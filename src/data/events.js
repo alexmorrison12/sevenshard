@@ -25,14 +25,15 @@ export const CHAOS_GATE = {
   lines: ['gate at :30, who’s in', 'LF3 chaos gate, any ilvl', 'the Gatekeeper counters are free damage', 'gate done, ty all'],
 };
 
-/** Adventure Island (every 2 h at :00): one objective per reward focus, then (usually) a boss. */
+/** Adventure Island (every 2 h at :00): one objective per reward focus, then (usually) a boss (hp in hundreds of
+ *  attack-power units: a party of four deals roughly 250 ap/s, so 100 ≈ a 40-second fight). */
 export const ISLAND_EVENTS = {
   gold: { title: 'Gold Rush', desc: 'Gather the gold coins washed up on the beach before the tide steals them back.', type: 'collect', need: 30, time: 210,
-    mobs: [['crab', 1]], boss: { type: 'crab', name: 'The Gilded Crab King', scale: 2.4, hp: 90 }, env: 'day', ground: 'sand' },
+    mobs: [['crab', 1]], boss: { type: 'crab', name: 'The Gilded Crab King', scale: 2.4, hp: 100 }, env: 'day', ground: 'sand' },
   silver: { title: 'Mirror Shards', desc: 'Shatter the mirror crystals that trap the Seven Lights’ reflections.', type: 'destroy', need: 7, time: 210,
-    mobs: [['wisp', 3], ['crab', 1]], boss: { type: 'crystal_golem', name: 'The Mirror Warden', scale: 1.5, hp: 70 }, env: 'day', ground: 'grass' },
+    mobs: [['wisp', 3], ['crab', 1]], boss: { type: 'crystal_golem', name: 'The Mirror Warden', scale: 1.5, hp: 95 }, env: 'day', ground: 'grass' },
   cards: { title: 'Lantern Vigil', desc: 'Light the eight lantern shrines before nightfall while the shades try to snuff them out.', type: 'channel', need: 8, time: 240, channel: 2.4,
-    mobs: [['wisp', 2], ['wraith', 1]], boss: { type: 'wraith', name: 'The Drowned Lamplighter', scale: 1.6, hp: 80 }, env: 'dusk', ground: 'grass' },
+    mobs: [['wisp', 2], ['wraith', 1]], boss: { type: 'wraith', name: 'The Drowned Lamplighter', scale: 1.6, hp: 90 }, env: 'dusk', ground: 'grass' },
   shards: { title: 'Boiling Tide', desc: 'The reef boils at noon. Hold the beach against the magma crabs.', type: 'survive', need: 75, time: 240,
     mobs: [['crab', 3], ['imp', 1]], boss: { type: 'crab', name: 'The Molten Crab Tyrant', scale: 2.6, hp: 110 }, env: 'dusk', ground: 'rock' },
   pips: { title: 'Runaway Pips', desc: 'The kite-racing Pips have cut their strings. Catch every one before they blow away!', type: 'catch', need: 8, time: 150,

@@ -47,6 +47,7 @@ export class FieldMode {
     this.cfg = FIELDS[this.id] || { name: zone?.name, levels: [1, 60], music: 'field', ambience: 'meadow' };
     this.kind = this.cfg.shrink ? 'pipsprout' : 'field';        // not 'field' in Pipsprout: no full-size mounts/pets there
     this.npcs = []; this.packs = []; this.objs = []; this.drops = []; this.offs = []; this.t = 0; this.channel = null; this.safe = null; this.safeT = 0;
+    this.quiet = new Map();                  // story fights in progress: no field packs inside these circles
   }
   get L() { return this.g.level; }
   get me() { return this.g.hero?.u; }
@@ -149,7 +150,7 @@ export class FieldMode {
     const recheck = this.safeT <= 0; if (recheck) { this.safeT = 2; this.safe = null; }
     for (const p of this.packs) {
       const d = dist(me.pos, p.a), alive = p.units.filter(u => u.level && !u.dead);
-      if (p.state === 'sleep') { if (d < ACTIVE_R) this.spawnPack(p); continue; }
+      if (p.state === 'sleep') { if (d < ACTIVE_R && !this.isQuiet(p.a)) this.spawnPack(p); continue; }
       const calm = alive.every(u => u.combatT <= 0);
       if (d > SLEEP_R && calm) { for (const u of alive) this.L.remove(u); p.units = []; p.state = 'sleep'; continue; }
       // a story NPC turned up next to an idle pack: send the pack elsewhere (it re-forms clear of the NPC)
@@ -157,7 +158,7 @@ export class FieldMode {
       if (!alive.length) {
         if (p.t <= 0) p.t = p.elite ? 110 + Math.random() * 40 : 26 + Math.random() * 16;
         p.t -= dt;
-        if (p.t <= 0 && d > 16) this.spawnPack(p);
+        if (p.t <= 0 && d > 16 && !this.isQuiet(p.a)) this.spawnPack(p);
       }
     }
     // seeds appear near the hero
@@ -184,6 +185,17 @@ export class FieldMode {
     this.attuneT -= dt;
     if (this.attuneT <= 0) { this.attuneT = 0.5; for (const o of this.objs) if (o.kind === 'triport' && dist(me.pos, o) < 5) attune(this.s, o.key); }
   }
+  /** a quest fight (boss encounter, defence) claims a circle: packs inside it leave and don't come back until it ends */
+  quietZone(key, z) {
+    if (!z) { this.quiet.delete(key); return; }
+    this.quiet.set(key, z);
+    for (const p of this.packs) {
+      if (p.state === 'sleep' || !this.isQuiet(p.a)) continue;
+      for (const u of p.units) if (u.level && !u.dead) { this.g.presenter?.call?.('play', 'spawn_puff', { pos: u.pos, x: u.pos.x, z: u.pos.z }); this.L.remove(u); }
+      p.units = []; p.state = 'sleep';
+    }
+  }
+  isQuiet(a) { for (const q of this.quiet.values()) if (dist(q, a) < q.r + (a.r || 6)) return true; return false; }
   /** everyone the hero might stop and talk to (residents and story NPCs); packs keep clear of them */
   safeSpots() {
     return this.safe ||= this.L.units.filter(u => u.kind === 'npc' && u.data.npcDef && !u.data.npcDef.object && !u.data.storyHidden && !u.dead).map(u => ({ x: u.pos.x, z: u.pos.z }));

@@ -21,7 +21,7 @@ const CSS = `
 .ss-lobby .status.err{color:#ff7a5a}
 .ss-lobby .foot{margin-top:14px;text-align:center;font-size:12px;color:#7d86a0}
 .ss-lobby .x{position:absolute;right:10px;top:8px;background:none;border:0;box-shadow:none;color:#a9b1c6;font:20px/1 sans-serif;padding:6px 10px;letter-spacing:0}
-.ss-netbadge{position:fixed;left:50%;transform:translateX(-50%);top:max(8px,env(safe-area-inset-top,0px));z-index:30;display:flex;align-items:center;gap:10px;padding:6px 8px 6px 12px;border-radius:4px;font:600 12.5px "Segoe UI",Roboto,sans-serif;color:#e7e3d8;background:rgba(9,12,22,.9);border:1px solid #3a4560;box-shadow:0 4px 16px rgba(0,0,0,.5);white-space:nowrap;pointer-events:auto}
+.ss-netbadge{position:fixed;left:max(12px,env(safe-area-inset-left,0px));top:max(10px,env(safe-area-inset-top,0px));z-index:30;display:flex;align-items:center;gap:10px;padding:6px 8px 6px 12px;border-radius:4px;font:600 12.5px "Segoe UI",Roboto,sans-serif;color:#e7e3d8;background:rgba(9,12,22,.9);border:1px solid #3a4560;box-shadow:0 4px 16px rgba(0,0,0,.5);white-space:nowrap;pointer-events:auto}
 .ss-netbadge b{color:#62e38a;letter-spacing:.14em;text-transform:uppercase;font-size:11px}
 .ss-netbadge b::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:#62e38a;box-shadow:0 0 8px #62e38a;margin-right:6px;vertical-align:1px}
 .ss-netbadge .code{font:700 14px ui-monospace,Menlo,monospace;letter-spacing:.18em;color:#f1dca6}

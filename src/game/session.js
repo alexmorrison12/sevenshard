@@ -85,7 +85,7 @@ export class Session {
     if (coarse || q.touch) { this.ui.setTouch?.(true, { skills: true }); this.touch.enable(true); }
     this.applyVolumes();
     for (const pl of PLUGINS) { try { pl.init?.(this); } catch (e) { console.error('[plugin init]', pl.id, e); } }
-    window.__session = this; window.__game = this.game;
+    window.__session = this; window.__game = this.game; window.__ZONES = ZONES;
     this.game.hooks.frame.push(dt => this.tick(dt));
   }
   applyVolumes() { const s = this.account.settings; this.game.audio?.setVolumes?.({ master: s.master, music: s.music, sfx: s.sfx, ambience: s.ambience }); this.applyPrefs(); }
@@ -266,7 +266,7 @@ export class Session {
     if (this.ui.npc?.active) this.ui.npc.finish?.(null);
     this.ui.screen('loading', { zone: ZONES[id]?.name || id, region: o.region, kind: o.kind || ZONES[id]?.kind, pct: 5, tip: TIPS[Math.floor(Math.random() * TIPS.length)] });
     const t0 = performance.now();
-    const zone = await buildZone(id, { quality: this.game.renderer.quality, onProgress: f => this.ui.screen('loading', { pct: 5 + f * 85 }) });
+    const zone = await buildZone(id, { quality: this.game.renderer.quality, seed: o.seed, onProgress: f => this.ui.screen('loading', { pct: 5 + f * 85 }) });
     zone.name = zone.name || ZONES[id]?.name || id; zone.id = id;
     this.game.setZone(zone);
     // compile every shader now, behind the loading screen, instead of hitching the first time water or foliage appears

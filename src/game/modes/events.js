@@ -343,7 +343,7 @@ class IslandEventMode {
     const g = this.g, L = this.L, cfg = this.cfg;
     this.state = 'objective';
     if (cfg.type === 'collect') this.makeCoins();
-    else if (cfg.type === 'destroy') { for (const p of this.pick(cfg.need, 7)) { const c = mobFrom('wisp', { x: p.x, z: p.z, ref: this.ref }); c.type = 'rift_crystal'; c.name = 'Mirror Crystal'; c.data.tpl = { model: 'rift_crystal' }; c.data.crystal = true; c.data.immovable = true; c.data.flinch = false; c.ctrl = null; c.hpMax = c.st.hpMax = Math.round(this.ref.ap * 40); c.hp = c.hpMax; c.radius = 0.9; c.height = 2.4; L.add(c); this.objs.push({ unit: c }); } }
+    else if (cfg.type === 'destroy') { for (const p of this.pick(cfg.need, 7)) { const c = mobFrom('wisp', { x: p.x, z: p.z, ref: this.ref }); c.type = 'rift_crystal'; c.name = 'Mirror Crystal'; c.data.tpl = { model: 'rift_crystal' }; c.data.crystal = true; c.data.immovable = true; c.data.flinch = false; c.ctrl = null; c.hpMax = c.st.hpMax = Math.round(this.ref.ap * 110); c.hp = c.hpMax; c.radius = 0.9; c.height = 2.4; L.add(c); this.objs.push({ unit: c }); } }
     else if (cfg.type === 'channel') this.makeShrines();
     else if (cfg.type === 'catch') { for (const p of this.pick(cfg.need, 6)) { const u = mobFrom('gilded_imp', { x: p.x, z: p.z, ref: this.ref, escape: 1e9, name: 'Runaway Pip', team: 2 }); u.type = 'pip'; u.data.tpl = { ...u.data.tpl, model: 'pip' }; u.radius = 0.4; u.height = 0.8; u.st.speed = 4.9; u.untargetable = true; u.data.pip = true; L.add(u); this.objs.push({ unit: u }); } }
     this.mobT = 2;

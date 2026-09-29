@@ -33,7 +33,7 @@ encounters, systems, story, modes, meta.
 | Layered boss HP (×145), enrage timers, mechanic callouts | layered bars in cycling colours, enrage, banners | ✅ |
 | Damage numbers (crit, back/head, counter) | WebGL numbers with Lost Ark styles, zig-zag stacking | ✅ |
 | "Other players' effects" setting | other heroes' skill FX dimmed (Off / Low / Full), no screen flashes from others, awakening overlap cap | ✅ |
-| DPS meter (community logs) | party meter + results table; in-fight meter panel | 🟡 meta/ui |
+| DPS meter (community logs) | party meter + results table; in-fight meter panel with damage/support/skills/log tabs and the last 12 fights | ✅ |
 | Death: revive at entrance / feathers | both, with death overlay; legion raids: feathers only (1 per gate) or spectate | ✅ |
 | Mounts, pets (auto-loot) | mount up with T (+70% speed, thrown off in combat): horse, direwolf, sunstag; pets (foxling, owlet, slimelet, Pip) follow you | ✅ |
 | Touch controls (Lost Ark Mobile) | floating virtual stick, touch skill cluster, auto-aim, tap to attack, pinch zoom | ✅ |
@@ -67,23 +67,23 @@ encounters, systems, story, modes, meta.
 | Guardian Raids | Rimewing, Cinderhorn, Sandmaw, Kurai the Pyrefox — scripted mechanics, counters, stagger checks, part breaks, own arenas | ✅ |
 | Abyssal Dungeon | The Sunken Oratory: Nerissa (song channels, bubble prison) and the Deep Oracle (tentacles, submerge adds) | ✅ |
 | Legion Raid with gates, normal/hard, weekly gold | Gorrath, the Horned Tyrant: Skarn & Vesk (twin howl, pack grief), Gorrath (horned fury, rift carve, soulfire orbs, stagger check, ghost phase) | ✅ |
-| Trial Guardian / challenge modes | weekly Trial Guardian with affixes | ⬜ modes |
-| Hell mode / Cube / Boss rush | Inferno Descent (100 floors, boons) + Rift Cube | ⬜ modes |
-| Field bosses, Chaos Gates, Adventure Islands, Procyon's Compass | hourly schedule (UTC) + event compass | 🟡 systems · ⬜ modes |
+| Trial Guardian / challenge modes | weekly Trial Guardian: 2 of 7 affixes (Volcanic, Frenzied, Mirror Guard, Storm-Warded, Haunted, Glass, Bulwark), synced heroes | ✅ |
+| Hell mode / Cube / Boss rush | Inferno Descent: 100 floors, 7 floor kinds, 21 boons, a boss every 10th floor, checkpoints · Rift Cube: 10 timed rooms, weekly tickets | ✅ |
+| Field bosses, Chaos Gates, Adventure Islands, Procyon's Compass | hourly schedule (UTC), Event Compass with Go; Old Thunderhoof field boss with AI adventurers, chaos gate waves + Gatekeeper, 5 Adventure Island objectives | ✅ |
 | Una's tasks | Wayfarer's Tasks (daily/weekly), reputation | 🟡 systems |
 | Sailing, crew, ship skills, sea events | Dawnrunner, crew, Full Sail/Repair/Cannons/Brace, storms, ghost ships, sea bounties | ⬜ sea |
 | Islands & Island Souls | 8 islands with their own gimmicks | ⬜ sea |
-| Stronghold | Brightwater Isle: buildings, research, crafting, dispatch | 🟡 systems · ⬜ modes/world |
+| Stronghold | Brightwater Isle: buildings, research, crafting, crew dispatch, garden and pet ranch, steward, ferry | ✅ |
 | Trade skills (6) + Life Energy | foraging, logging, mining, hunting, fishing, archaeology + minigames | 🟡 systems · ⬜ story/fields |
 | Mokoko seeds, collectibles, Adventure Tome | 120 Pip Seeds, Island Souls, Giant's Hearts, Masterpieces, Omnium Stars, Sea Bounties, World Tree Leaves, Vistas; Tome per region | 🟡 systems · ⬜ placement |
 | Rapport, songs, emotes | 8 rapport NPCs, 5 songs (real in-world performances), 20+ emotes | 🟡 systems/audio |
 | Triports, Song of Escape | Songs (,): Hymn of Homeward returns you to Solhaven; rapport songs; triports in fields | ✅ songs · 🟡 story triports |
-| PvP Proving Grounds 3v3, duels | Deathmatch & Elimination vs AI (friends as teammates), ranks, duels | ⬜ modes |
+| PvP Proving Grounds 3v3, duels | Deathmatch & Elimination in the Crucible (normalised stats, unstoppable after CC), Elo ranks Bronze → Grandmaster, Proving Tokens, duels from the context menu | ✅ |
 | Guild | AI guilds, donations, bloodstones, research, shop | 🟡 systems |
 | Auction house, crystal exchange, vendors | simulated market with SimPlayer listings, exchange rate | 🟡 systems · ⬜ ui |
 | Mail | mailbox (+ tongue-in-cheek compensation letters) | 🟡 systems |
-| Party finder, matchmaking | live AI listings (Lost Ark culture notes), apply/create/accept applicants, matchmaking, AI fill | ✅ logic · 🟡 window |
-| Raid auction (bidding) and "More rewards" chests | AI raiders bid gold, pot split among the rest; More Rewards chest after every gate | ✅ logic · 🟡 bid window |
+| Party finder, matchmaking | live AI listings (Lost Ark culture notes), apply/create/accept applicants, matchmaking, AI fill | ✅ |
+| Raid auction (bidding) and "More rewards" chests | AI raiders bid gold, pot split among the rest; More Rewards chest after every gate | ✅ |
 
 ## MMO layer & multiplayer (Everdawn carry-over, adapted)
 | | SEVENSHARD | Status |
@@ -91,14 +91,14 @@ encounters, systems, story, modes, meta.
 | Living world of AI players | 28+ AI adventurers in Solhaven with Lost Ark-culture chatter, LF parties, AI raiders with personalities | ✅ |
 | Online co-op | host/join by room code or invite link (WebRTC), up to 8 players; friends follow the host into every instance; each browser owns its hero; host owns enemies | ✅ |
 | Multi-character roster | ✅ | ✅ |
-| Leaderboards, share cards, challenge links | weekly legion race, daily guardian, inferno, pvp, stones, honing | ⬜ meta |
+| Leaderboards, share cards, challenge links | weekly legion race (World First, fastest, top DPS/support, deathless), daily guardian, inferno, pvp, stones, honing; 1200×630 share cards; challenge links; optional global boards (Supabase) | ✅ |
 | Test tooling | flow, coop, errors, shot, labs | ✅ |
 
 ## Presentation
 | | SEVENSHARD | Status |
 |---|---|---|
 | Title / key scene | animated Solhaven dusk + CSS logo | ✅ |
-| Lost Ark-style HUD & windows | ✅ HUD, 🟡 system windows | 🟡 ui |
+| Lost Ark-style HUD & windows | HUD + 28 windows (character, inventory, skills/tripods, engravings, honing, stones, gems, cards, market, guild, mail, stronghold, tome, rapport, compass, leaderboards, party finder, Rift Nexus content board, meter, settings…) | ✅ |
 | Procedural music, SFX, ambience | synthesized score per place (18 tracks), 125 SFX, stingers, 13 ambiences, 5 songs | ✅ |
 | Boss intro title cards | cinematic camera framed by boss size + letterbox + name card | ✅ |
 | Spectator | Watch the Raid: 8 AI raiders vs Gorrath with a director camera | ✅ |

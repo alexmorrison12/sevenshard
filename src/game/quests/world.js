@@ -215,23 +215,24 @@ class DefendRunner extends Runner {
   spawnAlly(def, at) { const u = makeAlly(def, { x: at.x, z: at.z - 1 }, { level: this.level(), leader: null, atkMul: 0.6 }); u.ctrl.hold = true; this.L.add(u); this.units.push(u); return u; }
   start() {
     this.state = 'run'; this.t = 0; this.next = 1; this.wave = 0;
+    this.g.mode?.quietZone?.('run:' + this.key, { x: this.at.x, z: this.at.z, r: (this.s.r || 9) + 14 });
     this.g.ui?.banner?.(this.s.text || 'Hold the line!', { kind: 'warn', sub: `Survive ${Math.round(this.s.dur)} seconds` });
     this.g.audio?.sfx?.('raid_warning', {});
   }
   fail(why) {
-    this.state = 'idle';
+    this.state = 'idle'; this.g.mode?.quietZone?.('run:' + this.key, null);
     for (const u of this.units) if (u !== this.ally && u.level && !u.dead) u.level.remove(u);
     this.units = this.units.filter(u => u === this.ally);
     this.g.ui?.toast?.(`${why} The defence failed — step back into the circle to try again.`, 'warn');
   }
   win() {
-    this.state = 'done';
+    this.state = 'done'; this.g.mode?.quietZone?.('run:' + this.key, null);
     for (const u of this.units) if (u !== this.ally && u.level && !u.dead) { u.hp = 0; u.dead = true; u.level.emit('death', { unit: u, killer: null }); }
     this.Q.markers.setBeacon('run:' + this.key, null);
     this.Q.progressEntry(this.e, this.s.need || 1);
   }
   hud(h) { if (this.state === 'run') { h.progress = { label: this.s.label || this.s.text || 'Defend', pct: Math.min(100, this.t / this.s.dur * 100) }; h.timer = { label: 'Hold', left: Math.max(0, this.s.dur - this.t), urgent: this.s.dur - this.t < 10 }; } }
-  dispose(gone) { this.Q.markers.setBeacon('run:' + this.key, null); if (!gone) super.dispose(); }
+  dispose(gone) { this.Q.markers.setBeacon('run:' + this.key, null); this.g.mode?.quietZone?.('run:' + this.key, null); if (!gone) super.dispose(); }
 }
 
 /** walk someone from A to B: { who: storyNpcId | { name, npc }, from, to: [anchors] | path: [[anchor,dx,dz]…], ambush: [[pct, [[type, n]]]] } */
@@ -299,6 +300,7 @@ class EncounterRunner extends Runner {
     if (!def) { warnOnce('boss:' + s.boss, 'no boss def', s.boss); this.Q.progressEntry(this.e, 1); return; }
     this.Q.markers.setBeacon('run:' + this.key, null);
     this.state = 'fight';
+    this.g.mode?.quietZone?.('run:' + this.key, { x: at.x, z: at.z, r: (s.r || 6) + 18 });
     const lvl = this.level(), ref = refFor(lvl);
     // tune a def written for a 4-player raid down to a solo story fight (≈ 2 minutes for a level-appropriate hero)
     const hpScale = s.hpScale ?? Math.min(1, (s.storyHp || def.storyHp || 700) / Math.max(1, def.hp));
@@ -320,6 +322,7 @@ class EncounterRunner extends Runner {
   }
   end(r) {
     const enc = this.enc; this.enc = null;
+    this.g.mode?.quietZone?.('run:' + this.key, null);
     try { enc?.exit?.(); } catch { /* */ }
     this.g.party = null;
     for (const u of this.units) if (u.level) u.level.remove(u);
@@ -335,6 +338,6 @@ class EncounterRunner extends Runner {
     if (!this.enc) return;
     h.boss = this.enc.bossHud(); const t = this.enc.timerHud?.(); if (t) h.timer = t;
   }
-  dispose(gone) { this.Q.markers.setBeacon('run:' + this.key, null); if (this.enc) { try { this.enc.exit(); } catch { /* */ } this.enc = null; this.g.party = null; } if (!gone) super.dispose(); }
+  dispose(gone) { this.Q.markers.setBeacon('run:' + this.key, null); this.g.mode?.quietZone?.('run:' + this.key, null); if (this.enc) { try { this.enc.exit(); } catch { /* */ } this.enc = null; this.g.party = null; } if (!gone) super.dispose(); }
 }
 export { THREE };
