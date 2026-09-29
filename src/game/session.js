@@ -416,7 +416,7 @@ export class Session {
     if (n.rapport) choices.push({ id: 'rapport', text: 'Spend time together (Rapport)', kind: 'talk' });
     for (const pl of PLUGINS) if (pl.npcChoices) { try { choices.unshift(...(pl.npcChoices(n.id) || [])); } catch (e) { console.error('[plugin choices]', pl.id, e); } }
     choices.push({ id: 'bye', text: 'Farewell.', kind: 'leave' });
-    const pick = await this.ui.dialog({ id: n.id, name: n.name, title: n.title }, [{ text: line, choices }]);
+    const pick = await this.ui.dialog({ id: n.id, name: n.name, title: n.title, portrait: n.portrait }, [{ text: line, choices }]);
     for (const pl of PLUGINS) if (pl.onNpcChoice?.(n.id, pick, t)) return;
     if (pick === 'svc') this.service(n.action, n, t);
     else if (pick && pick !== 'bye' && pick !== 'rapport') this.bus.emit('npcChoice', { npc: n.id, choice: pick, unit: t });
@@ -459,7 +459,7 @@ export class Session {
   worldRegions() {
     const here = this.game.zone?.id, ch = this.char;
     const seaXY = (x, z) => ({ x: +(0.475 + (x + 548) / 1308 * 0.47).toFixed(3), y: +(0.56 + (z - 30) * 0.00075).toFixed(3) });
-    const pipsOpen = !!this.account.roster.unlocked?.pipsprout || (ch?.quests?.done || []).includes('g8_hollow');
+    const pipsOpen = !!ch?.powerpass || !!this.account.roster.unlocked?.pipsprout || (ch?.quests?.done || []).includes('g8_hollow');
     const regions = [
       { id: 'solhaven', name: 'Solhaven', kind: 'city', x: 0.335, y: 0.615, level: 'Capital', triport: true },
       { id: 'goldmeadow', name: 'Goldmeadow', kind: 'field', x: 0.215, y: 0.62, level: 'Lv 1–25', triport: true },
@@ -482,7 +482,7 @@ export class Session {
     this.ui.close('map');
     if (id === 'stronghold') return this.launch({ kind: 'stronghold' });
     if (['solhaven', 'goldmeadow', 'thornwood', 'ashen_ridge', 'pipsprout'].includes(id)) {
-      if (id === 'pipsprout' && !this.account.roster.unlocked?.pipsprout && !(this.char.quests?.done || []).includes('g8_hollow')) return this.ui.toast('The way to Pipsprout Hollow is hidden somewhere in Goldmeadow.', 'info');
+      if (id === 'pipsprout' && !this.char.powerpass && !this.account.roster.unlocked?.pipsprout && !(this.char.quests?.done || []).includes('g8_hollow')) return this.ui.toast('The way to Pipsprout Hollow is hidden somewhere in Goldmeadow.', 'info');
       this.game.audio?.sfx?.('teleport', {});
       return id === 'solhaven' ? this.returnToHub() : fieldTravel(this, id);
     }
