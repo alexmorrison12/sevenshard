@@ -376,7 +376,9 @@
 .ss-gd-mbar { position: relative; width: 200px; height: 16px; background: rgba(0, 0, 0, .55); border-radius: 1px; overflow: hidden; }
 .ss-gd-mbar i { position: absolute; inset: 0; transform-origin: 0 50%; background: linear-gradient(90deg, #8a6428, #f3c46a); }
 .ss-gd-mbar em { position: absolute; inset: 0; display: grid; place-items: center; font: 700 10.5px/1 var(--ss-font); font-style: normal; color: #fff; text-shadow: var(--ss-ol); }
-.ss-gd-browse { max-height: 250px; display: flex; flex-direction: column; gap: 5px; }
+.ss-gd-browse { max-height: 430px; display: flex; flex-direction: column; gap: 5px; }
+.ss-gd-brow small { display: block; margin-top: 2px; font: 400 11px/1.2 var(--ss-font); color: var(--ss-dim); }
+.ss-gd-req { color: var(--ss-bad); }
 .ss-gd-brow { display: grid; grid-template-columns: 34px 1fr auto auto; align-items: center; gap: 12px; padding: 8px 10px; background: rgba(4, 6, 12, .45); border: 1px solid var(--ss-line-soft); border-radius: 2px; }
 .ss-gd-brow b { display: block; font: 600 13px/1.2 var(--ss-font); color: #fff; }
 .ss-gd-brow b span { color: var(--ss-gold); }
@@ -387,7 +389,7 @@
 .ss-gd-create .ss-gd-tag { flex: 0 0 90px; text-transform: uppercase; }
 
 /* leaderboards */
-.ss-lb { display: grid; grid-template-columns: 210px 1fr; gap: 16px; height: 520px; }
+.ss-lb { display: grid; grid-template-columns: 210px 1fr; grid-template-rows: minmax(0, 1fr); gap: 16px; height: 540px; flex: 0 1 540px; }
 .ss-lb-side { display: flex; flex-direction: column; gap: 2px; padding-right: 8px; border-right: 1px solid var(--ss-line-soft); }
 .ss-lb-grp { margin: 10px 0 4px; font: 400 10.5px/1 var(--ss-serif); letter-spacing: .2em; text-transform: uppercase; color: var(--ss-gold); }
 .ss-lb-grp:first-child { margin-top: 2px; }
@@ -637,7 +639,8 @@
 .ss-mk-dhd { display: flex; align-items: center; gap: 12px; }
 .ss-mk-dhd b { display: block; font: 400 17px/1.2 var(--ss-serif); }
 .ss-mk-dhd span { font: 400 11.5px/1.4 var(--ss-font); color: var(--ss-dim); }
-.ss-mk-chartw { padding: 10px 10px 4px; background: rgba(3, 5, 10, .5); border: 1px solid var(--ss-line-soft); border-radius: 2px; }
+.ss-mk-chartw { padding: 10px 10px 4px; background: rgba(3, 5, 10, .5); border: 1px solid var(--ss-line-soft); border-radius: 2px; min-width: 0; overflow: hidden; }
+.ss-mk-chart { display: block; max-width: 100%; height: auto; }
 .ss-mk-chart .ss-mk-grid line { stroke: rgba(140, 158, 200, .12); }
 .ss-mk-chart text { font: 600 9.5px var(--ss-font); fill: var(--ss-dim); }
 .ss-mk-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }

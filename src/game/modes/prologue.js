@@ -139,12 +139,13 @@ export class PrologueMode {
     if (b === 'duel') this.startDuel();
     if (b === 'escape') {
       this.clearMobs(); g.audio?.music?.('dungeon'); this.hint('Run! Follow Seraphine to the harbour.', 'warn');
+      this.talkers = this.talkers.filter(u => u !== bran);
       bran.ctrl.hold = true; bran.untargetable = true; bran.model?.play?.('block', { dur: 2, loop: true });
-      if (this.varkhul?.level) { this.varkhul.ctrl.started = false; this.varkhul.untargetable = true; this.varkhul.faceTo(bran.pos.x, bran.pos.z); }
+      if (this.varkhul?.level) { if (this.varkhul.ctrl) this.varkhul.ctrl.started = false; this.varkhul.untargetable = true; this.varkhul.faceTo(bran.pos.x, bran.pos.z); }
     }
     void prev;
   }
-  hint(text, kind = 'info') { this.g.ui?.toast?.(text, kind === 'warn' ? 'warn' : 'info'); if (kind === 'warn') this.g.ui?.banner?.(text, { kind: 'warn' }); }
+  hint(text, kind = 'info') { if (kind === 'warn') this.g.ui?.banner?.(text, { kind: 'warn' }); else this.g.ui?.toast?.(text, 'info'); }
   wave(at, mix, lvl = 2, r = 8, dirZ = 0) {
     const L = this.L, me = this.me;
     for (const [type, n] of mix) for (let i = 0; i < n; i++) {
@@ -198,15 +199,16 @@ export class PrologueMode {
     me.model?.play?.('rifle_aim', { loop: true, dur: 1.2 });
     this.manning = { cannon: c, cd: 0.4, input: g.player.input };
     g.player.input = (dt, inp, cam) => this.cannonInput(dt, inp, cam);
-    g.camFocus = new THREE.Vector3((c.x + a.pos.x) / 2, 0, (c.z + a.pos.z) / 2 + 4);
-    this.zoomSave = g.cam.zoom; g.cam.zoom = g.cam.maxDist;
+    // over-the-shoulder artillery view: the cannon in front, the behemoth filling the sky
+    const y = this.L.heightAt(c.x, c.z), dx = a.pos.x - c.x, dz = a.pos.z - c.z, d = Math.hypot(dx, dz) || 1;
+    g.cam.cinematic({ pos: [c.x - dx / d * 9 + 1.5, y + 8.5, c.z - dz / d * 9], look: [c.x + dx / d * 16, y + 4, c.z + dz / d * 16], dur: 0.9, fov: 52 });
     this.reticle = g.fx?.telegraph?.({ shape: 'circle', pos: { x: a.pos.x, y: 0, z: a.pos.z }, radius: 3, color: 'white' }) || null;
     g.audio?.sfx?.('reload', { pos: me.pos });
   }
   endManning() {
     const g = this.g, m = this.manning; if (!m) return;
     g.player.input = m.input; this.manning = null;
-    g.camFocus = null; if (this.zoomSave) g.cam.zoom = this.zoomSave;
+    g.cam.endCinematic?.(0.7);
     this.reticle?.stop?.(); this.reticle = null;
     this.me?.model?.stop?.();
   }
@@ -328,7 +330,7 @@ export class PrologueMode {
   startDuel() {
     const def = BOSS_DEFS.varkhul || STORY_BOSSES.varkhul;
     const v = this.varkhul; if (!v) return;
-    v.ctrl.started = true; v.data.hpFloor = Math.round(v.hpMax * 0.62);
+    if (v.ctrl) v.ctrl.started = true; v.data.hpFloor = Math.round(v.hpMax * 0.62);
     this.duelT = 0; this.duelOver = false;
     this.g.audio?.music?.(def.music || 'boss');
     this.g.ui?.banner?.('Varkhul', { kind: 'boss', sub: 'the Ravager', dur: 2.4 });
@@ -346,7 +348,7 @@ export class PrologueMode {
     const v = this.varkhul, me = this.me; if (!v || !me) return;
     this.duelT += dt;
     const done = this.duelT > 38 || v.hp <= v.data.hpFloor + 1 || me.hp <= me.hpMax * 0.22;
-    if (done) { this.duelOver = true; v.ctrl.interrupt(0); v.ctrl.started = false; this.Q?.signal('duel'); }
+    if (done) { this.duelOver = true; if (v.ctrl) { v.ctrl.interrupt(0); v.ctrl.started = false; } this.Q?.signal('duel'); }
   }
   // ---------------------------------------------------------------- intro & ending
   async playIntro() {
@@ -370,14 +372,14 @@ export class PrologueMode {
     }, { music: 'cutscene_heroic', after: 'boss' });
   }
   async finishPrologue() {
-    if (this.finishing) return; this.finishing = true;
+    if (this.finishing) return; this.finishing = true; this.s.storyTransition = true;
     const s = this.s, A = s.account, c = s.char;
     if (this.awakened) this.awaken(false);
     c.zone = 'solhaven'; c.flags ||= {}; c.flags.welcomed = true;
     if ((c.level || 1) < 5) { let need = 0; for (let l = c.level; l < 5; l++) need += xpForLevel(l); A.addXp(c, need - (c.xp || 0) + 1); }
     A.save();
     await screenFade(1, 0.9);
-    await arriveInSolhaven(s);
+    try { await arriveInSolhaven(s); } finally { s.storyTransition = false; }
   }
 }
 
@@ -488,7 +490,7 @@ Object.assign(CUTSCENES, {
     me.model?.play?.('getup', { dur: 0.9 });
     await cs.say('seraphine', 'Get up! Get UP! There’s a boat at the harbour — come on!', 2.6);
     await cs.say('brannoc', 'Go! Both of you! I’ll hold him! GO!', 2.4);
-    if (v) { v.ctrl.started = false; v.untargetable = true; }
+    if (v) { if (v.ctrl) v.ctrl.started = false; v.untargetable = true; }
   } },
   pro_escape: { music: 'cutscene_sad', run: async (cs, Q) => {
     const M = cs.g.mode, me = cs.hero; if (!me) return;

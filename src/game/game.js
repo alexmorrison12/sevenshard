@@ -42,7 +42,8 @@ export class Game {
     let last = performance.now();
     const loop = now => {
       if (!this.running) return;
-      const raw = Math.min(0.1, (now - last) / 1000); last = now;
+      // rAF timestamps can be earlier than a performance.now() taken during a long load → clamp negative steps
+      const raw = Math.max(0, Math.min(0.1, (now - last) / 1000)); last = Math.max(last, now);
       try { this.frame(Math.min(0.05, raw) * this.timeScale, raw); }
       catch (e) {
         // never let one bad frame freeze the game: log each distinct error once, keep rendering

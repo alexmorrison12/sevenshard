@@ -63,7 +63,7 @@ varying vec4 vDet; varying vec4 vMat; varying vec2 vFace; varying vec3 vOP; vary
 const FRAG_PARS = /* glsl */`
 uniform sampler2D uDetail; uniform sampler2D uFace; uniform sampler2D uMarks; uniform vec2 uFaceTile; uniform vec3 uEye; uniform float uEyeGlow;
 uniform vec3 uBrow; uniform vec3 uInk; uniform vec3 uLip; uniform vec4 uTint; uniform float uGlow; uniform vec4 uCast; uniform vec3 uSclera;
-uniform vec4 uMarkCol; uniform vec4 uRune; uniform float uDemon; uniform float uEnv; uniform vec3 uEnvSky; uniform vec3 uEnvGnd;
+uniform vec4 uMarkCol; uniform vec4 uRune; uniform vec4 uHone; uniform float uDemon; uniform float uEnv; uniform vec3 uEnvSky; uniform vec3 uEnvGnd;
 varying vec4 vDet; varying vec4 vMat; varying vec2 vFace; varying vec3 vOP; varying vec3 vON;
 `;
 
@@ -85,6 +85,7 @@ export function makeUniforms() {
     uGlow: { value: 1.5 },
     uCast: { value: new THREE.Vector4(1, 0.2, 0.1, 0) },    // identity glow colour + amount (setGlow)
     uRune: { value: new THREE.Vector4(1.0, 0.12, 0.05, 0) }, // rune glow colour + intensity (legion set / hone)
+    uHone: { value: new THREE.Vector4(1, 1, 1, 0) },     // skinned-weapon hone glow (Stormfist gauntlets), on the cast mask
     uDemon: { value: 0 },
     uEnv: { value: 1 },
     uEnvSky: { value: new THREE.Color(0xd8e0ea) },
@@ -95,7 +96,8 @@ export function makeUniforms() {
 export function makeHeroMaterial(U, opts = {}) {
   const mat = lambert({ vertexColors: true }, {
     wrap: 0.5, spec: 1, shine: opts.shine ?? 26, rim: 0.22, rimColor: 0xfff2dc,
-    key: 'hero' + (opts.key || ''),
+    key: 'hero' + (opts.key || '') + (opts.hone ? 'h' : ''),
+    defines: opts.hone ? { HONE_GLOW: 1 } : undefined,
     uniforms: U,
     vertex: vs => vs
       .replace('#include <common>', '#include <common>\n' + VERT_PARS)
@@ -141,7 +143,14 @@ export function makeHeroMaterial(U, opts = {}) {
         totalEmissiveRadiance += uCast.rgb * castA * vMat.z * 1.1;
         totalEmissiveRadiance += uRune.rgb * uRune.a * vMat.w * (0.8 + 0.2 * sin(uTime * 4.0 + vOP.y * 9.0));
         totalEmissiveRadiance += vec3(0.95, 0.12, 1.0) * veins * 1.1 * (0.7 + 0.3 * sin(uTime * 5.0 + vOP.y * 20.0));
-        totalEmissiveRadiance += vec3(1.6, 0.35, 1.3) * eyeEmit * 2.2;`)
+        totalEmissiveRadiance += vec3(1.6, 0.35, 1.3) * eyeEmit * 2.2;
+        totalEmissiveRadiance += uHone.rgb * uHone.a * vMat.z * (0.82 + 0.18 * sin(uTime * 3.0 + vOP.y * 6.0));
+        #ifdef HONE_GLOW
+        { // weapon hone +15 and up: the whole weapon smoulders in its accent colour, stronger with every level
+          float hk = uRune.a >= 1.05 ? 0.25 + 0.75 * smoothstep(1.1, 4.5, uRune.a) : 0.0;
+          totalEmissiveRadiance += uRune.rgb * hk * (0.3 + 0.7 * vMat.x) * 0.5 * (0.82 + 0.18 * sin(uTime * 3.0 + vOP.y * 6.0));
+        }
+        #endif`)
       .replace('+ gSpecAcc +', `+ gSpecAcc * vMat.x * (0.12 + smoothstep(0.5, 1.0, vMat.x) * 0.2 + diffuseColor.rgb * 0.32) + heroEnv(geometryNormal, geometryViewDir, diffuseColor.rgb, vMat.x) +`)
       .replace('vec3 outgoingLight = reflectedLight', `
         float rimG = pow(1.0 - saturate(dot(geometryNormal, geometryViewDir)), 2.5);

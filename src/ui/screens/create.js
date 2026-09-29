@@ -2,12 +2,12 @@
 //   Step 1 "Class": class grid (8) on the left, class details on the right (role, difficulty, identity, awakening,
 //                   class engravings, skill preview), sex toggle at the bottom.
 //   Step 2 "Appearance": categories (face, hair, hair colour, skin, eyes, body, marks) on the left; name + path
-//                   ("Play the Story" / "Powerpass") + Create on the right.
+//                   ("Play the Story" / "Powerpass" / "Raid Ready") + Create on the right.
 //   data: { cls, sex: 'm'|'f', look: { face, hair, hairColor, skin, eyes, height, build, marks, markColor },
 //           name, step: 'class'|'look', classes?: [ids], taken?: [names] }
 // Actions: create:change { cls, sex, look }  (every edit — update the 3D hero)
 //          create:step { step }  create:camera { view: 'body'|'face' }
-//          create:confirm { cls, sex, look, name, path: 'story'|'powerpass' }  create:back {}
+//          create:confirm { cls, sex, look, name, path: 'story'|'powerpass'|'raid' }  create:back {}
 import { h, btn, esc, setText, show, clamp } from '../core/util.js';
 import { glyph } from '../core/glyphs.js';
 import { iconUrl } from '../core/icon.js';
@@ -107,6 +107,7 @@ export class CreateScreen extends Screen {
   setSex(s) { if (s === this.sex) return; this.sex = s; this.markSex(); this.changed(); }
   setCam(v) { this.cam = v; this.markCam(); this.emit('create:camera', { view: v }); }
   setStep(s, silent) {
+    if (s !== 'look') s = 'class'; // unknown steps fall back to the class picker
     this.step = s;
     this.el.dataset.step = s;
     this.stepBtns.forEach((b, i) => { b.classList.toggle('is-on', (i ? 'look' : 'class') === s); b.classList.toggle('is-done', !i && s === 'look'); });
@@ -213,11 +214,12 @@ export class CreateScreen extends Screen {
     const paths = h('div', 'ss-cc-paths', f);
     this.pathBtns = {};
     for (const p of [
-      { id: 'story', t: 'Play the Story', s: 'Begin with the Siege of Brighthold and walk the road of the Shardbearer from level 1.', tag: 'Recommended' },
-      { id: 'powerpass', t: 'Powerpass', s: 'Start at level 50 with a Vanguard set (Item Level 1,340), ready for Chaos Dungeons and Guardian Hunts.', tag: 'Veteran' },
+      { id: 'story', t: 'Play the Story', s: 'Begin with the Siege of Brighthold and walk the road of the Shardbearer from level 1.', tag: 'Recommended', g: 'tome' },
+      { id: 'powerpass', t: 'Powerpass', s: 'Start at level 60 in a Vanguard +10 set (Item Level 1,200) with a Starter Crate to hone toward the raid.', tag: 'Veteran', g: 'bolt' },
+      { id: 'raid', t: 'Raid Ready', s: 'Level 60 in the Horned Tyrant +8 set (Item Level 1,420) with engravings, accessories and a cut stone.', tag: 'Instant', g: 'crown' },
     ]) {
       const b = btn('ss-cc-path', paths, null, () => { this.path = p.id; for (const [k, x] of Object.entries(this.pathBtns)) x.setAttribute('aria-pressed', k === p.id); }, p.t);
-      b.innerHTML = `<span class="ss-cc-pathg">${glyph(p.id === 'story' ? 'tome' : 'bolt')}</span><div><b>${p.t}</b><span>${p.s}</span></div><em>${p.tag}</em>`;
+      b.innerHTML = `<span class="ss-cc-pathg">${glyph(p.g)}</span><div><b>${p.t}</b><span>${p.s}</span></div><em>${p.tag}</em>`;
       b.setAttribute('aria-pressed', this.path === p.id);
       this.pathBtns[p.id] = b;
     }

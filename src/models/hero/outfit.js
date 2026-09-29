@@ -98,7 +98,7 @@ export function outfitPieces(base, g) {
       case 'coat': add(coatTailsPiece(base, o)); break;
       case 'bandolier': add(bandolierPiece(base, o)); break;
       case 'chains': add(chainsPiece(base, o)); break;
-      case 'gauntlets': for (const s of ['L', 'R']) add(gauntletPiece(base, s, o)); break;
+      case 'gauntlets': for (const s of ['L', 'R']) add(gauntletPiece(base, s, o), { cast: 0.85 }); break;
       case 'hipchain': addD(hipChainPiece(base, o)); break;
     }
   }

@@ -43,7 +43,7 @@ const RAW = { m: HERO_M, f: HERO_F };
 // LOD mesh budgets (vertex targets before assembly)
 export const LOD = {
   full: { body: 2600, head: 2000, hand: 340, hBody: 0.019, hHead: 0.0046, hHand: 0.0066, ring: 1, hair: 1 },
-  crowd: { body: 950, head: 320, hand: 90, hBody: 0.03, hHead: 0.011, hHand: 0.011, ring: 0.5, hair: 0.4 },
+  crowd: { body: 800, head: 320, hand: 90, hBody: 0.03, hHead: 0.011, hHand: 0.011, ring: 0.5, hair: 0.4 },
 };
 
 // ------------------------------------------------------------------------------------------------

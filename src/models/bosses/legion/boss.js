@@ -623,7 +623,7 @@ export class Boss {
       if (v > 90) { T.tr.clear(); v = 0; }   // teleport / pose jump: restart the ribbon
       T.prev.copy(T.pb); T.init = true;
       const vMin = (c.vMin ?? 7), vMax = (c.vMax ?? 16);
-      const alpha = Math.min(1, Math.max(0, (v - vMin) / (vMax - vMin))) * (this.dead ? 0 : 1);
+      const alpha = Math.min(1, Math.max(0, (v - vMin) / (vMax - vMin))) * (this.dead ? 0 : 1) * (c.when ? c.when(this) : 1);   // `when` (optional): e.g. off once the part is broken
       T.tr.push(T.pa, T.pb, alpha);
       T.tr.update(dt);
     }

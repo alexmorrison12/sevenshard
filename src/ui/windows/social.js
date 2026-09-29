@@ -9,7 +9,7 @@
 // leaderboards data: { board, sub?, boards?: [{ id, label, subs? }], rows: [{ rank, name, cls, value, sub?, you?, party?: [cls], date? }],
 //                      you?: { rank, value }, note? }
 //   Actions: lb:board { board, sub }
-import { h, btn, esc, fmtInt, clear } from '../core/util.js';
+import { h, btn, esc, fmtInt, clear, pretty } from '../core/util.js';
 import { glyph } from '../core/glyphs.js';
 import { iconUrl } from '../core/icon.js';
 import { slot, tabs } from '../core/kit.js';
@@ -249,8 +249,10 @@ export class GuildWin extends Win {
     const list = h('div', 'ss-gd-browse ss-scroll', B);
     for (const g of d.browse || []) {
       const r = h('div', 'ss-gd-brow', list);
-      r.innerHTML = `<div class="ss-gd-emb sm">${glyph('guild')}</div><div><b>${esc(g.name)} <span>&lt;${esc(g.tag)}&gt;</span></b><em>${esc(g.motto || '')}</em></div><div class="ss-gd-bm"><span>Lv ${g.level}</span><span>${g.members}/${g.max || 100}</span>${g.req ? `<span>${esc(g.req)}</span>` : ''}</div>`;
-      btn('ss-btn ss-btn--primary ss-btn--sm', r, 'Apply', () => this.ui.emit('guild:join', { id: g.id }));
+      const sub = [g.leader ? `Led by ${esc(g.leader)}` : '', g.focus ? esc(pretty(g.focus)) : ''].filter(Boolean).join(' · ');
+      r.innerHTML = `<div class="ss-gd-emb sm">${glyph('guild')}</div><div><b>${esc(g.name)} <span>&lt;${esc(g.tag)}&gt;</span></b><em>${esc(g.motto || '')}</em>${sub ? `<small>${sub}</small>` : ''}</div><div class="ss-gd-bm"><span>Lv ${g.level}</span><span>${g.members}/${g.max || 100}</span>${g.req ? `<span class="ss-gd-req">${esc(g.req)}</span>` : ''}</div>`;
+      const full = g.full || g.req === 'Full' || (g.max && g.members >= g.max);
+      btn('ss-btn ss-btn--primary ss-btn--sm', r, full ? 'Full' : 'Apply', () => this.ui.emit('guild:join', { id: g.id })).disabled = !!full;
     }
     if (!(d.browse || []).length) h('div', 'ss-empty', list, 'No guilds are recruiting.');
     h('div', 'ss-h', B, 'Found a Guild');

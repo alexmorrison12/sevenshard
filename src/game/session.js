@@ -28,6 +28,7 @@ import { PLUGINS, LAUNCHERS, SERVICES, WINDOWS, ACTIONS, ZONE_MODES } from './re
 import './plugins.js';
 import { TouchControls } from './touch.js';
 import { watchRaid } from './watch.js';
+import { Portrait } from './portrait.js';
 import { SocialContext } from './social/context.js';
 import { sunView, rank as sunRank, resetTree as sunReset, sunState, unlocked as sunUnlocked } from './progression/sunheart.js';
 import { SUNHEART_POINTS } from '../data/sunheart.js';
@@ -36,6 +37,8 @@ import { contentRewards, moreRewards as offerMoreRewards } from './systems/hooks
 import * as SYS from './systems/index.js';
 
 const q = Object.fromEntries(new URLSearchParams(location.search));
+const AUDIO_PREP = { city: ['city', 'city_night', 'victory'], field: ['field', 'field_dark', 'boss', 'boss_intro'], dungeon: ['dungeon', 'boss', 'victory', 'defeat'],
+  arena: ['boss', 'boss_intro', 'victory', 'defeat'], raid: ['raid', 'raid_ghost', 'boss_intro', 'victory', 'defeat'], sea: ['sea', 'boss'], island: ['sea', 'boss', 'pip'] };
 const CONTENT_NAMES = { chaos: 'Chaos Dungeon', guardian: 'Guardian Hunt', raid: 'Legion Raid', inferno: 'Inferno Descent', cube: 'Rift Cube', trial: 'Trial Guardian', pvp: 'Proving Grounds', fieldboss: 'Field Boss', chaosgate: 'Chaos Gate', island: 'Adventure Island', ghostship: 'Ghost Ship' };
 const NEWS = [
   { tag: 'Event', title: 'The Horned Legion stirs', date: 'This week', body: 'Gorrath, the Horned Tyrant, waits beyond the Rift Nexus. Eight Shardbearers. Two gates. One weekly race.' },
@@ -239,7 +242,9 @@ export class Session {
     zone.name = zone.name || ZONES[id]?.name || id; zone.id = id;
     this.game.setZone(zone);
     // compile every shader now, behind the loading screen, instead of hitching the first time water or foliage appears
-    try { await Promise.race([zone.precompile?.(this.game.renderer, this.game.cam.cam, this.game.scene), new Promise(r => setTimeout(r, 2500))]); } catch (e) { console.warn('[precompile]', e); }
+    // bake the music this place will need (instruments render on first use) while the loading screen is up
+    const prep = AUDIO_PREP[o.kind || ZONES[id]?.kind] || AUDIO_PREP.field;
+    try { await Promise.race([Promise.all([zone.precompile?.(this.game.renderer, this.game.cam.cam, this.game.scene), this.game.audio?.prepare?.(prep)]), new Promise(r => setTimeout(r, 2500))]); } catch (e) { console.warn('[precompile]', e); }
     // towns follow your local clock: day, dusk, night
     if (zone.setEnv && (zone.kind === 'city' || ZONES[id]?.kind === 'city' || id === 'stronghold')) { const hr = new Date().getHours(); const tod = hr >= 7 && hr < 17 ? 'day' : hr >= 17 && hr < 20 ? 'dusk' : 'night'; try { zone.setEnv(tod); this.game.applyEnv(zone.env); } catch (e) { console.warn('[env]', e); } }
     this.relayLevel(this.game.level);
@@ -255,8 +260,8 @@ export class Session {
   spawnMe(at) {
     const c = this.heroChar(this.char);
     const st = this.statsFor(c);
-    const look = { tier: c.gear?.lookTier ?? gearTier(c), dye: c.gear?.dye || null };
-    const kit = this.game.spawnHero({ ...c, gear: look, weapon: { tier: gearTier(c), hone: c.equip.weapon?.hone || 0 } }, st, at || { x: 0, z: 0 });
+    const mo = this.modelOpts(c);
+    const kit = this.game.spawnHero({ ...c, gear: mo.gear, weapon: mo.weapon }, st, at || { x: 0, z: 0 });
     kit.items = (c.items || []).map(it => ({ id: it.id, count: Math.min(it.count, this.account.count(it.id) || it.count), cd: 0 }));
     kit.u.data.title = c.title;
     this.game.player.setMoveButton(this.account.settings.moveButton || 'right');
@@ -519,8 +524,17 @@ export class Session {
     if (id === 'settings') return this.openSettings();
     const data = this.windowData(id);
     if (data) this.ui.toggle(id, data); else this.ui.toast('This window opens soon.', 'info');
+    if (id === 'character') this.mountPortrait();
   }
-  refreshWindow(id) { if (this.ui.isOpen?.(id)) { const d = this.windowData(id); if (d) this.ui.update(id, d); } }
+  refreshWindow(id) { if (this.ui.isOpen?.(id)) { const d = this.windowData(id); if (d) this.ui.update(id, d); if (id === 'character') this.mountPortrait(); } }
+  /** the model options a character's hero is drawn with (world, portrait) */
+  modelOpts(c) { return { cls: c.cls, sex: c.sex, look: c.look, gear: { tier: c.gear?.lookTier ?? gearTier(c), dye: c.gear?.dye || null }, weapon: { tier: gearTier(c), hone: c.equip?.weapon?.hone || 0 } }; }
+  mountPortrait() {
+    if (!this.char || !this.ui.isOpen?.('character')) return;
+    const el = this.ui.get?.('character')?.portrait; if (!el) return;
+    if (!this.portrait) { this.portrait = new Portrait(this.game); this.game.hooks.frame.push(dt => this.portrait.update(dt)); }
+    this.portrait.mount(el, this.modelOpts(this.heroChar(this.char)));
+  }
   windowData(id) {
     const c = this.char, A = this.account; if (!c) return null;
     if (WINDOWS[id]) { try { return WINDOWS[id](this); } catch (e) { console.error('[window]', id, e); return null; } }

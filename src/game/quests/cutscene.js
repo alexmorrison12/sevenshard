@@ -13,11 +13,13 @@ import { makeResident, storyDef, walkable } from './spawn.js';
 export const SKIP = Symbol('skip');
 let active = null;
 export const cutsceneActive = () => active;
+/** true while a story fade has the screen (mostly) black */
+export const screenDark = () => { const f = document.querySelector('.qs-cine .qs-fade'); return !!f && +f.style.opacity > 0.4; };
 
 const CSS = `
 .qs-cine{position:fixed;inset:0;pointer-events:none;z-index:45;font-family:"Segoe UI",Roboto,system-ui,sans-serif}
 .qs-fade{position:absolute;inset:0;background:#000;opacity:0;transition:none}
-.qs-sub{position:absolute;left:50%;bottom:14.5%;transform:translateX(-50%);width:min(900px,86vw);text-align:center;opacity:0;transition:opacity .25s}
+.qs-sub{position:absolute;left:50%;bottom:13.8%;transform:translateX(-50%);width:min(980px,88vw);padding:10px 34px 12px;text-align:center;opacity:0;transition:opacity .25s;background:radial-gradient(ellipse at center,rgba(4,4,8,.62) 0%,rgba(4,4,8,.42) 55%,rgba(4,4,8,0) 78%)}
 .qs-sub.on{opacity:1}
 .qs-sub b{display:block;font:600 13px/1.2 Georgia,"Times New Roman",serif;letter-spacing:.22em;text-transform:uppercase;color:#e9c46a;margin-bottom:6px;text-shadow:0 1px 3px #000}
 .qs-sub span{display:inline;font:500 clamp(16px,1.35vw,22px)/1.45 Georgia,"Times New Roman",serif;color:#f6efdd;text-shadow:0 2px 4px #000,0 0 14px rgba(0,0,0,.85)}

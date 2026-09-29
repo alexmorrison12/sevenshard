@@ -1050,6 +1050,22 @@ A.kick = {
   ],
 };
 
+// whirl on those behind him: backhand windup on the left, a half pivot to the right and a flat backhand sweep through
+// the rear arc (hit = the axe passing directly behind him), then he turns back to face the front
+const PIV = (th, rel, y, rad) => K2(SWR(rel, th, y, -1, rad), { hips: [0, th, 0], $footL: rotY(TOE.L, th * 0.7), $footR: rotY(TOE.R, th * 0.7), $gripL: 1 });
+A.back_swipe = {
+  dur: 1.0, hits: [0.45], hitAt: ['weapon'], lock: 1, active: [[0.36, 0.6]],
+  keys: [
+    [0, {}],
+    [0.18, K2(SW(105, 1.3, -1, 0.5), TW(0.28), { $gripL: 1, $hips: [0, -0.07, 0.02], 'head+': [0, -0.55, 0], $charge: 0.5 }), 'o'],
+    [0.32, K2(PIV(-0.55, -55, 1.15, 0.74), TW(-0.1), { $hips: [0, -0.12, 0], 'head+': [0, -0.45, 0], $charge: 1 }), 'i'],
+    [0.45, K2(PIV(-1.35, -105, 1.1, 0.8), TW(-0.25), { $hips: [0, -0.14, 0], 'head+': [0, -0.2, 0], $charge: 1, $shake: 0.2 }), 'l'],
+    [0.6, K2(PIV(-1.65, -150, 1.18, 0.6), TW(-0.34), { $hips: [0, -0.1, 0], 'head+': [0, -0.1, 0], $charge: 0.6 }), 'o'],
+    [0.82, K2(SW(-80, 1.1, 1, 0.5), TW(-0.12), { hips: [0, -0.5, 0], $footL: rotY(TOE.L, -0.35), $footR: rotY(TOE.R, -0.35), $gripL: 1, $hips: [0, -0.05, 0], $charge: 0.2 }), 'io'],
+    [1.0, { hips: null, $footL: null, $footR: null, $gripL: 0, $charge: 0 }],
+  ],
+};
+
 // ghost phase: axe raised to the sky, open claw, spectral axes rain down (hits[0] = the call)
 A.cast = {
   dur: 1.9, hits: [0.9], hitAt: ['weaponTip'], lock: 1,

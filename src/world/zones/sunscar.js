@@ -131,14 +131,17 @@ export async function build(zone, { quality = 1 } = {}) {
   }
   // the bleached ribcage of a long-dead giant (south-east): a buried spine ridge and five pairs of huge ribs
   { const rx = 20, rz = 23, y = H(rx, rz), ax = Math.cos(-0.35), az = Math.sin(-0.35);   // spine direction
-    kit.add('bone', tube([V(rx - ax * 9, y - 0.9, rz - az * 9), V(rx - ax * 3, y - 0.2, rz - az * 3), V(rx + ax * 3, y - 0.25, rz + az * 3), V(rx + ax * 9, y - 1.0, rz + az * 9)], [0.8, 1.0, 0.9, 0.5], 10, true), null, { tint: 0xf2e8d2, chunkAt: [rx, rz] });
+    kit.add('bone', tube([V(rx - ax * 9, y - 0.9, rz - az * 9), V(rx - ax * 3, y - 0.2, rz - az * 3), V(rx + ax * 3, y - 0.25, rz + az * 3), V(rx + ax * 9, y - 1.0, rz + az * 9)], [0.8, 1.0, 0.9, 0.5], 10, true), null, { tint: [1.3, 1.24, 1.08], chunkAt: [rx, rz] });
+    g.paint('sand', S.line([[rx - ax * 9, rz - az * 9], [rx + ax * 9, rz + az * 9]], 3.5), { soft: 1.5, noise: 1, nscale: 1.5 });
     for (let k = 0; k < 5; k++) {
       const t = (k + 0.5) / 5 - 0.5, sx = rx + ax * t * 14, sz = rz + az * t * 14, sc = 1 - Math.abs(t) * 0.6;
       for (const s of [-1, 1]) {
         const px = -az * s, pz = ax * s;              // outward (perpendicular to the spine)
-        const pts = [V(sx, y - 0.2, sz), V(sx + px * 1.6 * sc, y + 3.2 * sc, sz + pz * 1.6 * sc), V(sx + px * 3.4 * sc - ax * 0.4, y + 4.6 * sc, sz + pz * 3.4 * sc - az * 0.4), V(sx + px * 5.2 * sc - ax * 0.8, y + 3.6 * sc, sz + pz * 5.2 * sc - az * 0.8), V(sx + px * 6.2 * sc - ax * 1.0, y - 0.6, sz + pz * 6.2 * sc - az * 1.0)];
-        kit.add('bone', tube(pts, [0.62, 0.55, 0.46, 0.36, 0.26].map(r => r * (0.7 + sc * 0.3)), 8, false), null, { tint: 0xf4ecd8, chunkAt: [rx, rz] });
-        kit.block(S.circle(pts[4].x, pts[4].z, 0.55), 0.3);
+        const ctrl = [V(sx, y - 0.2, sz), V(sx + px * 1.6 * sc, y + 3.2 * sc, sz + pz * 1.6 * sc), V(sx + px * 3.4 * sc - ax * 0.4, y + 4.6 * sc, sz + pz * 3.4 * sc - az * 0.4), V(sx + px * 5.2 * sc - ax * 0.8, y + 3.6 * sc, sz + pz * 5.2 * sc - az * 0.8), V(sx + px * 6.2 * sc - ax * 1.0, y - 0.6, sz + pz * 6.2 * sc - az * 1.0)];
+        const curve = new THREE.CatmullRomCurve3(ctrl), pts = curve.getPoints(16);
+        kit.add('bone', tube(pts, pts.map((_, j) => (0.62 - 0.36 * j / 16) * (0.7 + sc * 0.3)), 9, false), null, { tint: [1.35, 1.28, 1.12], chunkAt: [rx, rz] });
+        kit.block(S.circle(ctrl[4].x, ctrl[4].z, 0.55), 0.3);
+        g.paint('sand', S.circle(ctrl[4].x, ctrl[4].z, 1.6), { soft: 1.2, noise: 0.6, nscale: 1 });
       }
     }
     kit.block(S.line([[rx - ax * 9, rz - az * 9], [rx + ax * 9, rz + az * 9]], 2.2), 0.3);

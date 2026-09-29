@@ -30,12 +30,12 @@ b.setGlow('counter', 1);  b.breakPart('hornL');  b.setTint(0xffffff, 0.6);  b.di
 |---|---|
 | `root` | `THREE.Object3D` — add to the scene; set `position` / `rotation.y` (facing). Model faces −Z. Children: `pivot` (scaled model), two world-space particle pools, weapon trails, horn debris. |
 | `height`, `radius`, `meta` | metres; `meta` = this boss's `BOSSES` entry (`meta.actions[name].dur/hits`). |
-| `sockets` | `Object3D`s: `head, mouth, chest, back, handR, handL, weapon, weaponTip, feet…` + per-boss extras (below), `parts: { hornL, hornR }` (Gorrath). Weapon sockets ride on the weapon, also while it flies or lies on the ground. |
+| `sockets` | `Object3D`s: `head, mouth, chest, back, handR, handL, weapon, weaponTip, feet…` + per-boss extras (below), `parts: { hornL, hornR }` (Gorrath) / `{ mane, tail }` (hounds). Weapon sockets ride on the weapon, also while it flies or lies on the ground. |
 | `update(dt, state)` | `dt` is clamped to [0, 0.1] s. `state = { speed (m/s along facing), turn (rad/s), dead, groggy, enraged, ghost (0..1), combat (default true) }` (other keys ignored). Gait with planted feet (walk → run blend), idle life (breathing, look-around, snorts), springs (capes, tails, chains, tabards, flail), glow smoothing, particles, trails. **`dt = 0` holds the exact pose.** `dead: true` plays `death` and holds; true→false revives (and returns dropped weapons). `groggy: true` plays `groggy` and loops its `sustain` segment until false, then it gets up. `enraged` → persistent enrage glow. `ghost` → spectral form (translucent, no shadow). Actions with a `gait` hint (charges) run the legs even when `speed` is 0. |
 | `play(name, { dur, dist })` | one-shot action → `{ dur, hits }`; `dur` stretches the move (uniformly, or only the `stretch` segment), `hits` scale with it. `play('idle')` cancels. Unknown names and actions of a dead boss return `{ dur: 0, hits: [] }` (e.g. `getup`). `dist` (m): `axe_throw` range (default 15). `loop` is ignored (use `dur`). |
 | `stop(name?)`, `playing(name?)` | fade out actions / query. |
 | `setGlow(kind, v)` | `'counter'` (electric-blue fresnel rim + rising bands; body stays readable), `'enrage'` (hotter emissive shifted to the enrage colour + red rim + more embers), `'ghost'` (spectral blue-violet translucency, wisps). 0..1; combined by max with state flags and action channels (e.g. `triple_sweep` shows its own counter shimmer during its windup). |
-| `breakPart(name)` | Gorrath `'hornL'`/`'hornR'`: the horn beyond the bronze ring vanishes (also from shadows), shards tumble and settle, sparks; returns false if unknown/already broken. `repair()` restores. |
+| `breakPart(name)` | Destruction targets, listed in `boss.def.breakable` (the encounter's `breakModelPart` stem fallback reads it): Gorrath `'hornL'`/`'hornR'` — the horn beyond the bronze ring vanishes (also from shadows), shards tumble and settle, sparks. Skarn/Vesk `'mane'` — the dorsal spines and neck collar shatter and the flame mane dies to smoke and embers; `'tail'` — the burning tuft / scythe blade breaks off (its flames and trail stop). Returns false if unknown/already broken. `repair()` restores. |
 | `setTint(hex, amount)` | hit flash / freeze tint (caller fades `amount`). |
 | `onEvent = (name, worldPos, data, boss) => {}` | `'hit'` at every hit moment (`data.index`, position = the action's `hitAt` socket), `'step'` (footfall, `data` = leg id), `'snort'`, `'land'`, `'jump'`, `'kneel'`, `'fall'`, `'roar'`, `'release'`/`'catch'` (Gorrath's axe throw), `'drop'`/`'weaponDrop'` (death), `'break'` (part), `'rift'`, `'wave'`, `'summon'`, `'howl'`, `'slam'`, `'stomp'`, `'burst'`, `'ghost'`, `'skid'`, `'charge'`, `'ignite'`, `'flinch'`. `worldPos` may be null. |
 | `weapons` | Gorrath `axe`, Varkhul `sword`: `{ mesh }` separate objects. `flying('axe')` is true while Gorrath's axe is thrown (world-space boomerang path, spins flat, returns to the hand — collide with `sockets.weapon`). On death the weapon is dropped to the ground. |
@@ -59,7 +59,7 @@ weapon edge (+ debris after a horn break). Materials share one GL program per va
 - Colours are tuned for the `blood` raid preset (both legion gates): dark hides, a cool silhouette rim, hot glows.
 
 ## Lab (`src/lab/legion.js`, core in `legion_core.js`)
-Boss/action pickers, `dur ×`, loop, glow sliders, state toggles (enraged/groggy/dead), horn breaks, hit flash,
+Boss/action pickers, `dur ×`, loop, glow sliders, state toggles (enraged/groggy/dead), part breaks (hornL/hornR/mane/tail) + repair, hit flash,
 locomotion (speed/turn/patrol), a 1.85 m capsule hero, views `iso` (game camera; giants pull back), `cine` (close & low),
 `gamecine` (the encounter intro camera), `close` (head), `front/side/back/top/orbit`, and a `blood light (raid)` button.
 URL: `?boss=gorrath&act=axe_cleave&loop=1&t=1.2&view=iso|cine|gamecine&light=blood&counter=1&enrage=1&ghost=1&speed=2.6&hero=0&face=180`.
@@ -92,6 +92,7 @@ Automation (`window.__legion`): `set(id)`, `play(name, {loop})`, `pose(name, t, 
 | `intro` | 3.8 | 0.55, 2.6 | stretch 0.8–1.9 |
 | `leap` | 2.3 | 1.5 | move 0.45–1.5 →target (root arc 6 m) |
 | `kick` | 1.5 | 0.62 |  |
+| `back_swipe` | 1 | 0.45 | active 0.36–0.6 |
 | `cast` | 1.9 | 0.9 |  |
 | `spectral_lunge` | 2.3 | 1.1, 1.42 | active 1.1–1.5 |
 | `spawn` | 0.9 | – |  |
@@ -166,7 +167,7 @@ Automation (`window.__legion`): `set(id)`, `play(name, {loop})`, `pose(name, t, 
 | `hit` | 1.2 | 0.15 |  |
 | `death` | 6 | 2.2, 4 | holds |
 
-### Gatekeeper, Warden of the Chaos Gate (`gatekeeper`) — height 4 m, radius 1.6 m, walk ≈ 2.2 m/s, run ≈ 6 m/s · 46296 tris
+### Gatekeeper, Warden of the Chaos Gate (`gatekeeper`) — height 4 m, radius 1.6 m, walk ≈ 2.2 m/s, run ≈ 6 m/s · 46544 tris
 | action | dur (s) | hits (s) | extra |
 |---|---|---|---|
 | `idle` | 3 | – |  |
@@ -189,7 +190,8 @@ Automation (`window.__legion`): `set(id)`, `play(name, {loop})`, `pose(name, t, 
   horned-ring sigil on each bit, flame emitters, 2 speed trails). Sockets: `nose`,
   `weaponTip2` (second blade), `feetL/feetR`, `parts.hornL/hornR`. `triple_sweep` = Tyrant's Reaping: overhead windup
   with the counter shimmer (0.35–1.8), two sweeps, then a full 360° Reaping Wheel. `rift_carve` raises the axe high and
-  charges it (glow) before the slam. `leap` / `kick` / `cast` / `spectral_lunge` / `spawn` / `hit` are extra moves.
+  charges it (glow) before the slam. Rear attacks: `back_swipe` (1.0 s, hit 0.45 — backhand windup, half pivot, flat sweep through the rear arc, turns back)
+  and `kick` (1.5 s, hit 0.62 — a hoof kick straight back). `leap` / `cast` / `spectral_lunge` / `spawn` / `hit` are extra moves.
 - **Skarn / Vesk** (`hounds.js`): twin demon hounds (shared anatomy). Skarn: charcoal + molten cracks, flame-licked
   dorsal spikes and particle flame mane, ridged ram horns curling back and forward past the cheeks, burning tail tuft. Vesk: leaner, void-black with violet
   fissures, obsidian spines with violet fire, swept blade horns, scythe-bladed tail. Breath = directed particle jet

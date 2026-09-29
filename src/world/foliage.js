@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import { RNG, Simplex, clamp } from '../core/noise.js';
 import { MeshBuilder, tube, blob, linColor } from '../engine/geom.js';
 import { lambert, G } from '../engine/materials.js';
-import { groundLayers, foliageAtlas, kitTex, LAYER_TILE } from './textures.js';
+import { groundLayers, foliageAtlas, autumnAtlas, kitTex, LAYER_TILE } from './textures.js';
 import { BAYER, cutV, cutF } from './kit.js';
 import { circle } from './shapes.js';
 
@@ -130,6 +130,7 @@ export function foliageMaterials() {
     core: lambert({ vertexColors: true }, { wrap: 0.65, trans: 0.3, key: 'fol-core', uniforms: U, vertex: vs => cutV(windVertex(0.08)(vs)), fragment: leafFade }),
     bark: lambert({ map: bark.map, normalMap: bark.normalMap, vertexColors: true }, { wrap: 0.3, key: 'fol-bark', uniforms: U, vertex: vs => cutV(windVertex(0.015)(vs)), fragment: trunkFade }),
     flower: lambert({ vertexColors: true, side: THREE.DoubleSide }, { wrap: 0.5, trans: 0.3, key: 'fol-flower', uniforms: U, vertex: windVertex(0.12) }),
+    autumn: lambert({ map: autumnAtlas().map, vertexColors: true, alphaTest: 0.5, side: THREE.DoubleSide }, { wrap: 0.6, trans: 0.55, rim: 0.2, rimColor: 0xffd090, key: 'fol-autumn', uniforms: U, vertex: vs => cutV(windVertex(0.1)(vs)), fragment: leafFade }),
   };
   for (const m of Object.values(FM)) m.userData.shared = true;
   return FM;
@@ -207,6 +208,14 @@ export const SPECIES = {
     return { trunk: trunk.build(), leaves: leaf.build(), core: core.build(), height: h, radius: 0.45 * sc };
   },
   blossom(seed, o = {}) { return SPECIES.broadleaf(seed, { slot: SLOT.blossom, dark: 0x6a4050, light: 0xffd0e0, core: 0x2a1a20, ...o }); },
+  /** autumn maple: leaf cards from the autumn atlas (o.palette 0 red-orange, 1 orange-gold, 2 crimson, 3 gold fans) */
+  maple(seed, o = {}) {
+    const pal = o.palette ?? (seed % 3);
+    const cols = [[0x7a2a10, 0xffe0b0], [0x8a4a14, 0xfff0c0], [0x6a1a1a, 0xffc0b0], [0x8a6a18, 0xfff4c8]][pal];
+    const t = SPECIES.broadleaf(seed, { slot: pal, dark: cols[0], light: cols[1], core: 0x2a0e06, ...o });
+    t.leafMat = 'autumn';
+    return t;
+  },
   cypress(seed, o = {}) {
     const rng = new RNG(seed), nz = new Simplex(seed);
     const sc = o.scale ?? rng.range(0.9, 1.15), H = rng.range(7, 9) * sc;
@@ -333,7 +342,7 @@ export class Flora {
       for (const [, sub] of bucket(list)) {
         if (pr.trunk) place(pr.trunk, this.mats.bark, sub, true);
         if (pr.core) place(pr.core, this.mats.core, sub, true);
-        if (pr.leaves) place(pr.leaves, this.mats.leaves, sub, true);
+        if (pr.leaves) place(pr.leaves, pr.leafMat ? this.mats[pr.leafMat] : this.mats.leaves, sub, true);
       }
     }
     for (const [, f] of this.flowers) for (const [, sub] of bucket(f.list)) place(f.geo, this.mats.flower, sub, false);

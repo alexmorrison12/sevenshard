@@ -38,7 +38,7 @@ export class Presenter {
     on('staggerBreak', ({ tgt }) => { this.call('play', 'stagger_break', { pos: tgt.pos, x: tgt.pos.x, z: tgt.pos.z, r: tgt.radius * 2 }); this.sfx('stagger_break', tgt.pos); this.g.ui?.banner?.('STAGGER BREAK', { kind: 'stagger' }); this.g.cam.shake(0.45); });
     on('partBreak', ({ tgt }) => { this.call('play', 'part_break', { pos: tgt.pos, x: tgt.pos.x, z: tgt.pos.z }); this.sfx('part_break', tgt.pos); this.g.ui?.banner?.('PART DESTROYED', { kind: 'stagger' }); });
     on('perfect', ({ unit }) => { if (this.isLocal(unit)) { this.num(unit, 'PERFECT', 'crit'); this.sfx('crit', unit.pos); } });
-    on('awaken', ({ unit }) => { if (this.near(unit, 30)) { this.g.renderer.fx.flash = 0.12; this.g.renderer.fx.radial = 0.6; } });
+    on('awaken', ({ unit }) => { if (this.isLocal(unit)) { this.g.renderer.fx.flash = 0.12; this.g.renderer.fx.radial = 0.6; } });
     on('dash', ({ unit }) => { if (this.isLocal(unit)) this.g.renderer.fx.radial = Math.max(this.g.renderer.fx.radial, 0.25); });
     on('denied', ({ unit, why }) => { if (this.isLocal(unit)) { this.sfx('ui_error'); this.g.ui?.toast?.({ cooldown: 'Skill is on cooldown.', mana: 'Not enough mana.', identity: 'Identity gauge is not full.', awakening: 'No awakening uses left.' }[why] || 'Not ready.', 'error'); } });
     on('knock', ({ tgt, knock }) => { if (this.isLocal(tgt) && (knock === 'down' || knock === 'up')) { this.g.cam.shake(0.25); this.g.renderer.fx.hurt = Math.max(this.g.renderer.fx.hurt, 0.25); } });

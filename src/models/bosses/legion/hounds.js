@@ -10,6 +10,7 @@ import { col } from '../../kit/sdf.js';
 import { lerp3 } from '../../kit/parts.js';
 import { clamp01, mix, sstep, TAU } from '../../kit/rig.js';
 import { quadCarriage } from './boss.js';
+import { BossAcc } from './acc.js';
 
 const HP = [0, 1.9, -1.1], HS = 1.32;          // head pivot + head sculpt scale (big heavy skulls)
 const H = (x, y, z) => [HP[0] + x * HS, HP[1] + y * HS, HP[2] + z * HS];
@@ -26,6 +27,18 @@ const PAL = {
   },
 };
 const DT = { hide: [0.25, 0.3, 0.25, 0], fur: [0.6, 0, 0.12, 0], horn: [0.3, 0, 0.2, 0.25], claw: [0, 0, 0.2, 0.2] };
+
+/** Obsidian / bone shard for broken spines and tail blades (instanced debris). */
+function spineShard(c) {
+  const acc = new BossAcc();
+  const g = new THREE.TetrahedronGeometry(1, 1);
+  const p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) p.setXYZ(i, p.getX(i) * 0.5, p.getY(i) * 1.5, p.getZ(i) * 0.45);
+  g.computeVertexNormals();
+  const a = col(c.spine), t = col(c.spineT);
+  acc.add(g, { skin: rigid(0), color: (q) => lerp3(a, t, sstep(0.3, 1, q.y * 0.5 + 0.5)), emis: (q) => sstep(0.5, 1, q.y * 0.5 + 0.5) * 1.6, dtl: DT.horn, ext: [0.3, 0, 0, 4] });
+  return acc.build();
+}
 
 function makeHound(kind) {
   const c = PAL[kind], G = c.girth, fire = kind === 'skarn';
@@ -172,18 +185,18 @@ function makeHound(kind) {
         });
       }
       // brow horns (Skarn) and bone spikes: neck collar + elbows
-      const spk = (sk2, a, d, L, r, glowTip) => {
+      const spk = (sk2, a, d, L, r, glowTip, pid = 0) => {
         const D = new THREE.Vector3(...d).normalize(), A0 = new THREE.Vector3(...a);
         const pts2 = [A0, A0.clone().addScaledVector(D, L * 0.5).add(new THREE.Vector3(0, L * 0.05, 0)), A0.clone().addScaledVector(D, L)];
         const s0 = col(c.spine), sT = col(glowTip ? (fire ? 0xff7a20 : c.spineT) : c.hornT);
-        acc.add(sweep(pts2, [r, r * 0.55, r * 0.04], { radial: 6, capStart: true }), { skin: sk2, dtl: DT.horn, color: (pp, n, uv) => lerp3(s0, sT, sstep(0.5, 1, uv[1])), emis: (pp, uv) => (glowTip ? sstep(0.65, 1, uv[1]) * 2.2 : 0), ext: (pp, uv) => [0.3, 0, 0, glowTip && uv[1] > 0.65 ? 4 : 0] });
+        acc.add(sweep(pts2, [r, r * 0.55, r * 0.04], { radial: 6, capStart: true }), { skin: sk2, dtl: DT.horn, color: (pp, n, uv) => lerp3(s0, sT, sstep(0.5, 1, uv[1])), emis: (pp, uv) => (glowTip ? sstep(0.65, 1, uv[1]) * 2.2 : 0), ext: (pp, uv) => [0.3, pid, 0, glowTip && uv[1] > 0.65 ? 4 : 0] });
       };
       if (fire) for (const s of [-1, 1]) spk(hb, H(s * 0.09, 0.09, -0.24), [s * 0.4, 0.8, -0.5], 0.2, 0.035, false);
       for (let i = 0; i < 9; i++) {
         const a = (i / 8 - 0.5) * 3.4;
         const p0 = [Math.sin(a) * 0.3, 1.75 + Math.cos(a) * 0.26, -0.72];
         const { p: q } = S.project(p0.slice(), 0, 3);
-        spk(skinAt(q), [q[0] * 0.95, q[1] * 0.98, q[2] + 0.02], [Math.sin(a) * 0.7, Math.cos(a) * 0.5 + 0.3, 0.9], 0.2 + 0.08 * Math.cos(a), 0.04, true);
+        spk(skinAt(q), [q[0] * 0.95, q[1] * 0.98, q[2] + 0.02], [Math.sin(a) * 0.7, Math.cos(a) * 0.5 + 0.3, 0.9], 0.2 + 0.08 * Math.cos(a), 0.04, true, 1);   // collar (part: mane)
       }
       for (const s of [-1, 1]) spk(rigid(b(s < 0 ? 'fLL' : 'fLR')), [s * 0.33, 0.82, -0.36], [s * 0.3, 0.3, 1], 0.2, 0.04, false);
       // ears (short, swept back)
@@ -232,16 +245,16 @@ function makeHound(kind) {
         const tip2 = a.clone().addScaledVector(dir, LL), mid2 = a.clone().addScaledVector(dir, LL * 0.55);
         acc.add(sweep([a, mid2, tip2], [fire ? 0.06 : 0.05, fire ? 0.035 : 0.03, 0.003], { radial: 5, flat: fire ? 0.7 : 0.45 }), {
           skin: sk, dtl: DT.horn, color: (pp, n, uv) => lerp3(s0, sT, sstep(0.55, 1, uv[1])), emis: (pp, uv) => sstep(0.6, 1, uv[1]) * (fire ? 2.6 : 2.2),
-          ext: (pp, uv) => [0.3, 0, 0, uv[1] > 0.6 ? 4 : 0],
+          ext: (pp, uv) => [0.3, 1, 0, uv[1] > 0.6 ? 4 : 0],   // part 1: the mane
         });
       }
-      // tail tip: burning tuft (Skarn) / scythe blade (Vesk)
+      // tail tip: burning tuft (Skarn) / scythe blade (Vesk) — part 2: the tail
       const t4 = rigid(b('tail4'));
       if (fire) {
         const f1 = col(0xff5a10), f2 = col(0xffe0a0);
         for (let i = 0; i < 5; i++) {
           const a0 = new THREE.Vector3(0, 0.9, 2.06), d = new THREE.Vector3((i - 2) * 0.25, 0.8, 0.6).normalize();
-          acc.add(sweep([a0, a0.clone().addScaledVector(d, 0.12), a0.clone().addScaledVector(d, 0.26)], [0.05, 0.03, 0.003], { radial: 5 }), { skin: t4, dtl: [0, 0, 0, 0], color: (pp, n, uv) => lerp3(f1, f2, uv[1]), emis: (pp, uv) => 1.5 + uv[1] * 2, ext: [0, 0, 0, 3], fx: (pp, uv) => uv[1] * 1.5 });
+          acc.add(sweep([a0, a0.clone().addScaledVector(d, 0.12), a0.clone().addScaledVector(d, 0.26)], [0.05, 0.03, 0.003], { radial: 5 }), { skin: t4, dtl: [0, 0, 0, 0], color: (pp, n, uv) => lerp3(f1, f2, uv[1]), emis: (pp, uv) => 1.5 + uv[1] * 2, ext: [0, 2, 0, 3], fx: (pp, uv) => uv[1] * 1.5 });
         }
       } else {
         const bl = new THREE.Shape();
@@ -249,7 +262,7 @@ function makeHound(kind) {
         const eg = new THREE.ExtrudeGeometry(bl, { depth: 0.02, bevelEnabled: false, curveSegments: 8 });
         eg.translate(0, 0, -0.01);
         const m = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(0, Math.PI / 2, -0.6, 'YXZ')); m.setPosition(0, 0.9, 2.06);
-        acc.add(eg, { matrix: m, skin: t4, dtl: DT.horn, color: (pp) => cS, emis: 1.6, ext: [0.5, 0, 0, 4] });
+        acc.add(eg, { matrix: m, skin: t4, dtl: DT.horn, color: (pp) => cS, emis: 1.6, ext: [0.5, 2, 0, 4] });
       }
     },
 
@@ -259,6 +272,12 @@ function makeHound(kind) {
       handR: ['fPR', [0.3, 0.1, -0.85]], handL: ['fPL', [-0.3, 0.1, -0.85]], weapon: ['fPR', [0.3, 0.1, -0.85]], weaponTip: ['fPR', [0.3, 0.05, -0.95]],
       tail: ['tail4', [0, 0.9, 2.1]], feetFL: ['fPL', [-0.3, 0, -0.78]], feetFR: ['fPR', [0.3, 0, -0.78]], feetRL: ['rPL', [-0.3, 0, 0.7]], feetRR: ['rPR', [0.3, 0, 0.7]],
     },
+    // destruction targets (encounter scripts: Skarn 'mane', Vesk 'tail'; both hounds carry both)
+    breakable: {
+      mane: { id: 1, bone: 'neck', pos: [0, 2.08, -0.72], dir: [0, 0.6, 0.3], shards: 14, shardSize: 0.1 },
+      tail: { id: 2, bone: 'tail4', pos: [0, 0.92, 2.08], dir: [0, 0.4, 1], shards: 8, shardSize: 0.09 },
+    },
+    debris: { geo: () => spineShard(c) },
     gait: {
       legs: [
         { id: 'FL', chain: ['fUL', 'fLL', 'fPL'], toe: [-0.3, 0, -0.8], body: 'chest', scap: 0.3, lift: 0.22, flex: 1.3, out: 0.05, heel: 0.45 },
@@ -282,14 +301,18 @@ function makeHound(kind) {
     trails: [
       { bone: 'fPR', a: [0.3, 0.12, -0.8], b: [0.3, 0.02, -0.98], vMin: 8, vMax: 16, core: fire ? [6, 3, 1] : [3.5, 1.5, 6], edge: fire ? [2.2, 0.35, 0.05] : [0.9, 0.2, 2.4], life: 0.18 },
       { bone: 'fPL', a: [-0.3, 0.12, -0.8], b: [-0.3, 0.02, -0.98], vMin: 8, vMax: 16, core: fire ? [6, 3, 1] : [3.5, 1.5, 6], edge: fire ? [2.2, 0.35, 0.05] : [0.9, 0.2, 2.4], life: 0.18 },
-      { bone: 'tail4', a: [0, 1.0, 1.95], b: [0, 0.86, 2.14], vMin: 10, vMax: 20, core: fire ? [6, 3, 1] : [3.5, 1.5, 6], edge: fire ? [2.2, 0.35, 0.05] : [0.9, 0.2, 2.4], life: 0.2 },
+      { bone: 'tail4', a: [0, 1.0, 1.95], b: [0, 0.86, 2.14], vMin: 10, vMax: 20, core: fire ? [6, 3, 1] : [3.5, 1.5, 6], edge: fire ? [2.2, 0.35, 0.05] : [0.9, 0.2, 2.4], life: 0.2, when: h => (h.broken?.tail ? 0 : 1) },
     ],
     emitters: [
       // mane: flames (Skarn) / violet void fire (Vesk) along the spine
-      { bone: 'neck', p: [0, 2.1, -0.82], span: [0.03, 0.05, 0.3], kind: fire ? 'flame' : 'void', rate: fire ? 70 : 45, opts: { scale: fire ? 1.25 : 0.9 }, when: h => (h.dead ? 0.1 : 1) * (1 + h.glow.enrage) },
-      { bone: 'chest', p: [0, 2.08, -0.36], span: [0.03, 0.03, 0.32], kind: fire ? 'flame' : 'void', rate: fire ? 60 : 40, opts: { scale: fire ? 1.15 : 0.85 }, when: h => (h.dead ? 0.1 : 1) * (1 + h.glow.enrage) },
-      { bone: 'body', p: [0, 1.98, 0.25], span: [0.03, 0.03, 0.34], kind: fire ? 'flame' : 'void', rate: fire ? 40 : 26, opts: { scale: fire ? 0.9 : 0.7 }, when: h => (h.dead ? 0.05 : 1) * (1 + h.glow.enrage) },
-      { bone: 'tail4', p: [0, 0.95, 2.1], kind: fire ? 'flame' : 'void', rate: 16, opts: { scale: 0.9 }, when: h => (h.dead ? 0 : 1) },
+      { bone: 'neck', p: [0, 2.1, -0.82], span: [0.03, 0.05, 0.3], kind: fire ? 'flame' : 'void', rate: fire ? 70 : 45, opts: { scale: fire ? 1.25 : 0.9 }, when: h => (h.dead ? 0.1 : 1) * (1 + h.glow.enrage) * (h.broken?.mane ? 0.08 : 1) },
+      { bone: 'chest', p: [0, 2.08, -0.36], span: [0.03, 0.03, 0.32], kind: fire ? 'flame' : 'void', rate: fire ? 60 : 40, opts: { scale: fire ? 1.15 : 0.85 }, when: h => (h.dead ? 0.1 : 1) * (1 + h.glow.enrage) * (h.broken?.mane ? 0.08 : 1) },
+      { bone: 'body', p: [0, 1.98, 0.25], span: [0.03, 0.03, 0.34], kind: fire ? 'flame' : 'void', rate: fire ? 40 : 26, opts: { scale: fire ? 0.9 : 0.7 }, when: h => (h.dead ? 0.05 : 1) * (1 + h.glow.enrage) * (h.broken?.mane ? 0.08 : 1) },
+      { bone: 'tail4', p: [0, 0.95, 2.1], kind: fire ? 'flame' : 'void', rate: 16, opts: { scale: 0.9 }, when: h => (h.dead || h.broken?.tail ? 0 : 1) },
+      // broken parts smoulder
+      { bone: 'neck', p: [0, 2.02, -0.7], span: [0.05, 0.05, 0.45], kind: 'smoke', rate: 9, opts: { scale: 1.1 }, when: h => (h.broken?.mane ? 1 : 0) },
+      { bone: 'chest', p: [0, 2.0, -0.2], span: [0.05, 0.05, 0.5], kind: 'ember', rate: 6, opts: { scale: 0.8, col: fire ? [5, 2, 0.5] : [2.5, 0.8, 5] }, when: h => (h.broken?.mane ? 1 : 0) },
+      { bone: 'tail4', p: [0, 0.92, 2.06], kind: 'smoke', rate: 5, opts: { scale: 0.7 }, when: h => (h.broken?.tail ? 1 : 0) },
       { bone: 'chest', p: [0, 1.6, -0.4], span: [0.3, 0.3, 0.3], kind: 'ember', rate: fire ? 10 : 0, opts: { scale: 1.3 }, when: h => 1 + h.glow.enrage * 2 },
       { bone: 'chest', p: [0, 1.6, -0.4], span: [0.3, 0.3, 0.3], kind: 'ghost', rate: fire ? 0 : 6, opts: { scale: 1.2, col: [1.6, 0.5, 3.4] }, when: h => 1 + h.glow.enrage * 2 },
       // eyes

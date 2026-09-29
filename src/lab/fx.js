@@ -199,6 +199,7 @@ function numberStorm(n = 300) {
 // ------------------------------------------------------------------ stress: 4 players spamming skills over 60 mobs
 let stressOn = false, stressAcc = 0;
 const STRESS_SKILLS = ['greatsword_cleave', 'holy_nova', 'chi_palm', 'muzzle_flash', 'fire_nova', 'harp_note_wave', 'blade_storm', 'dark_slash', 'crimson_wave', 'lightning_pillar', 'meteor_rain', 'frost_lance', 'flurry_sparks', 'grenade', 'blood_pillars'];
+let othersDim = +(Q.get('dim') ?? 0.35);   // ?dim=1 to see the party at full strength
 function stress(on = !stressOn) {
   stressOn = on;
   party.forEach(h => { h.root.visible = on; });
@@ -216,11 +217,12 @@ function stressTick(dt) {
     const pos = pl.root.position.clone();
     const target = mob.position.clone().setY(0);
     const dir = target.clone().sub(pos).setY(0).normalize();
-    if (fx.has(name)) fx.play(name, { pos, dir, target, attach: pl.root, sockets: pl.sockets, dur: name === 'meteor_rain' || name === 'blade_storm' ? 1.5 : undefined });
+    // other players' effects are dimmed like the game does (present.js → dim: game.othersFx, default 0.35)
+    if (fx.has(name)) fx.play(name, { pos, dir, target, attach: pl.root, sockets: pl.sockets, dim: pl === hero ? 1 : othersDim, dur: name === 'meteor_rain' || name === 'blade_storm' ? 1.5 : undefined });
     for (let i = 0; i < 4; i++) {
       const m = mobs[(Math.random() * mobs.length) | 0];
       const hp = m.position.clone().setY(1.0);
-      fx.hit({ pos: hp, dir, crit: Math.random() < 0.3, element: ['physical', 'fire', 'holy', 'lightning', 'dark'][(Math.random() * 5) | 0], scale: 0.7 });
+      fx.hit({ pos: hp, dir, crit: Math.random() < 0.3, element: ['physical', 'fire', 'holy', 'lightning', 'dark'][(Math.random() * 5) | 0], scale: 0.7, dim: pl === hero ? 1 : othersDim });
       fx.number(hp.setY(1.6), Math.random() < 0.3 ? 20000 + Math.random() * 200000 : 800 + Math.random() * 20000, { style: Math.random() < 0.3 ? 'crit' : 'normal' });
     }
   }

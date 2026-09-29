@@ -1065,13 +1065,37 @@ export class SailingMode {
     else h.progress = { label: `${kn} knots · heading ${heading} · wind from ${wind}`, pct: clamp(sh.v / (this.stats.speed * 1.5), 0, 1) * 100 };
     const gw = ghostWindow();
     h.timer = !this.ghost && !this.ghostDone && gw?.live ? { label: 'Ghost Ship sighted', left: Math.max(0, (gw.end - Date.now()) / 1000), urgent: true } : null;
+    // the dedicated sailing cluster (UI ShipHud: hull, speed dial, sails, Q–R ship skills, compass & wind) — it
+    // replaces the combat cluster, so the crew skills (A S D F), Gale / Sunfire and stores go to the tracker below
+    const wv = this.waves.wind, dest = c && !c.steer ? { name: this.destName(c), dist: pathLen(sh, c.path || [c]) } : null;
+    h.ship = {
+      name: 'Dawnrunner', hp: Math.round(sh.dur), hpMax: sh.durMax, speed: +(sh.v * KN).toFixed(1), speedMax: Math.round(this.stats.speed * 1.5 * KN),
+      sails: sh.boost > 0 || sh.galeT > 0 ? 3 : sh.v > this.stats.speed * 0.55 ? 2 : sh.v > 1 ? 1 : 0,
+      heading: sh.h, wind: Math.atan2(-wv.x, -wv.y), windSpeed: 12 + (this.stormAt || 0) * 26, crew: this.crew.length, dest,
+      skills: KEYS.slice(0, 4).map((k, i) => { const v = view(this.slotSkill(i), k); return v && { id: v.id, name: v.name, icon: v.icon, key: k, cd: v.cd, cdLeft: v.cdLeft, desc: v.desc }; }),
+    };
+    const ready = (id, key) => { const left = this.cds.get(id) || 0; return `${key} · ${SKILLS[id].name}${left > 0.05 ? ` · ${Math.ceil(left)} s` : ' · ready'}`; };
+    const crewSteps = [];
+    crewSteps.push({ text: sh.galeT > 0 ? `Z · Gale Force · ${Math.ceil(sh.galeT)} s` : `Z · Gale Force · ${sh.gale >= 100 ? 'READY' : Math.floor(sh.gale) + '%'}`, n: 0, need: 1, done: false });
+    crewSteps.push({ text: `V · Sunfire Barrage · ${this.voyage.sunfire} left${this.cds.get('sunfire') > 0 ? ` · ${Math.ceil(this.cds.get('sunfire'))} s` : ''}`, n: 0, need: 1, done: this.voyage.sunfire <= 0 });
+    for (let i = 4; i < 8; i++) { const id = this.slotSkill(i); if (id) crewSteps.push({ text: ready(id, KEYS[i]), n: 0, need: 1, done: false }); }
+    crewSteps.push({ text: `1 Kits ${sea.items.repair_kit || 0} · 2 Kegs ${sea.items.powder_keg || 0} · 3 Flares ${sea.items.flare || 0}`, n: 0, need: 1, done: false });
     // voyage log
     const A = this.s.account, souls = (A.roster.collect.souls || []).length, bounties = (A.roster.collect.bounties || []).length;
-    h.quests = [{ id: 'sea:voyage', title: 'The Glass Sea', kind: 'guide', steps: [
+    h.quests = [{ id: 'sea:crew', title: 'Crew & stores', kind: 'guide', steps: crewSteps }, { id: 'sea:voyage', title: 'The Glass Sea', kind: 'guide', steps: [
       { text: 'Island Souls', n: souls, need: ISLANDS.length, done: souls >= ISLANDS.length },
       { text: 'Sea Bounties', n: bounties, need: SEA_BOUNTIES.length, done: bounties >= SEA_BOUNTIES.length },
       ...(this.treasure ? [{ text: 'Follow your treasure map to the golden buoy', n: 0, need: 1, done: false }] : []),
     ] }, ...(h.quests || [])];
+    if (sh.repair) h.timer = { label: 'Repairing the hull', left: Math.max(0, SKILLS.repair.dur - sh.repair.t) };
+  }
+  /** name for the ship HUD's destination: the port / landmark the course ends at */
+  destName(c) {
+    let best = null, bd = 90;
+    for (const p of Object.values(PORTS)) { const d = Math.hypot(p.x - c.x, p.z - c.z); if (d < bd) { bd = d; best = p.name; } }
+    if (best) return best;
+    if (this.treasure && Math.hypot(this.treasure.x - c.x, this.treasure.z - c.z) < 40) return 'Treasure';
+    return 'Waypoint';
   }
   bossHud() { return null; }
   debug() {
@@ -1239,3 +1263,4 @@ registerPlugin({
 registerAction('hud:item', (session, type, p) => { const m = session.game.mode; if (!(m instanceof SailingMode)) return false; m.useItem(p.slot); return true; });
 registerAction('hud:awaken', (session) => { const m = session.game.mode; if (!(m instanceof SailingMode)) return false; m.cast('awaken'); return true; });
 registerAction('hud:dash', (session) => { const m = session.game.mode; if (!(m instanceof SailingMode)) return false; m.cast(0); return true; });
+registerAction('hud:shipskill', (session, type, p) => { const m = session.game.mode; if (!(m instanceof SailingMode)) return false; m.cast(p?.slot ?? 0); return true; });

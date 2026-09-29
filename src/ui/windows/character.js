@@ -57,7 +57,7 @@ export class CharacterWin extends Win {
       if (it) {
         const g = grade(it.grade);
         t.innerHTML = `<div class="ss-cp-sn" style="color:${g.c}">${it.hone ? `+${it.hone} ` : ''}${esc(label)}</div>` +
-          (it.quality != null && it.kind !== 'stone' && it.kind !== 'bracelet' ? `<div class="ss-cp-q"><i style="width:${it.quality}%;background:${qualityColor(it.quality)}"></i></div><div class="ss-cp-sm"><span style="color:${qualityColor(it.quality)}">${it.quality}</span>${it.iLvl ? ` · ${fmtInt(it.iLvl)}` : ''}</div>` : '') +
+          (it.quality != null && it.kind !== 'stone' && it.kind !== 'bracelet' ? `<div class="ss-cp-q"><i style="width:${it.quality}%;background:${qualityColor(it.quality)}"></i></div><div class="ss-cp-sm"><span style="color:${qualityColor(it.quality)}" title="Quality">${it.quality}</span>${it.iLvl ? ` · iLvl ${fmtInt(it.iLvl)}` : ''}</div>` : '') +
           ((it.kind === 'accessory' || it.kind === 'stone') && it.engr ? `<div class="ss-cp-en">${it.engr.map(e => `${esc(engr(e.id).name.split(' ')[0])} +${e.v}`).join(' · ')}</div>` : '');
       } else t.innerHTML = `<div class="ss-cp-sn is-empty">${esc(label)}</div><div class="ss-cp-sm">Empty</div>`;
     };
@@ -80,10 +80,12 @@ export class CharacterWin extends Win {
     }
     for (const el of a.querySelectorAll('[data-k]')) el._tip = { title: STATS[el.dataset.k], lines: [STAT_DESC[el.dataset.k]] };
     const e = sec('Engravings');
-    const list = d.engravings || [];
+    // active only (Lv 1+ = 5 nodes); positives first, penalties last
+    const lvOf = x => x.level ?? engrLevel(x.nodes);
+    const list = (d.engravings || []).filter(x => lvOf(x) >= 1).sort((a, b) => (!!(a.neg || engr(a.id).neg) - !!(b.neg || engr(b.id).neg)) || lvOf(b) - lvOf(a));
     if (!list.length) h('div', 'ss-empty', e, 'No active engravings.');
     for (const x of list) {
-      const E = engr(x.id), neg = x.neg || E.neg, lv = x.level ?? engrLevel(x.nodes);
+      const E = engr(x.id), neg = x.neg || E.neg, lv = lvOf(x);
       const r = h('div', 'ss-cp-engr ss-ptr' + (neg ? ' is-neg' : ''), e);
       r.innerHTML = `<i style="background-image:url('${iconUrl(engrIcon(x.id), 26)}')"></i><span>${esc(E.name)}</span><em class="ss-lvl">Lv ${lv}</em>`;
       r._tip = { title: `${E.name} · Lv ${lv}`, lines: [E.desc, x.nodes != null ? `${x.nodes} / 15 nodes` : null], color: neg ? '#ff8a7a' : null };

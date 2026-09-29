@@ -95,7 +95,8 @@ lab.panel.label('State');
 lab.panel.check('enraged', state.enraged, v => { state.enraged = v; });
 lab.panel.check('groggy', false, v => { state.groggy = v; });
 lab.panel.check('dead', false, v => { state.dead = v; });
-lab.panel.buttons(['hornL', 'hornR', 'repair', 'hit flash'], (n) => { if (n === 'repair') boss.repair?.(); else if (n === 'hit flash') { flash = 0.7; } else boss.breakPart(n); });
+// part breaks: Gorrath hornL/hornR, hounds mane/tail (buttons for parts the current boss lacks do nothing)
+lab.panel.buttons(['hornL', 'hornR', 'mane', 'tail', 'repair', 'hit flash'], (n) => { if (n === 'repair') boss.repair?.(); else if (n === 'hit flash') { flash = 0.7; } else boss.breakPart(n); });
 lab.panel.label('Locomotion');
 lab.panel.slider('speed m/s', 0, 12, state.speed, v => { state.speed = v; });
 lab.panel.slider('turn rad/s', -1.5, 1.5, state.turn, v => { state.turn = v; });

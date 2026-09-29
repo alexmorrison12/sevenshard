@@ -270,7 +270,7 @@
 .ss-win-t { flex: 1; font: 400 14px/1 var(--ss-serif); letter-spacing: .2em; text-transform: uppercase; color: var(--ss-gold-hi); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ss-win-t .ss-gl { color: var(--ss-gold); margin-right: 8px; font-size: 16px; }
 .ss-win-x { flex: none; }
-.ss-win-bd { position: relative; flex: 1; min-height: 0; padding: 14px 16px 16px; }
+.ss-win-bd { position: relative; flex: 1; min-height: 0; padding: 14px 16px 16px; overflow: auto; } /* scrolls only when a window is taller than the screen */
 .ss-win-ft { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 10px 16px 14px; border-top: 1px solid var(--ss-line-soft); flex: none; }
 .ss-win.is-top { z-index: 2; }
 .ss-win.is-top > .ss-win-hd .ss-win-t { color: #fff0c8; }

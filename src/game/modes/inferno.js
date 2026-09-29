@@ -1017,6 +1017,6 @@ registerPlugin({
   },
   hud(h) {
     const m = this.s?.game?.mode;
-    if (m && m.questHud && (m.kind === 'inferno' || m.kind === 'cube' || m.kind === 'trial')) { try { const q = m.questHud(); if (q) (h.quests ||= []).unshift(q); } catch (e) { console.error('[modes hud]', e); } }
+    if (m && m.questHud && ['inferno', 'cube', 'trial', 'island_event'].includes(m.kind)) { try { const q = m.questHud(); if (q) (h.quests ||= []).unshift(q); } catch (e) { console.error('[modes hud]', e); } }
   },
 });

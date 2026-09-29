@@ -17,6 +17,7 @@ import { db, saveDb } from './store.js';
 import { RAIDS } from '../../data/raids.js';
 import { CLASSES } from '../../data/classes/index.js';
 import { weekId } from '../../core/util.js';
+import { itemLevel } from '../systems/stats.js';
 import { clock, clockS, dur, short, pct, int, stoneLabel, pvpTier } from './fmt.js';
 
 const isSupport = c => CLASSES[c]?.role === 'support';
@@ -154,7 +155,8 @@ class MetaPlugin {
         let prog = D0.raids[ch.id]; if (!prog || prog.week !== wk) prog = D0.raids[ch.id] = { week: wk };
         const g = prog[mode] ||= {};
         g['g' + gate] = Math.min(g['g' + gate] ?? Infinity, r.time); saveDb();
-        const res = post(`legion_${mode}`, `g${gate + 1}`, r.time, `${modeName} · ${R.gates[gate].name}`);
+        const il = Math.floor(itemLevel(ch));
+        const res = post(`legion_${mode}`, `g${gate + 1}`, r.time, `${deathsTxt || 'Cleared'} · iLvl ${int(il)}${trial ? ' (trial)' : ''}`);
         if (res?.rank) { clear.board = { label: 'this week', rank: res.rank, total: res.total }; notes.push({ over: 'Weekly Legion Race', text: `#${int(res.rank)} · Gate ${gate + 1} ${modeName}`, sub: `${clock(r.time)} of ${int(res.total)} clears this week`, kind: 'info', icon: bossIcon }); }
         if (g.g0 != null && g.g1 != null) {
           const full = g.g0 + g.g1;

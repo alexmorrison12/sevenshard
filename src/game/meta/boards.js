@@ -149,9 +149,15 @@ function simEntries(B, def, period) {
       }
       case 'legion_nm': case 'legion_hm': {
         const g = def.variant || 'full';
-        const t = g === 'full' ? (spread(...GATE_T.g1, u) + spread(...GATE_T.g2, clamp(u + (r.next() - 0.5) * 0.12, 0, 1))) * k : spread(...GATE_T[g], u) * k;
-        e.value = t * (1 + (r.next() - 0.5) * 0.04); e.at = posted(e.value * 1000 + 20 * 60e3);
-        e.sub = `${hard ? 'Hard' : 'Normal'} · ${g === 'full' ? 'both gates' : g === 'g1' ? 'Hounds of the Horn' : 'The Horned Tyrant'}`; e.party = pickParty(r, 8, p.cls); break;
+        if (g === 'full') {
+          const t1 = spread(...GATE_T.g1, u) * k, t2 = spread(...GATE_T.g2, clamp(u + (r.next() - 0.5) * 0.12, 0, 1)) * k;
+          e.value = t1 + t2; e.sub = `G1 ${clock(t1)} + G2 ${clock(t2)}`;
+        } else {
+          e.value = spread(...GATE_T[g], u) * k * (1 + (r.next() - 0.5) * 0.04);
+          const deaths = r.next() < 0.45 - u * 0.2 ? 0 : 1 + Math.floor(r.next() * r.next() * 6);
+          e.sub = `${deaths ? `${deaths} death${deaths > 1 ? 's' : ''}` : 'Deathless'} · avg iLvl ${int((hard ? 1452 : 1424) + (1 - u) * 26 + r.next() * 8)}`;
+        }
+        e.at = posted(e.value * 1000 + 20 * 60e3); e.party = pickParty(r, 8, p.cls); break;
       }
       case 'legion_dps': {
         const g = r.next() < 0.5 ? 1 : 2, hardRun = r.next() < 0.3;

@@ -221,7 +221,7 @@ export function createHero(opts = {}) {
   const U = makeUniforms();
   const UW = { ...U, uRune: { value: new THREE.Vector4(1, 0.15, 0.05, 0) }, uCast: U.uCast }; // weapons: own rune glow (hone)
   const matSkinned = makeHeroMaterial(U);
-  const matRigid = makeHeroMaterial(UW, { key: 'r' });
+  const matRigid = makeHeroMaterial(UW, { key: 'r', hone: true });
   const UD = { ...U, uDemon: { value: 0 }, uRune: { value: new THREE.Vector4(0.85, 0.3, 1.0, 1.4) } }; // demon parts: own glow, no darkening
   let matDemon = null, D = null;
   const root = new THREE.Group(); root.name = 'hero';
@@ -384,6 +384,9 @@ export function createHero(opts = {}) {
     const k = hone >= 15 ? 1.1 + (hone - 15) * 0.34 : tier === 2 ? 0.75 : tier === 1 ? 0.22 + Math.max(0, hone - 9) * 0.08 : Math.max(0, hone - 9) * 0.06;
     const col = new THREE.Color(tier === 2 ? 0xff2a12 : (CLASSES[o.cls]?.accent ?? 0x9ab8ff));
     UW.uRune.value.set(col.r, col.g, col.b, k);
+    // Stormfist: the gauntlets are the weapon (skinned) → same hone glow on their cast mask
+    const hk = o.cls === 'stormfist' && k >= 1.05 ? (0.25 + 0.75 * Math.min(1, Math.max(0, (k - 1.1) / 3.4))) * 0.45 : 0;
+    U.uHone.value.set(col.r, col.g, col.b, hk);
   }
   function attachWeapons(drawn) {
     const put = (m, parent) => { parent.add(m); m.position.set(0, 0, 0); m.quaternion.identity(); m.scale.setScalar(1); };
@@ -437,7 +440,7 @@ export function createHero(opts = {}) {
   function ensureDemon() {
     if (D && D.base === base) return D;
     if (D) dropDemon();
-    if (!matDemon) matDemon = makeHeroMaterial(UD, { key: 'r' });
+    if (!matDemon) matDemon = makeHeroMaterial(UD, { key: 'rd' });
     const P = base.P;
     const horns = new THREE.Mesh(demonHorns(base), matDemon); horns.castShadow = true; horns.name = 'demon_horns';
     bones[B.head].add(horns);
@@ -503,7 +506,7 @@ export function createHero(opts = {}) {
 const sstep = (x) => x * x * (3 - 2 * x);
 
 // crowd LOD: squeeze outfit + hair into what is left of a 6k-triangle budget (decimated copies are cached per piece)
-const CROWD_TRIS = 5000;
+const CROWD_TRIS = 4500;
 const CROWD_DEC = new WeakMap();
 const partTris = (pt) => (pt.keepTri ? pt.keepTri.reduce((a, k) => a + k, 0) : pt.p.idx.length / 3);
 // thin double-sided cloth / strings of small parts do not survive QEM: they are built natively at crowd resolution
@@ -513,7 +516,7 @@ const decimatable = (pt) => DECIMATE.test(((pt.p.tag || '').split('|')[1] || '')
 function crowdBudget(parts) {
   let fixed = 0, rest = 0;
   for (let i = 0; i < parts.length; i++) { const t = partTris(parts[i]); if (i < 5 || !decimatable(parts[i])) fixed += t; else rest += t; }
-  const avail = Math.max(700, CROWD_TRIS - fixed);
+  const avail = Math.max(450, CROWD_TRIS - fixed);
   if (rest <= avail) return;
   const ratio = avail / rest;
   for (let i = 5; i < parts.length; i++) {

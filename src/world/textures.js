@@ -215,7 +215,7 @@ Surf surf(vec2 uv) {
   Surf s = S0();
   float n = fbm(uv, 3, 4, 61), n2 = fbm(uv, 12, 3, 62);
   vec2 wp = uv + vec2(fbm(uv, 2, 3, 63), fbm(uv, 2, 3, 64)) * 0.08;
-  float rip = sin((wp.x * 0.3 + wp.y) * TAU * 18.0 + n * 3.0);
+  float rip = sin((wp.x * 5.0 + wp.y * 18.0) * TAU + n * 3.0);
   vec3 col = mix(vec3(0.74, 0.64, 0.46), vec3(0.84, 0.76, 0.58), sat(0.5 + n));
   col *= 1.0 + rip * 0.035 + n2 * 0.04;
   float g = h1(wrapc(ivec2(floor(uv * 512.0)), ivec2(512)), 65);
@@ -511,9 +511,9 @@ Surf surf(vec2 uv) {
   vec2 q = uv + vec2(fbm(uv, 2, 3, 821), fbm(uv, 2, 3, 822)) * 0.06;
   float n = fbm(uv, 3, 4, 823), n2 = fbm(uv, 12, 3, 824);
   // asymmetric wind ripples: gentle windward slope, steep lee face
-  float ph = fract((q.x * 0.35 + q.y) * 16.0 + n * 0.6);
+  float ph = fract(q.x * 6.0 + q.y * 16.0 + n * 0.6);          // integer frequencies → tiles seamlessly
   float rip = ph < 0.78 ? ph / 0.78 : 1.0 - (ph - 0.78) / 0.22;
-  float rip2 = fract((q.x * 0.2 + q.y) * 41.0 + n2 * 0.8);
+  float rip2 = fract(q.x * 8.0 + q.y * 41.0 + n2 * 0.8);
   vec3 c = mix(vec3(0.74, 0.56, 0.34), vec3(0.93, 0.78, 0.54), sat(0.45 + n * 0.8));
   c *= 0.9 + rip * 0.14;
   c *= 1.0 - smoothstep(0.8, 1.0, ph) * 0.18;             // shaded lee faces
@@ -1164,6 +1164,55 @@ export function foliageAtlas(size = 1024) {
   const t = dataTex(alb, size, true, false); t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
   FOLIAGE = { map: t };
   return FOLIAGE;
+}
+
+
+// ------------------------------------------------------------------ autumn foliage atlas (2×2): maple clusters in three
+// palettes + a gold fan-leaf cluster. Same slot layout as foliageAtlas (cards tinted by vertex colour).
+const AUTUMN_GLSL = /* glsl */`
+float mapleLeaf(vec2 q, float sz) {
+  // five-lobed star leaf in local coords (q scaled so the leaf spans ~sz)
+  q /= sz; float r = length(q), a = atan(q.y, q.x);
+  float lobes = 0.55 + 0.45 * pow(abs(cos(a * 2.5)), 0.6);
+  float stemNotch = smoothstep(0.35, 0.0, abs(a + 1.5708)) * 0.35;
+  return smoothstep(lobes - stemNotch, lobes - stemNotch - 0.12, r);
+}
+Surf cluster(vec2 q, int seed, vec3 lo, vec3 hi, float fan) {
+  Surf s = S0(); s.a = 0.0; s.col = mix(lo, hi, 0.5);
+  vec2 c = q - 0.5;
+  for (int i = 0; i < 60; i++) {
+    vec4 r = h4(ivec2(i, seed), 700);
+    float rr = sqrt(r.x) * 0.36, a = r.y * TAU;
+    vec2 p = vec2(cos(a), sin(a)) * rr;
+    vec2 lq = rot(c - p, r.z * TAU);
+    float sz = 0.06 + r.w * 0.035;
+    float m;
+    if (fan > 0.5) { float fr = length(lq), fa = atan(lq.y, lq.x); m = smoothstep(sz, sz * 0.85, fr) * step(abs(fa - 1.5708), 0.8); }
+    else m = mapleLeaf(lq, sz);
+    if (m > 0.02) {
+      float t = 1.0 - rr / 0.36;
+      vec3 col = mix(lo, hi, sat(t * 0.55 + r.x * 0.35 + r.w * 0.2));
+      col *= 1.0 - smoothstep(0.006, 0.0, abs(lq.x)) * 0.25 * step(lq.y, 0.0);
+      s.col = mix(s.col, col, m); s.a = max(s.a, m);
+    }
+  }
+  return s;
+}
+Surf surf(vec2 uv) {
+  vec2 g = uv * 2.0; ivec2 id = ivec2(floor(g)); vec2 q = fract(g);
+  int k = id.y * 2 + id.x;
+  if (k == 0) return cluster(q, 11, vec3(0.55, 0.08, 0.03), vec3(1.0, 0.42, 0.10), 0.0);   // flame red → orange
+  if (k == 1) return cluster(q, 12, vec3(0.62, 0.22, 0.04), vec3(1.0, 0.72, 0.18), 0.0);   // orange → gold
+  if (k == 2) return cluster(q, 13, vec3(0.36, 0.03, 0.05), vec3(0.85, 0.12, 0.10), 0.0);  // deep crimson
+  return cluster(q, 14, vec3(0.70, 0.52, 0.06), vec3(1.0, 0.88, 0.30), 1.0);               // gold fans
+}`;
+let AUTUMN = null;
+export function autumnAtlas(size = 1024) {
+  if (AUTUMN) return AUTUMN;
+  const alb = bakeSet(AUTUMN_GLSL, { size, outputs: ['rgba'] }).rgba;
+  const t = dataTex(alb, size, true, false); t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
+  AUTUMN = { map: t };
+  return AUTUMN;
 }
 
 // ------------------------------------------------------------------ macro noise (periodic)

@@ -13,7 +13,7 @@ import { ITEMS, GEAR_SLOTS } from '../../data/items.js';
 import { xpForLevel, MAX_LEVEL } from '../account.js';
 import { storyGear, makeGear } from '../systems/gear.js';
 import { itemLevel } from '../systems/stats.js';
-import { Cutscene, cutsceneActive, fill } from './cutscene.js';
+import { Cutscene, cutsceneActive, screenDark, fill } from './cutscene.js';
 import { QuestMarkers } from './markers.js';
 import { QuestWorld } from './world.js';
 import { anchorOf, dist, warnOnce, familyOf } from './spawn.js';
@@ -90,7 +90,7 @@ export class QuestSystem {
   /** quests only start (and chapter cards only show) in the open world, never over content, cutscenes or boss intros */
   openWorld() {
     const g = this.g; if (!g.level || !g.hero || this.s.screen !== 'game') return false;
-    if (g.inputBlocked || g.cam?.cine || cutsceneActive() || this.s.ui?.npc?.active) return false;
+    if (g.inputBlocked || g.cam?.cine || cutsceneActive() || screenDark() || this.s.storyTransition || this.s._traveling || this.s.ui?.npc?.active) return false;
     const k = g.mode?.kind, zk = ZONES[g.zone?.id]?.kind || g.zone?.kind;
     return OPEN_KINDS.has(k) || ['city', 'field', 'island'].includes(zk);
   }

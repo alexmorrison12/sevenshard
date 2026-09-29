@@ -181,7 +181,7 @@ export class BoardsPanel {
     this.th.innerHTML = `<span>#</span><span>Shardbearer</span>${partyCol ? '<span>Party</span>' : ''}<span>Details</span><span>${esc(unitLabel(def.unit))}</span>`;
     const crest = (c, s = 22) => `<i class="ss-mx-cr" style="width:${s}px;height:${s}px;background-image:url('${iconUrl('class:' + c, s)}')"></i>`;
     this.tbl.innerHTML = v.rows.length ? v.rows.map(r => {
-      const tags = [r.you && '<b class="ss-mx-tg is-you">You</b>', r.friend && '<b class="ss-mx-tg">Friend</b>', r.remote && !r.you && '<b class="ss-mx-tg is-g">Global</b>', r.trial && '<b class="ss-mx-tg is-m">Trial</b>', r.premade && '<b class="ss-mx-tg is-m">Premade</b>', r.coop && '<b class="ss-mx-tg">Co-op</b>'].filter(Boolean).join('');
+      const tags = [r.you && '<em class="ss-mx-tg is-you">You</em>', r.friend && '<em class="ss-mx-tg">Friend</em>', r.remote && !r.you && '<em class="ss-mx-tg is-g">Global</em>', r.trial && '<em class="ss-mx-tg is-m" title="Trial run: stats raised to the raid minimum">Trial</em>', r.premade && '<em class="ss-mx-tg is-m" title="Premade (Raid Ready) character">Premade</em>', r.coop && '<em class="ss-mx-tg">Co-op</em>'].filter(Boolean).join('');
       return `<div class="ss-mx-lb-tr${partyCol ? ' has-party' : ''}${r.you ? ' is-you' : ''}${r.rank <= 3 ? ' is-top r' + r.rank : ''}" style="--cc:${clsInfo(r.cls).color}">
         <span class="ss-mx-lb-rank">${r.rank <= 3 ? `<i><b>${r.rank}</b></i>` : int(r.rank)}</span>
         <span class="ss-mx-lb-who">${crest(r.cls)}<b>${esc(r.name)}</b>${r.guild ? `<small>&lt;${esc(r.guild)}&gt;</small>` : ''}${tags}</span>
@@ -192,7 +192,7 @@ export class BoardsPanel {
     const playable = /^legion|guardian|inferno/.test(this.board);
     this.you.innerHTML = y ? `<span>Your best</span><b>#${int(y.rank)}</b><em>${esc(y.display)}</em><small>${esc(y.name)} · ${esc(y.sub || '')}</small><i></i>
         <button type="button" class="ss-btn ss-btn--sm" data-a="challenge">${glyph('send')}<span>Challenge a friend</span></button>`
-      : `<span>${esc(noEntryHint(this.board))}</span><i></i>${playable && this.meta.s?.char ? `<button type="button" class="ss-btn ss-btn--sm ss-btn--primary" data-a="play">${glyph('sword')}<span>Take it on</span></button>` : ''}`;
+      : `<span>${esc(noEntryHint(this.board))}</span><i></i>${playable && this.meta.s?.char && this.meta.s?.screen === 'game' && !this.meta.s?.guestMode ? `<button type="button" class="ss-btn ss-btn--sm ss-btn--primary" data-a="play">${glyph('sword')}<span>Take it on</span></button>` : ''}`;
   }
   renderRecords() {
     const rows = recordRows(this.meta.s?.account);
@@ -209,6 +209,9 @@ export class BoardsPanel {
 const unitLabel = u => ({ time: 'Time', after: 'After reset', dps: 'DPS', score: 'Score', floor: 'Depth', rating: 'Rating', stone: 'Stone', luck: 'Odds', count: 'Seeds' }[u] || 'Value');
 function noEntryHint(board) {
   if (board === 'legion_first') return 'Clear both gates of Gorrath this week to enter the race.';
+  if (board === 'legion_dps') return 'Clear a Gorrath gate this week on a damage dealer to post your DPS.';
+  if (board === 'legion_support') return 'Clear a Gorrath gate this week on a support to post your score.';
+  if (board === 'legion_deathless') return 'Clear a Gorrath gate this week without a single death in the raid.';
   if (board.startsWith('legion_')) return 'Clear a Gorrath gate this week to post a time.';
   if (board === 'guardian') return `Hunt ${bossName(todaysGuardian())} today to post a time.`;
   if (board === 'inferno') return 'Descend into the Inferno to post your depth.';

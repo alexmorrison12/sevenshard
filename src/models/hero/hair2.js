@@ -330,10 +330,8 @@ export function lockHairPiece(base, style, sex) {
   return cached(`${base.headKey}|hair2|${style}`, () => {
     const F = frame(base), s = F.s, H = F.H;
     const rng = new RNG(style.length * 131 + 7);
-    const _t0 = performance.now();
     const sd = buildStyle(F, base, style, sex, rng);
     sd.build();
-    const _t1 = performance.now();
     // strand grooves perturb the surface for a combed, clumpy read
     const groove = (d0, x, y, z) => {
       if (d0 > 0.01) return d0;
@@ -347,13 +345,9 @@ export function lockHairPiece(base, style, sex) {
     const bmin = [H.x - 0.24 * s, H.y - (long ? 0.62 : 0.3) * s, H.z - 0.22 * s], bmax = [H.x + 0.24 * s, H.y + 0.34 * s, H.z + 0.36 * s];
     const fn = (x, y, z) => wrap.eval(x, y, z);
     let m = surfaceNets(fn, bmin, bmax, cell, { refine: -1, near: (x, y, z, R) => wrap.near(x, y, z, R) });
-    const _t2 = performance.now(), _nv = m.pos.length / 3;
     const target = Math.round((long ? 1150 : 900) * LQ);
     if (m.pos.length / 3 > target) m = simplify(m.pos, m.nrm, m.idx, target);
-    const _t3 = performance.now();
     refineVerts(fn, m.pos, m.nrm, cell, 1);
-    const _t4 = performance.now();
-    (globalThis.__hairT ||= []).push([style, sd.n, _nv, Math.round(_t1 - _t0), Math.round(_t2 - _t1), Math.round(_t3 - _t2), Math.round(_t4 - _t3)]);
     const n = m.pos.length / 3;
     const pc = makePiece(n, m.idx.length);
     pc.pos.set(m.pos); pc.nrm.set(m.nrm); pc.idx.set(m.idx);

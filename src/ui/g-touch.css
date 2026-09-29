@@ -151,7 +151,16 @@
 .ss-touch .ss-cc-look { gap: 8px; }
 .ss-touch .ss-cc-cats { width: 104px; }
 .ss-touch .ss-cc-opt { height: 48px; }
-.ss-touch .ss-cc-create { height: 46px; }
+.ss-touch .ss-cc-create { height: 46px; flex: none; }
+/* paths: compact rows; only the chosen path shows its description, so Create stays on screen */
+.ss-touch .ss-cc-paths { gap: 6px; }
+.ss-touch .ss-cc-path { padding: 9px 12px; gap: 10px; align-items: center; }
+.ss-touch .ss-cc-path b { margin-bottom: 0; font-size: 13.5px; }
+.ss-touch .ss-cc-path div span { display: none; }
+.ss-touch .ss-cc-path[aria-pressed="true"] { align-items: flex-start; }
+.ss-touch .ss-cc-path[aria-pressed="true"] div span { display: block; margin-top: 4px; font-size: 11.5px; line-height: 1.4; }
+.ss-touch .ss-cc-path em { top: 10px; }
+.ss-touch .ss-cc-namemsg:not(.is-bad) { display: none; }
 /* loading, results, death */
 .ss-touch .ss-ld-tx { left: 30px; right: 220px; bottom: 44px; }
 .ss-touch .ss-ld-zone { font-size: 40px; }

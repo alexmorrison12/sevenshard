@@ -331,3 +331,44 @@ export function buildStreamers(list, hAt, { color = 0xf0d8a8, alpha = 0.5, speed
   const m = new THREE.Mesh(g, mat); m.renderOrder = 3; m.name = 'streamers';
   return m;
 }
+
+// ---------------------------------------------------------------- moon pond
+/** A still pond that reflects the (unseen) moon: dark water, sky fresnel, a rippling moon disc and its glitter path.
+ *  { x, z, r, level, moon: [dx, dz] (moon reflection offset from the centre), moonR, color } */
+export function buildMoonPond({ x, z, r, level, moon = [0, -0.2], moonR = 0.24, deep = 0x061020, sky = 0x2a3a66, moonCol = 0xe8f0ff } = {}) {
+  const g = new THREE.CircleGeometry(r, 48); g.rotateX(-Math.PI / 2);
+  const u = {
+    uTime: G.uTime, uNoise: { value: noiseTex() }, uDeep: { value: new THREE.Color(deep) }, uSky: { value: new THREE.Color(sky) },
+    uMoon: { value: new THREE.Color(moonCol).multiplyScalar(2.2) }, uMoonP: { value: new THREE.Vector2(moon[0], moon[1]) }, uMoonR: { value: moonR }, uR: { value: r }, uC: { value: new THREE.Vector2(x, z) },
+    uFogColor: G.uFogColor, uFogSunColor: G.uFogSunColor, uFogDensity: G.uFogDensity, uFogHeight: G.uFogHeight, uFogBase: G.uFogBase, uSunDir: G.uSunDir, uCamPos: G.uCamPos,
+  };
+  const mat = new THREE.ShaderMaterial({
+    uniforms: u,
+    vertexShader: 'varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }',
+    fragmentShader: /* glsl */`
+      uniform float uTime, uMoonR, uR; uniform sampler2D uNoise; uniform vec3 uDeep, uSky, uMoon; uniform vec2 uMoonP, uC;
+      varying vec3 vW;
+      ${FOG_GLSL_PARS}
+      void main() {
+        vec2 p = (vW.xz - uC) / uR;                                  // −1..1 across the pond
+        vec4 n1 = texture2D(uNoise, vW.xz / 5.0 + vec2(uTime * 0.01, uTime * 0.007));
+        vec4 n2 = texture2D(uNoise, vW.xz / 1.7 - vec2(uTime * 0.02, -uTime * 0.015));
+        vec2 wob = (vec2(n1.g, n2.b) - 0.5) * 0.05;
+        vec3 v = normalize(uCamPos - vW);
+        float fres = pow(1.0 - max(v.y, 0.0), 3.0);
+        vec3 col = mix(uDeep, uSky, 0.25 + fres * 0.6 + (n1.r - 0.5) * 0.1);
+        // the moon's reflection and a glitter path under it
+        vec2 mp = p + wob - uMoonP;
+        float disc = smoothstep(uMoonR, uMoonR * 0.9, length(mp * vec2(1.0, 1.25)));
+        float halo = exp(-length(mp) * 5.0) * 0.35;
+        float path = exp(-abs(mp.x) * 10.0) * smoothstep(0.9, 0.0, mp.y) * smoothstep(-0.02, 0.1, mp.y) * smoothstep(0.55, 0.8, n2.g + n1.b * 0.4);
+        col += uMoon * (disc * 0.85 + halo + path * 0.7);
+        float edge = smoothstep(1.0, 0.9, length(p));
+        col = applyFog(col, vW);
+        gl_FragColor = vec4(col, 0.9 * edge);
+      }`,
+    transparent: true, depthWrite: false,
+  });
+  const m = new THREE.Mesh(g, mat); m.position.set(x, level, z); m.renderOrder = 5; m.name = 'moon-pond';
+  return m;
+}
