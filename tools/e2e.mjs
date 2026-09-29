@@ -63,6 +63,21 @@ await shot('09_raid');
 await step('raid: finish gate', async () => { const m = __game.mode; for (const b of m.bosses) { b.hp = 0; b.dead = true; __game.level.emit('death', { unit: b, killer: __game.hero.u }); } await __e2e.sleep(4500); return { state: m.state }; });
 await shot('10_raid_results');
 await step('Sunheart: points + rank', async () => { const c = __session.char; const sh = (c.sunheart ||= { points: 0, ranks: {} }); sh.points += 12; c.premade = true; await __session.route('sunheart:rank', { id: 'ev_crit', delta: 1 }); return { ranks: sh.ranks, atk: Math.round(__game.hero.u.st.atk) }; });
+// modes: every other content kind launches, runs a few seconds and returns to Solhaven cleanly
+const modeStep = (name, c, ms) => step(name, async ([c, ms]) => {
+  const S = __session; if (c.kind === 'cube') S.account.give('rift_cube_ticket', 1);
+  await S.launch(c); if (__game.hero) __e2e.auto();
+  await __e2e.sleep(__e2e.quick ? ms * 0.6 : ms);
+  const r = { zone: __game.zone?.id, mode: __game.mode?.kind, units: __game.level?.units.length };
+  await S.returnToHub(); await __e2e.sleep(1500);
+  return { ...r, back: __game.zone?.id };
+}, [c, ms]);
+await modeStep('pvp deathmatch', { kind: 'pvp', mode: 'deathmatch' }, 9000);
+await modeStep('inferno descent', { kind: 'inferno', start: 1, party: 1 }, 8000);
+await modeStep('trial guardian', { kind: 'trial' }, 8000);
+await modeStep('rift cube', { kind: 'cube', party: 1 }, 8000);
+await modeStep('stronghold', { kind: 'stronghold' }, 4000);
+await step('map travel: Goldmeadow', async () => { await __session.route('map:travel', { id: 'goldmeadow' }); await __e2e.sleep(3000); const r = { zone: __game.zone?.id, mode: __game.mode?.kind }; await __session.returnToHub(); await __e2e.sleep(1500); return r; });
 await step('save persisted', async () => { __session.account.save(true); const raw = JSON.parse(localStorage.getItem('sevenshard.save.v1')); return { chars: raw.chars.length, names: raw.chars.map(c => c.name) }; });
 console.log(`\n${ok} passed, ${bad} failed · ${errs.length} console error(s)`);
 for (const e of [...new Set(errs)].slice(0, 25)) console.log('  ' + e);

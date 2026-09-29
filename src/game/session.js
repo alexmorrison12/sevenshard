@@ -32,6 +32,7 @@ import { Portrait } from './portrait.js';
 import { warmHeroes } from '../models/hero/index.js';
 import { legionRaceNews } from './meta/index.js';
 import { infernoMenu } from './modes/inferno.js';
+import { travel as fieldTravel } from './modes/field.js';
 import { SocialContext } from './social/context.js';
 import { sunView, rank as sunRank, resetTree as sunReset, sunState, unlocked as sunUnlocked } from './progression/sunheart.js';
 import { SUNHEART_POINTS } from '../data/sunheart.js';
@@ -220,6 +221,7 @@ export class Session {
       case 'songs:play': { this.ui.close('songs'); if (!(A.roster.songs || ['homeward']).includes(p.id)) return this.ui.toast('You haven\u2019t learned that song yet. Lyra Songwind teaches songs in Solhaven.', 'warn'); return PLUGINS.find(pl => pl.id === 'companions')?.play?.(p.id); }
       case 'emotes:play': this.ui.close('emotes'); return this.command({ cmd: p.id, args: '', raw: '/' + p.id });
       case 'nexus:enter': return this.nexusEnter(p);
+      case 'map:travel': return this.mapTravel(p.id);
       case 'settings:rebind': {
         this.ui.toast(`Press a key for "${p.action}" (Esc to cancel)\u2026`, 'info');
         const onKey = e => {
@@ -450,6 +452,22 @@ export class Session {
     if (k === 'chaos') return this.launch({ kind: 'chaos', tier: +a });
     if (k === 'guardian') return this.launch({ kind: 'guardian', boss: a });
     if (k === 'raid') return this.launch({ kind: 'raid', raid: a, gate: +b, trial: o.trial });
+  }
+  /** World map travel (Lost Ark triports): towns and fields by triport, the stronghold by ferry, islands by ship */
+  async mapTravel(id) {
+    if (!id || !this.char || this.guestMode) return;
+    const k = this.game.mode?.kind;
+    if (!['city', 'field', 'pipsprout', 'stronghold', 'island', 'sea', 'sail'].includes(k)) return this.ui.toast('Finish what you are doing here first — triports only work in the open world.', 'warn');
+    if (id === this.game.zone?.id) return;
+    this.ui.close('map');
+    if (id === 'stronghold') return this.launch({ kind: 'stronghold' });
+    if (['solhaven', 'goldmeadow', 'thornwood', 'ashen_ridge', 'pipsprout'].includes(id)) {
+      if (id === 'pipsprout' && !this.account.roster.unlocked?.pipsprout && !(this.char.quests?.done || []).includes('g8_hollow')) return this.ui.toast('The way to Pipsprout Hollow is hidden somewhere in Goldmeadow.', 'info');
+      this.game.audio?.sfx?.('teleport', {});
+      return id === 'solhaven' ? this.returnToHub() : fieldTravel(this, id);
+    }
+    // islands and the open sea: board the Dawnrunner
+    if (LAUNCHERS.sail) return this.launch({ kind: 'sail', to: id });
   }
   /** Rift Nexus board: every instanced activity with its entry level, gates, weekly state and party */
   nexusData(kind) {

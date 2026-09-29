@@ -408,7 +408,9 @@ export class QuestSystem {
     const out = { talk: [], offer: [] }, st = this.st; if (!st) return out;
     for (const e of st.active) { const q = this.def(e.id), s = this.step(e); if ((s?.type === 'talk' || s?.type === 'choice') && s.npc === npcId && this.inZone(q, s)) out.talk.push(e); }
     for (const q of QUEST_LIST) if (!q.auto && q.giver === npcId && this.available(q) === true) out.offer.push(q);
-    out.talk.sort((a, b) => (KIND_ORDER[this.def(a.id).kind] ?? 9) - (KIND_ORDER[this.def(b.id).kind] ?? 9));
+    // the tracked quest speaks first, a Powerpass character's optional story last, otherwise story before side quests
+    const rank = e => { const q = this.def(e.id); return (e.id === st.tracked ? -10 : 0) + (this.optional(q) ? 20 : 0) + (KIND_ORDER[q.kind] ?? 9); };
+    out.talk.sort((a, b) => rank(a) - rank(b));
     return out;
   }
   npcChoices(npcId) {
@@ -435,7 +437,8 @@ export class QuestSystem {
       this.g.player?.stop?.();
       this.s.bus.emit('talk', { npc: n.id, unit });
       unit?.model?.play?.(unit.type === 'pip' ? 'talk' : 'wave', { dur: 1.4 });
-      for (const e of biz.talk) { if (!this.isActive(e.id)) continue; const ok = await this.runTalk(e, n); if (!ok) break; }
+      // one quest per conversation (Lost Ark style): anyone else with business keeps their marker for the next chat
+      for (const e of biz.talk.slice(0, 1)) { if (!this.isActive(e.id)) continue; await this.runTalk(e, n); }
       // follow-up offers from the same person
       const offers = biz.offer.length ? biz.offer : this.business(n.id).offer;
       for (const q of offers.slice(0, 1)) await this.runOffer(q, n, unit);

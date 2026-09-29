@@ -11,7 +11,7 @@ const cw = B => 2 * (B.u.radius + 0.6);
 export default {
   id: 'thunderhoof', model: 'thunderhoof', name: 'Old Thunderhoof', title: 'the Storm Stag', kind: 'field',
   radius: 2.6, height: 5.2, hp: 34000, atk: 0.12, bars: 150, speed: 6.2, turnRate: 3.6, enrage: 720,
-  music: 'boss', arena: 'test',
+  music: 'boss', arena: 'crucible',
   anims: {
     gore: { dur: 1.5, hits: [0.75] }, rear: { dur: 2.2, hits: [1.2] }, charge: { dur: 2.6, hits: [1.1] },
     call_lightning: { dur: 2.4, hits: [1.3] }, roar: { dur: 2.4, hits: [1.0] },
