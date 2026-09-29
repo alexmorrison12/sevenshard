@@ -61,7 +61,7 @@ async function hornCharge(B, tgt, teleDur) {
 
 export default {
   id: 'gorrath', model: 'gorrath', name: 'Gorrath', title: 'the Horned Tyrant', kind: 'legion',
-  radius: 2.3, height: 7, hp: 90000, atk: 0.12, bars: 185, speed: 4.6, turnRate: 3, enrage: 900,
+  radius: 2.3, height: 7, hp: 90000, atk: 0.13, bars: 185, speed: 4.6, turnRate: 3, enrage: 900,
   music: 'boss_gorrath', arena: 'throne_of_horns',
   // canonical action timings (the live model's metadata wins; this table serves headless runs and stand-ins)
   anims: {
@@ -172,7 +172,7 @@ export default {
         const list = B.heroes().map(h => ['circle', { x: h.pos.x, z: h.pos.z, r: 2.4 }]);
         for (let i = 0; i < 3; i++) { const p = onNav(B, { x: B.u.pos.x + rnd(B, -14, 14), z: B.u.pos.z + rnd(B, -14, 14) }); list.push(['circle', { x: p.x, z: p.z, r: 2.4 }]); }
         const last = v === (B.mods.hard ? 2 : 1);
-        await volley(B, list, v === 0 ? 1.15 : 0.85, { coef: 0.8, knock: last ? 'down' : undefined, color: 'orange', fx: 'dark_burst', fxColor: GHOST, fxMax: 11, sfx: 'ghost_slam', shake: 0.3 });
+        await volley(B, list, v === 0 ? 1.15 : 0.85, { coef: B.mods.hard ? 0.8 : 1.0, knock: last ? 'down' : undefined, color: 'orange', fx: 'dark_burst', fxColor: GHOST, fxMax: 11, sfx: 'ghost_slam', shake: 0.3 });
       }
       await wait(B, 0.5);
     } },
@@ -182,9 +182,9 @@ export default {
       B.banner(outFirst ? 'Wheel of Ruin — OUT, then IN!' : 'Wheel of Ruin — IN, then OUT!', 'mechanic');
       const inner = ['circle', { r: 8.5, fxR: 8.5 }], outer = ['donut', { r: 34, inner: 8.5, fxR: 20 }];
       const [a, b] = outFirst ? [inner, outer] : [outer, inner];
-      await strike(B, a[0], { ...a[1], dur: 2.0, color: 'orange', coef: 3.5, knock: 'push', kb: 3, fx: 'shockwave', fxColor: GHOST, sfx: 'ghost_slam', shake: 0.5 });
+      await strike(B, a[0], { ...a[1], dur: 2.0, color: 'orange', coef: B.mods.hard ? 3.4 : 4.0, knock: 'push', kb: 3, fx: 'shockwave', fxColor: GHOST, sfx: 'ghost_slam', shake: 0.5 });
       act(B, 'stomp', 1.25);
-      await strike(B, b[0], { ...b[1], dur: 1.25, color: 'orange', coef: 3.5, knock: 'down', fx: 'shockwave', fxColor: GHOST, sfx: 'ghost_slam', shake: 0.5 });
+      await strike(B, b[0], { ...b[1], dur: 1.25, color: 'orange', coef: B.mods.hard ? 3.4 : 4.0, knock: 'down', fx: 'shockwave', fxColor: GHOST, sfx: 'ghost_slam', shake: 0.5 });
       await wait(B, 0.6);
     } },
     // COUNTER in the ghost phase
@@ -205,16 +205,22 @@ export default {
       const u = B.u, c = center(B);
       B.flags.inMech = true;
       try {
-        B.banner('RIFT CARVE — the throne splits into eight! Stand in the unmarked wedges.', 'mechanic');
+        B.banner('RIFT CARVE — the throne splits into eight! Stand in the golden wedges.', 'mechanic');
         act(B, 'leap_slam', 1.1);
         await B.leap(c.x, c.z, 1.1 * (B.flags.haste || 1), 6);
         smash(B, 'circle', { r: 5, coef: 0.6, knock: 'push', kb: 5, fx: 'crater', fxColor: 'crimson', sfx: 'impact_heavy', shake: 0.5 });
         act(B, 'rift_carve', 3.2);
         const a0 = rnd(B, 0, Math.PI * 2);
-        const wave = (odd, dur, last) => {
-          const list = [];
-          for (let i = odd ? 1 : 0; i < 8; i += 2) { const d = angDir(a0 + i * 45 * DEG); list.push(['cone', { r: 40, deg: 45, dir: d }]); }
-          return volley(B, list, dur, { color: 'orange', coef: 6, knock: last ? 'up' : 'push', kb: 1.5, fx: 'axe_shockwave', fxLen: 24, fxR: 4, fxColor: 'demon', sfx: 'explosion_big', shake: 0.6, heavy: true });
+        // danger wedges in purple (wipe colour, readable on the bloodstone), the safe ones marked yellow
+        const wave = async (odd, dur, last) => {
+          const list = [], safe = [];
+          for (let i = 0; i < 8; i++) {
+            const d = angDir(a0 + i * 45 * DEG);
+            if ((i % 2 === 1) === odd) list.push(['cone', { r: 40, deg: 45, dir: d }]);
+            else safe.push(tele(B, 'cone', { r: 40, deg: 45, dir: d, dur, color: 'yellow', safe: true }));
+          }
+          try { return await volley(B, list, dur, { color: 'purple', coef: 6, knock: last ? 'up' : 'push', kb: 1.5, fx: 'axe_shockwave', fxLen: 24, fxR: 4, fxColor: 'demon', sfx: 'explosion_big', shake: 0.6, heavy: true }); }
+          finally { for (const t of safe) t.alive = false; }
         };
         await wait(B, 0.6);
         await wave(true, 2.6, false);
@@ -283,7 +289,7 @@ export default {
         clearAdds(B, x => alive.includes(x));
         act(B, 'roar', 1.0);
         await wait(B, 1.0);
-        smash(B, 'all', { coef: 6 * alive.length, knock: 'down', fx: 'explosion_big', fxR: 12, sfx: 'explosion_big', shake: 0.8, heavy: true });
+        smash(B, 'all', { coef: Math.min(12, 5 * alive.length), knock: 'down', fx: 'explosion_big', fxR: 12, sfx: 'explosion_big', shake: 0.8, heavy: true });
         B.banner(`Gorrath devours ${alive.length} Soulfire Orb${alive.length > 1 ? 's' : ''}!`, 'fail');
         buff(B, 'soulfire', 1e6, { dmgMul: 0.1 * alive.length }, 'Devoured Soulfire');
         await wait(B, 1.0);
@@ -307,18 +313,18 @@ export default {
         B.phase = 3; u.st.speed *= 1.2; u._statDirty = true;
         B.flags.hasteBase = 0.85; setHaste(B);
         let n = 0;
-        const every = B.mods.hard ? 16 : 20, c = center(B);
+        const every = B.mods.hard ? 18 : 20, c = center(B);
         fx(B, 'ghost_mist', c.x, c.z, { r: 24, dur: every + 1 });
         const tm = L.every(every, () => {
           if (u.dead) { L.cancelTimer(tm); return; }
           n++;
           fx(B, 'ghost_mist', c.x, c.z, { r: 24, dur: every + 1 });
-          smash(B, 'all', { id: 'spectral_dread', coef: 0.2 + 0.1 * n, fx: 'fear_howl', fxR: 14, fxColor: GHOST, sfx: 'ghost_wail', shake: 0.3 });
+          smash(B, 'all', { id: 'spectral_dread', coef: 0.25 + 0.12 * n, fx: 'fear_howl', fxR: 14, fxColor: GHOST, sfx: 'ghost_wail', shake: 0.3 });
           if (n === 1 || n % 3 === 0) B.banner(`Spectral Dread deepens (${n})…`, 'warn');
         });
       } finally { B.flags.inMech = false; u.data.hpFloor = 0; }
       await wait(B, 1.0);
     } },
   ],
-  onStart(enc) { if (enc.o.hard) for (const b of enc.bosses) scaleHp(b, 1.2); },
+  onStart(enc) { if (enc.o.hard) for (const b of enc.bosses) scaleHp(b, 1.12); },
 };

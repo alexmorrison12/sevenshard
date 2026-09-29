@@ -38,7 +38,7 @@ export class ChaosMode {
     const g = this.game, L = this.L;
     this.stage = i; this.pct = 0; this.portal = null; this.bossSpawned = false; this.spawnT = 0.5;
     const sp = this.anchor(`stage${i + 1}:spawn`);
-    for (const m of this.party.members) { const u = m.kit.u; u.pos.x = sp.x + (Math.random() - 0.5) * 2; u.pos.z = sp.z + (Math.random() - 0.5) * 2; u.facing = sp.facing || 0; }
+    for (const m of this.party.members) { const u = m.kit.u; u.pos.x = sp.x + (Math.random() - 0.5) * 2; u.pos.z = sp.z + (Math.random() - 0.5) * 2; u.facing = sp.facing || 0; L.emit('teleport', { unit: u, x: u.pos.x, z: u.pos.z }); }
     g.cam.snap(g.hero.u.pos);
     // clear leftovers
     for (const u of L.units.slice()) if (u.kind === 'mob' || u.data.crystal) L.remove(u);

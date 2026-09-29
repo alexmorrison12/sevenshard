@@ -2,11 +2,11 @@
 // punishes back attackers, frost breath, erupting ice spikes, a swooping lunge, flight dives, and an Absolute Zero
 // stagger check (she rises into the storm; break her or the arena freezes). Her crystal crest is breakable: once it
 // shatters the frozen sky no longer answers her (no more dives).
-import { fwd, back, rnd, tele, wait, strike, smash, volley, act, counter, marker, onNav, behind, farthest, reachAlong, scaleHp, fx } from './kit.js';
+import { fwd, back, rnd, tele, wait, strike, smash, volley, act, counter, marker, onNav, behind, farthest, reachAlong, scaleHp, fx, standardStart, partyK } from './kit.js';
 
 export default {
   id: 'rimewing', model: 'rimewing', name: 'Rimewing', title: 'Tyrant of the Frozen Sky', kind: 'guardian',
-  radius: 2.8, height: 6, hp: 40000, atk: 0.13, bars: 180, speed: 5.2, turnRate: 3.2, enrage: 540,
+  radius: 2.8, height: 6, hp: 40000, atk: 0.14, bars: 180, speed: 5.2, turnRate: 3.2, enrage: 540,
   music: 'boss', arena: 'frostmere',
   anims: {
     bite: { dur: 1.35, hits: [0.62] }, claw: { dur: 1.6, hits: [0.86] }, tail_sweep: { dur: 2.1, hits: [1.0] },
@@ -100,7 +100,7 @@ export default {
       B.banner('ABSOLUTE ZERO — she gathers the storm! Stagger her before it breaks!', 'stagger');
       const tg = B.tele('circle', { r: 40, dur, color: 'purple', follow: u, safe: true });
       try {
-        await B.staggerCheck(Math.round(430 * (B.mods.hard ? 1.08 : 1)), dur, { groggy: 5, label: 'Absolute Zero', onFail: async () => {
+        await B.staggerCheck(Math.round(430 * partyK(B) * (B.mods.hard ? 1.08 : 1)), dur, { groggy: 5, label: 'Absolute Zero', onFail: async () => {
           tg.alive = false;
           act(B, 'land', 0.5); await wait(B, 0.5);
           smash(B, 'all', { coef: 3.4, knock: 'down', status: [{ id: 'freeze', dur: 2.5 }], fx: 'absolute_zero', fxR: 20, sfx: 'explosion_big', shake: 0.9 });
@@ -115,5 +115,5 @@ export default {
       act(B, 'wing_gust', 1.2); await wait(B, 1.4);
     } },
   ],
-  onStart(enc) { if (enc.o.hard) for (const b of enc.bosses) scaleHp(b, 1.2); },
+  onStart: standardStart,
 };

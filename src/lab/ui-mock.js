@@ -379,6 +379,120 @@ export const mockWindows = {
       { id: 'pvp', name: 'Crucible Rumble', kind: 'pvp', where: 'Solhaven · Proving Gate', times: [at(35), at(275)] },
     ] };
   },
+  sunheart: () => {
+    const q = new URLSearchParams(location.search);
+    const mk = (id, names, color, blurb, ranks) => ({ id, name: id.charAt(0).toUpperCase() + id.slice(1), color, blurb, spent: 0,
+      tiers: names.map((row, ti) => ({ tier: ti + 1, gate: [0, 10, 20, 40, 60][ti], open: ti < 3, nodes: row.map((n, ni) => ({ id: id + ti + ni, name: n, desc: `${n}: +${(ni + 1) * 2}% to a combat stat per rank.`, rank: ti < 2 ? ranks[ti][ni] : 0, max: ti === 4 ? 1 : 5, cost: ti >= 3 ? 2 : 1, can: ti < 3 })) })) });
+    const t = [
+      mk('evolution', [['Crit', 'Specialization', 'Swiftness'], ['Vital Force', 'Keen Instinct', 'Sharpened'], ['Relentless', 'Unbreakable', 'Bloodline'], ['Apex', 'Vanguard'], ['Transcendence']], '#ff9a4a', 'Raw power: stats, damage and survival.', [[5, 3, 2], [1, 0, 2]]),
+      mk('enlightenment', [['Identity I', 'Identity II'], ['Surge Mastery', 'Focus', 'Cadence'], ['Awakened Soul', 'Resonance'], ['Illumination'], ['Epiphany']], '#6fb8ff', 'Your class, sharpened: identity and skill tweaks.', [[4, 2], [1, 1, 0]]),
+      mk('leap', [['Awakening I', 'Awakening II', 'Hyper'], ['Radiant Leap', 'Momentum'], ['Starfall', 'Overdrive'], ['Zenith'], ['Ascension']], '#9fe07a', 'Awakening and hyper-awakening power.', [[3, 0, 0], [0, 0]]),
+    ];
+    for (const tr of t) tr.spent = tr.tiers.reduce((a, x) => a + x.nodes.reduce((b, n) => b + n.rank * n.cost, 0), 0);
+    return { unlocked: q.get('locked') !== '1', unlockAt: 1400, iLvl: q.get('locked') === '1' ? 1352 : 1415, points: 60, available: 60 - t.reduce((a, x) => a + x.spent, 0), trees: t };
+  },
+  partyfinder: () => ({
+    iLvl: 1415, contents: [{ id: 'Gorrath NM', label: 'Gorrath · Normal' }, { id: 'Gorrath HM', label: 'Gorrath · Hard' }, { id: 'Sunken Oratory', label: 'Sunken Oratory' }, { id: 'Kurai', label: 'Guardian: Kurai' }],
+    listings: [
+      { id: 'l1', title: 'LF1 support, know mechs, fast clear', content: 'Gorrath NM', sub: 'Gate 1–2', icon: 'boss:gorrath', leader: { name: 'Grimholt', cls: 'demonbound', iLvl: 1428 }, size: 8, members: [{ name: 'Grimholt', cls: 'demonbound' }, { name: 'Vexa', cls: 'bladedancer' }, { name: 'Kestrel', cls: 'pistoleer' }, { name: 'Lyra', cls: 'songweaver', support: true }, { name: 'Thornlight', cls: 'stormfist' }, { name: 'Moonpetal', cls: 'starcaller' }, { name: 'Oryn', cls: 'reaver' }], req: { iLvl: 1415, supports: 2 }, tags: ['Know mechs', 'Voice optional'], age: 120 },
+      { id: 'l2', title: 'Chill learning run, first clear welcome', content: 'Sunken Oratory', icon: 'boss:nerissa', leader: { name: 'Brightwen', cls: 'oathkeeper', iLvl: 1390 }, size: 4, members: [{ name: 'Brightwen', cls: 'oathkeeper', support: true }, { name: 'Ashveil', cls: 'reaver', you: true }], req: { iLvl: 1325 }, tags: ['Learning'], joined: true },
+      { id: 'l3', title: 'HM carry — 1445+ only', content: 'Gorrath HM', icon: 'boss:gorrath', leader: { name: 'Sable', cls: 'bladedancer', iLvl: 1462 }, size: 8, members: [{ name: 'Sable', cls: 'bladedancer' }, { name: 'Wren', cls: 'songweaver', support: true }, { name: 'Dax', cls: 'reaver' }], req: { iLvl: 1445, supports: 2 }, tags: ['Carry'] },
+      { id: 'l4', title: 'Kurai fox farm', content: 'Kurai', icon: 'boss:kurai', leader: { name: 'Pip', cls: 'pistoleer', iLvl: 1460 }, size: 4, members: [{ name: 'Pip', cls: 'pistoleer' }, { name: 'Ember', cls: 'starcaller' }, { name: 'Holt', cls: 'stormfist' }, { name: 'Faye', cls: 'oathkeeper', support: true }], req: { iLvl: 1460 } },
+    ],
+  }),
+  mail: () => ({ mails: [
+    { id: 'm1', from: 'Solmara Support', kind: 'system', subject: 'Please accept our compensation', date: Date.now() - 3600e3 * 5, body: 'Dear Shardbearer,\n\nThe Glass Sea was briefly unreachable during maintenance. Please accept these supplies with our apologies.\n\nMay the Shards light your way.', attachments: [{ name: 'Solar Blessing', icon: 'item:solar_blessing', grade: 3, count: 10, kind: 'material' }, { name: 'Gold', icon: 'currency:gold', grade: 4, count: 500, kind: 'currency' }, { name: 'Resurrection Feather', icon: 'item:feather', grade: 3, count: 1, kind: 'consumable' }], expires: 'in 29 days' },
+    { id: 'm2', from: 'Glassborn', kind: 'guild', subject: 'Weekly guild rewards', date: Date.now() - 86400e3, read: true, body: 'Thank you for donating this week. Your share of the guild vault is attached.', attachments: [{ name: 'Bloodstone', icon: 'currency:bloodstone', grade: 4, count: 120 }], claimed: true },
+    { id: 'm3', from: 'Kestrel', kind: 'player', subject: 'gg last night', date: Date.now() - 86400e3 * 2, read: true, body: 'That counter on the horn phase was clean. Same time tomorrow?' },
+  ] }),
+  guild: () => ({ guild: { name: 'Glassborn', tag: 'GLSB', level: 14, xp: 64200, xpMax: 90000, motto: 'We hone together, we fail together.', bloodstones: 12450, rank: 'Officer', emblem: { color: '#4fa3ff' },
+    members: [{ name: 'Ashveil', cls: 'reaver', level: 60, iLvl: 1415, rank: 'Officer', online: true, weekly: 22000 }, { name: 'Brightwen', cls: 'oathkeeper', level: 60, iLvl: 1390, rank: 'Guild Master', online: true, weekly: 40000 }, { name: 'Kestrel', cls: 'pistoleer', level: 55, iLvl: 1340, rank: 'Member', online: false, weekly: 5000 }, { name: 'Thornlight', cls: 'stormfist', level: 60, iLvl: 1402, rank: 'Member', online: true, weekly: 12000 }, { name: 'Lyra', cls: 'songweaver', level: 60, iLvl: 1433, rank: 'Veteran', online: false, weekly: 18000 }],
+    research: [{ id: 'r1', name: 'Honing Fortune', level: 2, max: 5, desc: 'Honing silver cost −2% per level.' }, { id: 'r2', name: 'Swift Supply', level: 4, max: 5, desc: 'Guild shop restocks faster.' }],
+    missions: [{ id: 'g1', name: 'Clear 30 Chaos Dungeons', n: 22, need: 30, reward: '1,000 bloodstones' }, { id: 'g2', name: 'Defeat Gorrath 5 times', n: 5, need: 5, reward: 'Guild XP +8,000' }] } }),
+  leaderboards: () => ({ board: 'legion_nm', note: 'Week 12 · resets in 2d 4h', rows: [
+    { rank: 1, name: 'Sable', cls: 'bladedancer', value: '11:42.8', sub: 'Glassborn · Tue', party: ['bladedancer', 'songweaver', 'reaver', 'oathkeeper'] },
+    { rank: 2, name: 'Grimholt', cls: 'demonbound', value: '12:03.1', sub: 'Ironvale · Wed', party: ['demonbound', 'oathkeeper', 'pistoleer', 'songweaver'] },
+    { rank: 3, name: 'Ashveil', cls: 'reaver', value: '12:40.5', sub: 'Glassborn · Wed', you: true, party: ['reaver', 'oathkeeper', 'pistoleer', 'starcaller'] },
+    { rank: 4, name: 'Wren', cls: 'songweaver', value: '13:11.0', sub: 'Tidewatch · Thu' }, { rank: 5, name: 'Holt', cls: 'stormfist', value: '13:52.4', sub: 'Tidewatch · Thu' },
+  ], you: { rank: 3, value: '12:40.5' } }),
+  stone: () => ({ stones: [GEAR.stone, { ...GEAR.stone, uid: 'st2', name: 'Uncut Ability Stone', facets: [[1, 0, 1], [0, 1], [1]] }], stone: GEAR.stone, chance: 0.45, cost: { silver: 1680 }, last: { line: 0, ok: true }, lastKey: 1 }),
+  cards: () => {
+    const C = (id, name, grade, awaken, count, icon, set) => ({ id, name, grade, awaken, count, icon, set });
+    const cards = [C('brannoc', 'Brannoc Hale', 4, 5, 0, 'npc:brannoc', 'Oath of Brighthold'), C('seraphine', 'Seraphine', 4, 3, 2, 'npc:seraphine', 'Oath of Brighthold'), C('bramble', 'Bramblebeard', 4, 2, 1, 'npc:bramblebeard', 'Pipsprout Friends'),
+      C('gorrath', 'Gorrath', 4, 4, 3, 'boss:gorrath', 'Legion Commanders'), C('varkhul', 'Varkhul', 4, 1, 0, 'boss:varkhul', 'Legion Commanders'), C('nerissa', 'Nerissa', 3, 3, 4, 'boss:nerissa', 'Drowned Choir'),
+      C('rimewing', 'Rimewing', 3, 5, 0, 'boss:rimewing'), C('kurai', 'Kurai', 3, 2, 1, 'boss:kurai'), C('merchant', 'Old Tobin', 2, 0, 5, 'npc:merchant', 'Pipsprout Friends'), C('thunderhoof', 'Old Thunderhoof', 2, 1, 2, 'boss:thunderhoof'), C('skarn', 'Skarn', 3, 0, 0, 'boss:skarn', 'Legion Commanders'), C('vesk', 'Vesk', 3, 1, 1, 'boss:vesk', 'Legion Commanders')];
+    return { deck: ['brannoc', 'seraphine', 'gorrath', 'varkhul', 'skarn', null], cards,
+      sets: [{ id: 'oath', name: 'Oath of Brighthold', cards: ['brannoc', 'seraphine'], bonuses: [{ need: 2, text: 'Holy resistance +8%' }, { need: 2, awaken: 8, text: 'Damage +5% vs demons' }] },
+             { id: 'legion', name: 'Legion Commanders', cards: ['gorrath', 'varkhul', 'skarn', 'vesk'], bonuses: [{ need: 2, text: 'Fire resistance +8%' }, { need: 4, text: 'Crit rate +4%' }, { need: 4, awaken: 12, text: 'Damage +7%' }] }] };
+  },
+  gems: () => {
+    const G = (uid, gem, level) => ({ uid, gem, level, name: `Lv.${level} ${gem === 'ruin' ? 'Ruinstone' : 'Swiftstone'}`, grade: Math.min(7, 2 + Math.floor(level / 2)), icon: `item:gem:${gem}:${level}`, kind: 'gem', desc: gem === 'ruin' ? `Damage of the socketed skill +${[0, 3, 6, 9, 12, 15, 18, 21, 24, 30, 40][level]}%.` : `Cooldown −${level * 2}%.` });
+    const sk = mockSkills('reaver');
+    return { sockets: [G('s1', 'ruin', 7), G('s2', 'ruin', 7), G('s3', 'ruin', 5), null, G('s5', 'swift', 5), G('s6', 'swift', 5), null, G('s8', 'ruin', 3), null, G('s10', 'swift', 7), null].map((gm, i) => ({ gem: gm, skill: gm ? { id: sk[i % 8].id, name: sk[i % 8].name, icon: sk[i % 8].icon } : null })),
+      gems: [G('b1', 'ruin', 5), G('b2', 'ruin', 5), G('b3', 'ruin', 5), G('b4', 'swift', 3), G('b5', 'swift', 3), G('b6', 'ruin', 2), G('b7', 'swift', 8), G('b8', 'ruin', 1)], skills: sk.map(k => ({ id: k.id, name: k.name, icon: k.icon })), fuseCost: { silver: 4200 } };
+  },
+  market: () => {
+    const hist = (b, n = 14) => Array.from({ length: n }, (_, i) => Math.round(b * (1 + Math.sin(i * 0.9 + b) * 0.08 + (i / n - 0.5) * 0.1)));
+    return { cat: 'honing', sub: 'leap', q: '', currencies: { silver: 8425310, gold: 41280, crystals: 1250 },
+      cats: [{ id: 'honing', label: 'Honing Materials', subs: [{ id: 'stones', label: 'Stones' }, { id: 'leap', label: 'Leapstones' }, { id: 'fusion', label: 'Fusion' }, { id: 'boost', label: 'Boosters' }] }, { id: 'books', label: 'Engraving Recipes' }, { id: 'battle', label: 'Battle Items' }, { id: 'gems', label: 'Gems' }, { id: 'accessories', label: 'Accessories' }, { id: 'trade', label: 'Trade Goods' }, { id: 'cooking', label: 'Cooking' }],
+      results: [
+        { id: 'r1', name: 'Great Honor Leapstone', icon: 'item:leapstone', grade: 4, kind: 'material', bundle: 1, lowest: 38, avg: 41, recent: 39, stock: 184200, history: hist(40), trend: -4.2 },
+        { id: 'r2', name: 'Destruction Stone Crystal', icon: 'item:destruction_stone', grade: 3, kind: 'material', bundle: 10, lowest: 12, avg: 11, recent: 12, stock: 1020300, history: hist(11), trend: 6.1 },
+        { id: 'r3', name: 'Guardian Stone Crystal', icon: 'item:guardian_stone', grade: 3, kind: 'material', bundle: 10, lowest: 3, avg: 3, recent: 3, stock: 2400100, history: hist(3), trend: 0.5 },
+        { id: 'r4', name: 'Superior Oreha Fusion', icon: 'item:fusion', grade: 5, kind: 'material', bundle: 1, lowest: 21, avg: 22, recent: 20, stock: 41200, history: hist(21), trend: -1.3 },
+        { id: 'r5', name: 'Solar Protection', icon: 'item:solar_protection', grade: 4, kind: 'material', bundle: 1, lowest: 118, avg: 125, recent: 121, stock: 3200, history: hist(120), trend: 2.8 },
+      ],
+      sellable: [{ ...GEAR.necklace, suggested: 1850 }, { uid: 'sl2', name: 'Engraving Recipe: Grudge', kind: 'book', grade: 5, icon: 'item:book:grudge', count: 3, suggested: 1180 }, { uid: 'sl3', name: 'Lv 7 Ruinstone', kind: 'gem', grade: 4, icon: 'item:gem:ruin:7', count: 1, suggested: 9400 }],
+      listings: [{ id: 'ls1', item: { name: 'Engraving Recipe: Adrenaline', icon: 'item:book:adrenaline', grade: 5 }, price: 1450, qty: 2, left: 150000, sold: 1 }],
+      exchange: { rate: 1240, history: hist(1240, 20) } };
+  },
+  stronghold: () => ({ level: 12, xp: 6400, xpMax: 11000, energy: { now: 4820, max: 10000, perHour: 180 },
+    buildings: [
+      { id: 'manor', name: 'Manor', level: 4, max: 10, desc: 'The heart of Brightwater Isle. Caps every other building.', effect: 'Building cap Lv 4', next: { cost: [{ name: 'Timber', icon: 'item:timber', grade: 1, need: 400, have: 820 }, { name: 'Silver', icon: 'currency:silver', need: 60000, have: 8425310 }], time: 5400, can: true } },
+      { id: 'workshop', name: 'Workshop', level: 3, max: 10, desc: 'Craft battle items and fusion materials.', effect: 'Crafting slots 3', upgrading: { left: 2280, total: 3600 } },
+      { id: 'research', name: 'Research Hall', level: 2, max: 10, desc: 'Unlocks roster-wide research perks.', effect: 'Research speed +10%', next: { cost: [{ name: 'Ore', icon: 'item:ore', grade: 1, need: 600, have: 210 }], time: 7200, req: 'Requires Manor Lv 5', can: false } },
+      { id: 'barracks', name: 'Crew Barracks', level: 2, max: 10, desc: 'House crew and send them on dispatch missions.', effect: 'Dispatch slots 2' },
+      { id: 'garden', name: 'Garden', level: 1, max: 5, desc: 'Grows herbs and flowers over time.', effect: 'Yield 12 per hour' },
+      { id: 'ranch', name: 'Pet Ranch', level: 0, max: 5, desc: 'Pets forage for materials while you are away.', next: { cost: [{ name: 'Timber', icon: 'item:timber', grade: 1, need: 200, have: 820 }], time: 1800, can: true } },
+    ],
+    research: [{ id: 'r1', name: 'Honing Thrift', tier: 1, desc: 'Honing silver −5%.', state: 'done' }, { id: 'r2', name: 'Chaos Salvage', tier: 1, desc: 'Chaos Dungeon loot +3%.', state: 'active', left: 8400, total: 14400 }, { id: 'r3', name: 'Quick Hands', tier: 1, desc: 'Crafting speed +10%.', state: 'available', time: 10800, cost: [{ name: 'Silver', icon: 'currency:silver', need: 80000, have: 8425310 }] }, { id: 'r4', name: 'Guardian Spoils', tier: 2, desc: 'Guardian Hunt loot +5%.', state: 'locked', req: 'Research Hall Lv 3' }],
+    craft: { slots: 3, queue: [{ id: 'q1', name: 'Major HP Potion', icon: 'item:hp_potion', grade: 2, qty: 10, left: 0, total: 1800 }, { id: 'q2', name: 'Destruction Bomb', icon: 'item:destruction_bomb', grade: 2, qty: 5, left: 1260, total: 2400 }],
+      recipes: [{ id: 'c1', name: 'Major HP Potion', icon: 'item:hp_potion', grade: 2, time: 1800, out: 10, cost: [{ name: 'Herb', icon: 'item:herb', grade: 1, need: 30, have: 140 }], can: true }, { id: 'c2', name: 'Flame Grenade', icon: 'item:flame_grenade', grade: 2, time: 2400, out: 5, cost: [{ name: 'Ore', icon: 'item:ore', grade: 1, need: 40, have: 210 }], can: true }, { id: 'c3', name: 'Superior Oreha Fusion', icon: 'item:fusion', grade: 5, time: 3600, out: 30, cost: [{ name: 'Relic Shard', icon: 'item:relic_shard', grade: 3, need: 50, have: 12 }], can: false }] },
+    dispatch: { slots: 2, crew: [{ id: 'cw1', name: 'Marlo', role: 'Sailor', power: 34 }, { id: 'cw2', name: 'Ines', role: 'Scout', power: 30, busy: true }, { id: 'cw3', name: 'Bram', role: 'Brawler', power: 38 }],
+      active: [{ id: 'a1', name: 'Chart the Mistveil shoals', left: 3120, total: 7200 }],
+      missions: [{ id: 'm1', name: 'Escort a merchant convoy', time: 3600, chance: 0.9, power: 60, rewards: [{ name: 'Silver', icon: 'currency:silver', grade: 1, count: 12000 }], can: true }, { id: 'm2', name: 'Hunt the reef serpent', time: 14400, chance: 0.55, power: 110, rewards: [{ name: 'Sea Bounty', icon: 'item:sea_bounty', grade: 5 }, { name: 'Fusion', icon: 'item:fusion', grade: 5, count: 10 }], can: true }] } }),
+  tome: () => ({ tab: new URLSearchParams(location.search).get('tab') || 'tome',
+    regions: [
+      { id: 'goldmeadow', name: 'Goldmeadow', pct: 72, cats: [{ id: 'bosses', label: 'Field Bosses', have: 2, total: 2 }, { id: 'npcs', label: 'Characters', have: 14, total: 18 }, { id: 'seeds', label: 'Pip Seeds', have: 6, total: 9 }, { id: 'vistas', label: 'Vistas', have: 3, total: 4 }, { id: 'lore', label: 'Lore', have: 5, total: 8 }, { id: 'cuisine', label: 'Cuisine', have: 2, total: 5 }],
+        rewards: [{ pct: 10, name: 'Silver', icon: 'currency:silver', grade: 1, count: 20000, claimed: true }, { pct: 30, name: 'Card Pack', icon: 'item:card_pack', grade: 3, claimed: true }, { pct: 50, name: 'Skill Potion', icon: 'item:skill_potion', grade: 4 }, { pct: 70, name: 'Pip Seed', icon: 'item:pip_seed', grade: 6 }, { pct: 90, name: 'Mount Whistle', icon: 'item:mount_whistle', grade: 5 }, { pct: 100, name: 'Title: Meadowwalker', icon: 'item:scroll', grade: 5 }] },
+      { id: 'solhaven', name: 'Solhaven', pct: 94, cats: [{ id: 'npcs', label: 'Characters', have: 30, total: 31 }, { id: 'seeds', label: 'Pip Seeds', have: 8, total: 8 }], rewards: [{ pct: 100, name: 'Card Pack', icon: 'item:card_pack', grade: 4 }] },
+      { id: 'thornwood', name: 'Thornwood', pct: 31, cats: [], rewards: [] }, { id: 'ashen', name: 'Ashen Ridge', pct: 8, cats: [], rewards: [] }, { id: 'pips', name: 'Pipsprout Hollow', pct: 55, cats: [], rewards: [] }],
+    collectibles: [
+      { id: 'seeds', name: 'Pip Seeds', icon: 'item:pip_seed', have: 47, total: 120, tiers: [{ n: 40, name: 'Pip Pet', icon: 'item:pet_charm', grade: 5 }, { n: 60, name: 'Card Pack', icon: 'item:card_pack', grade: 4 }] },
+      { id: 'souls', name: 'Island Souls', icon: 'item:island_soul', have: 5, total: 40, tiers: [{ n: 5, name: 'Sail Emblem', icon: 'item:map', grade: 4 }] },
+      { id: 'hearts', name: "Giant's Hearts", icon: 'item:giants_heart', have: 3, total: 12, tiers: [{ n: 4, name: 'Crew', icon: 'item:scroll', grade: 4 }] },
+      { id: 'art', name: 'Masterpieces', icon: 'item:masterpiece', have: 11, total: 40, tiers: [{ n: 10, name: 'Skill Potion', icon: 'item:skill_potion', grade: 4, claimed: true }, { n: 20, name: 'Card Pack', icon: 'item:card_pack', grade: 4 }] },
+      { id: 'stars', name: 'Omnium Stars', icon: 'item:omnium_star', have: 2, total: 15, tiers: [{ n: 3, name: 'Relic Shard', icon: 'item:relic_shard', grade: 4 }] },
+      { id: 'bounty', name: 'Sea Bounties', icon: 'item:sea_bounty', have: 4, total: 30, tiers: [{ n: 5, name: 'Ship Skin', icon: 'item:mount_whistle', grade: 5 }] },
+      { id: 'leaves', name: 'World Tree Leaves', icon: 'item:world_leaf', have: 9, total: 60, tiers: [{ n: 10, name: 'Leaf Crown', icon: 'item:gift:2', grade: 4 }] },
+      { id: 'vistas', name: 'Vistas', icon: 'item:map', have: 12, total: 44, tiers: [{ n: 10, name: 'Photo Frame', icon: 'item:scroll', grade: 3, claimed: true }, { n: 20, name: 'Title', icon: 'item:scroll', grade: 4 }] },
+    ] }),
+  rapport: () => ({ npcs: [
+    { id: 'seraphine', name: 'Seraphine', title: 'Oracle of the Shards', icon: 'npc:seraphine', stage: 2, points: 3400, max: 6000, daily: { songs: 2, songsMax: 5, emotes: 4, emotesMax: 5 },
+      songs: [{ id: 'sunrise', name: 'Song of Sunrise' }, { id: 'valor', name: 'Ballad of Valor' }, { id: 'rest', name: 'Lullaby of Rest', locked: true }], emotes: [{ id: 'bow', name: 'Bow' }, { id: 'heart', name: 'Heart' }, { id: 'cheer', name: 'Cheer' }],
+      gifts: [{ uid: 'g1', name: 'Songbird Music Box', kind: 'gift', grade: 3, icon: 'item:gift:1', count: 2 }, { uid: 'g2', name: 'Starlight Candle', kind: 'gift', grade: 4, icon: 'item:gift:3' }],
+      rewards: [{ stage: 1, name: 'Card: Seraphine', icon: 'item:card_pack', grade: 4, claimed: true }, { stage: 2, name: 'Skill Potion', icon: 'item:skill_potion', grade: 4 }, { stage: 3, name: 'Song: Shardlight', icon: 'item:scroll', grade: 5 }, { stage: 5, name: 'Giant\'s Heart', icon: 'item:giants_heart', grade: 6 }] },
+    { id: 'brannoc', name: 'Brannoc Hale', title: 'Knight-Commander', icon: 'npc:brannoc', stage: 4, points: 800, max: 9000 },
+    { id: 'bramblebeard', name: 'Bramblebeard', title: 'Elder of the Pips', icon: 'npc:bramblebeard', stage: 1, points: 200, max: 3000 },
+    { id: 'merchant', name: 'Old Tobin', title: 'Travelling Merchant', icon: 'npc:merchant', stage: 0, points: 0, max: 2000 },
+  ] }),
+  bid: () => ({ item: { ...{}, name: 'Horned Tyrant Horn Relic', icon: 'item:relic_shard', grade: 5, kind: 'material', desc: 'A splinter of Gorrath\'s horn. Used to craft Tyrant accessories.' }, min: 500, step: 100, left: 22, total: 30, gold: 41280, status: 'open',
+    bids: [{ name: 'Grimholt', cls: 'demonbound', amount: 1800 }, { name: 'Ashveil', cls: 'reaver', amount: 1600, you: true }, { name: 'Vexa', cls: 'bladedancer', amount: 1200 }], note: 'Winning gold is split among the other 7 raiders.' }),
+  quests: () => ({ tracked: ['msq1', 'side1'], quests: [
+    { id: 'msq1', title: "The Tyrant's Shadow", kind: 'msq', level: 50, zone: 'Ashen Ridge', giver: 'Commander Brannoc Hale', desc: 'Legion scouts have been sighted on the ridge road. Brannoc wants them silenced before they report back to Gorrath — and wants to know what they were looking for.', steps: [{ text: 'Defeat Legion scouts', n: 7, need: 10 }, { text: 'Report to Commander Brannoc', n: 0, need: 1 }], rewards: [{ name: 'Experience', icon: 'item:scroll', grade: 2, count: 128000 }, { name: 'Leapstone', icon: 'item:leapstone', grade: 4, count: 10 }] },
+    { id: 'side1', title: 'Seeds in the Wheat', kind: 'side', zone: 'Goldmeadow', giver: 'Bramblebeard', desc: 'The Pips hid their seeds in the wheat again.', steps: [{ text: 'Find hidden Pip Seeds', n: 2, need: 5 }] },
+    { id: 'd1', title: 'Wayfarer: Wolf Pelts', kind: 'daily', steps: [{ text: 'Collect wolf pelts', n: 12, need: 12, done: true }, { text: 'Deliver to Hilde', n: 0, need: 1 }] },
+  ] }),
   gamemenu: () => ({}),
   map: () => ({ view: new URLSearchParams(location.search).get('view') || 'world' }),
   inventory: () => ({ items: inventory(), slots: 60, currencies: { silver: 8425310, gold: 41280, crystals: 1250 } }),

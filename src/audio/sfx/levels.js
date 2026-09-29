@@ -53,4 +53,8 @@ export const LEVELS = {
   chest_open: 2.239, door_open: 4.712, mount_summon: 2.003, horse_gallop: 1.508, ship_bell: 1.025, cannon: 0.655,
   wave_splash: 0.767, sail_flap: 2.545, fishing_cast: 2.56, fishing_bite: 2.67, fishing_reel: 6.213, chop: 1.451,
   mine: 1.666, dig: 1.71, gather: 2.821, bell: 0.987,
+  gunshot_heavy: 0.822, chain: 1.75, spike: 1.216, punch_heavy: 0.985, claw: 3.019, stomp: 0.797,
+  cast: 2.146, frost: 2.262, chi: 0.666, void: 0.554, vanish: 2.401, fire_burst: 0.908,
+  ghost_slam: 0.773, ghost_wail: 1.8, roar: 0.448, charge_roar: 0.515, channel: 0.331, spin: 1.37,
+  fire_loop: 0.461,
 };

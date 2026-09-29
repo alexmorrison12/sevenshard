@@ -261,15 +261,22 @@ function gemIcon(x, R, kind, lv) {
 // ------------------------------------------------------------------ engraving books
 const CLASS_OF = {}; for (const c in ENGR_CLASS) for (const e of ENGR_CLASS[c]) CLASS_OF[e] = c;
 const CLASS_COVER = { reaver: '#8a1a22', oathkeeper: '#2a4a8a', stormfist: '#1a4a7a', pistoleer: '#6a3a14', starcaller: '#4a2a8a', songweaver: '#8a3a4a', bladedancer: '#3a2a6a', demonbound: '#3a0e2e' };
+/** Combat engraving colours (their emblem field hue) → book covers. */
+const ENGR_COLOR = {
+  vendetta: '#e0303a', hexed_idol: '#8a5aff', keen_edge: '#4ab0e0', adrenaline: '#ff5a3a', backstabber: '#a070ff', frontliner: '#e0a030',
+  wind_captain: '#30c0a0', spirit_absorption: '#4aa8ff', precise_blade: '#a0c030', super_charge: '#e0c030', barricade: '#4a7aff', expert: '#40c070',
+  awakening: '#e0b040', master_brawler: '#ff8030', ether_predator: '#30b090', crisis_evasion: '#c8b070', stabilized_status: '#50b070', all_out_attack: '#ff3a3a',
+  mana_flow: '#3a8aff', heavy_armor: '#7a90b0', sight_focus: '#e09a30', drops_of_ether: '#30d0c0', propulsion: '#ff9030', increase_mass: '#a07a50',
+};
 function engrBook(x, R, e) {
   const cls = CLASS_OF[e];
-  const cover = cls ? CLASS_COVER[cls] : e.startsWith('neg_') ? '#4a1414' : '#2a3448';
+  const cover = cls ? CLASS_COVER[cls] : e.startsWith('neg_') ? '#4a1414' : shade(ENGR_COLOR[e] || '#4a5a7a', -0.45);
   x.save(); x.translate(52, 52); x.rotate(-0.08);
-  book(x, 54, 70, cover, { trim: cls ? 'gold' : 'silver' });
-  // emblem medallion on the cover
-  x.save(); x.beginPath(); x.arc(3, -2, 17, 0, TAU); x.clip();
-  x.translate(3 - 17, -2 - 17); x.scale(0.34, 0.34); ENGRAVING_PAINTERS[e](x, R); x.restore();
-  x.lineWidth = 2.6; x.strokeStyle = metalLG(x, -14, -19, 20, 15, cls ? 'gold' : 'silver'); circle(x, 3, -2, 17.2); x.stroke(); outline(x, INK, 0.6);
+  book(x, 56, 72, cover, { trim: cls ? 'gold' : 'silver' });
+  // emblem medallion set into the cover
+  x.save(); x.beginPath(); x.arc(3, -2, 20, 0, TAU); x.clip();
+  x.translate(3 - 20, -2 - 20); x.scale(0.4, 0.4); ENGRAVING_PAINTERS[e](x, R); x.restore();
+  x.lineWidth = 2.8; x.strokeStyle = metalLG(x, -17, -22, 23, 18, cls ? 'gold' : 'silver'); circle(x, 3, -2, 20.2); x.stroke(); outline(x, INK, 0.6);
   x.restore();
 }
 

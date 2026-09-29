@@ -10,8 +10,12 @@
 // Geometry, the sail atlas and the plank texture are built once per type and shared; each instance owns two small
 // materials (+ a shadow depth material) for its own billow / reef / recoil / wheel uniforms. update() allocates nothing.
 import * as THREE from 'three';
-import { woodMaterial, sailMaterial, sailDepthMaterial, MAX_GUNS } from './mats.js';
+import { woodMaterial, sailMaterial, sailDepthMaterial, foamMaterial, MAX_GUNS } from './mats.js';
+import { plankTex } from './tex.js';
 import { buildDawnrunner } from './dawnrunner.js';
+import { buildPirate } from './pirate.js';
+import { buildGhost } from './ghost.js';
+import { buildMerchant } from './merchant.js';
 
 export const SHIPS = {
   dawnrunner: { name: 'Dawnrunner', length: 18 },
@@ -19,21 +23,22 @@ export const SHIPS = {
   ghost: { name: 'Ghost Ship', length: 19 },
   merchant: { name: 'Merchant Cog', length: 16 },
 };
-const BUILDERS = { dawnrunner: buildDawnrunner };
+const BUILDERS = { dawnrunner: buildDawnrunner, pirate: buildPirate, ghost: buildGhost, merchant: buildMerchant };
 const CACHE = {};
 
 /** Build (and cache) a ship type's shared geometry; returns build stats. */
 export function preloadShip(type) {
   if (CACHE[type]) return CACHE[type];
   const t0 = performance.now();
+  plankTex();                                       // shared by every type (first build pays ~20 ms)
   const d = (BUILDERS[type] || BUILDERS.dawnrunner)();
   d.ms = performance.now() - t0;
-  d.tris = (d.wood.index.count + d.sails.index.count) / 3;
+  d.tris = (d.wood.index.count + d.sails.index.count + (d.foam ? d.foam.index.count : 0)) / 3;
   d.verts = d.wood.attributes.position.count + d.sails.attributes.position.count;
   return (CACHE[type] = d);
 }
-export function shipStats() { return Object.entries(CACHE).map(([type, d]) => ({ type, ms: d.ms, tris: d.tris, verts: d.verts, drawCalls: 2 })); }
-export function disposeShipCache() { for (const k in CACHE) { const d = CACHE[k]; d.wood.dispose(); d.sails.dispose(); d.tex.dispose(); delete CACHE[k]; } }
+export function shipStats() { return Object.entries(CACHE).map(([type, d]) => ({ type, ms: d.ms, tris: d.tris, verts: d.verts, drawCalls: d.foam ? 3 : 2, report: d.report })); }
+export function disposeShipCache() { for (const k in CACHE) { const d = CACHE[k]; d.wood.dispose(); d.sails.dispose(); d.foam?.dispose(); d.tex.dispose(); delete CACHE[k]; } }
 
 const RECOIL = 0.5, RECOIL_DUR = 1.25, STAGGER = 0.12;
 const recoilAt = (t) => (t < 0 ? 0 : t < 0.06 ? RECOIL * (t / 0.06) : t < 0.2 ? RECOIL : t < RECOIL_DUR ? RECOIL * (1 - smooth01((t - 0.2) / (RECOIL_DUR - 0.2))) : 0);
@@ -49,6 +54,11 @@ export function createShip(type = 'dawnrunner') {
   const wood = new THREE.Mesh(def.wood, wmat); wood.name = 'ship-wood'; wood.castShadow = true; wood.receiveShadow = true;
   const sails = new THREE.Mesh(def.sails, smat); sails.name = 'ship-sails'; sails.castShadow = true; sails.receiveShadow = true; sails.customDepthMaterial = sdep;
   hull.add(wood, sails);
+  // waterline foam skirt rides on the root (stays on the water while the hull rocks); drawn after the sea
+  const fmat = def.foam ? foamMaterial(def.look.foam) : null;
+  const foam = def.foam ? new THREE.Mesh(def.foam, fmat) : null;
+  if (foam) { foam.name = 'ship-foam'; foam.renderOrder = 6; foam.castShadow = false; foam.receiveShadow = false; root.add(foam); }
+  const fu = fmat?.userData.ship;
   const mk = (parent, p, ry = 0, name = '') => { const o = new THREE.Object3D(); o.name = name; o.position.fromArray(p); o.rotation.y = ry; parent.add(o); return o; };
   const sockets = {
     helm: mk(hull, def.sockets.helm, 0, 'helm'),
@@ -98,6 +108,8 @@ export function createShip(type = 'dawnrunner') {
     st.swXV += ((-pitch - st.swX) * 9 - st.swXV * 1.6) * dt; st.swX += st.swXV * dt;
     st.swZV += ((-roll - st.swZ) * 9 - st.swZV * 1.6) * dt; st.swZ += st.swZV * dt;
     wu.uSway.value.set(st.swX, st.swZ);
+    // --- waterline foam (thicker with speed; flows aft)
+    if (fu) { fu.uFoam.value += (Math.min(1, Math.abs(speed) / 7) - fu.uFoam.value) * (first ? 1 : 1 - Math.exp(-dt * 1.5)); fu.uFlow.value = (fu.uFlow.value + speed * dt * 0.25) % 1000; }
     // --- cannon recoil
     const rc = wu.uRecoil.value;
     for (let i = 0; i < MAX_GUNS; i++) { if (fireT[i] < 50) { fireT[i] += dt; rc[i] = recoilAt(fireT[i]); } }
@@ -113,8 +125,8 @@ export function createShip(type = 'dawnrunner') {
   }
 
   function setGlow(k = 1) { wu.uGlow.value = k; }
-  function dispose() { root.removeFromParent(); wmat.dispose(); smat.dispose(); sdep.dispose(); }
+  function dispose() { root.removeFromParent(); wmat.dispose(); smat.dispose(); sdep.dispose(); fmat?.dispose(); }
 
   su.uBillow.value = st.billow; su.uLuff.value = st.luff;
-  return { type, name: SHIPS[type].name, length: SHIPS[type].length, root, hull, sockets, update, fire, setGlow, dispose, stats: { tris: def.tris, ms: def.ms, drawCalls: 2 } };
+  return { type, name: SHIPS[type].name, length: SHIPS[type].length, root, hull, sockets, update, fire, setGlow, dispose, stats: { tris: def.tris, ms: def.ms, drawCalls: foam ? 3 : 2 } };
 }

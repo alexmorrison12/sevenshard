@@ -1,11 +1,11 @@
 // Gunner presets — Pistoleer (twin pistols / shotgun / rifle): muzzle flashes, tracers, sniper rounds, grenades.
 import * as THREE from 'three';
-import { ctx, tc, vec, GEN, PHYS, FIRE, TAU, UP, hue, shockwave, decal, hit, explosion, S, R, P, v3 } from './lib.js';
+import { KEYS, ctx, tc, vec, GEN, PHYS, FIRE, TAU, UP, hue, shockwave, decal, hit, explosion, S, R, P, v3 } from './lib.js';
 
 const K = {};
 const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3();
-const MUZ_STAR = P({ sprite: S.star, ramp: R.wFlash, life: 0.07, size: 0.9, end: 1.3, i: 3.4, noGround: true });
-const MUZ_CONE = P({ sprite: S.flame1, ramp: R.wFlash, life: 0.07, size: 0.8, end: 1.4, i: 3, noGround: true });
+const MUZ_STAR = P({ sprite: S.star, ramp: R.wFlash, life: 0.07, size: 1.2, end: 1.3, i: 2.6, noGround: true });
+const MUZ_CONE = P({ sprite: S.flame1, ramp: R.wFlash, life: 0.07, size: 1.05, end: 1.4, i: 2.4, noGround: true });
 const MUZ_GLOW = P({ sprite: S.glow, ramp: R.wFlash, life: 0.1, size: 1.6, end: 1.2, i: 1.8, noGround: true });
 const MUZ_SMOKE = P({ pool: 'alpha', sprite: [S.smoke1, S.smoke2, S.smoke3], ramp: R.smokeLight, life: [0.5, 0.8], size: [0.25, 0.35], end: [2.5, 3.5], ease: 2, drag: 4, accY: 0.8, alpha: 0.55, color: [0.9, 0.88, 0.85] });
 const SHELL = P({ sprite: S.spark, ramp: R.wSolid, life: [0.45, 0.6], size: [0.03, 0.045], orient: 'stretch', stretch: 0.06, drag: 0.4, accY: -14, color: [1.3, 0.9, 0.35], i: 1.1 });
@@ -64,9 +64,9 @@ const SNIPE_IMPACT = { name: 'sniper_impact', init(T) { T.dur = T.p.delay; }, st
 K.sniper_impact = (fx, p) => {
   const c = ctx(fx, p), s = c.s, pos = v3(p.pos, _c).clone();
   const col = tc(c.tint, 0xffd080, 1.6);
-  hit(fx, { pos, dir: c.f, crit: true, element: 'physical', scale: 1.5 * s });
-  fx.at(GEN.flare, pos, 3 * s, col, { rot: 0 });
-  fx.at(GEN.ringThin, pos, 0.8 * s, col, { life: 0.35 });
+  hit(fx, { pos, dir: c.f, crit: true, element: 'physical', scale: 1.1 * s });
+  fx.at(GEN.flare, pos, 1.8 * s, col, { rot: 0, i: 0.7 });
+  fx.at(GEN.ringThin, pos, 0.45 * s, col, { life: 0.35 });
   fx.sphere(GEN.sparkLong, 30, pos, 6, 16, s, col, c.f, 0.7);
   const g = vec(pos.x, fx.gy(pos.x, pos.z, pos.y), pos.z);
   if (pos.y - g.y < 2.5) shockwave(fx, { pos: g, radius: 3 * s, color: col, dur: 0.3, wall: false });
@@ -119,7 +119,7 @@ K.target_down = {                    // rifle: crosshair decal + three precise h
   init(T) { const fx = T.fx, c = ctx(fx, T.p, T.v.c = {}, 2.5, 12, 10); T.v.tgt = vec(c.tx, c.ty, c.tz); fx.at(CROSS, _a.set(c.tx, c.ty + 0.07, c.tz), c.R / 2.5, [1, 0.3, 0.2]); T.dur = 1.1; },
   tick(T) {
     const c = T.v.c;
-    for (let k = 0; k < 3; k++) if (T.once('s' + k, 0.25 + k * 0.3)) K.sniper_round(T.fx, { pos: vec(c.x, c.y, c.z), to: vec(T.v.tgt.x + T.fx.r(-0.5, 0.5), T.v.tgt.y + 1, T.v.tgt.z + T.fx.r(-0.5, 0.5)), dir: c.f, color: T.p.color });
+    for (let k = 0; k < 3; k++) if (T.once(KEYS[k], 0.25 + k * 0.3)) K.sniper_round(T.fx, { pos: vec(c.x, c.y, c.z), to: vec(T.v.tgt.x + T.fx.r(-0.5, 0.5), T.v.tgt.y + 1, T.v.tgt.z + T.fx.r(-0.5, 0.5)), dir: c.f, color: T.p.color });
   },
 };
 K.catastrophe = {                    // artillery: shells rain over the area

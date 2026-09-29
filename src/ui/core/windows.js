@@ -14,13 +14,15 @@ const KEY = 'ss.ui.win.v1';
 
 export class Win {
   static id = 'win'; static title = 'Window'; static glyph = null; static width = 420; static height = null; static bare = false;
+  /** 'win' (default: hidden while a full screen is up) or 'modal' (stays above screens, e.g. the raid auction over results) */
+  static layer = 'win';
   /** default position: 'center' | 'left' | 'right' | { x|right, y|bottom } (virtual px) */
   static pos = 'center';
   constructor(ui, mgr) {
     this.ui = ui; this.mgr = mgr;
     const C = this.constructor;
     this.id = C.id;
-    const el = this.el = h('section', `ss-win ss-panel ss-orn ss-win--${C.id}`, mgr.layer);
+    const el = this.el = h('section', `ss-win ss-panel ss-orn ss-win--${C.id}`, C.layer === 'modal' ? ui.layers.modal : mgr.layer);
     el.setAttribute('role', 'dialog');
     el.setAttribute('aria-label', C.title);
     el.style.width = C.width + 'px';
@@ -142,6 +144,8 @@ export class WindowManager {
     return best ? best.id : null;
   }
   closeTop() { const t = this.top(); return t ? this.close(t) : false; }
+  /** A window living in the modal layer (e.g. the auction) is open: screens shouldn't take Enter/Esc. */
+  hasOpenModal() { for (const w of this.inst.values()) if (w.isOpen && w.constructor.layer === 'modal') return true; return false; }
   closeAll() { for (const w of this.inst.values()) if (w.isOpen) this.close(w.id); }
   openList() { return [...this.inst.values()].filter(w => w.isOpen).map(w => w.id); }
   place(w) {

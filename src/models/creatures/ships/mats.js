@@ -204,9 +204,9 @@ void main() {
   vec2 p = vec2( vUv.x * 1.6 - uFlow * 1.6, o * 3.2 - uTime * 0.35 );
   float n = vn( p * 1.7 ) * 0.55 + vn( p * 4.1 + 7.3 ) * 0.3 + vn( p * 9.7 - 3.1 ) * 0.15;
   float edge = 1.0 - smoothstep( 0.0, 1.0, o );
-  float lace = smoothstep( 0.42, 0.62, n + edge * 0.55 - 0.25 ) * edge;
-  float line = smoothstep( 0.18, 0.0, o ) * ( 0.55 + 0.45 * n );          // bright contact line at the hull
-  float a = clamp( ( lace * 0.8 + line ) * vK * ( 0.35 + 0.65 * uFoam ), 0.0, 1.0 );
+  float lace = smoothstep( 0.36, 0.56, n + edge * 0.6 - 0.22 ) * edge;
+  float line = smoothstep( 0.3, 0.0, o ) * ( 0.6 + 0.4 * n );             // bright contact line at the hull
+  float a = clamp( ( lace * 1.0 + line * 1.3 ) * vK * ( 0.5 + 0.5 * uFoam ), 0.0, 1.0 );
   vec3 col = applyFog( uFoamCol, vW );
   col = mix( col, vec3( dot( col, vec3( 0.3, 0.5, 0.2 ) ) ), uDesat );
   gl_FragColor = vec4( col, a * 0.9 );

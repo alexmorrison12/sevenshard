@@ -718,15 +718,15 @@ function recomputeRowNormals(pb, ids) {
 // ------------------------------------------------------------------------------------------------
 // Tabard / apron panels (front + optional back), conforming at the top, hanging below the belt
 export function panelPiece(base, sp) {
-  return cached(`${base.key}|panel|${JSON.stringify(sp)}`, () => {
+  return cached(`${base.key}|panel2|${JSON.stringify(sp)}`, () => {
     const pb = new PB(base);
     const J = base.JJ.J, P = base.P;
-    const fn = base.chainSDF.torso;
+    const fn = base.chainSDF.torsoLegs;
     const top = sp.top ?? (J.chest[1] + 0.1), bot = sp.bottom ?? (J.shinL[1] + 0.08);
     const hw = sp.hw ?? P.core[1] * 0.75;
-    const cols = 6, rows = 12;
+    const lowQ = base.L?.ring < 1;
+    const cols = lowQ ? 6 : 12, rows = lowQ ? 8 : 18;
     const hy = J.hips[1] - 0.04, ky = J.shinL[1];
-    // hanging part follows the front / back flap bones (they swing with the legs)
     const flapW = (face, y, u) => {
       if (y > hy) return 'auto';
       const t = Math.min(1, (hy - y) / (hy - ky));
@@ -735,27 +735,35 @@ export function panelPiece(base, sp) {
       if (t < 0.5) return [[B.hips, 1 - 2 * t + side], [b1, 2 * t]];
       return [[b1, 2 - 2 * t], [b2, 2 * t - 1]];
     };
+    const folds = sp.folds ?? 3.5, foldA = (sp.foldAmp ?? 0.011) * (sp.stiff ? 0.4 : 1);
     for (const face of sp.back ? [-1, 1] : [-1]) { // -1 front, +1 back
       const ids = [];
-      let running = new Float32Array(cols + 1).fill(-1);
+      const hangZ = new Float32Array(cols + 1).fill(NaN);
+      const hemAt = (u) => {
+        if (sp.tatter) return bot - 0.08 * Math.abs(NZ.noise2(u * 3.1 + face, 1.7)) - (Math.round((u + 1) * cols / 2) % 2) * 0.045;
+        if (sp.hem === 'v') return bot - 0.1 * (1 - Math.abs(u));
+        if (sp.hem === 'scallop') return bot - 0.03 * Math.abs(Math.cos(u * Math.PI * 1.5));
+        return bot - 0.012 * (1 - u * u);
+      };
       for (let r = 0; r <= rows; r++) {
         const v = r / rows;
         const row = [];
         for (let c = 0; c <= cols; c++) {
           const u = c / cols * 2 - 1;
-          let yb = bot;
-          if (sp.tatter) yb = bot - 0.07 * Math.abs(NZ.noise2(u * 3.1 + face, 1.7)) - (c % 2) * 0.04;
-          else if (sp.hem === 'v') yb = bot - 0.09 * (1 - Math.abs(u));
-          const y = lerp(top, yb, v);
-          const x = u * hw * (1 + v * (sp.flare ?? 0.1));
+          const y = lerp(top, hemAt(u), v);
+          const x = u * hw * (1 + v * (sp.flare ?? 0.12));
           const rr = marchIn((xx, yy, zz) => fn.eval(xx, yy, zz), x, y, J.spine[2], 0, 0, face, 0.45);
-          let z = J.spine[2] + face * (rr > 0.01 ? rr : 0.05) + face * 0.018;
-          if (face < 0) { running[c] = running[c] < -0.5 ? z : Math.min(running[c], z); z = Math.min(z, running[c]); }
-          else { running[c] = running[c] < -0.5 ? z : Math.max(running[c], z); z = Math.max(z, running[c]); }
-          const trim = sp.trim && (Math.abs(u) > 0.8 || v > 0.9);
-          const slot = trim ? (sp.trimSlot ?? SLOT.TRIM) : (sp.slot ?? SLOT.TABARD);
-          const f = (0.92 - 0.1 * v + 0.05 * Math.cos(u * 3)) * (sp.tatter && v > 0.8 ? 0.85 : 1);
-          row.push(pb.v(x, y, z, 0, 0, face, slot, [f, f, f], 0, flapW(face, y, u), trim && sp.runes ? 1 : 0));
+          let z = J.spine[2] + face * (rr > 0.01 ? rr : 0.05) + face * (sp.off ?? 0.02);
+          // below the hips the cloth hangs free: never closer to the body than it was at the hip
+          if (y < hy) { if (isNaN(hangZ[c])) hangZ[c] = z; z = face < 0 ? Math.min(z, hangZ[c]) : Math.max(z, hangZ[c]); }
+          const hang = smoothstep(hy + 0.02, hy - 0.25, y);
+          z += face * Math.sin(u * Math.PI * folds + (face > 0 ? 1.3 : 0.4)) * foldA * (0.25 + hang);   // pleats deepen downward
+          z -= face * u * u * (sp.wrap ?? 0.05) * (0.3 + hang);                                          // edges curve back around the legs
+          const border = Math.abs(u) > 0.84 || v > 0.93;
+          const slot = border && sp.trim ? (sp.trimSlot ?? SLOT.TRIM) : (sp.slot ?? SLOT.TABARD);
+          const fold = 0.86 + 0.14 * Math.cos(u * Math.PI * folds + (face > 0 ? 1.3 : 0.4)) * hang;
+          const f = (0.95 - 0.1 * v) * fold * (sp.tatter && v > 0.8 ? 0.85 : 1);
+          row.push(pb.v(x, y, z, 0, 0, face, slot, [f, f, f], 0, flapW(face, y, u), border && sp.runes ? 1 : 0));
         }
         ids.push(row);
       }
@@ -763,11 +771,28 @@ export function panelPiece(base, sp) {
         const a = ids[r][c], b = ids[r][c + 1], cc = ids[r + 1][c + 1], d = ids[r + 1][c];
         if (face < 0) { pb.tri(a, cc, d); pb.tri(a, b, cc); } else { pb.tri(a, d, cc); pb.tri(a, cc, b); }
       }
+      // inner side (slightly darker lining, offset toward the body for thickness)
+      const inner = [];
+      for (let r = 0; r <= rows; r++) { const row = []; for (let c = 0; c <= cols; c++) { const i = ids[r][c]; row.push(pb.v(pb.P[i * 3], pb.P[i * 3 + 1], pb.P[i * 3 + 2] - face * 0.005, 0, 0, -face, sp.slot ?? SLOT.TABARD, [0.5, 0.5, 0.5], 0, { bi: pb.BI.slice(i * 4, i * 4 + 4), bw: pb.BW.slice(i * 4, i * 4 + 4) })); } inner.push(row); }
       for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
-        const a = ids[r][c], b = ids[r][c + 1], cc = ids[r + 1][c + 1], d = ids[r + 1][c];
+        const a = inner[r][c], b = inner[r][c + 1], cc = inner[r + 1][c + 1], d = inner[r + 1][c];
         if (face < 0) { pb.tri(a, d, cc); pb.tri(a, cc, b); } else { pb.tri(a, cc, d); pb.tri(a, b, cc); }
       }
       recomputeRowNormalsPanel(pb, ids, face);
+      // raised embroidered border along both sides and the hem
+      if (sp.trim && !lowQ) {
+        const edge = [];
+        for (let r = 1; r <= rows; r++) edge.push(ids[r][0]);
+        for (let c = 1; c <= cols; c++) edge.push(ids[rows][c]);
+        for (let r = rows - 1; r >= 1; r--) edge.push(ids[r][cols]);
+        const pts = edge.map(i => new THREE.Vector3(pb.P[i * 3], pb.P[i * 3 + 1], pb.P[i * 3 + 2] + face * 0.002));
+        const tb = new PB(base); tb.ao = false;
+        tb.add(tubeGeo(pts, pts.map(() => 0.005), 5), { slot: sp.runes ? SLOT.RUNE : (sp.trimSlot ?? SLOT.TRIM), bw: (x, y, z) => flapW(face, y, x / hw), mulFn: topLit(0.3, 0.95), rune: sp.runes ? 1 : 0 });
+        const tp = tb.build();
+        const o0 = pb.n;
+        for (let i = 0; i < tp.n; i++) pb.v(tp.pos[i * 3], tp.pos[i * 3 + 1], tp.pos[i * 3 + 2], tp.nrm[i * 3], tp.nrm[i * 3 + 1], tp.nrm[i * 3 + 2], tp.slot[i], [tp.mul[i * 3], tp.mul[i * 3 + 1], tp.mul[i * 3 + 2]], 0, { bi: Array.from(tp.bi.slice(i * 4, i * 4 + 4)), bw: Array.from(tp.bw.slice(i * 4, i * 4 + 4)) }, tp.rune ? tp.rune[i] : 0);
+        for (let t = 0; t < tp.idx.length; t += 3) pb.tri(o0 + tp.idx[t], o0 + tp.idx[t + 1], o0 + tp.idx[t + 2]);
+      }
       if (sp.emblem) {
         const r = Math.round(rows * 0.3), [x, y, z] = [pb.P[ids[r][cols / 2] * 3], pb.P[ids[r][cols / 2] * 3 + 1], pb.P[ids[r][cols / 2] * 3 + 2]];
         const e = emblemGeo(sp.emblem, 0.075 * base.scale);

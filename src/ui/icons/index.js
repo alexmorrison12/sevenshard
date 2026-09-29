@@ -20,6 +20,7 @@ import { ITEM_PAINT } from './items.js';
 import { EMBLEM_PAINT } from './emblems.js';
 import { MISC_PAINT } from './misc.js';
 import { PORTRAIT_PAINT } from './portraits.js';
+import { NPC_CARD_PAINT, genericCard } from './npcs_cards.js';
 
 export { GRADES, CLASS_COLORS, CLASSES };
 /** Skill keys per class (DESIGN.md §4 order), e.g. SKILL_KEYS.reaver[0] = 'whirlwind_edge'. */
@@ -31,15 +32,46 @@ export const ICON_IDS = Object.freeze(ALL.slice());
 const KNOWN = new Set(ALL);
 
 const PAINT = new Map();
-for (const table of [SKILL_PAINT, ITEM_PAINT, EMBLEM_PAINT, MISC_PAINT, PORTRAIT_PAINT]) for (const k in table) PAINT.set(k, table[k]);
+for (const table of [SKILL_PAINT, ITEM_PAINT, EMBLEM_PAINT, MISC_PAINT, PORTRAIT_PAINT, NPC_CARD_PAINT]) for (const k in table) PAINT.set(k, table[k]);
+
+/**
+ * Aliases: ids the game data produces that share art with a canonical id — awakening / identity skills by their kit
+ * def ids (skill:<cls>:<def.id>), and ITEMS ids like food1 / gift1.
+ */
+const ALIAS = {};
+const AWAKEN_ID = { reaver: 'worldsplitter', oathkeeper: 'radiant_judgment', stormfist: 'heavens_fury', pistoleer: 'last_rites', starcaller: 'stellar_collapse', songweaver: 'grand_finale', bladedancer: 'thousand_cuts', demonbound: 'abyssal_rupture' };
+for (const c in AWAKEN_ID) ALIAS[`skill:${c}:${AWAKEN_ID[c]}`] = `skill:${c}:awakening`;
+const IDENTITY_ID = {
+  reaver: { burst_mode: 'z', crimson_finale: 'x', bloodlust: 'z' }, oathkeeper: { aegis_of_dawn: 'z', sacred_punishment: 'x', sanctified: 'x' },
+  stormfist: { dragon_ascent: 'z', thunder_tiger: 'x' }, pistoleer: { swap_stance: 'z', stance: 'z', quickdraw: 'z', deadeye_focus: 'x', deadeye: 'x' },
+  starcaller: { overload: 'z', arcane_surge: 'x' }, songweaver: { anthem_of_courage: 'z', hymn_of_mending: 'x' },
+  bladedancer: { surge: 'z', surge_orbs: 'x' }, demonbound: { demonform: 'z', demon_form: 'z', revert: 'x' },
+};
+for (const c in IDENTITY_ID) for (const k in IDENTITY_ID[c]) ALIAS[`skill:${c}:${k}`] = `skill:${c}:identity_${IDENTITY_ID[c][k]}`;
+for (let i = 1; i <= 4; i++) { ALIAS[`item:food${i}`] = `item:food:${i}`; ALIAS[`item:gift${i}`] = `item:gift:${i}`; }
+Object.assign(ALIAS, { 'status:identity_mode': 'status:atk_up', 'status:haste': 'status:speed_up', 'status:protection': 'status:def_up', 'item:acc:necklace': 'item:necklace', 'item:acc:earring': 'item:earring', 'item:acc:ring': 'item:ring', 'item:gem': 'item:gem:ruin:5' });
+/** Every alias id → canonical id. */
+export const ICON_ALIASES = Object.freeze({ ...ALIAS });
+
+/** Unknown tripod / status ids pick the closest generic art by keyword (unique tripods, custom buffs). */
+const KEYWORDS = {
+  tripod: [[/fire|burn|flame|inferno|hell|scorch|blaze|ember|solar|pyre|ignit/, 'burn'], [/frost|ice|glacial|perma|freez|shatter|cold|hail|rime/, 'freeze'], [/storm|thunder|lightning|bolt|static|shock|spark|volt|tempest/, 'shock'], [/blood|bleed|crimson|lacerat|gore|reap|massacre/, 'bleed'], [/chain|pull|reel|gravity|singular|horizon|bind|shackle|vortex/, 'pull'], [/wave|wide|gale|sweep|tide|far|reach|breadth|wind/, 'wide'], [/pierc|lance|penetrat|impal|thrust/, 'pierce'], [/zone|field|ground|sanct|rune|pillar|pool|ring/, 'zone'], [/charge|overcharge|focus|aim|steady|hold/, 'charge'], [/quick|swift|tempo|allegro|rapid|haste|step|fourth/, 'swift'], [/back|shadow|ambush|assassin/, 'back'], [/head|skyfall|leap|descent/, 'head'], [/armor|guard|bulwark|shield|bastion|steadfast|stance/, 'stance'], [/nova|burst|explo|bomb|super|cataclysm|finale|verdict|judg|double|twin|echo|encore|triple|third|extra|second/, 'extra_hit'], [/weak|break|crush|earth|quake|split|shock/, 'crushing'], [/after|shock|tremor/, 'aftershock'], [/vital|execut|finish|hunt|predator|kill/, 'vital'], [/keen|crit|eye|sight|gaze|deadeye/, 'keen'], [/mana|thrift|saver|spirit/, 'mana_saver'], [/unstopp|titan|colossus|immov|rage/, 'unstoppable']],
+  status: [[/shield|guard|bulwark|aegis|bastion|barrier|ward/, 'shield'], [/heal|mend|regen|renew|hymn|restor|life/, 'regen'], [/haste|speed|swift|wind|tempo|allegro|quick/, 'speed_up'], [/crit|keen|focus|deadeye|precis/, 'crit_up'], [/invuln|immun|grand_finale|radiant/, 'invuln'], [/super|unstopp|stance|armor_up/, 'super_armor'], [/protect|def_up|sanct|fortif|stone/, 'def_up'], [/atk|attack|might|bless|anthem|courage|zeal|fury|burst|power|trance|demon|surge|overload|mode|judg/, 'atk_up'], [/burn|fire|ignit/, 'burn'], [/bleed|blood/, 'bleed'], [/poison|venom|toxic/, 'poison'], [/frost|chill|freez|ice/, 'freeze'], [/slow|snare|root/, 'slow'], [/brand|mark|stigma|expose/, 'brand'], [/weak|curse|hex/, 'weaken'], [/break|shred|sunder/, 'armor_break']],
+};
+function keywordFallback(fam, key) {
+  for (const [re, id] of KEYWORDS[fam] || []) if (re.test(key)) return `${fam}:${id}`;
+  return null;
+}
 
 const FALLBACK = {
-  skill: genericSkill, item: genericItem, tripod: genericTripod, engr: genericRound, class: genericClass, currency: genericCurrency,
+  card: genericCard, skill: genericSkill, item: genericItem, tripod: genericTripod, engr: genericRound, class: genericClass, currency: genericCurrency,
   status: genericStatus, ui: genericUI, boss: genericBoss, npc: genericNpc,
 };
 /** Frame per family: square (bevelled tile), round (circular emblem, transparent corners), glyph (transparent). */
-const FRAME = { skill: 'square', item: 'item', status: 'status', npc: 'square', grade: 'grade', tripod: 'round', engr: 'round', boss: 'round', class: 'glyph', ui: 'glyph', currency: 'glyph' };
+const FRAME = { skill: 'square', item: 'item', status: 'status', npc: 'square', card: 'square', grade: 'grade', tripod: 'round', engr: 'round', boss: 'round', class: 'glyph', ui: 'glyph', currency: 'glyph' };
 
+/** Tolerate display names: 'skill:reaver:Whirlwind Edge', 'engr:All-Out Attack' → lower_snake_case. */
+const normId = id => (/[A-Z\s'’\-]/.test(id) ? id.trim().toLowerCase().replace(/['’]/g, '').replace(/[\s\-]+/g, '_') : id);
 function parse(id, opts) {
   id = String(id || '');
   let grade = null, bare = false;
@@ -51,14 +83,15 @@ function parse(id, opts) {
   if (typeof opts === 'number') grade = opts;
   else if (opts && typeof opts === 'object') { if (opts.grade != null) grade = opts.grade; if (opts.bare) bare = true; }
   if (grade != null) grade = Math.max(0, Math.min(7, grade | 0));
-  // tolerate display names: 'skill:reaver:Whirlwind Edge', 'engr:All-Out Attack' → lower_snake_case
-  if (/[A-Z\s'\-]/.test(id)) id = id.trim().toLowerCase().replace(/'/g, '').replace(/[\s\-]+/g, '_');
+  id = normId(id);
+  if (ALIAS[id]) id = ALIAS[id];
+  else if (!PAINT.has(id) && id.indexOf(':') > 0) { const f = id.slice(0, id.indexOf(':')); if (KEYWORDS[f]) id = keywordFallback(f, id.slice(f.length + 1)) || id; }
   const parts = id.split(':');
   return { base: id, parts, fam: parts[0], grade, bare, key: id + '|' + (grade ?? '') + (bare ? 'b' : '') };
 }
 
-/** True when `id` (ignoring @grade / @bare suffixes) is a canonical icon id with dedicated art. */
-export function hasIcon(id) { return KNOWN.has(parse(id).base); }
+/** True when `id` (ignoring @grade / @bare suffixes) has dedicated art: a canonical id or an alias of one. */
+export function hasIcon(id) { const s = normId(String(id || '').split('@')[0]); return KNOWN.has(s) || !!ALIAS[s]; }
 
 let warned = 0;
 /** Paint an icon into a fresh canvas of `size` px (painted at 2× and downsampled). */

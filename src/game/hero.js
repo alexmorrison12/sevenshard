@@ -115,7 +115,13 @@ export class HeroKit {
     const now = this.level.time;
     if (now - this.basicT > 0.9) this.basicStage = 0;
     const b = this.cls.basic[this.basicStage % this.cls.basic.length];
-    const def = { id: 'basic', basic: true, type: 'normal', dur: b.dur, cancelAt: b.dur * 0.55, events: [{ t: 0, a: 'anim', name: b.anim, dur: b.dur }, { ...b.hit, a: 'hit' }, ...(b.fx ? [{ ...b.fx, a: 'fx' }] : []), ...(b.proj ? [{ ...b.proj, a: 'proj' }] : []), { t: b.hit?.t || 0.15, a: 'sfx', name: b.sfx || 'slash' }] };
+    const events = [{ t: 0, a: 'anim', name: b.anim, dur: b.dur }];
+    if (b.hit && b.hit.shape !== 'none') events.push({ ...b.hit, a: 'hit' });
+    if (b.fx) events.push({ ...b.fx, a: 'fx' });
+    if (b.proj) events.push({ t: 0.12, ...b.proj, a: 'proj' });
+    events.push({ t: b.hit?.t ?? b.proj?.t ?? 0.15, a: 'sfx', name: b.sfx || 'slash' });
+    events.sort((a, c) => (a.t || 0) - (c.t || 0));
+    const def = { id: 'basic', basic: true, type: 'normal', dur: b.dur, cancelAt: b.dur * 0.55, events };
     const run = this._start(def, aim, { kind: 'basic', free: true, noCd: true });
     this.basicStage = (this.basicStage + 1) % this.cls.basic.length; this.basicT = now + b.dur;
     return run;

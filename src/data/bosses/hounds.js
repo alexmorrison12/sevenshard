@@ -67,7 +67,7 @@ async function crossLine(B, lead) {
   if (lead) B.banner('CROSSFIRE — the hounds breathe across the kennels! Find a corner.', 'mechanic');
   act(B, 'breath', 2.0);
   const dir = fwd(B), len = reachAlong(B, dir, 44, u.pos, 0.2) + 3;
-  await strike(B, 'rect', { len, width: 7, dur: 2.0, color: 'orange', coef: 2.6, knock: 'down', kb: 3,
+  await strike(B, 'rect', { len, width: 7, dur: 2.0, color: 'orange', coef: 3.0, knock: 'down', kb: 3,
     fx: west ? 'fire_breath' : 'dark_breath', fxLen: len, sfx: west ? 'fire_whoosh' : 'void_whoosh', shake: 0.4,
     status: west ? [{ id: 'def_down', dur: 6 }] : [{ id: 'weaken', dur: 6 }] });
   await wait(B, 0.8);

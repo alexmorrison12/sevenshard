@@ -56,6 +56,7 @@ export function applyStatus(level, tgt, id, o = {}) {
     level.emit('status', { tgt, id, on: true, s });
   }
   if (def.cc) tgt.cc[def.cc] = Math.max(tgt.cc[def.cc], dur);
+  if (def.invuln) tgt.invuln = Math.max(tgt.invuln, dur);      // the status and the i-frame timer agree
   tgt._statDirty = true;
   return s;
 }
@@ -307,7 +308,7 @@ export function resolveHit(level, src, h, ox, oz, dx, dz, ctx = {}) {
       if (h.knock) applyKnock(level, src, u, h.knock, h.kb ?? 3, ox, oz, h.knockDur);
       else if (u.kind === 'mob' && !u.superArmor && u.data.flinch !== false) u.data.flinchT = 0.25;  // light flinch
       if (h.status) for (const s of h.status) if (level.rng() < (s.chance ?? 1)) applyStatus(level, u, s.id, { dur: s.dur, src, stacks: s.stacks, power: s.power ? se.atk * s.power : 0 });
-      if (h.brand) applyStatus(level, u, 'brand', { dur: h.brand, src });
+      if (h.brand) applyStatus(level, u, 'brand', { dur: h.brand === true ? 10 : h.brand, src });
     }
     // hit-stop: heavier for big hits and crits
     const hs = h.hitstop ?? (h.heavy ? 0.085 : ev.crit ? 0.05 : 0.03);

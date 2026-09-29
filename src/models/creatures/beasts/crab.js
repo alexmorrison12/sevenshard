@@ -27,23 +27,27 @@ const PAL = {
 // crab space (front −Z, right +X) → rig space (front −X): rotate +90° about Y
 const C = (p) => [p[2], p[1], -p[0]];
 const FACE = -Math.PI / 2;
-const BODY = [0, 0.25, 0];
-// leg layout (crab space): coxa on the carapace side, knee arched high, ankle, toe
+const BODY = [0, 0.24, 0];
+// leg layout (crab space): coxa under the carapace side, knee arched, ankle, toe — short, sturdy, angled back
 function legPts(i, s) {
-  const z = -0.075 + i * 0.085, sp = (i - 1);
+  const z = -0.07 + i * 0.08, sp = i - 1;
   return {
-    coxa: [s * 0.19, 0.23, z], knee: [s * 0.35, 0.36, z + sp * 0.05],
-    ank: [s * 0.46, 0.17, z + sp * 0.09], toe: [s * 0.5, 0, z + sp * 0.11],
+    coxa: [s * 0.19, 0.215, z], knee: [s * 0.31, 0.3, z + sp * 0.035],
+    ank: [s * 0.4, 0.14, z + sp * 0.065 + 0.02], toe: [s * 0.44, 0, z + sp * 0.085 + 0.035],
   };
 }
-// claw arm layout (crab space, before per-side size): shoulder → wrist → hand → finger hinge → tips
+// claw layout (crab space, size k): short thick merus → knobbly wrist → a big hand pointing forward-inward
+const vadd = (a, b, t = 1) => [a[0] + b[0] * t, a[1] + b[1] * t, a[2] + b[2] * t];
 function clawPts(s, k) {
-  return {
-    sh: [s * 0.15, 0.225, -0.12], wr: [s * 0.27, 0.27, -0.2], hand: [s * 0.23, 0.285, -0.3],
-    hinge: [s * (0.23 - 0.04 * k), 0.3 + 0.025 * k, -0.3 - 0.13 * k], tipF: [s * (0.15 - 0.03 * k), 0.27, -0.3 - 0.24 * k], tipD: [s * (0.16 - 0.03 * k), 0.305 + 0.01 * k, -0.3 - 0.24 * k],
-  };
+  const d = [-s * 0.3, 0.05, -0.95];
+  const sh = [s * 0.12, 0.215, -0.125], wr = [s * (0.12 + 0.07 * k), 0.24, -0.125 - 0.075 * k];
+  const hand = vadd(wr, [-s * 0.005, 0.01, -0.035 * k]);
+  const palmEnd = vadd(hand, d, 0.15 * k);
+  const fBase = vadd(vadd(hand, d, 0.13 * k), [0, -0.018 * k, 0]), fTip = vadd(vadd(fBase, d, 0.1 * k), [-s * 0.012 * k, 0.004 * k, 0]);
+  const hinge = vadd(vadd(hand, d, 0.125 * k), [0, 0.026 * k, 0]), dTip = vadd(vadd(hinge, d, 0.105 * k), [-s * 0.012 * k, -0.02 * k, 0]);
+  return { d, sh, wr, hand, palmEnd, fBase, fTip, hinge, dTip };
 }
-const CS = (s) => (s > 0 ? 1.3 : 0.88); // right crusher / left cutter
+const CS = (s) => (s > 0 ? 1.35 : 0.9); // right crusher / left cutter
 
 export const crab = {
   name: 'Crab',
@@ -51,15 +55,15 @@ export const crab = {
   config(variant, opts = {}) {
     const v = PAL[variant] ? variant : (opts.elite ? 'barnaclaw' : 'sand');
     const elite = v === 'barnaclaw' || !!opts.elite;
-    return { variant: elite ? 'barnaclaw' : v, pal: PAL[elite ? 'barnaclaw' : v], elite, shapeKey: elite ? 'elite' : 'base', scale: elite ? 2 : 1, h: elite ? 0.02 : 0.023, hg: { 1: elite ? 0.017 : 0.019, 2: 0.016 }, mat: { dfreq: 5, rim: 0.3, rimColor: 0xfff0e0, spec: 0.3, shine: 28 }, aoScale: 0.8 };
+    return { variant: elite ? 'barnaclaw' : v, pal: PAL[elite ? 'barnaclaw' : v], elite, shapeKey: elite ? 'elite' : 'base', scale: elite ? 2 : 1, h: elite ? 0.02 : 0.023, hg: { 1: elite ? 0.017 : 0.019, 2: 0.016 }, mat: { dfreq: 5, rim: 0.3, rimColor: 0xfff0e0, spec: 0.18, shine: 40 }, aoScale: 0.8 };
   },
   rig(R) {
     R.add('body', null, C(BODY));
-    R.add('mouth', 'body', C([0, 0.2, -0.17]));
-    R.add('foam', 'mouth', C([0, 0.19, -0.2]));
+    R.add('mouth', 'body', C([0, 0.2, -0.165]));
+    R.add('foam', 'mouth', C([0, 0.19, -0.19]));
     for (const s of [-1, 1]) {
       const n = s < 0 ? 'L' : 'R', k = CS(s), P = clawPts(s, k);
-      R.add('eye' + n, 'body', C([s * 0.055, 0.3, -0.16]));
+      R.add('eye' + n, 'body', C([s * 0.05, 0.28, -0.155]));
       R.add('cU' + n, 'body', C(P.sh)); R.add('cL' + n, 'cU' + n, C(P.wr)); R.add('cH' + n, 'cL' + n, C(P.hand)); R.add('cF' + n, 'cH' + n, C(P.hinge));
       for (let i = 0; i < 3; i++) {
         const L = legPts(i, s), nm = 'l' + i + n;
@@ -69,40 +73,37 @@ export const crab = {
   },
   sculpt(S, cfg) {
     const c = cfg.pal, E = cfg.elite;
-    const shell = [0.04, 0.3, 0.25, 0], smooth = [0.02, 0.15, 0.2, 0];
+    const shell = [0.02, 0.08, 0.35, 0], smooth = [0.02, 0.06, 0.25, 0];
     const e = (bone, p, r, o) => S.ell(bone, C(p), [r[2], r[1], r[0]], o); // crab-space radii [x,y,z] → rig [z,y,x]
-    // ---- carapace: wide, domed, with raised regions and a toothed front margin
-    e('body', [0, 0.26, 0.01], [0.235, 0.075, 0.18], { k: 0.05, col: c.shell, tag: 'shell', dtl: shell });
-    e('body', [0, 0.285, -0.02], [0.15, 0.055, 0.12], { k: 0.05, col: c.shell, tag: 'shell', dtl: shell });
+    // ---- carapace: wide, gently domed, raised regions, a toothed front margin
+    e('body', [0, 0.25, 0.01], [0.235, 0.068, 0.175], { k: 0.05, col: c.shell, tag: 'shell', dtl: shell });
+    e('body', [0, 0.272, -0.02], [0.15, 0.05, 0.12], { k: 0.05, col: c.shell, tag: 'shell', dtl: shell });
     for (const s of [-1, 1]) {
-      e('body', [s * 0.11, 0.285, 0.05], [0.07, 0.04, 0.07], { k: 0.04, col: c.shell, tag: 'shell', dtl: shell });
-      e('body', [s * 0.07, 0.29, -0.09], [0.05, 0.03, 0.045], { k: 0.03, col: c.shell, tag: 'shell', dtl: shell });
-      // anterolateral teeth along the front-side margin
-      for (let i = 0; i < 4; i++) {
+      e('body', [s * 0.11, 0.272, 0.05], [0.07, 0.036, 0.07], { k: 0.04, col: c.shell, tag: 'shell', dtl: shell });
+      e('body', [s * 0.07, 0.277, -0.09], [0.05, 0.028, 0.045], { k: 0.03, col: c.shell, tag: 'shell', dtl: shell });
+      for (let i = 0; i < 4; i++) { // anterolateral teeth along the front-side margin
         const bx = s * (0.12 + i * 0.035), bz = -0.14 + i * 0.045;
-        S.cone('body', C([bx, 0.265, bz]), C([bx + s * 0.05, 0.27, bz - 0.035 + i * 0.012]), 0.022, 0.004, { k: 0.015, col: c.shell, tag: 'tooth', dtl: shell });
+        S.cone('body', C([bx, 0.255, bz]), C([bx + s * 0.05, 0.26, bz - 0.035 + i * 0.012]), 0.022, 0.004, { k: 0.015, col: c.shell, tag: 'tooth', dtl: shell });
       }
     }
-    // front brow between the eyes + mouth frame + underside plate
-    e('body', [0, 0.265, -0.155], [0.08, 0.03, 0.03], { k: 0.025, col: c.shell, tag: 'brow', dtl: shell });
-    e('body', [0, 0.195, -0.145], [0.075, 0.04, 0.035], { k: 0.02, col: c.mouth, tag: 'mouthf', dtl: smooth });
-    e('body', [0, 0.19, 0.02], [0.17, 0.045, 0.14], { k: 0.04, col: c.belly, tag: 'belly', dtl: smooth });
-    // ---- claws: merus + carpus (skinned), palms (own surface), movable fingers (own surface)
+    // front brow between the eyes, mouth frame, underside plate
+    e('body', [0, 0.255, -0.152], [0.08, 0.028, 0.03], { k: 0.025, col: c.shell, tag: 'brow', dtl: shell });
+    e('body', [0, 0.2, -0.148], [0.058, 0.028, 0.022], { k: 0.018, col: c.mouth, tag: 'mouthf', dtl: smooth });
+    e('body', [0, 0.185, 0.02], [0.17, 0.042, 0.14], { k: 0.04, col: c.belly, tag: 'belly', dtl: smooth });
+    // ---- claws: merus + carpus (skinned, blended), palm + fixed finger (own surface), movable finger (own surface)
     for (const s of [-1, 1]) {
       const n = s < 0 ? 'L' : 'R', k = CS(s), P = clawPts(s, k);
-      S.cone('cU' + n, C(P.sh), C(P.wr), 0.032 * k, 0.03 * k, { k: 0.02, col: c.shell, tag: 'arm', b2: 'cL' + n, t0: 0.7, t1: 1, dtl: shell });
+      S.cone('cU' + n, C(P.sh), C(P.wr), 0.03 * k, 0.03 * k, { k: 0.02, col: c.shell, tag: 'arm', b2: 'cL' + n, t0: 0.7, t1: 1, dtl: shell });
       S.sph('cL' + n, C(P.wr), 0.036 * k, { k: 0.02, col: c.shell, tag: 'arm', dtl: shell });
-      S.cone('cL' + n, C(P.wr), C(P.hand), 0.034 * k, 0.04 * k, { k: 0.02, col: c.shell, tag: 'arm', b2: 'cH' + n, t0: 0.7, t1: 1, dtl: shell });
-      // palm: bulbous, flattened, tapering into the fixed finger
-      S.seg('cH' + n, C([s * 0.235, 0.29, -0.3 + 0.02]), C([s * (0.225 - 0.03 * k), 0.29, -0.3 - 0.13 * k]), 0.055 * k, 0.045 * k, { group: 1, k: 0.02, col: c.shell, tag: 'palm', dtl: shell });
-      S.cone('cH' + n, C([s * (0.225 - 0.03 * k), 0.28, -0.3 - 0.11 * k]), C(P.tipF), 0.028 * k, 0.006, { group: 1, k: 0.02, col: c.shell, tip: { col: c.tip, from: 0.35 }, tag: 'finger', dtl: smooth });
-      // movable finger (dactyl): hinged on top of the palm end, curving down to meet the fixed finger
-      S.cone('cF' + n, C(P.hinge), C([mix(P.hinge[0], P.tipD[0], 0.55), P.hinge[1] + 0.012 * k, mix(P.hinge[2], P.tipD[2], 0.55)]), 0.026 * k, 0.018 * k, { group: 2, k: 0.015, col: c.shell, tag: 'dactyl', dtl: smooth });
-      S.cone('cF' + n, C([mix(P.hinge[0], P.tipD[0], 0.55), P.hinge[1] + 0.012 * k, mix(P.hinge[2], P.tipD[2], 0.55)]), C(P.tipD), 0.018 * k, 0.005, { group: 2, k: 0.012, col: c.shell, tip: { col: c.tip, from: 0.1 }, tag: 'dactyl', dtl: smooth });
+      S.cone('cL' + n, C(P.wr), C(P.hand), 0.034 * k, 0.042 * k, { k: 0.02, col: c.shell, tag: 'arm', b2: 'cH' + n, t0: 0.6, t1: 1, dtl: shell });
+      S.seg('cH' + n, C(P.hand), C(P.palmEnd), 0.047 * k, 0.06 * k, { group: 1, k: 0.02, col: c.shell, tag: 'palm', dtl: shell });
+      S.sph('cH' + n, C(vadd(P.hand, [0, 0.03 * k, -0.02 * k])), 0.032 * k, { group: 1, k: 0.02, col: c.shell, tag: 'palm', dtl: shell }); // knuckle hump
+      S.cone('cH' + n, C(P.fBase), C(P.fTip), 0.03 * k, 0.005, { group: 1, k: 0.02, col: c.shell, tip: { col: c.tip, from: 0.4 }, tag: 'finger', dtl: smooth });
+      const dm = vadd(vadd(P.hinge, P.d, 0.055 * k), [-s * 0.004 * k, 0.004 * k, 0]);
+      S.cone('cF' + n, C(P.hinge), C(dm), 0.024 * k, 0.018 * k, { group: 2, k: 0.015, col: c.shell, tag: 'dactyl', dtl: smooth });
+      S.cone('cF' + n, C(dm), C(P.dTip), 0.018 * k, 0.004, { group: 2, k: 0.012, col: c.shell, tip: { col: c.tip, from: 0.2 }, tag: 'dactyl', dtl: smooth });
     }
-    if (E) { // a crust of weed along the back margin
-      e('body', [0, 0.27, 0.13], [0.2, 0.04, 0.06], { k: 0.04, col: c.weed, tag: 'weedpad', dtl: [0.3, 0, 0.35, 0] });
-    }
+    if (E) e('body', [0, 0.26, 0.13], [0.2, 0.04, 0.06], { k: 0.04, col: c.weed, tag: 'weedpad', dtl: [0.3, 0, 0.35, 0] }); // a crust of weed along the back margin
   },
   paint(v, cfg) {
     const c = cfg.pal, [x, y, z] = v.p, [nx, ny, nz] = v.n;
@@ -143,35 +144,35 @@ export const crab = {
       const n = s < 0 ? 'L' : 'R', nm = 'l' + i + n, L = legPts(i, s);
       const seg = (bone, a, bb, r0, r1, flat) => {
         const A = V(a), B = V(bb);
-        const g = sweep([A, A.clone().lerp(B, 0.5), B], [r0, (r0 + r1) * 0.55, r1], { radial: 5, flat, up: [0, 1, 0], capEnd: true, capStart: true });
+        const g = sweep([A, A.clone().lerp(B, 0.5), B], [r0, (r0 + r1) * 0.55, r1], { radial: 6, flat, up: [0, 1, 0], capEnd: true, capStart: true });
         acc.add(g, { skin: rigid(b(bone)), dtl: [0.02, 0.25, 0.2, 0], color: (p, nn, uv) => lerp3(lerp3(cl, cj, sstep(0.8, 1, uv[1]) + sstep(0.15, 0, uv[1])), cd, sstep(0.3, 0.9, nn.y) * 0.25) });
       };
-      seg(nm + 'U', L.coxa, L.knee, 0.024, 0.02, 0.7);
-      seg(nm + 'L', L.knee, L.ank, 0.02, 0.014, 0.75);
+      seg(nm + 'U', L.coxa, L.knee, 0.03, 0.026, 1.35);
+      seg(nm + 'L', L.knee, L.ank, 0.024, 0.018, 1.3);
       const A = V(L.ank), T = V(L.toe);
-      acc.add(sweep([A, A.clone().lerp(T, 0.55), T], [0.013, 0.009, 0.001], { radial: 5, capStart: true }), { skin: rigid(b(nm + 'E')), dtl: [0, 0.2, 0.15, 0], color: (p, nn, uv) => lerp3(cl, ct, sstep(0.35, 0.9, uv[1])) });
+      acc.add(sweep([A, A.clone().lerp(T, 0.55), T], [0.017, 0.011, 0.001], { radial: 5, capStart: true }), { skin: rigid(b(nm + 'E')), dtl: [0, 0.2, 0.15, 0], color: (p, nn, uv) => lerp3(cl, ct, sstep(0.35, 0.9, uv[1])) });
       // knee knob + a couple of bristles on the lower segment
-      acc.add(new THREE.IcosahedronGeometry(0.022, 0), { matrix: new THREE.Matrix4().makeTranslation(...C(L.knee)), skin: rigid(b(nm + 'L')), color: c.joint, dtl: [0, 0.2, 0.2, 0] });
+      acc.add(new THREE.SphereGeometry(0.029, 6, 4), { matrix: new THREE.Matrix4().makeTranslation(...C(L.knee)), skin: rigid(b(nm + 'L')), color: c.joint, dtl: [0, 0.2, 0.2, 0] });
     }
     // ---- eye stalks + glossy eyes (the elite's glow)
     for (const s of [-1, 1]) {
       const n = s < 0 ? 'L' : 'R', bone = rigid(b('eye' + n));
-      const p0 = [s * 0.055, 0.29, -0.16], p1 = [s * 0.062, 0.35, -0.172], p2 = [s * 0.07, 0.395, -0.175];
-      acc.add(sweep(bez(C(p0), C(p1), C(p2), 4), taper(4, 0.012, 0.01), { radial: 5 }), { skin: bone, color: c.stalk, dtl: [0, 0.2, 0.15, 0] });
-      const eg = new THREE.SphereGeometry(0.02, 8, 6);
-      acc.add(eg, { matrix: new THREE.Matrix4().makeTranslation(...C([s * 0.072, 0.405, -0.178])), skin: bone, color: c.eye, emis: E ? 2.8 : 0, dtl: [0, 0, 0, 0] });
-      const gl = new THREE.IcosahedronGeometry(0.006, 0);
-      acc.add(gl, { matrix: new THREE.Matrix4().makeTranslation(...C([s * 0.066, 0.418, -0.19])), skin: bone, color: 0xffffff, emis: 0.8, dtl: [0, 0, 0, 0] });
+      const p0 = [s * 0.05, 0.27, -0.152], p1 = [s * 0.056, 0.31, -0.16], p2 = [s * 0.062, 0.335, -0.164];
+      acc.add(sweep(bez(C(p0), C(p1), C(p2), 4), taper(4, 0.015, 0.012), { radial: 5 }), { skin: bone, color: c.stalk, dtl: [0, 0.1, 0.15, 0] });
+      const eg = new THREE.SphereGeometry(0.024, 8, 6);
+      acc.add(eg, { matrix: new THREE.Matrix4().makeTranslation(...C([s * 0.064, 0.347, -0.166])), skin: bone, color: c.eye, emis: E ? 2.8 : 0, dtl: [0, 0, 0, 0] });
+      const gl = new THREE.IcosahedronGeometry(0.007, 0);
+      acc.add(gl, { matrix: new THREE.Matrix4().makeTranslation(...C([s * 0.058, 0.362, -0.184])), skin: bone, color: 0xffffff, emis: 0.9, dtl: [0, 0, 0, 0] });
     }
     // ---- mouthparts: two flat plates (maxillipeds) that flutter + a froth of bubbles (scaled by the foam bone)
     for (const s of [-1, 1]) {
-      const g = leafGeo(0.028, 0.05, 0.006, 0.3, 0, { nu: 3, nv: 3, pw: 0.5 });
-      const m = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(Math.PI, Math.PI / 2 + s * 0.15, 0, 'YXZ')).setPosition(...C([s * 0.022, 0.22, -0.172]));
-      acc.add(g, { matrix: m, skin: rigid(b('mouth')), color: c.mouth, dtl: [0, 0.2, 0.2, 0] });
+      const g = leafGeo(0.017, 0.034, 0.005, 0.3, -0.3, { nu: 3, nv: 3, pw: 0.3 });
+      const m = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(Math.PI + 0.25, Math.PI / 2, s * 0.08, 'YXZ')).setPosition(...C([s * 0.016, 0.212, -0.16]));
+      acc.add(g, { matrix: m, skin: rigid(b('mouth')), color: lerp3(col(c.mouth), col(c.belly), 0.35), dtl: [0, 0.2, 0.2, 0] });
     }
     for (let i = 0; i < 4; i++) {
       const g = new THREE.IcosahedronGeometry(0.011 + 0.006 * hsh(i + 3), 1);
-      acc.add(g, { matrix: new THREE.Matrix4().makeTranslation(...C([(i - 1.5) * 0.017, 0.19 + 0.01 * hsh(i), -0.2 - 0.008 * hsh(i + 7)])), skin: rigid(b('foam')), color: 0xf4fbff, emis: 0.25, dtl: [0, 0, 0, 0] });
+      acc.add(g, { matrix: new THREE.Matrix4().makeTranslation(...C([(i - 1.5) * 0.016, 0.19 + 0.01 * hsh(i), -0.19 - 0.008 * hsh(i + 7)])), skin: rigid(b('foam')), color: 0xb8c8d0, emis: 0, dtl: [0, 0, 0, 0] });
     }
     if (E) {
       // barnacles: little volcano cones with dark crater mouths, clustered on the shell
@@ -201,10 +202,10 @@ export const crab = {
     }
   },
   sockets: {
-    head: ['body', C([0, 0.42, -0.14])], mouth: ['mouth', C([0, 0.2, -0.2])], center: ['body', C([0, 0.25, 0])], back: ['body', C([0, 0.34, 0.02])],
-    handR: ['cHR', C([0.2, 0.3, -0.52])], handL: ['cHL', C([-0.19, 0.29, -0.47])],
+    head: ['body', C([0, 0.38, -0.14])], mouth: ['mouth', C([0, 0.2, -0.19])], center: ['body', C([0, 0.24, 0])], back: ['body', C([0, 0.33, 0.02])],
+    handR: ['cHR', C(clawPts(1, CS(1)).palmEnd)], handL: ['cHL', C(clawPts(-1, CS(-1)).palmEnd)],
   },
-  height: 0.45, radius: 0.45,
+  height: 0.4, radius: 0.45,
   controller(inst) { return new CrabCtl(inst, SPEC); },
   get actionList() { return ACTIONS; },
 };
@@ -303,10 +304,10 @@ class CrabCtl extends BaseCtl {
     this.eyeT -= dt;
     if (this.eyeT < 0) { this.eyeT = 0.6 + Math.random() * 2; this.eyeLook = (Math.random() - 0.5) * 1.2; }
     this.eyeFold = 0;
-    this.jaw = 0; this.glow = 1; this.clawOpenR = 0.08 * cb; this.clawOpenL = 0.08 * cb;
+    this.jaw = 0; this.glow = 1; this.clawOpenR = 0.22 * cb; this.clawOpenL = 0.22 * cb;
     // froth: a few bubbles swell and pop every few seconds while idle
     this.foamT += dt;
-    this.foam = idle * Math.max(0, Math.sin(this.foamT * 0.9)) ** 3;
+    this.foam = this.dead || this.isDown || this.restW > 0.3 ? 0 : idle * (1 - cb) * Math.max(0, Math.sin(this.foamT * 0.9)) ** 3;
     this._fidget(dt, idle);
     this.acts.apply();
     for (let sd = -1; sd <= 1; sd += 2) {
@@ -521,6 +522,6 @@ const SPEC = {
     cUL: 'cUL', cLL: 'cLL', cHL: 'cHL', cFL: 'cFL', cUR: 'cUR', cLR: 'cLR', cHR: 'cHR', cFR: 'cFR',
   },
   fidgets: [{ name: 'idle_alt', w: 3 }, { name: 'eyewipe', w: 1.5 }, { name: 'clack', w: 1 }],
-  fidgetGap: 3, chargeK: 0.35,
+  fidgetGap: 3, chargeK: 0.1,
   actions: ACTIONS,
 };

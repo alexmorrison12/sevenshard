@@ -95,13 +95,16 @@ export const BLADEDANCER = {
     speedLines(x, R, 10, [20, 30, 80, 100], -PI / 2, '#d8c0ff', { len: 22, w: 1.2 });
     sparkle(x, 60, 8, 9, HOT);
   },
-  blade_dance(x, R) {
+  blade_dance(x, R) { // a whirling dancer inside a storm of cuts
     backdrop(x, R, ['#6a3aa0', '#1c0c3a', '#040108']);
-    glow(x, 50, 50, 46, VIO, 0.55);
-    const cuts = [[10, 30, 90, 70], [16, 76, 84, 20], [50, 6, 54, 94], [6, 52, 94, 46], [24, 12, 80, 88]];
-    cuts.forEach(([ax, ay, bx, by], i) => slashAB(x, ax, ay, bx, by, 8 * (i % 2 ? 1 : -1), 5, i % 2 ? VIO : SIL, { hot: '#ffffff' }));
-    sparkle(x, 50, 50, 12);
-    embers(x, R, 14, 50, 50, 40, [VIO, HOT]);
+    glow(x, 50, 54, 46, VIO, 0.55);
+    slash(x, 50, 60, 40, PI * 0.95, PI * 2.2, 9, VIO, { sy: 0.36, bias: 1.2 });
+    slash(x, 50, 44, 34, -PI * 0.1, PI * 1.05, 7, SIL, { sy: 0.32, rot: -0.35, bias: 1.2, hot: '#ffffff' });
+    figure(x, { head: [50, 26], neck: [50, 32], sh: [[42, 36], [58, 36]], el: [[32, 38], [68, 34]], ha: [[22, 36], [78, 30]], hip: [50, 58], kn: [[44, 70], [58, 70]], ft: [[38, 84], [66, 80]] }, { col: '#0a0414', rim: '#d8b0ff', s: 1.15 });
+    blade(x, 20, 38, -PI / 2 - 0.5, 0.62, { edgeGlow: MAG });
+    blade(x, 80, 30, PI / 2 + 0.2, 0.62, { edgeGlow: MAG });
+    slash(x, 50, 60, 40, -PI * 0.05, PI * 0.9, 9, VIO, { sy: 0.36, bias: 1.2 });
+    embers(x, R, 12, 50, 50, 42, [VIO, HOT]);
   },
   shadow_step(x, R) {
     backdrop(x, R, ['#3a2a60', '#100822', '#020104']);

@@ -1,6 +1,7 @@
 // Titles & achievements. track() turns events into counters (roster.records), completes achievements (roster.achieved),
 // unlocks titles (roster.titles) and grants achievement rewards. Called by tasks.track (never import tasks.js here).
 import { TITLES, TITLE_LIST, ACHIEVEMENTS } from '../../data/titles.js';
+import { STAGES } from '../../data/rapport.js';
 import { ok, fail, grantBundle, bundleRows, unlock } from './common.js';
 
 export { TITLES, ACHIEVEMENTS };
@@ -40,7 +41,7 @@ function count(account, event, d) {
     case 'card': rec.cards = Object.keys(r.cards || {}).length; ch.push('cards'); break;
     case 'collect': if (d.type) { rec[`collect_${d.type}`] = d.have; ch.push(`collect_${d.type}`); } if (d.zoneDone) I('seed_zones'); break;
     case 'tome': if (d.pct >= 1) I('tomes'); break;
-    case 'rapport': rec.devoted = Object.values(r.rapport || {}).filter(x => (x.pts || 0) >= 16000).length; ch.push('devoted'); break;
+    case 'rapport': rec.devoted = Object.values(r.rapport || {}).filter(x => (x.pts || 0) >= STAGES[STAGES.length - 1].min).length; ch.push('devoted'); break;
     case 'sold': if (d.gold) I('market_gold', d.gold); break;
     case 'donate': I('donations'); break;
     case 'sail': if (d.dist) I('sailed', Math.round(d.dist)); if (d.arrive) I('islands_visited'); break;

@@ -79,20 +79,22 @@ function sculpt(S) {
     const tip = add(base, [sx * 0.35, cy * 0.12 - 0.22 - 0.15 * hs(i), 0.3 + 0.2 * hs(i + 3)]);
     S.cone(i > 2 && i < 9 ? 'neck1' : 'chest', base, tip, 0.2, 0.03, { k: 0.1, col: C.cream, tag: 'ruff', dtl: fur });
   }
-  // head: wedge skull, pointed muzzle, flared cheek tufts (scaled up around the skull pivot for a noble, readable face)
-  S.ell('head', hx([0, 4.14, -2.46]), [hr(0.36), hr(0.31), hr(0.38)], { k: 0.12, col: C.mask, tag: 'head', dtl: furS });
-  S.cone('head', hx([0, 4.06, -2.7]), hx([0, 3.93, -3.36]), hr(0.25), hr(0.085), { k: 0.12, col: C.mask, tag: 'muzzle', dtl: furS });
-  S.cone('head', hx([0, 4.18, -2.6]), hx([0, 4.0, -3.28]), hr(0.13), hr(0.05), { k: 0.1, col: C.mask, tag: 'bridge', dtl: furS });
+  // head (own finer surface, group 2 — the seam hides in the cheek ruff): broad triangular fox skull with a defined
+  // stop, a fine pointed muzzle, almond eye sockets and layered cheek ruffs
+  const G2 = { group: 2 };
+  S.ell('head', hx([0, 4.13, -2.42]), [hr(0.37), hr(0.29), hr(0.33)], { ...G2, k: 0.1, col: C.mask, tag: 'head', dtl: furS });
+  S.ell('head', hx([0, 4.24, -2.56]), [hr(0.21), hr(0.12), hr(0.19)], { ...G2, k: 0.08, col: C.mask, tag: 'brow', dtl: furS });
+  S.cone('head', hx([0, 4.06, -2.62]), hx([0, 3.97, -3.16]), hr(0.19), hr(0.062), { ...G2, k: 0.1, col: C.mask, tag: 'muzzle', dtl: furS });
+  S.cone('head', hx([0, 4.16, -2.62]), hx([0, 4.02, -3.1]), hr(0.1), hr(0.042), { ...G2, k: 0.08, col: C.mask, tag: 'bridge', dtl: furS });
   for (const s of [-1, 1]) {
-    S.ell('head', hx([0.27 * s, 3.99, -2.42]), [hr(0.21), hr(0.21), hr(0.26)], { k: 0.1, col: C.mask, tag: 'cheek', dtl: fur });
-    S.cone('head', hx([0.3 * s, 3.95, -2.35]), hx([0.66 * s, 3.78, -2.12]), hr(0.17), 0.02, { k: 0.08, col: C.mask, tag: 'cheek', dtl: fur });
-    S.cone('head', hx([0.3 * s, 4.07, -2.3]), hx([0.62 * s, 4.02, -2.0]), hr(0.15), 0.02, { k: 0.08, col: C.cream, tag: 'cheek', dtl: fur });
-    S.ell('head', hx([0.19 * s, 4.19, -2.72]), [hr(0.075), hr(0.06), hr(0.08)], { k: 0.03, sub: true, col: 0x100808, tag: 'socket' });
+    S.ell('head', hx([0.26 * s, 4.0, -2.4]), [hr(0.2), hr(0.19), hr(0.22)], { ...G2, k: 0.08, col: C.mask, tag: 'cheek', dtl: fur });
+    for (let k = 0; k < 3; k++) S.cone('head', hx([0.3 * s, 3.98 - k * 0.07, -2.36 + k * 0.05]), hx([(0.7 - k * 0.06) * s, 3.86 - k * 0.12, -2.1 + k * 0.08]), hr(0.13 - k * 0.02), 0.015, { ...G2, k: 0.06, col: k === 1 ? C.cream : C.mask, tag: 'cheek', dtl: fur });
+    S.ell('head', hx([0.17 * s, 4.17, -2.68]), [hr(0.085), hr(0.048), hr(0.07)], { ...G2, k: 0.025, sub: true, col: 0x100808, tag: 'socket', rot: [0, 0, s * 0.35] });
   }
-  S.ell('head', hx([0, 3.96, -3.38]), [hr(0.07), hr(0.06), hr(0.06)], { k: 0.03, col: C.nose, tag: 'nose', dtl: skinD });
-  S.cone('head', hx([0, 3.91, -2.75]), hx([0, 3.9, -3.32]), hr(0.06), hr(0.035), { k: 0.03, sub: true, col: C.mouth, tag: 'mouth' });
-  S.cone('jaw', hx([0, 3.88, -2.62]), hx([0, 3.84, -3.28]), hr(0.13), hr(0.06), { group: 1, k: 0.06, col: C.cream, tag: 'jaw', dtl: furS });
-  S.ell('jaw', hx([0, 3.83, -2.75]), [hr(0.15), hr(0.08), hr(0.22)], { group: 1, k: 0.06, col: C.cream, tag: 'jaw', dtl: furS });
+  S.ell('head', hx([0, 3.985, -3.17]), [hr(0.06), hr(0.05), hr(0.05)], { ...G2, k: 0.025, col: C.nose, tag: 'nose', dtl: skinD });
+  S.cone('head', hx([0, 3.94, -2.72]), hx([0, 3.93, -3.12]), hr(0.05), hr(0.03), { ...G2, k: 0.025, sub: true, col: C.mouth, tag: 'mouth' });
+  S.cone('jaw', hx([0, 3.9, -2.62]), hx([0, 3.88, -3.08]), hr(0.11), hr(0.05), { group: 1, k: 0.05, col: C.cream, tag: 'jaw', dtl: furS });
+  S.ell('jaw', hx([0, 3.86, -2.72]), [hr(0.13), hr(0.07), hr(0.18)], { group: 1, k: 0.05, col: C.cream, tag: 'jaw', dtl: furS });
   // legs: slim, long, black-socked
   for (const [s, n] of SIDES) {
     const u = X(J.fU, s), l = X(J.fL, s), p = X(J.fP, s);
@@ -112,7 +114,7 @@ function sculpt(S) {
 }
 
 function paint(v) {
-  const face = v.t('head') + v.t('muzzle') + v.t('bridge') + v.t('cheek') + v.t('jaw');
+  const face = v.t('head') + v.t('muzzle') + v.t('bridge') + v.t('cheek') + v.t('jaw') + v.t('brow');
   const [x, y, z] = face > 0.2 ? hinv(v.p) : v.p, [, ny] = v.n;
   // warm golden back fading into ivory flanks and a cream belly
   v.mix(C.gold, sstep(0.15, 0.75, ny + Math.sin(z * 3 + x * 2) * 0.1) * (1 - face) * (1 - v.t('ruff')) * 0.8);
@@ -120,40 +122,46 @@ function paint(v) {
   // black socks rising up the legs with a soft edge
   const sock = (v.t('leg') + v.t('shin') + v.t('meta') + v.t('paw')) * sstep(1.25 + Math.sin(x * 9 + z * 7) * 0.08, 0.55, y);
   v.mix(C.sock, Math.min(1, sock));
-  // kitsune mask: crimson brush-strokes from the eyes to the ears, lower-lid flicks, brow flame, dark lips
+  // kitsune mask: bold crimson flame strokes sweeping from the eyes up to the ears, lower-lid flicks, a glowing
+  // flame sigil on the brow, dark lips and nose
   if (face > 0.2 && y > 3.7) {
-    const ax = Math.abs(x);
-    const eyeLine = Math.abs((y - 4.2) - (ax - 0.19) * 0.9 - (z + 2.72) * -0.35);
-    const stroke = (1 - sstep(0.025, 0.05, eyeLine)) * sstep(0.12, 0.2, ax) * (1 - sstep(0.46, 0.55, ax)) * sstep(-2.95, -2.6, -z) * (1 - sstep(-2.2, -2.05, -z));
-    const flick = (1 - sstep(0.02, 0.045, Math.abs((y - 4.1) + (ax - 0.26) * 1.4))) * sstep(0.18, 0.24, ax) * (1 - sstep(0.36, 0.42, ax)) * (z < -2.5 ? 1 : 0);
-    const brow = (1 - sstep(0.03, 0.06, ax)) * sstep(4.2, 4.3, y) * (z < -2.35 && z > -2.85 ? 1 : 0);
-    const lip = (y < 3.97 && z < -2.7 && v.group === 0 && ny < 0.2) ? 0.9 : 0;
-    v.mix(C.red, Math.min(1, stroke + flick) * 0.95);
-    v.mix(C.red, brow * 0.9);
-    if (brow > 0.3) { v.emis = 1.4 * brow; v.gm = 0.2; v.kind = K.eye; }
-    v.mix(C.dark, lip * 0.7);
-    // eyeliner around the sockets
-    for (const s of [-1, 1]) { const d = Math.hypot(x - 0.19 * s, y - 4.19, z + 2.72); v.mix(0x100808, (1 - sstep(0.09, 0.12, d)) * 0.9); }
+    const ax = Math.abs(x), front = sstep(-2.2, -2.45, z);
+    const u = (ax - 0.1) / 0.36;
+    if (u > 0 && u < 1) {
+      const cy = 4.22 + (ax - 0.1) * 0.78, wdt = 0.06 * (1 - u) + 0.018;
+      v.mix(C.red, (1 - sstep(wdt * 0.6, wdt, Math.abs(y - cy))) * front * 0.95);
+    }
+    const u2 = (ax - 0.2) / 0.17;
+    if (u2 > 0 && u2 < 1) { const cy2 = 4.12 - (ax - 0.2) * 1.1, wd2 = 0.035 * (1 - u2) + 0.012; v.mix(C.red, (1 - sstep(wd2 * 0.6, wd2, Math.abs(y - cy2))) * front * 0.9); }
+    // brow flame sigil: a teardrop of fire rising between the eyes
+    const fy = (y - 4.23) / 0.2;
+    if (fy > 0 && fy < 1 && z < -2.45) {
+      const fw = 0.055 * Math.sin(Math.min(1, fy * 1.25) * Math.PI) * (1 - fy * 0.3) + 0.005 + 0.012 * Math.sin(fy * 9);
+      const sig = 1 - sstep(fw * 0.7, fw, ax);
+      if (sig > 0.05) { v.mix(0xff6020, sig); v.emis = Math.max(v.emis, 1.6 * sig); v.gm = 0.5; v.kind = K.eye; }
+    }
+    for (const s of [-1, 1]) { const d = Math.hypot((x - 0.17 * s) * 0.9, (y - 4.17) * 1.5, z + 2.68); v.mix(0x100808, (1 - sstep(0.08, 0.11, d)) * 0.9); }
+    if (y < 3.955 && z < -2.72 && v.group === 2 && ny < 0.3) v.mix(C.dark, 0.75);
   }
   v.mix(C.dark, v.t('socket'));
   v.mix(C.nose, v.t('nose'));
-  if ((v.group === 1 && ny > 0.4) || v.t('mouth') > 0.4) { v.mix(C.mouth, 0.9); v.kind = K.mouth; v.emis = 0.5; v.gm = 0.6; }
+  if ((v.group === 1 && ny > 0.4 && z < -2.75) || v.t('mouth') > 0.4) { v.mix(C.mouth, 0.9); v.kind = K.mouth; v.emis = 0.5; v.gm = 0.6; }
   v.mul(1 + Math.sin(x * 11 + z * 7) * Math.sin(y * 9) * 0.035);
 }
 
 function dress({ acc, facc, S, b }) {
   const lc = (a, bb, t) => { const A = col(a), B = col(bb); return [mix(A[0], B[0], t), mix(A[1], B[1], t), mix(A[2], B[2], t)]; };
   const head = b('head');
-  // eyes: golden, slit pupils, glowing
-  for (const s of [-1, 1]) {
-    const e = eyeball(hx([0.19 * s, 4.19, -2.72]), hr(0.075), [0.75 * s, 0.12, -0.65], [0, 1, 0], 10, 0.8);
-    acc.addRaw(e, { skin: rigid(head), kind: K.eye, dtl: [0, 0, 0, 0], gm: 0.35,
-      color: (t, p, n, uv) => { const dx = Math.abs(uv[0] - 0.5), dy = Math.abs(uv[1] - 0.5); return t < 0.2 ? 0x120606 : (dx < 0.05 && dy < 0.28) ? 0x080202 : C.eye; },
-      emis: (t, p, uv) => { const dx = Math.abs(uv[0] - 0.5), dy = Math.abs(uv[1] - 0.5); return t < 0.2 ? 0 : (dx < 0.05 && dy < 0.28) ? 0.1 : 2.2; } });
+  // eyes: almond, molten gold with slit pupils
+  for (const s2 of [-1, 1]) {
+    const e = eyeball(hx([0.17 * s2, 4.17, -2.66]), hr(0.068), [0.62 * s2, 0.08, -0.78], [0.35 * s2, 1, 0], 10, 0.62);
+    acc.addRaw(e, { skin: rigid(head), kind: K.eye, dtl: [0, 0, 0, 0], gm: 0,
+      color: (t, p, n, uv) => { const dx = Math.abs(uv[0] - 0.5), dy = Math.abs(uv[1] - 0.5); return t < 0.25 ? 0x120606 : (dx < 0.05 * (1 - dy) && dy < 0.3) ? 0x060202 : lc(0xffe07a, 0xff8a20, sstep(0.05, 0.3, Math.hypot(dx, dy))); },
+      emis: (t, p, uv) => { const dx = Math.abs(uv[0] - 0.5), dy = Math.abs(uv[1] - 0.5); return t < 0.25 ? 0 : (dx < 0.05 * (1 - dy) && dy < 0.3) ? 0 : 1.15; } });
   }
   // ears: tall cupped leaf plates — charcoal backs, crimson inner with pale fur rims
   for (const [s2, n] of SIDES) {
-    const g = leafGeo(0.3, 0.98, 0.13, 0.7, 0.12, { nu: 9, nv: 8, pw: 0.9 });
+    const g = leafGeo(0.34, 0.88, 0.12, 0.45, 0.1, { nu: 9, nv: 8, pw: 0.85 });
     const m = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(-0.12, s2 * 0.32, -s2 * 0.26, 'YXZ'));
     m.setPosition(...X(J.ear, s2));
     acc.add(g, { matrix: m, skin: rigid(b('ear' + n)), dtl: [0.3, 0, 0.1, 0],
@@ -215,7 +223,7 @@ export const kurai = {
       death: { dur: 3.3, hits: [], hold: true },
     },
   },
-  config() { return { h: 0.058, ao: { dist: 0.09, str: 0.8 }, grad: { top: 0.12, bottom: 0.28, y0: 0, y1: 2.5, low: 0.18 }, dtl: [0.35, 0, 0.15, 0] }; },
+  config() { return { h: 0.058, hg: { 1: 0.034, 2: 0.034 }, ao: { dist: 0.09, str: 0.8 }, grad: { top: 0.12, bottom: 0.28, y0: 0, y1: 2.5, low: 0.18 }, dtl: [0.35, 0, 0.15, 0] }; },
   rig, sculpt, paint, dress,
   look: { glow: 0xffa030, glowI: 1.25, glow2: 0xff3a0c, glow2I: 1.5, pulse: 3.0, dfreq: 1.4, enrage: 0xff2a10, ghost: 0xffa050, flash: 0xff8a30 },
   cloneLook: { ghost: 0xff7a24 },

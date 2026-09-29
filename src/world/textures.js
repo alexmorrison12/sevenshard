@@ -740,6 +740,20 @@ Surf surf(vec2 uv) {
   s.col = c; s.h = plate * 0.7 + n * 0.1;
   return s;
 }`,
+  glacier: /* glsl */`
+Surf surf(vec2 uv) {
+  Surf s = S0();
+  float n = fbm(uv, 3, 5, 351);
+  float streak = fbm(vec2(uv.x, uv.y * 0.2), 10, 3, 352);
+  vec3 c = mix(vec3(0.50, 0.72, 0.90), vec3(0.86, 0.94, 1.0), sat(0.5 + n * 0.9 + streak * 0.5));
+  ivec2 cell; vec2 ctr; vec4 v = pvoro(uv * 4.0 + vec2(n, streak) * 0.3, ivec2(4), 353, 0.9, cell, ctr);
+  float fr = smoothstep(0.035, 0.0, v.z);
+  c = mix(c, vec3(0.25, 0.5, 0.75), fr * 0.65);
+  float band = smoothstep(0.72, 0.92, sin((uv.y * 6.0 + n * 0.8) * TAU) * 0.5 + 0.5);
+  c = mix(c, vec3(0.95, 0.98, 1.0), band * 0.55);
+  s.col = c; s.h = 0.5 + n * 0.25 - fr * 0.3 + band * 0.08;
+  return s;
+}`,
   thatch: /* glsl */`
 Surf surf(vec2 uv) {
   Surf s = S0();
@@ -761,7 +775,7 @@ Surf surf(vec2 uv) {
   return s;
 }`,
 };
-const KIT_REPEAT_BUMP = { bark: 6, ashlar: 4, plaster: 2, tiles: 6, slate: 5, planks: 4, timber: 2, metal: 1.5, gold: 2, cloth: 1.5, rockface: 5, marbleWall: 1, darkstone: 5, bone: 2, window: 3, thatch: 4 };
+const KIT_REPEAT_BUMP = { glacier: 3, bark: 6, ashlar: 4, plaster: 2, tiles: 6, slate: 5, planks: 4, timber: 2, metal: 1.5, gold: 2, cloth: 1.5, rockface: 5, marbleWall: 1, darkstone: 5, bone: 2, window: 3, thatch: 4 };
 
 const KITCACHE = new Map();
 function dataTex(px, size, srgb, repeat = true) {

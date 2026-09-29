@@ -614,7 +614,7 @@ function poseFn(ctl, dt) {
     P.rot(arm[2], hv(hp, 5, mk, cb) * rel, hv(hp, 6, mk, cb) * rel, 0);
   }
   // two-handed grip weight (axe / greatsword): on in combat & during attacks, off when relaxed (carried on the shoulder)
-  if (ctl.gripL) ctl.gripW = clamp01(Math.max(cb, W === 'great' ? 1 - mk : 0, ctl.acts.weight('attack'), ctl.acts.weight('attack2'), ctl.acts.weight('attack_big')) * (1 - Math.max(ctl.acts.weight('death'), ctl.acts.weight('knockdown'), ctl.acts.weight('hit'), ctl.acts.weight('knockback'), ctl.acts.weight('stun'), ctl.acts.weight('getup'), ctl.acts.weight('spawn'))));
+  if (ctl.gripL) ctl.gripW = clamp01(Math.max(cb, W === 'great' ? 1 - mk : 0, ctl.acts.weight('attack'), ctl.acts.weight('attack2'), ctl.acts.weight('attack_big')) * (1 - Math.max(ctl.acts.weight('death'), ctl.acts.weight('knockdown'), ctl.acts.weight('hit'), ctl.acts.weight('knockback'), ctl.acts.weight('stun'), ctl.acts.weight('getup'), ctl.acts.weight('spawn'), ctl.acts.weight('idle_alt'), ctl.acts.weight('roar'), ctl.acts.weight('spawn_drop'))));
   if (W === 'bow') { ctl.drawW = 0; ctl.draw = 0; ctl.arrowVis = 0; ctl.release = Math.max(0, ctl.release - dt * 3); }
   // ---- rattle & jerk: footfall shudder, twitchy quantised head, chattering jaw, cocked skull
   let jolt = 0; for (let i = 0; i < G.legs.length; i++) jolt = Math.max(jolt, G.legs[i].down);
@@ -670,9 +670,10 @@ const COMMON = {
     const P = ctl.pose, b = ctl.b, k = a.k;
     const hang = sstep(0.05, 0.2, k) * (1 - sstep(0.62, 0.66, k)), reach = sstep(0.3, 0.5, k) * (1 - sstep(0.75, 0.9, k));
     const clack = sstep(0.62, 0.66, k) * (1 - sstep(0.7, 0.85, k));
-    P.rot(b.head, (-0.15 * hang + 0.2 * clack) * w, 0.25 * reach * w, 0.2 * hang * w);
+    const hand = ctl.W === 'sword' ? 0 : 1, snap = (1 - hand) * sstep(0.5, 0.56, k) * (1 - sstep(0.62, 0.8, k));
+    P.rot(b.head, (-0.15 * hang + 0.2 * clack - 0.35 * snap) * w, (0.25 * reach * hand + 0.3 * Math.sin(k * 40) * snap) * w, 0.2 * hang * w);
     const s = ctl.W === 'bow' ? 1 : -1;
-    up(ctl, s, 1.7 * reach, -0.2 * reach, -s * 0.5 * reach, 2.0 * reach, 0, w);
+    up(ctl, s, 1.7 * reach * hand, -0.2 * reach * hand, -s * 0.5 * reach * hand, 2.0 * reach * hand, 0, w);
     ctl.jaw = Math.max(ctl.jaw, 0.85 * hang * w);
   } },
   death: { dur: 1.5, hold: true, excl: true, state: true, fadeIn: 0.02, keep: true, fn(ctl, a, w) { // jolt → buckle; post() scatters the bones

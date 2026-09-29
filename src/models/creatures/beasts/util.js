@@ -1,5 +1,6 @@
 // Small shared helpers for the field beasts (allocation-free in the per-frame paths).
 import * as THREE from 'three';
+import { col } from '../../kit/sdf.js';
 
 /** deterministic 0..1 hash */
 export const hsh = (i) => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
@@ -32,4 +33,41 @@ export function sidePair(KD, GU, DE) {
   const gu = { ...GU, start(ctl, a) { a.u.side = ctl.kdSide ?? 1; GU.start?.(ctl, a); } };
   const de = { ...DE, start(ctl, a) { DE.start?.(ctl, a); if (ctl.kdSide && ctl.acts.weight('knockdown') > 0.3) a.u.side = ctl.kdSide; } };
   return { knockdown: kd, getup: gu, death: de };
+}
+
+/**
+ * Crisp glowing crack (or scar) ribbon laid onto an SDF surface: pts = rough surface points (model space), projected
+ * onto `group`'s surface and lifted by `lift`; 3 verts across (edge / core / edge), width tapers to the ends with a
+ * jagged wobble; skinned with the surface's own weights (follows the body's deformation). ~4 tris per segment.
+ * o: { width, core (hex), edge (hex), emis (core emissive), group, lift, seed }
+ */
+export function surfaceCrack(acc, S, pts, o = {}) {
+  const w0 = o.width ?? 0.03, E = o.emis ?? 2, g = o.group ?? 0, lift = o.lift ?? 0.012;
+  const cc = col(o.core ?? 0xffe0a0), ce = col(o.edge ?? o.core ?? 0xff8a20);
+  const n = pts.length, P = [], N = [], SK = [];
+  for (let i = 0; i < n; i++) {
+    const r = S.project(pts[i].slice(), g, 5);
+    const nn = [0, 0, 0]; S.normal(r.p[0], r.p[1], r.p[2], nn, g);
+    P.push([r.p[0] + nn[0] * lift, r.p[1] + nn[1] * lift, r.p[2] + nn[2] * lift]); N.push(nn);
+    const sm = S.sampleAt(r.p[0], r.p[1], r.p[2]); SK.push(sm);
+  }
+  const base = acc.count;
+  for (let i = 0; i < n; i++) {
+    const a = P[Math.max(0, i - 1)], b = P[Math.min(n - 1, i + 1)], nn = N[i];
+    let tx = b[0] - a[0], ty = b[1] - a[1], tz = b[2] - a[2];
+    // side = normal × tangent
+    let sx = nn[1] * tz - nn[2] * ty, sy = nn[2] * tx - nn[0] * tz, sz = nn[0] * ty - nn[1] * tx;
+    const sl = Math.hypot(sx, sy, sz) || 1;
+    const u = i / (n - 1), taper = Math.pow(Math.sin(Math.PI * Math.min(1, 0.08 + u * 0.92)), 0.6);
+    const w = w0 * taper * (0.7 + 0.6 * hsh(i * 7.3 + (o.seed ?? 0)));
+    sx *= w / sl; sy *= w / sl; sz *= w / sl;
+    const p = P[i], sk = SK[i];
+    acc.vert(p[0] - sx, p[1] - sy, p[2] - sz, nn[0], nn[1], nn[2], ce[0], ce[1], ce[2], sk.si, sk.sw, 0, 0, 0, 0, E * 0.45, 0);
+    acc.vert(p[0], p[1], p[2], nn[0], nn[1], nn[2], cc[0], cc[1], cc[2], sk.si, sk.sw, 0, 0, 0, 0, E, 0);
+    acc.vert(p[0] + sx, p[1] + sy, p[2] + sz, nn[0], nn[1], nn[2], ce[0], ce[1], ce[2], sk.si, sk.sw, 0, 0, 0, 0, E * 0.45, 0);
+  }
+  for (let i = 0; i < n - 1; i++) {
+    const a = base + i * 3, b = a + 3;
+    acc.tri(a, b, a + 1); acc.tri(a + 1, b, b + 1); acc.tri(a + 1, b + 1, a + 2); acc.tri(a + 2, b + 1, b + 2);
+  }
 }

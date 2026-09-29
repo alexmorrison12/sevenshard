@@ -50,7 +50,7 @@ function sculpt(S) {
   for (let i = 1; i < NS; i++) {
     // armour shingles overlapping towards the tail: each flares into a lip on its lower edge
     const s = i / NS * 0.94;
-    const a = spineAt(s + 0.035), c = spineAt(Math.max(0, s - 0.03));
+    const a = spineAt(s + 0.026), c = spineAt(Math.max(0, s - 0.03));
     S.cone('seg' + i, a, c, radius(s) * 1.02, radius(s) * 1.17, { k: 0.06, col: C.plate, tag: 'ring', dtl: armor });
     const T = norm(sub(spineAt(s + 0.01), spineAt(s - 0.01)));
     const back = dorsal(T);

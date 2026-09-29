@@ -2,6 +2,9 @@
 // (Modules that are still being written resolve to empty stubs in the build until they land.)
 import './content/builtin.js';
 import './features.js';
+import './social/partyfinder.js';
+import './social/bidding.js';
+import './social/wardrobe.js';
 import './quests/index.js';
 import './modes/field.js';
 import './modes/prologue.js';

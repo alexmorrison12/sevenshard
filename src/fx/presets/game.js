@@ -9,7 +9,8 @@ import { SHADE } from './shade.js';
 import { GUNNER } from './gunner.js';
 import { BOSS } from './boss.js';
 import { AWAKEN } from './awaken.js';
-import { AMBIENT, KEYS } from './ambient.js';
+import { AMBIENT } from './ambient.js';
+import { KEYS } from './lib.js';
 
 const K = {};
 const _a = new THREE.Vector3(), _b = new THREE.Vector3();
@@ -22,14 +23,14 @@ const CROSSHAIR = P({ sprite: S.rune, ramp: R.wInOut, life: 0.9, size: 2.4, end:
 
 // ------------------------------------------------------------------ Oathkeeper / holy
 K.holy_aura = (fx, p) => {           // Aegis of Dawn: party-wide golden aura pulse
-  const c = ctx(fx, p, null, 8), s = c.R / 8, col = tc(c.tint, HOLYC, 1.5), pos = vec(c.x, c.y, c.z);
-  decal(fx, { pos, radius: c.R * 0.75, kind: 'holy', dur: 2.2, color: col, hot: 0.6 });
+  const c = ctx(fx, p, null, 8), s = c.R / 8, col = tc(c.tint, HOLYC, 1.15), pos = vec(c.x, c.y, c.z);
+  decal(fx, { pos, radius: c.R * 0.75, kind: 'holy', dur: 2.2, color: col, hot: 0.4 });
   shockwave(fx, { pos, radius: c.R, color: col, dur: 0.7, height: 2.2 * s, dust: false });
-  lightPillar(fx, c.x, c.y, c.z, 1.6 * s, 14 * s, [col[0] * 1.3, col[1] * 1.3, col[2] * 1.3], 1.2, 0);
+  lightPillar(fx, c.x, c.y, c.z, 1.0 * s, 14 * s, [col[0] * 0.9, col[1] * 0.9, col[2] * 0.9], 1.0, 0);
   risingRing(fx, c.x, c.y, c.z, c.R * 0.6, HOLY.riseSpark, 50, col, s, [2, 5]);
   fx.sphere(HOLY.feather, 16, vec(c.x, c.y + 2, c.z), 1.5, 4, s, null, UP, 1.2);
-  fx.at(GEN.rays, vec(c.x, c.y + 1.4, c.z), 1.6 * s, col);
-  fx.flash(0.1, col);
+  fx.at(GEN.rays, vec(c.x, c.y + 1.4, c.z), 1.0 * s, col, { i: 0.7 });
+  fx.flash(0.08, col);
 };
 K.holy_blessing = (fx, p) => { const c = ctx(fx, p, null, 6); fx.play('music_buff_ring', { ...p, color: p.color ?? HOLYC }); fx.play('holy_nova', { ...p, radius: c.R * 0.8, color: p.color ?? HOLYC }); };
 K.holy_circle = { ...WARRIOR.sanctuary_zone, name: 'holy_circle' };
@@ -47,8 +48,8 @@ K.holy_pillars = {                   // many pillars of light slam down across t
 K.holy_ray = (fx, p) => {            // a ray of judgment sweeps down the lane
   const c = ctx(fx, p, null, 2, 7), s = c.s, col = tc(c.tint, HOLYC, 2), W = (c.W ?? 3) * s;
   const from = vec(c.x + c.f.x * 0.6, c.y + 1.3, c.z + c.f.z * 0.6), to = vec(c.x + c.f.x * c.L, c.y + 0.4, c.z + c.f.z * c.L);
-  fx.beam({ from, to, kind: 'holy', color: col, width: W * 0.5, dur: 0.45 });
-  fx.beam({ from, to, kind: 'glow', color: [2.4, 2.2, 1.8], width: W * 0.18, dur: 0.35 });
+  fx.beam({ from, to, kind: 'holy', color: [col[0] * 0.6, col[1] * 0.6, col[2] * 0.6], width: W * 0.35, dur: 0.45 });
+  fx.beam({ from, to, kind: 'glow', color: [1.5, 1.35, 1.1], width: W * 0.12, dur: 0.35 });
   decal(fx, { pos: vec(c.x, c.y, c.z), dir: c.f, radius: W * 0.4, length: c.L, kind: 'fissure', dur: 2, color: col });
   const o = fx.o(s, col);
   along(c.x, c.z, c.f, c.L, fx.n(20), (x, z, u) => { o.dt = u * 0.12; fx.spawn(HOLY.spark, x, c.y + 0.3, z, fx.r(-2, 2), fx.r(2, 6), fx.r(-2, 2), o); });
@@ -73,7 +74,7 @@ K.holy_sword = {                     // a sword of light plunges into the point 
     if (T.once('hit', 0.25)) {
       v.trail.stopped = true;
       WARRIOR.holy_explosion(fx, { pos: g, radius: c.R, color: T.p.color ?? HOLYC });
-      lightPillar(fx, g.x, g.y, g.z, c.R * 0.35, 12, [2, 1.7, 1.1], 0.6, 0);
+      lightPillar(fx, g.x, g.y, g.z, c.R * 0.3, 12, [1.3, 1.1, 0.7], 0.6, 0);
       fx.meshes.debris(g.x, g.y + 0.3, g.z, 8, c.s, 7, { gy: g.y, glow: [2, 1.6, 0.7] });
     }
     if (T.age > T.dur - 0.5) v.sword.alpha = Math.max(0, (T.dur - T.age) / 0.5) * 1.2;
@@ -158,13 +159,13 @@ K.bullet_impact = (fx, p) => { const c = ctx(fx, p, null, 2.4), s = c.R / 2.4; f
 K.crosshair = (fx, p) => { const c = ctx(fx, p, null, 2.4); fx.at(CROSSHAIR, vec(c.x, c.y + 0.07, c.z), c.R / 2.4, tc(c.tint, 0xff3a2a, 1.4)); fx.telegraph({ shape: 'circle', pos: vec(c.x, c.y, c.z), radius: c.R * 0.5, color: 'red', dur: 0.4, detonate: false, intensity: 0.6 }); };
 K.flare_shot = (fx, p) => { const c = ctx(fx, p, null, 1); GUNNER.muzzle_flash(fx, { ...p, weapon: 'pistol', color: p.color ?? 0xff4a2a }); fx.projectile({ from: vec(c.x + c.f.x * 0.8, c.y + 1.3, c.z + c.f.z * 0.8), dir: vec(c.f.x * 0.4, 1, c.f.z * 0.4), kind: 'bolt', color: tc(c.tint, 0xff4a2a, 2), speed: 18, range: 9, scale: 0.8, impact: false, onHit: q => { fx.at(GEN.bigFlash, q, 0.3, [1, 0.3, 0.2]); fx.sphere(GEN.sparkLong, 30, q, 2, 6, 1, [1, 0.4, 0.2]); } }); };
 K.gun_spin = { ...AWAKEN.awk_bullet_hell, name: 'gun_spin', init(T) { AWAKEN.awk_bullet_hell.init(T); T.dur = 0.9; } };
-K.shotgun_blast = (fx, p) => { const c = ctx(fx, p, null, 5.2), s = c.s; GUNNER.muzzle_flash(fx, { ...p, weapon: 'shotgun' }); const arc = (p.arc ?? 60) > 6.3 ? (p.arc ?? 60) * Math.PI / 180 : p.arc; const o = fx.o(s, [1, 0.8, 0.5]); for (let i = 0; i < fx.n(18); i++) { const a = (Math.random() - 0.5) * arc, d = fx.r(0.5, 1) * c.R; const x = c.x + (c.f.x * Math.cos(a) + c.rt.x * Math.sin(a)) * d, z = c.z + (c.f.z * Math.cos(a) + c.rt.z * Math.sin(a)) * d; o.dt = d / 90; fx.spawn(GEN.flash, x, c.y + fx.r(0.4, 1.4), z, 0, 0, 0, o); } fx.telegraph({ shape: 'cone', pos: vec(c.x, c.y, c.z), dir: c.f, radius: c.R, angle: arc, color: [1, 0.55, 0.15], dur: 0.12, detonate: true, intensity: 0.5 }); };
+K.shotgun_blast = (fx, p) => { const c = ctx(fx, p, null, 5.2), s = c.s; GUNNER.muzzle_flash(fx, { ...p, weapon: 'shotgun' }); const arc = (p.arc ?? 60) > 6.3 ? (p.arc ?? 60) * Math.PI / 180 : p.arc; for (let i = 0; i < fx.n(9); i++) { const a = (Math.random() - 0.5) * arc, d = fx.r(0.55, 1) * c.R; const x = c.x + (c.f.x * Math.cos(a) + c.rt.x * Math.sin(a)) * d, z = c.z + (c.f.z * Math.cos(a) + c.rt.z * Math.sin(a)) * d; hit(fx, { pos: vec(x, c.y + fx.r(0.5, 1.4), z), dir: c.f, scale: 0.55 * s }); } fx.telegraph({ shape: 'cone', pos: vec(c.x, c.y, c.z), dir: c.f, radius: c.R, angle: arc, color: [1, 0.55, 0.15], dur: 0.12, detonate: true, intensity: 0.5 }); };
 K.sniper = GUNNER.sniper_round;
 
 // ------------------------------------------------------------------ Bladedancer
 K.blade_merge = (fx, p) => { const c = ctx(fx, p, null, 1.5), col = tc(c.tint, BLADEC, 1.8), h = vec(c.x, c.y + 1.2, c.z); for (let i = 0; i < fx.n(30); i++) fx.spawn(GEN.converge, h.x, h.y, h.z, fx.r(1, 1.8) * c.s, fx.r(0, TAU), 6, fx.o(c.s, col)); fx.at(GEN.starFlash, h, 1.6 * c.s, col, { dt: 0.2 }); fx.at(GEN.flare, h, 2 * c.s, col, { dt: 0.2, rot: 0 }); };
 K.blade_return = (fx, p) => { const c = ctx(fx, p, null, 1, 9), col = tc(c.tint, BLADEC, 2); for (let k = -1; k <= 1; k++) { const from = vec(c.x + c.f.x * c.L + c.rt.x * k * 1.2, c.y + 1.1, c.z + c.f.z * c.L + c.rt.z * k * 1.2); fx.projectile({ from, to: vec(c.x + c.rt.x * k * 0.3, c.y + 1.1, c.z + c.rt.z * k * 0.3), kind: 'glaive', color: col, scale: 0.6 * c.s, speed: 30, impact: false }); } };
-K.blade_vortex = { ...WARRIOR.whirlwind, name: 'blade_vortex', init(T) { WARRIOR.whirlwind.init(T); T.v.col = tc(T.v.c.tint, BLADEC, 2.2); } };
+K.blade_vortex = { ...WARRIOR.whirlwind, name: 'blade_vortex', init(T) { WARRIOR.whirlwind.init(T); T.v.col = tc(T.v.c.tint, BLADEC, 2.2); T.v.hue = null; } };
 K.shadow_burst = (fx, p) => { const c = ctx(fx, p, null, 1.2), up = vec(c.x, c.y + 1, c.z); fx.at(DARK.flash, up, 1.6 * c.R / 1.2, tc(c.tint, BLADEC, 1)); fx.radial(DARK.smoke, 10, vec(c.x, c.y, c.z), 1, 2.5, 0.4, 1.2, c.s, null, 0.2, 0.5); fx.sphere(DARK.spark, 14, up, 2, 6, c.s, null); };
 K.shadow_dash = (fx, p) => { const c = ctx(fx, p, null, 1, 7); SHADE.blade_dash(fx, { ...p, target: vec(c.x + c.f.x * c.L, c.y, c.z + c.f.z * c.L), color: p.color ?? BLADEC }); };
 K.surge_slash = (fx, p) => { const c = ctx(fx, p, null, 1, 7), col = tc(c.tint, BLADEC, 2.4); slash(fx, { pos: vec(c.x, c.y, c.z), dir: c.f, style: 'thrust', radius: 1, length: c.L, width: 0.35 * c.s, color: [2.4, 2.4, 2.8], intensity: 1, dur: 0.35, height: 1.0 }); slash(fx, { pos: vec(c.x + c.f.x * c.L * 0.5, c.y, c.z + c.f.z * c.L * 0.5), dir: c.f, style: 'x', radius: 2 * c.s, color: col, intensity: 1, delay: 0.1 }); };
@@ -183,7 +184,7 @@ K.demon_wings = (fx, p) => SHADE.hellfire_wings(fx, { ...p, len: p.len ?? (p.r ?
 K.abyss_eruption = (fx, p) => { const c = ctx(fx, p, null, 7), s = c.R / 7, g = vec(c.x, c.y, c.z), col = tc(c.tint, DEMONC, 1.6); for (let i = 0; i < 7; i++) { const a = i / 7 * TAU, r = i ? c.R * 0.55 : 0; fx.meshes.pillars.spawn(g.x + Math.cos(a) * r, g.y, g.z + Math.sin(a) * r, 1.1 * s, 9 * s, 1.1, 2, [2.2, 0.1, 0.3], 0.06, 1, i * 0.04); } fx.meshes.spikeRings(g.x, g.y, g.z, [[c.R * 0.35, 10, 2], [c.R * 0.7, 16, 1.5], [c.R, 22, 1.1]], 1, { color: [0.3, 0.02, 0.06], glow: [1.8, 0.1, 0.3], fres: 0.5, life: [1.3, 1.8], speed: 30 }); shockwave(fx, { pos: g, radius: c.R * 1.8, color: col, dur: 0.7, height: 3.2 * s }); fx.at(GEN.bigFlash, vec(g.x, g.y + 2, g.z), 1.6 * s, [1, 0.15, 0.4]); fx.sphere(DARK.flame, 80, vec(g.x, g.y + 2, g.z), 3, 10, s, null, UP, 1.2); decal(fx, { pos: g, radius: c.R * 0.8, kind: 'crater', dur: 9, color: [1.8, 0.2, 0.4] }); decal(fx, { pos: g, radius: c.R, kind: 'demon', dur: 3, color: col }); fx.flash(0.4, [0.9, 0.1, 0.3]); fx.shake(1, g); fx.aberr(0.8); };
 K.blood_burst = (fx, p) => { const c = ctx(fx, p, null, 4.4), s = c.R / 4.4, pos = vec(c.x, c.y, c.z), up = vec(c.x, c.y + 1, c.z); fx.at(CRIM.flash, up, 2.6 * s, null); fx.sphere(PHYS.blood, 40, up, 3, 9, s, null, UP, 1.2); fx.sphere(CRIM.spark, 30, up, 4, 10, s, null); shockwave(fx, { pos, radius: c.R * 1.3, color: [1.8, 0.1, 0.15], dur: 0.45, height: 1.8 }); decal(fx, { pos, radius: c.R * 0.6, kind: 'blood', dur: 8 }); };
 K.blood_pillar = (fx, p) => fx.play('blood_pillars', { ...p, count: p.count ?? 3, radius: p.radius ?? p.r ?? 3.2, target: undefined });
-K.blood_whirl = { ...WARRIOR.whirlwind, name: 'blood_whirl', init(T) { WARRIOR.whirlwind.init(T); T.v.col = tc(T.v.c.tint, BLOODC, 2.4); } };
+K.blood_whirl = { ...WARRIOR.whirlwind, name: 'blood_whirl', init(T) { WARRIOR.whirlwind.init(T); T.v.col = tc(T.v.c.tint, BLOODC, 2.4); T.v.hue = null; } };
 K.soul_drain = (fx, p) => { const c = ctx(fx, p, null, 4.4), s = c.R / 4.4, h = vec(c.x, c.y + 1.1, c.z); for (let i = 0; i < fx.n(50); i++) fx.spawn(SOUL_IN, h.x, c.y + fx.r(0.3, 1.8), h.z, fx.r(0.7, 1) * c.R, fx.r(0, TAU), fx.r(2, 4), fx.o(s, tc(c.tint, 0xa050ff, 1))); fx.at(DARK.flash, h, 1.8 * s, null, { dt: 0.5 }); decal(fx, { pos: vec(c.x, c.y, c.z), radius: c.R, kind: 'swirl', dur: 1.2, color: tc(c.tint, 0xa050ff, 1.2) }); };
 
 // ------------------------------------------------------------------ Gorrath (legion boss) — axe, ghost phase, soulfire, rift

@@ -81,7 +81,7 @@ function play(name) {
   frozen = false;
   const r = boss.play(name, { dur: m.dur * durScale });
   move = null;
-  if (m.move) move = { t: 0, segs: m.move.map(s => ({ t0: s.t[0] * durScale, t1: s.t[1] * durScale, dist: s.dist === 'target' ? 10 : s.dist })), dur: r.dur };
+  if (m.move) move = { t: 0, segs: m.move.map(s => ({ t0: s.t[0] * durScale, t1: s.t[1] * durScale, dist: s.dist === 'target' ? 10 : s.dist, h: s.height || 0 })), dur: r.dur };
   return r;
 }
 lab.panel.slider('dur ×', 0.5, 2, 1, v => { durScale = v; });
@@ -104,7 +104,7 @@ lab.panel.slider('facing°', 0, 360, face * 180 / Math.PI, v => { face = v * Mat
 lab.panel.check('hero (1.85 m)', q.hero !== '0', v => { hero.visible = v; });
 lab.panel.button('blood light (raid)', () => applyBlood());
 lab.panel.label('Camera');
-lab.panel.buttons(['iso', 'cine', 'close', 'front', 'side', 'back', 'top', 'orbit'], v => view(v));
+lab.panel.buttons(['iso', 'cine', 'gamecine', 'close', 'front', 'side', 'back', 'top', 'orbit'], v => view(v));
 let flash = 0;
 
 function view(name) {
@@ -129,8 +129,15 @@ function view(name) {
     camera.position.copy(hp).addScaledVector(fwd, d).addScaledVector(rt, d * 0.35); camera.position.y = hp.y - d * 0.05;
     controls.target.copy(hp).addScaledVector(fwd, H * 0.04); controls.target.y -= H * 0.05;
     camera.fov = 34; camera.updateProjectionMatrix(); controls.update();
+  } else if (name === 'gamecine') {
+    // the encounter intro camera (src/game/modes/encounter.js): pos (x+6, y+0.9h, z+11), look (x, y+0.55h, z), fov 30
+    lab.setView('orbit');
+    const p = b.root.position;
+    camera.position.set(p.x + 6, p.y + H * 0.9, p.z + 11); controls.target.set(p.x, p.y + H * 0.55, p.z);
+    camera.fov = 30; camera.updateProjectionMatrix(); controls.update();
   } else if (name === 'iso') {
     lab.setView('iso', new THREE.Vector3(b.root.position.x, 0, b.root.position.z));
+    if (H > 9) { lab.iso.maxDist = 60; lab.iso.zoom = lab.iso.dist = 52; lab.iso.snap(new THREE.Vector3(b.root.position.x, 0, b.root.position.z)); }
   } else {
     // views relative to the boss's facing: front, side (its right), back, orbit, top
     lab.setView('orbit');
@@ -197,11 +204,14 @@ lab.onFrame((dt) => {
   // action root motion (charges, leaps)
   if (move) {
     move.t += dt;
+    let hov = 0;
     for (const g of move.segs) if (move.t > g.t0 && move.t <= g.t1) {
       const f = boss.root.rotation.y, v = g.dist / (g.t1 - g.t0);
       boss.root.position.x += -Math.sin(f) * v * dt; boss.root.position.z += -Math.cos(f) * v * dt;
+      hov = Math.sin(Math.PI * (move.t - g.t0) / (g.t1 - g.t0)) * g.h;   // the encounter's B.leap arc (u.data.hover)
     }
-    if (move.t > move.dur) move = null;
+    boss.root.position.y = hov;
+    if (move.t > move.dur) { move = null; boss.root.position.y = 0; }
   }
   if (flash > 0) { flash = Math.max(0, flash - dt * 3); boss.setTint(0xffffff, flash); }
   boss.update(dt, s);

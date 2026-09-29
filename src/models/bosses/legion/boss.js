@@ -201,6 +201,8 @@ export class Boss {
         hL0: W.hL0 ? new THREE.Vector3(...W.hL0).normalize() : null, bL0: W.bL0 ? new THREE.Vector3(...W.bL0).normalize() : null,
       };
     }
+    const WL = def.weaponL;
+    if (WL) this.wpnL = { grip: new THREE.Vector3(...WL.grip), h0: new THREE.Vector3(...WL.h0).normalize(), b0: new THREE.Vector3(...WL.b0).normalize() };
     // IK accumulators (base pose from carriage, then actions blend in)
     const ikState = () => ({ w: 0, p: new THREE.Vector3(), h: new THREE.Vector3(0, 1, 0), b: new THREE.Vector3(1, 0, 0), pole: new THREE.Vector3(1, -1, 1), hasAim: false, hasPole: false });
     this.ik = { R: ikState(), L: ikState(), grip: 0 };
@@ -506,7 +508,15 @@ export class Boss {
       T.g2.sub(T.off);
       armIK(P, L.ch, L.hand, T.g2, ik.L.hasPole ? ik.L.pole : T.pole.set(-1, -0.6, 0.8), T.q, ik.grip);
     } else if (L && ik.L.w > 0.001) {
-      armIK(P, L.ch, L.hand, ik.L.p, ik.L.hasPole ? ik.L.pole : _v3.set(-1, -0.6, 0.8), null, ik.L.w);
+      // free left hand; with def.weaponL (e.g. a shield) and $aimL the hand is oriented like the right weapon hand
+      const WL = this.wpnL;
+      if (WL && ik.L.hasAim) {
+        const T = this._tmpArmL || (this._tmpArmL = { q: new THREE.Quaternion(), off: new THREE.Vector3(), w: new THREE.Vector3(), pole: new THREE.Vector3() });
+        weaponQ(T.q, WL.h0, WL.b0, ik.L.h, ik.L.b);
+        T.off.copy(WL.grip).sub(P.rest[L.hand]).applyQuaternion(T.q);
+        T.w.copy(ik.L.p).sub(T.off);
+        armIK(P, L.ch, L.hand, T.w, ik.L.hasPole ? ik.L.pole : T.pole.set(-1, -0.6, 0.8), T.q, ik.L.w);
+      } else armIK(P, L.ch, L.hand, ik.L.p, ik.L.hasPole ? ik.L.pole : _v3.set(-1, -0.6, 0.8), null, ik.L.w);
     }
   }
 

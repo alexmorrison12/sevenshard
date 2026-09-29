@@ -93,19 +93,19 @@ export function islandSkirt(kit, poly, hAt, { depth = 22, seed = 1, tint = 0x5a4
  * Rock wall along a polyline. The wall rises from the ground to base+height, leaning back (away from `inside`).
  * opts: { height, thick, seed, tint, top (hex, e.g. snow), inside: [x,z] (arena centre), step, closed, mat }
  */
-export function cliffRing(kit, pts0, hAt, { height = 8, thick = 5, seed = 1, tint = 0x7a7068, strata = 0x5a524c, top = null, inside = [0, 0], step = 1.5, closed = true, lean = 0.35, mat = 'rock', jag = 1.6 } = {}) {
+export function cliffRing(kit, pts0, hAt, { height = 8, heightFn = null, thick = 5, seed = 1, tint = 0x7a7068, strata = 0x5a524c, top = null, inside = [0, 0], step = 1.5, closed = true, lean = 0.35, mat = 'rock', jag = 1.6 } = {}) {
   const nz = new Simplex(seed);
   const pts = resample(pts0, step, closed);
   const N = pts.length, R = 7;
   const pos = [], idx = [], col = [], uv = [];
-  const boost = (c) => { const l = c[0] * 0.3 + c[1] * 0.5 + c[2] * 0.2; return l > 0.6 ? c.map(v => v * 1.45) : c; };
-  const cT = boost(linColor(tint)), cS = boost(linColor(strata)), cTop = top != null ? linColor(top).map(v => v * 1.6) : null;
+  const boost = (c) => c;
+  const cT = boost(linColor(tint)), cS = boost(linColor(strata)), cTop = top != null ? linColor(top).map(v => v * 1.15) : null;
   for (let i = 0; i <= (closed ? N : N - 1); i++) {
     const [px, pz] = pts[i % N];
     // outward direction = away from the arena centre
     let ox = px - inside[0], oz = pz - inside[1]; const L = Math.hypot(ox, oz) || 1; ox /= L; oz /= L;
     const y0 = hAt(px, pz) - 1.5;
-    const hh = height * (1 + nz.noise2(px * 0.07, pz * 0.07) * 0.35) + nz.noise2(px * 0.4, pz * 0.4) * jag;
+    const hh = (heightFn ? heightFn(px, pz) : height) * (1 + nz.noise2(px * 0.07, pz * 0.07) * 0.35) + nz.noise2(px * 0.4, pz * 0.4) * jag;
     for (let r = 0; r <= R; r++) {
       const t = r / R;
       // profile: rise steeply, then fold back over the top (thick) → a rounded crest

@@ -348,18 +348,20 @@ function makeHound(kind) {
       [1.4, { body: null, neck: null, head: null, jaw: null }],
     ],
   };
+  // leap onto a target: the encounter moves the root along its arc (B.leap); the model poses the crouch, the
+  // stretched airborne body (forepaws reaching, jaws open) and the landing
   A.pounce = {
-    dur: 2.2, hits: [1.25], hitAt: ['feetFR'], lock: 1, move: [{ t: [0.6, 1.25], dist: 'target' }],
+    dur: 2.2, hits: [1.25], hitAt: ['feetFR'], lock: 1, move: [{ t: [0.45, 1.25], dist: 'target', height: 4 }],
     keys: [
       [0, {}],
-      [0.5, { $hips: [0, -0.28, 0.12], body: [0.1, 0, 0], neck: [-0.2, 0, 0], head: [0.15, 0, 0], jaw: [-0.2, 0, 0] }, 'o'],
-      [0.62, { $hips: [0, 0.3, -0.1], body: [0.2, 0, 0], $air: 0.9, neck: [0.1, 0, 0], jaw: [-0.6, 0, 0] }, 'o'],
-      [0.95, { $hips: [0, 0.95, -0.05], body: [0.05, 0, 0], $air: 1, neck: [-0.1, 0, 0], head: [-0.1, 0, 0], jaw: [-0.7, 0, 0] }, 'o'],
-      [1.25, { $hips: [0, -0.12, -0.15], body: [-0.18, 0, 0], $air: 0, neck: [-0.35, 0, 0], head: [-0.1, 0, 0], jaw: [0, 0, 0], $footFL: F('FL', 0, 0, -0.3), $footFR: F('FR', 0, 0, -0.3) }, 'i'],
+      [0.4, { $hips: [0, -0.28, 0.12], body: [0.1, 0, 0], neck: [-0.2, 0, 0], head: [0.15, 0, 0], jaw: [-0.2, 0, 0] }, 'o'],
+      [0.55, { $hips: [0, 0.12, -0.1], body: [0.22, 0, 0], $air: 0.9, neck: [0.1, 0, 0], jaw: [-0.6, 0, 0] }, 'o'],
+      [0.95, { $hips: [0, 0.15, -0.05], body: [-0.05, 0, 0], $air: 1, neck: [-0.1, 0, 0], head: [-0.1, 0, 0], jaw: [-0.75, 0, 0] }, 'io'],
+      [1.25, { $hips: [0, -0.14, -0.15], body: [-0.18, 0, 0], $air: 0, neck: [-0.35, 0, 0], head: [-0.1, 0, 0], jaw: [0, 0, 0], $footFL: F('FL', 0, 0, -0.3), $footFR: F('FR', 0, 0, -0.3) }, 'i'],
       [1.6, { $hips: [0, -0.08, -0.1], body: [-0.1, 0, 0], neck: [-0.1, 0, 0], jaw: [-0.2, 0, 0], $footFL: F('FL', 0, 0, -0.3), $footFR: F('FR', 0, 0, -0.3) }, 'o'],
       [2.2, { body: null, neck: null, head: null, jaw: null }],
     ],
-    ev: [[0.62, 'jump', 'feetRL'], [1.25, 'land', 'feetFR']],
+    ev: [[0.5, 'jump', 'feetRL'], [1.25, 'land', 'feetFR']],
   };
   A.breath = {
     dur: 3.4, hits: [1.1, 1.6, 2.1, 2.6], hitAt: ['mouth'], lock: 1, active: [[1.0, 2.8]],
@@ -423,18 +425,18 @@ function makeHound(kind) {
     ev: [[2.4, 'land', 'feetFL']],
   };
   A.intro = {
-    dur: 4.5, hits: [1.2, 3.0], hitAt: ['feetFR', 'mouth'], lock: 1, fadeIn: 0.01,
+    dur: 3.2, hits: [0.72, 2.0], hitAt: ['feetFR', 'mouth'], lock: 1, fadeIn: 0.01, stretch: [0.9, 1.4],
     keys: [
       [0, { $hips: [0, 3.5, -0.8], $air: 1, body: [-0.35, 0, 0], neck: [0.2, 0, 0], jaw: [-0.6, 0, 0] }],
-      [1.05, { $hips: [0, 0.4, -0.1], $air: 1, body: [-0.2, 0, 0], neck: [0, 0, 0], jaw: [-0.5, 0, 0] }, 'i'],
-      [1.2, { $hips: [0, -0.3, 0.05], $air: 0, body: [-0.1, 0, 0], neck: [-0.4, 0, 0], head: [0.2, 0, 0], jaw: [-0.2, 0, 0], $shake: 0.4 }, 'i'],
-      [2.1, { $hips: [0, -0.18, 0.05], body: [-0.05, 0, 0], neck: [-0.45, 0.25, 0], head: [0.25, 0.2, 0], jaw: [-0.55, 0, 0] }, 'o'],
-      [2.6, { $hips: [0, -0.14, 0.1], body: [0.3, 0, 0], neck: [0.5, 0, 0], head: [0.4, 0, 0], jaw: [-0.3, 0, 0] }, 'io'],
-      [3.0, { $hips: [0, -0.14, 0.1], body: [0.35, 0, 0], neck: [0.65, 0, 0], head: [0.5, 0, 0], jaw: [-0.75, 0, 0], $shake: 0.8, $body: 0.4 }, 'io'],
-      [3.9, { $hips: [0, -0.14, 0.1], body: [0.35, 0, 0], neck: [0.62, 0, 0], head: [0.5, 0, 0], jaw: [-0.7, 0, 0], $shake: 0.7, $body: 0.4 }],
-      [4.5, { body: null, neck: null, head: null, jaw: null, $body: 0 }],
+      [0.63, { $hips: [0, 0.4, -0.1], $air: 1, body: [-0.2, 0, 0], neck: [0, 0, 0], jaw: [-0.5, 0, 0] }, 'i'],
+      [0.72, { $hips: [0, -0.3, 0.05], $air: 0, body: [-0.1, 0, 0], neck: [-0.4, 0, 0], head: [0.2, 0, 0], jaw: [-0.2, 0, 0], $shake: 0.4 }, 'i'],
+      [1.36, { $hips: [0, -0.18, 0.05], body: [-0.05, 0, 0], neck: [-0.45, 0.25, 0], head: [0.25, 0.2, 0], jaw: [-0.55, 0, 0] }, 'o'],
+      [1.716, { $hips: [0, -0.14, 0.1], body: [0.3, 0, 0], neck: [0.5, 0, 0], head: [0.4, 0, 0], jaw: [-0.3, 0, 0] }, 'io'],
+      [2, { $hips: [0, -0.14, 0.1], body: [0.35, 0, 0], neck: [0.65, 0, 0], head: [0.5, 0, 0], jaw: [-0.75, 0, 0], $shake: 0.8, $body: 0.4 }, 'io'],
+      [2.72, { $hips: [0, -0.14, 0.1], body: [0.35, 0, 0], neck: [0.62, 0, 0], head: [0.5, 0, 0], jaw: [-0.7, 0, 0], $shake: 0.7, $body: 0.4 }],
+      [3.2, { body: null, neck: null, head: null, jaw: null, $body: 0 }],
     ],
-    ev: [[1.2, 'land', 'feetFR'], [3.0, 'howl', 'mouth']],
+    ev: [[0.72, 'land', 'feetFR'], [2.0, 'howl', 'mouth']],
   };
   A.groggy = {
     dur: 5.0, hits: [], lock: 1, stretch: [1.0, 4.0], sustain: [1.2, 3.8],

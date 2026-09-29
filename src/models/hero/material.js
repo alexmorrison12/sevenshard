@@ -132,13 +132,14 @@ export function makeHeroMaterial(U, opts = {}) {
         }`)
       .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
         totalEmissiveRadiance += diffuseColor.rgb * vMat.y * uGlow * (0.85 + 0.15 * sin(uTime * 3.0 + vOP.y * 14.0));
-        totalEmissiveRadiance += uCast.rgb * uCast.a * vMat.z * 2.0;
+        float castA = min(uCast.a, 3.0);
+        totalEmissiveRadiance += uCast.rgb * castA * vMat.z * 1.1;
         totalEmissiveRadiance += uRune.rgb * uRune.a * vMat.w * (0.8 + 0.2 * sin(uTime * 4.0 + vOP.y * 9.0));
         totalEmissiveRadiance += vec3(1.1, 0.1, 0.9) * veins * 2.2 * (0.75 + 0.25 * sin(uTime * 5.0 + vOP.y * 20.0));`)
-      .replace('+ gSpecAcc +', `+ gSpecAcc * vMat.x * (0.14 + smoothstep(0.5, 1.0, vMat.x) * 0.22 + diffuseColor.rgb * 0.6) + heroEnv(geometryNormal, geometryViewDir, diffuseColor.rgb, vMat.x) +`)
+      .replace('+ gSpecAcc +', `+ gSpecAcc * vMat.x * (0.12 + smoothstep(0.5, 1.0, vMat.x) * 0.2 + diffuseColor.rgb * 0.32) + heroEnv(geometryNormal, geometryViewDir, diffuseColor.rgb, vMat.x) +`)
       .replace('vec3 outgoingLight = reflectedLight', `
         float rimG = pow(1.0 - saturate(dot(geometryNormal, geometryViewDir)), 2.5);
-        totalEmissiveRadiance += uCast.rgb * uCast.a * rimG * 0.9 + vec3(0.55, 0.05, 0.6) * rimG * uDemon * 0.9;
+        totalEmissiveRadiance += uCast.rgb * min(uCast.a, 3.0) * rimG * rimG * 0.28 + vec3(0.55, 0.05, 0.6) * rimG * uDemon * 0.9;
         vec3 outgoingLight = reflectedLight`)
       .replace('void main() {', `vec3 heroEnv(vec3 n, vec3 v, vec3 alb, float metal) {
           if (metal < 0.3) return vec3(0.0);
@@ -147,7 +148,7 @@ export function makeHeroMaterial(U, opts = {}) {
           float k = smoothstep(-0.25, 0.55, rw.y);
           vec3 env = mix(uEnvGnd, uEnvSky, k) + vec3(1.0, 0.95, 0.85) * pow(max(dot(rw, uSunDir), 0.0), 24.0) * 1.2;
           float m = smoothstep(0.3, 1.0, metal) * uEnv;
-          return env * (0.1 + alb * 0.8) * m * 0.5;
+          return env * (0.09 + alb * 0.42) * m * 0.5;
         }
         void main() {`)
       .replace('#include <opaque_fragment>', `outgoingLight = mix(outgoingLight, uTint.rgb, uTint.a);

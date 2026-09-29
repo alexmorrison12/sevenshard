@@ -8,6 +8,7 @@ export const MENU = [
   { id: 'inventory', g: 'inventory', label: 'Inventory', key: 'I' },
   { id: 'skills', g: 'skills', label: 'Skills', key: 'K' },
   { id: 'engravings', g: 'engravings', label: 'Engravings', key: 'N' },
+  { id: 'sunheart', g: 'sun', label: 'Sunheart Passive', key: '' },
   { id: 'cards', g: 'cards', label: 'Cards', key: '' },
   { id: 'map', g: 'map', label: 'World Map', key: 'M' },
   { id: 'guild', g: 'guild', label: 'Guild', key: 'U' },

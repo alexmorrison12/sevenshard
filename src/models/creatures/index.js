@@ -15,10 +15,15 @@ import { legionnaire } from './demons/legionnaire.js';
 import { brute } from './demons/brute.js';
 import { abyss_caster } from './demons/caster.js';
 import { gargoyle } from './demons/gargoyle.js';
+import { rift_crystal } from './demons/crystal.js';
 import { pip, pip_seed, pip_pet } from './pips.js';
+import { BEASTS } from './beasts/index.js';     // wolf, boar, spider, crab, treant
+import { SPIRITS } from './spirits/index.js';   // skeleton, wraith, wisp, crystal_golem
+import { MOUNTS } from './mounts/index.js';     // horse, direwolf, sunstag + pets
+import { WILD } from './wild/index.js';         // sea_serpent, kraken_tentacle + critters
 export { createShip, SHIPS } from './ships.js';
 
-// ---- registry (real models override placeholders as they land) ----
+// ---- registry: every contract type exists from day one (placeholder blob until its real model lands) ----
 const PH = {
   imp: [1, 0.35, 0xa8262c], hellhound: [1.3, 0.55, 0x2a2226], legionnaire: [2.2, 0.55, 0x5a3a3a], brute: [3, 1.0, 0x7a3030],
   abyss_caster: [2.0, 0.5, 0x4a2a6a, true], gargoyle: [1.9, 0.7, 0x7a7a80], skeleton: [1.8, 0.4, 0xd8d0b8], wraith: [2.1, 0.5, 0x40506a, true],
@@ -29,26 +34,25 @@ const PH = {
   pip_pet: [0.45, 0.2, 0x9ad06a], butterfly: [0.2, 0.1, 0xffa0d0, true], bird: [0.25, 0.1, 0x8a6a4a, true], seagull: [0.35, 0.2, 0xf0f0f0, true],
   rabbit: [0.32, 0.12, 0x8a7458], cat: [0.42, 0.15, 0xd8843a], chicken: [0.46, 0.12, 0xf0ece0], fish: [0.2, 0.3, 0x6a9ab0],
 };
-for (const [t, [h, r, c, fly]] of Object.entries(PH)) register(t, placeholderDef(t, { height: h, radius: r, color: c, flying: fly }));
-register('imp', imp);
-register('hellhound', hellhound);
-register('legionnaire', legionnaire);
-register('brute', brute);
-register('abyss_caster', abyss_caster);
-register('gargoyle', gargoyle);
-register('pip', pip); register('pip_seed', pip_seed); register('pip_pet', pip_pet);
+for (const [t, [h, r, c, fly]] of Object.entries(PH)) if (!DEFS[t]) register(t, placeholderDef(t, { height: h, radius: r, color: c, flying: fly }));
+const OWN = { imp, hellhound, legionnaire, brute, abyss_caster, gargoyle, rift_crystal, pip, pip_seed, pip_pet };
+for (const defs of [OWN, BEASTS, SPIRITS, MOUNTS, WILD]) for (const [t, d] of Object.entries(defs)) register(t, d);
 
 const NAMES = {
   imp: 'Imp', hellhound: 'Hellhound', legionnaire: 'Legionnaire', brute: 'Abyssal Brute', abyss_caster: 'Abyss Caster', gargoyle: 'Gargoyle',
-  skeleton: 'Skeleton', wraith: 'Wraith', wolf: 'Wolf', boar: 'Boar', spider: 'Spider', crab: 'Crab', treant: 'Treant', crystal_golem: 'Crystal Golem',
-  wisp: 'Wisp', pip: 'Pip', pip_seed: 'Pip Seed', sea_serpent: 'Sea Serpent', kraken_tentacle: 'Kraken Tentacle', horse: 'Horse', direwolf: 'Direwolf',
-  sunstag: 'Sunstag', foxling: 'Foxling', owlet: 'Owlet', slimelet: 'Slimelet', pip_pet: 'Pipling', butterfly: 'Butterfly', bird: 'Songbird',
-  seagull: 'Seagull', rabbit: 'Rabbit', cat: 'Cat', chicken: 'Chicken', fish: 'Fish',
+  rift_crystal: 'Rift Crystal', skeleton: 'Skeleton', wraith: 'Wraith', wolf: 'Wolf', boar: 'Boar', spider: 'Spider', crab: 'Crab', treant: 'Treant',
+  crystal_golem: 'Crystal Golem', wisp: 'Wisp', pip: 'Pip', pip_seed: 'Pip Seed', sea_serpent: 'Sea Serpent', kraken_tentacle: 'Kraken Tentacle',
+  horse: 'Horse', direwolf: 'Direwolf', sunstag: 'Sunstag', foxling: 'Foxling', owlet: 'Owlet', slimelet: 'Slimelet', pip_pet: 'Pipling',
+  butterfly: 'Butterfly', bird: 'Songbird', seagull: 'Seagull', rabbit: 'Rabbit', cat: 'Cat', chicken: 'Chicken', fish: 'Fish',
 };
+// catalogue order: demons → field monsters → Pips → mounts & pets → sea → critters (anything else after)
+const ORDER = ['imp', 'hellhound', 'legionnaire', 'brute', 'abyss_caster', 'gargoyle', 'rift_crystal', 'skeleton', 'wraith', 'wisp', 'crystal_golem',
+  'wolf', 'boar', 'spider', 'crab', 'treant', 'pip', 'pip_seed', 'horse', 'direwolf', 'sunstag', 'foxling', 'owlet', 'slimelet', 'pip_pet',
+  'sea_serpent', 'kraken_tentacle', 'butterfly', 'bird', 'seagull', 'rabbit', 'cat', 'chicken', 'fish'];
 
 /** { [type]: { name, height, radius, flying?, variants: [...], actions: [...] } } (height/radius at scale 1, default variant) */
 export const CREATURES = {};
-for (const t of Object.keys(DEFS)) CREATURES[t] = describe(t, NAMES);
+for (const t of [...ORDER.filter(t => DEFS[t]), ...Object.keys(DEFS).filter(t => !ORDER.includes(t))]) CREATURES[t] = describe(t, NAMES);
 
 /** createCreature(type, { variant, scale, tint, elite, seed }) → creature (see README.md) */
 export function createCreature(type, opts = {}) {

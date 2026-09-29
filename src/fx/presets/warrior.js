@@ -32,9 +32,10 @@ K.crimson_wave = (fx, p) => {        // Red Dust: a crimson wave rolls forward +
   const c = ctx(fx, p, null, 2.2, 9), s = c.s, col = tc(c.tint, CRIMSON, 2.6);
   const pos = vec(c.x, c.y, c.z), L = c.L, W = (c.W ?? 3) * 0.55;
   const speed = p.speed ?? 22, dur = L / speed;
-  slash(fx, { pos, dir: c.f, style: 'wave', radius: W * 0.95, width: W * 0.55, arc: Math.PI, color: col, intensity: 1, speed, dur: dur + 0.15, sweep: 0.03, grow: 0.25, sparks: false });
+  slash(fx, { pos, dir: c.f, style: 'wave', radius: W * 1.05, width: W * 0.75, arc: Math.PI, color: col, intensity: 1, speed, dur: dur + 0.2, sweep: 0.03, grow: 0.3, sparks: false });
+  slash(fx, { pos, dir: c.f, style: 'wave', radius: W * 0.8, width: W * 0.3, arc: Math.PI * 0.9, color: [2.2, 1.2, 1.1], intensity: 1, speed, dur: dur + 0.15, sweep: 0.03, grow: 0.25, sparks: false, glow: false, delay: 0.03 });
   // ground cracks + sparks + embers along the path
-  decal(fx, { pos, dir: c.f, radius: W * 0.45, length: L, kind: 'fissure', dur: 3.5, color: [col[0] * 0.8, col[1] * 0.8, col[2] * 0.8], delay: 0.02 });
+  decal(fx, { pos, dir: c.f, radius: W * 0.4, length: L, kind: 'fissure', dur: 3.5, color: [col[0] * 0.55, col[1] * 0.55, col[2] * 0.55], delay: 0.02 });
   const o = fx.o(s, hue(col, [0, 0, 0]));
   along(c.x, c.z, c.f, L, fx.n(22), (x, z, u) => {
     o.dt = u * dur;
@@ -78,7 +79,7 @@ K.whirlwind = {                      // looping spin (handle.stop()); follows at
     const o = fx.o(s, null);
     for (let i = 0; i < n; i++) { const a = fx.r(0, TAU), r = v.R * fx.r(0.6, 1.0); fx.spawn(PHYS.dust, p.x + Math.cos(a) * r, gy + 0.2, p.z + Math.sin(a) * r, -Math.sin(a) * 5, fx.r(0.3, 1), Math.cos(a) * 5, o); }
     const m = T.rate('w', 50);
-    const ow = fx.o(s, hue(v.col, [0, 0, 0]));
+    const ow = fx.o(s, v.hue || (v.hue = hue(v.col, [0, 0, 0])));
     for (let i = 0; i < m; i++) { const a = fx.r(0, TAU), r = v.R * fx.r(0.4, 1.0); fx.spawn(GEN.streak, p.x + Math.cos(a) * r, gy + fx.r(0.3, 1.8), p.z + Math.sin(a) * r, -Math.sin(a) * 9, 0.3, Math.cos(a) * 9, ow); }
   },
 };
@@ -214,7 +215,7 @@ K.dash_trail = {                     // dash: afterimage streak following the un
   },
   tick(T) {
     const fx = T.fx, n = T.rate('s', 60);
-    const o = fx.o(1, hue(T.v.col, [0, 0, 0]));
+    const o = fx.o(1, T.v.hue || (T.v.hue = hue(T.v.col, [0, 0, 0])));
     for (let i = 0; i < n; i++) fx.spawn(GEN.streak, T.pos.x + fx.r(-0.3, 0.3), T.pos.y + fx.r(-0.8, 0.6), T.pos.z + fx.r(-0.3, 0.3), 0, 0.2, 0, o);
   },
   stop(T) { T.v.t.stopped = true; },
@@ -223,28 +224,28 @@ K.dash_trail = {                     // dash: afterimage streak following the un
 
 // ------------------------------------------------------------------ Oathkeeper
 K.holy_nova = (fx, p) => {
-  const c = ctx(fx, p, null, 6), s = c.R / 6, col = tc(c.tint, GOLD, 1.6);
+  const c = ctx(fx, p, null, 6), s = c.R / 6, col = tc(c.tint, GOLD, 1.2);
   const pos = vec(c.x, c.y, c.z), up = vec(c.x, c.y + 1.2, c.z);
-  fx.at(HOLY.flash, up, 2.2 * s, null);
-  fx.at(GEN.rays, up, 1.6 * s, col);
-  fx.at(GEN.starFlash, up, 2.2 * s, col);
+  fx.at(HOLY.flash, up, 1.3 * s, null);
+  fx.at(GEN.rays, up, 0.9 * s, col, { i: 0.7 });
+  fx.at(GEN.starFlash, up, 1.3 * s, col);
   shockwave(fx, { pos, radius: c.R, color: col, dur: 0.55, height: 1.8 * s, dust: false });
   shockwave(fx, { pos, radius: c.R * 0.7, color: [2, 1.9, 1.6], dur: 0.45, wall: false, dust: false, delay: 0.08 });
-  decal(fx, { pos, radius: c.R * 0.8, kind: 'holy', dur: 1.8, color: [col[0] * 1.2, col[1] * 1.2, col[2] * 1.2], hot: 0.6 });
-  lightPillar(fx, c.x, c.y, c.z, 1.2 * s, 9 * s, [col[0] * 1.3, col[1] * 1.3, col[2] * 1.3], 0.8);
+  decal(fx, { pos, radius: c.R * 0.8, kind: 'holy', dur: 1.8, color: col, hot: 0.4 });
+  lightPillar(fx, c.x, c.y, c.z, 0.9 * s, 9 * s, [col[0] * 0.9, col[1] * 0.9, col[2] * 0.9], 0.7);
   const o = fx.o(s, col);
   for (let i = 0; i < fx.n(50); i++) { const a = fx.r(0, TAU), r = fx.r(0.5, c.R); o.dt = r / (c.R / 0.5) * 0.9; fx.spawn(HOLY.mote, c.x + Math.cos(a) * r, c.y + fx.r(0.1, 0.5), c.z + Math.sin(a) * r, 0, fx.r(1, 2.5), 0, o); }
   fx.radial(HOLY.star, 24, up, 5, 10, 0.5, 2.5, s, col, 0.3);
   fx.sphere(FEATHER_RISE, 14, up, 1.5, 4, s, null, UP, 1.2);
 };
 K.light_pillar = (fx, p) => {        // pillar of light slamming down on the target point
-  const c = ctx(fx, p, null, 2.2, 8, 6), s = c.R / 2.2, col = tc(c.tint, GOLD, 1.8);
+  const c = ctx(fx, p, null, 2.2, 8, 6), s = c.R / 2.2, col = tc(c.tint, GOLD, 1.3);
   const x = p.target ? c.tx : c.x, z = p.target ? c.tz : c.z, y = p.target ? c.ty : c.y;
   const pos = vec(x, y, z);
   decal(fx, { pos, radius: c.R * 1.2, kind: 'holy', dur: 2.2, color: col, hot: 0.4 });
-  lightPillar(fx, x, y, z, c.R * 0.75, 16 * s, [col[0] * 1.5, col[1] * 1.5, col[2] * 1.5], 1.1, 0, 0.12);
-  lightPillar(fx, x, y, z, c.R * 0.3, 18 * s, [2.5, 2.3, 2.0], 0.9, 3, 0.12);
-  fx.at(HOLY.flash, pos, 2.5 * s, null, { dt: 0.12 }, 0, 1, 0);
+  lightPillar(fx, x, y, z, c.R * 0.6, 16 * s, [col[0], col[1], col[2]], 1.0, 0, 0.12);
+  lightPillar(fx, x, y, z, c.R * 0.25, 18 * s, [1.4, 1.3, 1.1], 0.8, 3, 0.12);
+  fx.at(HOLY.flash, pos, 1.6 * s, null, { dt: 0.12 }, 0, 1, 0);
   shockwave(fx, { pos, radius: c.R * 2.2, color: col, dur: 0.45, delay: 0.12, dust: false });
   const o = fx.o(s, col); o.dt = 0.12;
   for (let i = 0; i < fx.n(30); i++) { const a = fx.r(0, TAU); fx.spawn(HOLY.spark, x + Math.cos(a) * 0.4, y + 0.3, z + Math.sin(a) * 0.4, Math.cos(a) * fx.r(3, 8), fx.r(2, 9), Math.sin(a) * fx.r(3, 8), o); }
@@ -291,10 +292,10 @@ K.shield_bubble = {                  // golden hex bubble on the attach target(s
 K.holy_bulwark = K.shield_bubble;
 K.brand_mark = (fx, p) => fx.aura({ attach: p.attach ?? p.follow ?? p.unit, pos: p.pos, kind: 'brand', color: p.color ?? 0xff5ab0, dur: p.dur ?? 8, scale: p.scale ?? 1, height: p.height });
 K.holy_explosion = (fx, p) => {
-  const c = ctx(fx, p, null, 3.5, 8, 5), s = c.R / 3.5, col = tc(c.tint, GOLD, 1.7);
+  const c = ctx(fx, p, null, 3.5, 8, 5), s = c.R / 3.5, col = tc(c.tint, GOLD, 1.25);
   const x = p.target ? c.tx : c.x, z = p.target ? c.tz : c.z, y = p.target ? c.ty : c.y, pos = vec(x, y, z), up = vec(x, y + 1, z);
-  fx.at(HOLY.flash, up, 3 * s, null);
-  fx.at(GEN.rays, up, 2 * s, col);
+  fx.at(HOLY.flash, up, 1.7 * s, null);
+  fx.at(GEN.rays, up, 1.1 * s, col, { i: 0.7 });
   fx.sphere(HOLY.cross, 6, up, 1, 3, s, col);
   fx.sphere(HOLY.spark, 40, up, 4, 11, s, col);
   shockwave(fx, { pos, radius: c.R * 1.6, color: col, dur: 0.45, height: 1.6 * s, dust: false });
@@ -322,10 +323,10 @@ K.cleanse = (fx, p) => {             // white-cyan purifying spiral
   fx.at(GEN.ringThin, pos, 0.3 * s, col, { life: 0.6 }, 0, 0.05, 0);
 };
 K.identity_burst = (fx, p) => {      // generic identity activation (colour = class palette)
-  const c = ctx(fx, p), s = c.s, col = tc(c.tint, GOLD, 1.4);
+  const c = ctx(fx, p), s = c.s, col = tc(c.tint, GOLD, 1.1);
   const pos = vec(c.x, c.y, c.z), up = vec(c.x, c.y + 1.1, c.z);
-  fx.at(GEN.bigFlash, up, 0.6 * s, col);
-  fx.at(GEN.rays, up, 1.3 * s, col);
+  fx.at(GEN.bigFlash, up, 0.35 * s, col);
+  fx.at(GEN.rays, up, 0.9 * s, col, { i: 0.7 });
   shockwave(fx, { pos, radius: 4.5 * s, color: [col[0] * 1.5, col[1] * 1.5, col[2] * 1.5], dur: 0.5, height: 2 });
   fx.sphere(GEN.sparkLong, 40, up, 4, 10, s, col);
   risingRing(fx, c.x, c.y, c.z, 1.2 * s, HOLY.riseSpark, 30, col, s, [2, 5]);

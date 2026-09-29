@@ -12,6 +12,8 @@ import { fract, clamp01, mix, sstep, TAU } from '../kit/rig.js';
 const _v = new THREE.Vector3(), _p = new THREE.Vector3(), _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion();
 const X = new THREE.Vector3(1, 0, 0), Y = new THREE.Vector3(0, 1, 0);
 const tmpQ = new THREE.Quaternion(), tmpQ2 = new THREE.Quaternion(), tmpV = new THREE.Vector3(), tmpV2 = new THREE.Vector3();
+/** Boxing-free frame inputs: [dt, speed, turn, strafe, air, airPaw] — fill, then call gait.step() / gait.solveStep(pose). */
+export const GIN = new Float64Array(6);
 
 // per-gait scalar parameters (name → default)
 const GP = ['v', 0, 'f', 2, 'duty', 0.6, 'lift', 1, 'lean', 0,
@@ -109,11 +111,14 @@ export class Gait {
     this.onStep = null;
     this.ground = null;            // optional (lx, lz) → local ground height (terrain following), set by Creature.setGround
     this.gOff = 0; this.gPitch = 0; this.gRoll = 0; // smoothed body adaptation to the ground under the feet
+    this._su = 0; this._sk = 0;
   }
   gy(x, z) { return this.ground ? this.ground(x, z) : 0; }
   /** Smoothed body height / pitch / roll from the ground under the legs' home positions. */
-  adaptBody(dt, pitchRoll = true) {
-    if (!this.ground) { this.gOff = 0; this.gPitch = 0; this.gRoll = 0; return; }
+  adaptBody(dt, pitchRoll = true) { GIN[0] = dt; this.adaptStep(pitchRoll); }
+  adaptStep(pitchRoll) {
+    if (!this.ground) { if (this.gOff !== 0 || this.gPitch !== 0 || this.gRoll !== 0) { this.gOff = 0; this.gPitch = 0; this.gRoll = 0; } return; }
+    const dt = GIN[0];
     let sum = 0, fr = 0, fn = 0, re = 0, rn = 0, le = 0, ln = 0, ri = 0, rin = 0, fz = 0, rz = 0, lx = 0, rx = 0;
     const legs = this.legs;
     for (let i = 0; i < legs.length; i++) {
@@ -153,29 +158,39 @@ export class Gait {
   }
 
   /** speed/turn in model units (m/s, rad/s along the model's -Z facing). */
-  update(dt, speed, turn, strafe = 0) {
+  update(dt, speed, turn, strafe = 0) { GIN[0] = dt; GIN[1] = speed; GIN[2] = turn; GIN[3] = strafe; this.step(); }
+  /** same as update() but reads its inputs from GIN (no boxed double arguments) */
+  step() {
+    const dt = GIN[0], speed = GIN[1], turn = GIN[2], strafe = GIN[3];
     this.sSm += (speed - this.sSm) * (1 - Math.exp(-6 * dt));
     const as = Math.abs(this.sSm);
     this._gaitWeights(as);
-    const v0 = this.P[PI.v];
-    let f = this._mix(PI.f);
+    const P = this.P, w = this.gw, nG = this.nG;
+    // blended per-gait scalars in one pass
+    let f = 0, dutyAll = 0, liftK = 0, leanK = 0;
+    for (let i = 0; i < nG; i++) { const wi = w[i]; if (!wi) continue; const o = i * NP; f += P[o + PI.f] * wi; dutyAll += P[o + PI.duty] * wi; liftK += P[o + PI.lift] * wi; leanK += P[o + PI.lean] * wi; }
+    const v0 = P[PI.v];
     if (as < v0) f *= mix(this.fMin, 1, as / v0);
     const tr = Math.abs(turn);
     const actT = clamp01(Math.sqrt(speed * speed + strafe * strafe) / this.actV + tr * this.actTurn);
     this.act += (actT - this.act) * (1 - Math.exp(-(actT > this.act ? 10 : 5) * dt));
     const moving = actT > 0.04;
     this.moving = moving;
-    const dutyAll = this._mix(PI.duty);
-    const liftK = this._mix(PI.lift);
     if (moving) { this.f = f; this.phase = fract(this.phase + f * dt); }
-    const a = this.act;
-    this.bob = this._osc(O_BOB) * a;
-    this.pitch = this._osc(O_PITCH) * a;
-    this.roll = this._osc(O_ROLL) * a;
-    this.sway = this._osc(O_SWAY) * a;
-    this.flex = this._osc(O_FLEX) * a;
-    this.nod = this._osc(O_NOD) * a;
-    this.lean = this._mix(PI.lean) * clamp01(as / 2);
+    const a = this.act, ph = this.phase;
+    // body oscillators (amplitude, frequency, phase triplets) in one pass
+    let bob = 0, pit = 0, rol = 0, swy = 0, flx = 0, nod = 0;
+    for (let i = 0; i < nG; i++) {
+      const wi = w[i]; if (!wi) continue; const o = i * NP;
+      if (P[o + O_BOB]) bob += wi * P[o + O_BOB] * Math.cos(TAU * (P[o + O_BOB + 1] * ph + P[o + O_BOB + 2]));
+      if (P[o + O_PITCH]) pit += wi * P[o + O_PITCH] * Math.cos(TAU * (P[o + O_PITCH + 1] * ph + P[o + O_PITCH + 2]));
+      if (P[o + O_ROLL]) rol += wi * P[o + O_ROLL] * Math.cos(TAU * (P[o + O_ROLL + 1] * ph + P[o + O_ROLL + 2]));
+      if (P[o + O_SWAY]) swy += wi * P[o + O_SWAY] * Math.cos(TAU * (P[o + O_SWAY + 1] * ph + P[o + O_SWAY + 2]));
+      if (P[o + O_FLEX]) flx += wi * P[o + O_FLEX] * Math.cos(TAU * (P[o + O_FLEX + 1] * ph + P[o + O_FLEX + 2]));
+      if (P[o + O_NOD]) nod += wi * P[o + O_NOD] * Math.cos(TAU * (P[o + O_NOD + 1] * ph + P[o + O_NOD + 2]));
+    }
+    this.bob = bob * a; this.pitch = pit * a; this.roll = rol * a; this.sway = swy * a; this.flex = flx * a; this.nod = nod * a;
+    this.lean = leanK * clamp01(as / 2);
     const swingDur = (1 - dutyAll) / Math.max(0.3, this.f);
     const legs = this.legs;
     for (let i = 0; i < legs.length; i++) {
@@ -184,13 +199,14 @@ export class Gait {
       L.home.copy(L.toe).add(L.homeOff);
       const vgx = -turn * L.F.z - strafe, vgz = speed + turn * L.F.x;
       if (moving) {
-        const lp = fract(this.phase + this._legPhase(L));
+        let pc = 0, ps = 0; for (let g = 0; g < nG; g++) { const wg = w[g]; if (!wg) continue; pc += L.offC[g] * wg; ps += L.offS[g] * wg; }
+        const lp = fract(ph + fract(Math.atan2(ps, pc) / TAU + 1));
         const duty = dutyAll * L.dutyMul;
         if (lp < duty) {
           if (!L.stance) { L.stance = true; L.settle = false; L.down = 1; if (this.onStep) this.onStep(L); }
           L.u = 1;
           const ca = Math.cos(turn * dt), sa = Math.sin(turn * dt), fx = L.F.x, fz = L.F.z;
-          L.F.x = fx * ca - fz * sa - strafe * dt; L.F.z = fx * sa + fz * ca + speed * dt; L.F.y = this.gy(L.F.x, L.F.z);
+          L.F.x = fx * ca - fz * sa - strafe * dt; L.F.z = fx * sa + fz * ca + speed * dt; L.F.y = this.ground ? this.ground(L.F.x, L.F.z) : 0;
           L.pawPitch = -L.heel * sstep(0.65, 1.0, lp / duty) * clamp01(as / 1.5);
         } else {
           if (L.stance) { L.stance = false; L.liftF.copy(L.F); }
@@ -198,17 +214,17 @@ export class Gait {
           L.u = u;
           const Dx = vgx * duty / this.f, Dz = vgz * duty / this.f;
           const dl = Math.sqrt(Dx * Dx + Dz * Dz), k = dl > this.maxStride ? this.maxStride / dl : 1;
-          L.T.set(L.home.x - Dx * 0.5 * k, 0, L.home.z - Dz * 0.5 * k); L.T.y = this.gy(L.T.x, L.T.z);
-          this._swing(L, u, liftK * a);
+          L.T.set(L.home.x - Dx * 0.5 * k, 0, L.home.z - Dz * 0.5 * k); if (this.ground) L.T.y = this.ground(L.T.x, L.T.z);
+          this._su = u; this._sk = liftK * a; this._swing2(L);
         }
       } else if (!L.stance) {
         L.u = Math.min(1, L.u + dt / Math.max(0.12, swingDur));
-        L.T.copy(L.home); L.T.y = this.gy(L.T.x, L.T.z);
-        this._swing(L, L.u, liftK * 0.6);
+        L.T.copy(L.home); L.T.y = this.ground ? this.ground(L.T.x, L.T.z) : 0;
+        this._su = L.u; this._sk = liftK * 0.6; this._swing2(L);
         if (L.u >= 1) { L.stance = true; L.settle = false; L.F.copy(L.T); L.down = 1; if (this.onStep) this.onStep(L); }
       } else {
         L.pawPitch *= Math.exp(-8 * dt);
-        L.F.y = this.gy(L.F.x, L.F.z);
+        L.F.y = this.ground ? this.ground(L.F.x, L.F.z) : 0;
       }
       L.down = Math.max(0, L.down - dt * 6);
     }
@@ -222,6 +238,13 @@ export class Gait {
       }
     }
   }
+  _swing2(L) {
+    const u = this._su, liftK = this._sk, e = u * u * (3 - 2 * u);
+    L.F.lerpVectors(L.liftF, L.T, e);
+    const h = L.liftH * liftK * (L.settle ? 0.6 : 1);
+    L.F.y = L.liftF.y + (L.T.y - L.liftF.y) * e + h * Math.pow(Math.sin(Math.PI * Math.min(1, u * 1.08)), 0.8);
+    L.pawPitch = -L.flex * Math.sin(Math.PI * u) * clamp01(liftK * 1.5);
+  }
   _swing(L, u, liftK) {
     const e = u * u * (3 - 2 * u);
     L.F.lerpVectors(L.liftF, L.T, e);
@@ -233,6 +256,11 @@ export class Gait {
   /** Solve all legs after FK. air (0..1): tuck toward the rest pose relative to the body; airPaw: paw curl when airborne. */
   solve(pose, air = 0, airPaw = -0.6) {
     if (typeof air === 'object') { airPaw = air.airPaw ?? -0.6; air = air.air ?? 0; } // kit-style opts object (compat)
+    GIN[4] = air; GIN[5] = airPaw; this.solveStep(pose);
+  }
+  /** solve() reading air / airPaw from GIN[4], GIN[5] */
+  solveStep(pose) {
+    const air = GIN[4], airPaw = GIN[5];
     const legs = this.legs;
     for (let li = 0; li < legs.length; li++) {
       const L = legs[li];

@@ -17,3 +17,11 @@ export const RAIDS = {
       { name: 'The Horned Tyrant', zone: 'throne_of_horns', bosses: [{ boss: 'gorrath', anchor: 'boss' }] },
     ] },
 };
+// Field, event and story bosses (open-world or scripted encounters, not in the Rift Nexus). `players` is the party size
+// each is tuned around (bosses in src/data/bosses scale damage and stagger checks down for parties below four).
+export const FIELD_BOSSES = [
+  { id: 'thunderhoof', players: 8, arena: 'test', event: 'field_boss' },   // hourly field boss (Goldmeadow plains)
+  { id: 'gatekeeper', players: 4, arena: 'inferno', event: 'chaos_gate' },  // Chaos Gate lord / Inferno Descent floors
+  { id: 'varkhul', players: 1, arena: 'inferno', event: 'story' },          // prologue duel, Ashen Ridge fortress (1–4)
+  { id: 'ashmaw', players: 1, arena: 'test', event: 'story' },              // prologue siege set piece (1–4)
+];

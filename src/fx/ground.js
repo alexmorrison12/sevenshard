@@ -245,7 +245,7 @@ void main() {
     a *= smoothstep(-R * 0.4, 0.0, vL.y) * smoothstep(Ln + R * 0.4, Ln, vL.y);
     dark = vec3(0.02, 0.012, 0.01) * a;
     float lava = core * (0.6 + 0.4 * sin(t * 4.0 + vL.y * 0.8));
-    add = C * (lava * (1.2 + heat * 3.0) + edge * 0.5 * (0.3 + heat) + side * heat * 1.5);
+    add = C * (lava * (0.7 + heat * 1.5) + edge * 0.3 * (0.3 + heat) + side * heat * 0.9);
   } else if (kind == 9 || kind == 10 || kind == 11 || kind == 18) {  // pools: lava / poison / void / water
     float warp = fbm2(vL * 0.45 + nz * 1.4 + t * 0.07);
     float mask = smoothstep(1.0, 0.82, r + (warp - 0.5) * 0.35);

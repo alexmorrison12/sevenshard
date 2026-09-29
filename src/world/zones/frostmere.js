@@ -68,10 +68,10 @@ export async function build(zone, { quality = 1 } = {}) {
     wallPts.push([Math.cos(a) * R, Math.sin(a) * R * 0.97]);
   }
   const hAtWall = (x, z) => Math.min(H(x, z), 2.5);
-  cliffRing(kit, wallPts, hAtWall, { height: 16, thick: 9, seed: 7, tint: 0xe8f4ff, strata: 0xa8c8ec, top: 0xffffff, inside: [0, 0], closed: false, lean: 0.28, jag: 2.4, step: 1.6 });
+  cliffRing(kit, wallPts, hAtWall, { heightFn: (x, z) => 4.5 + 12 * smoothstep(0.45, -0.35, z / Math.hypot(x, z)), height: 16, thick: 9, seed: 7, tint: 0xe8f4ff, strata: 0xa8c8ec, top: 0xffffff, inside: [0, 0], closed: false, lean: 0.28, jag: 2.4, step: 1.6, mat: 'icecliff' });
   // an inner, lower tier of ice ledges in front of the wall (depth)
   const ledge = wallPts.filter((_, i) => i > 5 && i < 23).map(([x, z]) => { const L = Math.hypot(x, z); return [x / L * (L - 4.5), z / L * (L - 4.5)]; });
-  cliffRing(kit, ledge, hAtWall, { height: 5, thick: 4, seed: 9, tint: 0xf0f8ff, strata: 0xb4d4f4, top: 0xffffff, inside: [0, 0], closed: false, lean: 0.3, jag: 1.2, step: 1.4 });
+  cliffRing(kit, ledge, hAtWall, { heightFn: (x, z) => 2 + 3.5 * smoothstep(0.3, -0.4, z / Math.hypot(x, z)), height: 5, thick: 4, seed: 9, tint: 0xf0f8ff, strata: 0xb4d4f4, top: 0xffffff, inside: [0, 0], closed: false, lean: 0.3, jag: 1.2, step: 1.4, mat: 'icecliff' });
   // frozen waterfalls pouring down the north cliff face
   const falls = [];
   for (const a of [-2.05, -1.62, -1.12]) {

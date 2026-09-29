@@ -1,7 +1,7 @@
 // Awakenings — screen-filling mega effects (one per class) + the generic awakening activation.
 // All are timed tasks: pos = caster feet, dir = facing, target = aim point (defaults ahead), color overrides the palette.
 import * as THREE from 'three';
-import { ctx, tc, vec, groundSmash, skyBolt, along, risingRing, groundPulse, lightPillar, GEN, PHYS, FIRE, HOLY, STORM, DARK, ARC, CRIM, MUSIC, HEAL, TAU, UP, hue, shockwave, decal, hit, explosion, meteorImpact, slash, S, R, P, v3 } from './lib.js';
+import { KEYS, ctx, tc, vec, groundSmash, skyBolt, along, risingRing, groundPulse, lightPillar, GEN, PHYS, FIRE, HOLY, STORM, DARK, ARC, CRIM, MUSIC, HEAL, TAU, UP, hue, shockwave, decal, hit, explosion, meteorImpact, slash, S, R, P, v3 } from './lib.js';
 
 const K = {};
 const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3();
@@ -65,7 +65,7 @@ K.awk_world_split = {
     }
     // eruptions race along the fissure
     const n = 10;
-    for (let i = 0; i < n; i++) if (T.once('e' + i, 0.45 + i * 0.05)) {
+    for (let i = 0; i < n; i++) if (T.once(KEYS[i], 0.45 + i * 0.05)) {
       const u = (i + 0.5) / n, x = o0.x + v.f.x * v.L * u, z = o0.z + v.f.z * v.L * u, y = fx.gy(x, z, o0.y);
       fx.meshes.pillars.spawn(x, y, z, 0.8 * s, 6 * s, 0.7, 3, [col[0], col[1], col[2]], 0.05);
       fx.at(GEN.flash, _a.set(x, y + 1, z), 1.6 * s, col);
@@ -147,7 +147,7 @@ K.awk_heavenly_dragon = {
     T.v.head = vec(x, 30, z);
     T.v.trail = fx.ribbons.trail({ attach: T.v.head, color: [T.v.col[0] * 0.55, T.v.col[1] * 0.55, T.v.col[2] * 0.55], width: 1.8 * c.s, life: 0.6, kind: 'energy' });
     T.v.trail2 = fx.ribbons.trail({ attach: T.v.head, color: [1.3, 1.5, 1.9], width: 0.4 * c.s, life: 0.7 });
-    T.v.tele = fx.telegraph({ shape: 'circle', pos: T.v.g, radius: c.R, color: 'blue', dur: 1.1, detonate: true });
+    T.v.tele = fx.decal({ pos: T.v.g, radius: c.R, kind: 'electric', dur: 3, color: [0.5, 0.75, 1.8], hot: 0.4 });
     T.dur = 2.2;
   },
   tick(T) {
@@ -223,7 +223,7 @@ K.awk_stellar_collapse = {
     const fx = T.fx, p = T.p, c = ctx(fx, p, T.v.c = {}, 8, 10, 8);
     const x = p.target ? c.tx : c.x, z = p.target ? c.tz : c.z, y = fx.gy(x, z, c.y);
     T.v.g = vec(x, y, z); T.v.col = c.tint;
-    T.v.m = fx.meteor({ target: T.v.g, radius: c.R, delay: 1.5, scale: 2.4 * c.s, telegraph: false, dir: c.f, color: p.color, from: vec(x - c.f.x * 16, y + 40, z - c.f.z * 16) });
+    T.v.m = fx.meteor({ target: T.v.g, radius: c.R, delay: 1.5, scale: 2.4 * c.s, telegraph: false, dir: c.f, color: p.color, from: vec(x - c.f.x * 12, y + 26, z - c.f.z * 12) });
     T.v.tele = fx.telegraph({ shape: 'circle', pos: T.v.g, radius: c.R, color: 'orange', dur: 1.5 });
     decal(fx, { pos: T.v.g, radius: c.R * 0.9, kind: 'arcane', dur: 1.8, color: [2, 0.8, 0.3], hot: 0 });
     T.dur = 2.8;
@@ -253,7 +253,7 @@ K.awk_grand_finale = {
   init(T) {
     const fx = T.fx, c = ctx(fx, T.p, T.v.c = {}, 8);
     T.v.col = tc(c.tint, 0xffd88a, 1.6); T.dur = 3;
-    T.v.dec = fx.decal({ pos: T.pos, radius: c.R, kind: 'music', dur: Infinity, color: T.v.col, hot: 0.5 });
+    T.v.dec = fx.decal({ pos: T.pos, radius: c.R, kind: 'music', dur: Infinity, color: [T.v.col[0] * 0.45, T.v.col[1] * 0.45, T.v.col[2] * 0.45], hot: 0.3 });
     T.v.bub = fx.meshes.bubbles.alloc();
   },
   tick(T) {
@@ -269,7 +269,7 @@ K.awk_grand_finale = {
       const up = _a.set(p.x, gy + 2, p.z);
       fx.at(GEN.bigFlash, up, 0.7 * s, [1.2, 1.05, 0.8]);
       fx.at(BIG_RAYS, up, 0.8 * s, v.col);
-      lightPillar(fx, p.x, gy, p.z, 1.3 * s, 30, [1.4, 1.2, 0.8], 1.6, 0);
+      lightPillar(fx, p.x, gy, p.z, 0.7 * s, 30, [1.0, 0.85, 0.55], 0.9, 0);
       shockwave(fx, { pos: vec(p.x, gy, p.z), radius: c.R * 1.4, color: v.col, dur: 0.8, height: 3.2 });
       shockwave(fx, { pos: vec(p.x, gy, p.z), radius: c.R, color: [1.9, 0.9, 1.6], dur: 0.6, wall: false, delay: 0.1 });
       fx.sphere(MUSIC.noteGold, 60, up, 4, 11, s, null);
@@ -279,7 +279,7 @@ K.awk_grand_finale = {
     }
     if (T.age > 1.0 && v.bub >= 0) {
       const k = Math.min(1, (T.age - 1) / 0.3) * T.k;
-      fx.meshes.bubbles.set(v.bub, p.x, gy, p.z, c.R * 0.8, v.col, k * 0.5, Math.max(0, 1 - (T.age - 1) / 0.5), 1);
+      fx.meshes.bubbles.set(v.bub, p.x, gy, p.z, c.R * 0.8, [v.col[0] * 0.5, v.col[1] * 0.5, v.col[2] * 0.5], k * 0.2, Math.max(0, 1 - (T.age - 1) / 0.5), 1);
       const n = T.rate('m', 60);
       for (let i = 0; i < n; i++) { const a = fx.r(0, TAU), r = Math.sqrt(Math.random()) * c.R * 0.8; fx.spawn(HOLY.mote, p.x + Math.cos(a) * r, gy + 0.1, p.z + Math.sin(a) * r, 0, fx.r(1, 3), 0, fx.o(s, v.col)); }
     }
@@ -296,7 +296,7 @@ K.awk_thousand_cuts = {
     const fx = T.fx, p = T.p, c = ctx(fx, p, T.v.c = {}, 6, 8, 4);
     const x = p.target ? c.tx : c.x, z = p.target ? c.tz : c.z;
     T.v.g = vec(x, fx.gy(x, z, c.y), z); T.v.col = tc(c.tint, 0xc08aff, 2.4); T.dur = 2.1;
-    decal(fx, { pos: T.v.g, radius: c.R, kind: 'arcane', dur: 2.2, color: [1.2, 0.7, 2.2], hot: 0.2 });
+    decal(fx, { pos: T.v.g, radius: c.R, kind: 'arcane', dur: 2.2, color: [0.6, 0.35, 1.1], hot: 0.1 });
     fx.telegraph({ shape: 'circle', pos: T.v.g, radius: c.R, color: 'purple', dur: 0.3, detonate: false, intensity: 0.6 });
   },
   tick(T) {
@@ -306,10 +306,10 @@ K.awk_thousand_cuts = {
       for (let i = 0; i < n; i++) {
         const a = fx.r(0, TAU), r = Math.sqrt(Math.random()) * c.R * 0.85;
         _a.set(g.x + Math.cos(a) * r, g.y, g.z + Math.sin(a) * r); _b.set(Math.cos(fx.r(0, TAU)), 0, Math.sin(fx.r(0, TAU)));
-        slash(fx, { pos: _a, dir: _b, radius: fx.r(1.5, 3) * s, style: 'd', tilt: fx.r(-1.4, 1.4), color: Math.random() < 0.3 ? [2.4, 2.4, 2.8] : v.col, intensity: 1, dur: 0.16, sweep: 0.3, height: fx.r(0.4, 2.4), sparks: false, glow: false, width: 0.35 * s });
+        slash(fx, { pos: _a, dir: _b, radius: fx.r(1.8, 3.4) * s, style: 'd', tilt: fx.r(-1.4, 1.4), color: Math.random() < 0.35 ? [2.2, 2.2, 2.6] : v.col, intensity: 1, dur: 0.2, sweep: 0.3, height: fx.r(0.4, 2.4), sparks: Math.random() < 0.3, sparkCount: 4, glow: false, width: 0.5 * s });
       }
       const m = T.rate('c', 90);
-      const o = fx.o(s, hue(v.col, [0, 0, 0]));
+      const o = fx.o(s, v.hue || (v.hue = hue(v.col, [0, 0, 0])));
       for (let i = 0; i < m; i++) { o.rot = fx.r(0, TAU); const a = fx.r(0, TAU), r = Math.sqrt(Math.random()) * c.R; fx.spawn(CUT, g.x + Math.cos(a) * r, g.y + fx.r(0.3, 3), g.z + Math.sin(a) * r, 0, 0, 0, o); }
       if (T.rate('k', 10)) fx.shake(0.08, g);
       if (T.rate('f', 12)) fx.at(GEN.starFlash, _a.set(g.x + fx.r(-1, 1) * c.R * 0.7, g.y + fx.r(0.5, 2.5), g.z + fx.r(-1, 1) * c.R * 0.7), 1.6 * s, [0.9, 0.7, 1]);

@@ -97,7 +97,7 @@ function buildHorde() {
   while (kinds.length < count) kinds.push(mix[0][0]);
   const rng = (i, k) => { const x = Math.sin(i * 12.9898 + k * 78.233) * 43758.5453; return x - Math.floor(x); };
   kinds.forEach((t, i) => {
-    const vs = CREATURES[t].variants.filter(v => !/overseer|alpha|elite|centurion|warlord/.test(v));
+    const vs = CREATURES[t].variants.filter(v => !/overseer|alpha|elite|centurion|warlord|bone_knight|dreadwraith|geode_colossus/.test(v));
     const c = createCreature(t, { variant: vs[i % vs.length], seed: i + 1 });
     const it = add(c, (rng(i, 1) - 0.5) * 24, -14 - rng(i, 2) * 16, 0);
     it.speed = t === 'hellhound' ? 5.5 + rng(i, 3) * 1.5 : t === 'imp' ? 4 + rng(i, 3) * 1.2 : 2.6 + rng(i, 3) * 0.6;

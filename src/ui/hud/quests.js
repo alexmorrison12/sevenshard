@@ -10,7 +10,9 @@ export class QuestTracker {
     this.ui = ui;
     const el = this.el = h('div', 'ss-qt', parent);
     const hd = h('div', 'ss-qt-hd', el);
-    h('span', 'ss-qt-title', hd, 'Quests');
+    const tt = h('span', 'ss-qt-title ss-ptr', hd, 'Quests');
+    tt.addEventListener('click', () => ui._menu('quests'));
+    tt._tip = { title: 'Quest Journal', key: 'J' };
     this.count = h('span', 'ss-qt-count', hd);
     this.tog = btn('ss-qt-tog', hd, null, () => this.collapse(!this.collapsed), 'Collapse quest tracker');
     this.tog.innerHTML = glyph('up');

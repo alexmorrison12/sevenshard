@@ -68,7 +68,13 @@ export function buildWater(ground, { x, z, w, d, level = 0, shallow = 0x3fb0a8, 
   const mat = new THREE.ShaderMaterial({ vertexShader: WATER_VS, fragmentShader: WATER_FS, uniforms: u, transparent: true, depthWrite: false });
   const m = new THREE.Mesh(g, mat); m.position.set(x, level, z); m.renderOrder = 5; m.name = 'water';
   m.userData.u = u;
-  m.userData.setEnv = env => { u.uSky.value.set(env.fogColor).lerp(new THREE.Color(env.hemiSky), 0.5); u.uSunCol.value.set(env.sunColor).multiplyScalar(Math.min(1.2, env.sunIntensity / 3)); };
+  const s0 = u.uShallow.value.clone(), d0 = u.uDeep.value.clone();
+  m.userData.setEnv = env => {
+    const k = 1 - 0.62 * (env.night ?? 0);
+    u.uShallow.value.copy(s0).multiplyScalar(k); u.uDeep.value.copy(d0).multiplyScalar(k);
+    u.uSky.value.set(env.fogColor).lerp(new THREE.Color(env.hemiSky), 0.5);
+    u.uSunCol.value.set(env.sunColor).multiplyScalar(Math.min(1.2, env.sunIntensity / 3));
+  };
   return m;
 }
 
@@ -78,7 +84,12 @@ export function buildPool({ x, z, r, y, shallow = 0x4fc0c0, deep = 0x1f6a8a }) {
   const g = new THREE.CircleGeometry(r, 32); g.rotateX(-Math.PI / 2);
   const mat = new THREE.ShaderMaterial({ vertexShader: WATER_VS, fragmentShader: WATER_FS, uniforms: u, transparent: true, depthWrite: false });
   const m = new THREE.Mesh(g, mat); m.position.set(x, y, z); m.renderOrder = 5; m.name = 'pool';
-  m.userData.setEnv = env => { u.uSky.value.set(env.fogColor).lerp(new THREE.Color(env.hemiSky), 0.5); u.uSunCol.value.set(env.sunColor); };
+  const s0 = u.uShallow.value.clone(), d0 = u.uDeep.value.clone();
+  m.userData.setEnv = env => {
+    const k = 1 - 0.6 * (env.night ?? 0);
+    u.uShallow.value.copy(s0).multiplyScalar(k); u.uDeep.value.copy(d0).multiplyScalar(k);
+    u.uSky.value.set(env.fogColor).lerp(new THREE.Color(env.hemiSky), 0.5); u.uSunCol.value.set(env.sunColor);
+  };
   return m;
 }
 
@@ -92,11 +103,12 @@ void main() {
   float a = texture2D(uNoise, uv / 17.0 + flow).r;
   float b = texture2D(uNoise, uv / 6.0 - flow * 1.7 + a * 0.3).g;
   float c = texture2D(uNoise, uv / 2.5 + vec2(b, a) * 0.2 + flow * 2.0).b;
-  float crust = smoothstep(0.42, 0.62, a * 0.55 + b * 0.45 + c * 0.2 - 0.1);
+  float crust = smoothstep(0.36, 0.56, a * 0.55 + b * 0.45 + c * 0.2 - 0.1);
   float heat = 1.0 - crust;
+  float vein = smoothstep(0.06, 0.0, abs(a * 0.55 + b * 0.45 + c * 0.2 - 0.47)) * crust;
   float pulse = 0.8 + 0.2 * sin(uTime * 1.3 + uv.x * 0.2 + uv.y * 0.15);
-  vec3 col = mix(uCool * 0.55, vec3(0.08, 0.05, 0.04), crust);
-  col += uHot * pow(heat, 1.5) * 3.2 * pulse + vec3(1.0, 0.9, 0.5) * pow(heat, 5.0) * 2.5;
+  vec3 col = mix(uCool * 0.35, vec3(0.05, 0.03, 0.025), crust);
+  col += uHot * (pow(heat, 1.6) * 1.25 + vein * 0.9) * pulse + vec3(1.0, 0.85, 0.45) * pow(heat, 6.0) * 0.8;
   col = applyFog(col, vW);
   gl_FragColor = vec4(col, 1.0);
 }`;

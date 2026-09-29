@@ -54,6 +54,7 @@ export class NetHost {
     on('skillStart', ({ unit, def, run }) => { if (unit.remote) return; if (unit.kind === 'hero') this.all({ t: 'cs', id: unit.id, sk: def.id, ax: run.aimX, az: run.aimZ, k: run.kind }); });
     on('skillStage', ({ unit, run }) => { if (unit.kind === 'hero' && !unit.remote) this.all({ t: 'cg', id: unit.id, st: run.stage, ax: run.aimX, az: run.aimZ }); });
     on('bossBanner', ({ text, kind }) => this.all({ t: 'bn', text, kind }));
+    on('teleport', ({ unit, x, z }) => { if (unit?.remote) this.toOwner(unit, { t: 'tp', x, z }); });
     on('counter', ({ src, tgt }) => this.all({ t: 'ev', e: 'counter', s: src?.id, g: tgt?.id }));
     on('staggerBreak', ({ tgt }) => this.all({ t: 'ev', e: 'staggerBreak', g: tgt?.id }));
     on('partBreak', ({ tgt, part }) => this.all({ t: 'ev', e: 'partBreak', g: tgt?.id, part }));
@@ -103,7 +104,7 @@ export class NetHost {
     const party = this.game.party;
     if (party && !party.members.some(m => m.kit?.u === u)) { party.members.push({ kit: { u, char: { cls: c.cls, name: c.name } }, remote: true, guest: g.id }); u.party = party; }
     // send the whole world (the guest builds it), then their own id
-    this.send(g, { t: 'wl', you: u.id, units: L.units.filter(x => x !== u).map(spawnRec), place: this.game.placeInfo?.() || {} });
+    this.send(g, { t: 'wl', you: u.id, lead: this.game.hero?.u.id, units: L.units.filter(x => x !== u).map(spawnRec), place: this.game.placeInfo?.() || {} });
     this.all({ t: 'sp', u: spawnRec(u) }, g);
   }
 

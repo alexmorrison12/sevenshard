@@ -34,7 +34,7 @@ export function slash(fx, p) {
   const delay = p.delay ?? 0;
   const vertical = style === 'v' || style === 'up';
   const hgt = p.height ?? (aboveGround ? 0 : vertical ? 1.15 : 1.0);
-  const flags = (p.dark ? 2 : 0) | (p.flat ? 4 : 0) | (style === 'thrust' ? 1 : 0);
+  const flags = (p.dark ? 2 : 0) | (p.flat ? 4 : 0) | (style === 'thrust' ? 1 : 0) | ((p.speed || style === 'wave') ? 8 : 0);
   const sweep = p.sweep ?? (style === 'spin' ? 0.55 : style === 'wave' ? 0.04 : 0.3);
   const grow = p.grow ?? (style === 'wave' ? 0.35 : 0.12);
   _p.copy(_C).addScaledVector(UP, hgt);
@@ -444,9 +444,9 @@ export const PROJECTILE = {
       case 'wave':
         v.slashT = 0;
         _p.copy(T.pos); _p.y = fx.gy(T.pos.x, T.pos.z, T.pos.y) + 0.15;
-        fx.slashes.spawn(_p, _A.copy(T.right).negate(), _B.copy(UP), 1.9 * s, Math.PI, 0.95 * s, c, v.range / v.speed + 0.12, 0.04, 0.1, _e.copy(v.vel).multiplyScalar(v.speed), 0, v.delay);
+        fx.slashes.spawn(_p, _A.copy(T.right).negate(), _B.copy(UP), 1.9 * s, Math.PI, 1.1 * s, c, v.range / v.speed + 0.12, 0.04, 0.1, _e.copy(v.vel).multiplyScalar(v.speed), 8, v.delay);
         _c1[0] = c[0] * 0.35; _c1[1] = c[1] * 0.35; _c1[2] = c[2] * 0.35;
-        fx.slashes.spawn(_p, _A, _B, 2.0 * s, Math.PI, 1.8 * s, _c1, v.range / v.speed + 0.18, 0.04, 0.12, _e, 0, v.delay);
+        fx.slashes.spawn(_p, _A, _B, 2.0 * s, Math.PI, 1.8 * s, _c1, v.range / v.speed + 0.18, 0.04, 0.12, _e, 8, v.delay);
         T.pos.y = _p.y + 1.2 * s;
         break;
       case 'blade': case 'crescent': {   // a flying crescent slash (sword beam)
@@ -456,9 +456,9 @@ export const PROJECTILE = {
         if (p.tilt) { rotAbout(_A, _f, p.tilt); rotAbout(_B, _f, p.tilt); }
         const life = v.range / v.speed + 0.08;
         _p.copy(T.pos).addScaledVector(_f, -Rb * 0.75);
-        fx.slashes.spawn(_p, _A, _B, Rb, arc, 0.75 * s, c, life, 0.03, 0.05, _e.copy(v.vel).multiplyScalar(v.speed), 0, v.delay);
+        fx.slashes.spawn(_p, _A, _B, Rb, arc, 0.75 * s, c, life, 0.03, 0.05, _e.copy(v.vel).multiplyScalar(v.speed), 8, v.delay);
         _c1[0] = h[0] * 0.8; _c1[1] = h[1] * 0.8; _c1[2] = h[2] * 0.8;
-        fx.slashes.spawn(_p, _A, _B, Rb * 1.05, arc, 1.5 * s, _c1, life + 0.05, 0.03, 0.08, _e, 0, v.delay);
+        fx.slashes.spawn(_p, _A, _B, Rb * 1.05, arc, 1.5 * s, _c1, life + 0.05, 0.03, 0.08, _e, 8, v.delay);
         break;
       }
       case 'lightning_dragon': case 'dragon':
@@ -646,24 +646,27 @@ export const TRAIL = {
 };
 
 // ------------------------------------------------------------------ meteor
-const MET_TRAIL = P({ sprite: [S.blob, S.blob, S.flame1], ramp: R.blast, life: [0.35, 0.55], size: [1.0, 1.5], end: [1.8, 2.4], ease: 2, spin: [-2, 2], drag: 2.5, turb: 0.2, i: [1.6, 2.2] });
+const MET_TRAIL = P({ sprite: [S.blob, S.blob, S.flame1], ramp: R.blast, life: [0.3, 0.5], size: [0.9, 1.3], end: [1.8, 2.4], ease: 2, spin: [-2, 2], drag: 2.5, turb: 0.2, i: [1.1, 1.5] });
 export const METEOR = {
   name: 'meteor', fade: 0.1,
   init(T) {
     const fx = T.fx, p = T.p, v = T.v;
     const s = v.s = p.scale ?? ((p.radius ?? 3.5) / 3.5);
     v.R = p.radius ?? 3.5; v.fall = p.delay ?? p.fall ?? 1.1;
-    v.target = new THREE.Vector3().copy(T.pos); v.target.y = fx.gy(T.pos.x, T.pos.z, T.pos.y);
+    v.target = new THREE.Vector3();
+    if (p.target !== undefined) v3(p.target, v.target); else v.target.copy(T.pos);
+    v.target.y = fx.gy(v.target.x, v.target.z, v.target.y);
     v.from = new THREE.Vector3();
-    if (p.from) v3(p.from, v.from); else v.from.copy(v.target).addScaledVector(T.dir, -9 * s).add(_q.set(fx.r(-3, 3), 26 * Math.max(0.8, s), fx.r(-2, 2)));
+    if (p.from) v3(p.from, v.from); else v.from.copy(v.target).addScaledVector(T.dir, -7 * s).add(_q.set(fx.r(-3, 3), 17 * Math.max(0.8, Math.min(s, 1.6)), fx.r(-2, 2)));
     v.col = T.tint ? T.tint : [1, 0.45, 0.1];
     T.pos.copy(v.from); T.prev.copy(v.from);
     if (p.telegraph !== false) T.child(fx.telegraph({ shape: 'circle', pos: v.target, radius: v.R, color: p.teleColor ?? 'orange', dur: v.fall, detonate: true }));
     v.prop = { pos: T.pos, dir: new THREE.Vector3().subVectors(v.target, v.from).normalize(), alive: true, scale: 0.75 * s, spin: 3, tint: [1.8, 0.55, 0.1] };
     fx.meshes.props.add('meteor', v.prop);
-    T.hold(K.halo, 0, 0, 0, { tint: [1, 0.4, 0.1], scale: 2.4 * s });
-    T.hold(K.glow, 0, 0, 0, { tint: [1, 0.6, 0.25], scale: 1.6 * s });
-    v.trail = fx.ribbons.trail({ attach: T, color: [2.8, 0.9, 0.2], intensity: 1, width: 1.6 * s, life: 0.35 });
+    const ss = v.ss = Math.min(s, 1.3);
+    T.hold(K.halo, 0, 0, 0, { tint: [1, 0.4, 0.1], scale: 2.0 * ss });
+    T.hold(K.glow, 0, 0, 0, { tint: [1, 0.6, 0.25], scale: 1.4 * ss });
+    v.trail = fx.ribbons.trail({ attach: T, color: [2.2, 0.7, 0.15], intensity: 1, width: 1.3 * ss, life: 0.35 });
     T.dur = v.fall + 2;
     v.boom = false;
   },
@@ -672,12 +675,13 @@ export const METEOR = {
     if (!v.boom) {
       const u = Math.min(1, T.age / v.fall), e = u * u * (0.35 + 0.65 * u);
       T.prev.copy(T.pos); T.pos.lerpVectors(v.from, v.target, e);
-      const n = T.rate('t', 150 * s);
-      for (let i = 0; i < n; i++) { _p.lerpVectors(T.pos, T.prev, Math.random()); fx.spawn(MET_TRAIL, _p.x + fx.r(-0.3, 0.3) * s, _p.y + fx.r(-0.3, 0.3) * s, _p.z + fx.r(-0.3, 0.3) * s, fx.r(-1, 1), fx.r(0, 2), fx.r(-1, 1), fx.o(s, T.p.color !== undefined ? T.tint : null)); }
-      const n2 = T.rate('e', 60 * s);
-      for (let i = 0; i < n2; i++) { _p.lerpVectors(T.pos, T.prev, Math.random()); fx.spawn(FIRE.ember, _p.x, _p.y, _p.z, fx.r(-4, 4), fx.r(-1, 4), fx.r(-4, 4), fx.o(s)); }
-      const n3 = T.rate('s', 25 * s);
-      for (let i = 0; i < n3; i++) { _p.lerpVectors(T.pos, T.prev, Math.random()); fx.spawn(FIRE.smoke, _p.x, _p.y, _p.z, 0, 0.5, 0, fx.o(s * 1.2)); }
+      const ss = v.ss;
+      const n = T.rate('t', 130 * ss);
+      for (let i = 0; i < n; i++) { _p.lerpVectors(T.pos, T.prev, Math.random()); fx.spawn(MET_TRAIL, _p.x + fx.r(-0.3, 0.3) * s, _p.y + fx.r(-0.3, 0.3) * s, _p.z + fx.r(-0.3, 0.3) * s, fx.r(-1, 1), fx.r(0, 2), fx.r(-1, 1), fx.o(ss, T.p.color !== undefined ? T.tint : null)); }
+      const n2 = T.rate('e', 60 * ss);
+      for (let i = 0; i < n2; i++) { _p.lerpVectors(T.pos, T.prev, Math.random()); fx.spawn(FIRE.ember, _p.x, _p.y, _p.z, fx.r(-4, 4), fx.r(-1, 4), fx.r(-4, 4), fx.o(ss)); }
+      const n3 = T.rate('s', 22 * ss);
+      for (let i = 0; i < n3; i++) { _p.lerpVectors(T.pos, T.prev, Math.random()); fx.spawn(FIRE.smoke, _p.x, _p.y, _p.z, 0, 0.5, 0, fx.o(ss * 1.2)); }
       if (u >= 1) {
         v.boom = true; v.prop.alive = false; v.trail.stopped = true;
         meteorImpact(fx, v.target, v.R, T.p.color !== undefined ? T.tint : null);
@@ -708,8 +712,9 @@ export function meteorImpact(fx, target, Rr = 3.5, tint = null) {
   fx.sphere(FIRE.lavaBlob, 20, up, 6, 13, s, tint, _u, 1.1);
   fx.sphere(FIRE.ember, 50, up, 8, 17, s, tint, _u, 1.4);
   fx.radial(PHYS.dustRing, 22, up, 8, 13, 0.2, 1.5, s * 1.3, null, 1.2);
-  for (let i = 0; i < fx.n(14); i++) { const o = fx.o(s, null); o.dt = fx.r(0.1, 0.5); fx.spawn(FIRE.bigSmoke, up.x + fx.r(-2.5, 2.5) * s, up.y + fx.r(0, 2) * s, up.z + fx.r(-2.5, 2.5) * s, fx.r(-1.5, 1.5) * s, fx.r(3, 7) * s, fx.r(-1.5, 1.5) * s, o); }
-  fx.meshes.debris(up.x, up.y, up.z, Math.round(14 * Math.min(2, s)), s * 1.1, 9, { gy: g.y });
+  const sc = Math.min(s, 1.4);
+  for (let i = 0; i < fx.n(10); i++) { const o = fx.o(sc, null); o.dt = fx.r(0.1, 0.5); o.alpha = 0.7; fx.spawn(FIRE.bigSmoke, up.x + fx.r(-2.5, 2.5) * s, up.y + fx.r(0, 2) * sc, up.z + fx.r(-2.5, 2.5) * s, fx.r(-1.5, 1.5) * sc, fx.r(3, 7) * sc, fx.r(-1.5, 1.5) * sc, o); }
+  fx.meshes.debris(up.x, up.y, up.z, Math.round(14 * Math.min(2, s)), sc * 1.1, 9 * Math.sqrt(s / sc), { gy: g.y });
   decal(fx, { pos: g, radius: Rr * 1.15, kind: 'crater', dur: 10, color: tint ? [tint[0] * 1.6, tint[1] * 1.6, tint[2] * 1.6] : undefined });
   fx.shake(Math.min(1, 0.45 + 0.2 * s), g);
 }
@@ -760,7 +765,11 @@ export const AURA = {
       case 'burst': case 'crimson': case 'enrage': case 'demon':
         T.hold(A.ground, 0, 0.05, 0, { tint: t, scale: s * 1.1 });
         T.hold(A.body, 0, H * 0.5, 0, { tint: t, scale: s * 1.1 });
+        if (kind === 'burst' || kind === 'crimson') T.hold(A.ring, 0, 0.06, 0, { tint: t, scale: s * 0.8 });
         break;
+      case 'shock': T.hold(A.body, 0, H * 0.5, 0, { tint: [0.4, 0.6, 1.4], scale: s * 0.8 }); break;
+      case 'bleed': T.hold(A.body, 0, H * 0.5, 0, { tint: [1, 0.05, 0.05], scale: s * 0.7 }); break;
+      case 'speed': case 'haste': T.hold(A.ring, 0, 0.06, 0, { tint: t, scale: s * 0.7 }); break;
       case 'holy': case 'sanctity': T.hold(A.rune, 0, 0.05, 0, { tint: t, scale: s * 1.2 }); T.hold(A.ground, 0, 0.04, 0, { tint: t, scale: s * 1.4 }); break;
       case 'heal': case 'regen': case 'buff': case 'atk': case 'water': T.hold(A.ring, 0, 0.05, 0, { tint: t, scale: s }); break;
       case 'freeze': case 'frozen': T.v.spikes = []; {
@@ -786,7 +795,7 @@ export const AURA = {
     switch (kind) {
       case 'burst': case 'crimson': case 'enrage': case 'demon': {
         const fl = kind === 'demon' ? DARK.flame : kind === 'enrage' ? A.flameC : A.flameC;
-        n = T.rate('f', (kind === 'enrage' ? 60 : 45) * s);
+        n = T.rate('f', (kind === 'enrage' ? 60 : kind === 'demon' ? 45 : 70) * s);
         for (let i = 0; i < n; i++) { const a = fx.r(0, TAU), r = fx.r(0.3, 0.55) * s; fx.spawn(fl, x + Math.cos(a) * r, y + fx.r(0.05, H * 0.9), z + Math.sin(a) * r, Math.cos(a) * 0.3, fx.r(0.5, 1.4) * s, Math.sin(a) * 0.3, fx.o(s, kind === 'demon' ? null : t)); }
         n = T.rate('e', 16 * s);
         for (let i = 0; i < n; i++) { const a = fx.r(0, TAU); fx.spawn(kind === 'demon' ? DARK.ember : CRIM.ember, x + Math.cos(a) * 0.5 * s, y + fx.r(0.2, H), z + Math.sin(a) * 0.5 * s, 0, fx.r(1, 2.5), 0, fx.o(s, kind === 'demon' ? null : t)); }
@@ -817,14 +826,16 @@ export const AURA = {
         n = T.rate('m', 4); for (let i = 0; i < n; i++) fx.spawn(POI.mist, x, y + fx.r(0.2, 1), z, 0, 0.3, 0, fx.o(s));
         break;
       case 'shock':
-        n = T.rate('b', 10); for (let i = 0; i < n; i++) fx.spawn(STORM.bolt, x + fx.r(-0.4, 0.4) * s, y + fx.r(0.3, H), z + fx.r(-0.4, 0.4) * s, 0, 0, 0, fx.o(s * 0.5, null));
-        n = T.rate('s', 20); for (let i = 0; i < n; i++) { fx.rdir(_d); fx.spawn(STORM.spark, x, y + fx.r(0.3, H), z, _d.x * 3, _d.y * 3, _d.z * 3, fx.o(s)); }
+        n = T.rate('b', 14); for (let i = 0; i < n; i++) { const ob = fx.o(s * 0.9, null); ob.i = 0.6; fx.spawn(STORM.bolt, x + fx.r(-0.45, 0.45) * s, y + fx.r(0.3, H), z + fx.r(-0.45, 0.45) * s, 0, 0, 0, ob); }
+        n = T.rate('s', 40); for (let i = 0; i < n; i++) { fx.rdir(_d); fx.spawn(STORM.spark, x, y + fx.r(0.3, H), z, _d.x * 4, _d.y * 4, _d.z * 4, fx.o(s)); }
         break;
       case 'bleed':
-        n = T.rate('d', 10); for (let i = 0; i < n; i++) fx.spawn(A.drip, x + fx.r(-0.3, 0.3) * s, y + fx.r(0.6, H * 0.8), z + fx.r(-0.3, 0.3) * s, 0, 0, 0, fx.o(s));
+        n = T.rate('d', 24); for (let i = 0; i < n; i++) fx.spawn(A.drip, x + fx.r(-0.3, 0.3) * s, y + fx.r(0.6, H * 0.8), z + fx.r(-0.3, 0.3) * s, 0, 0, 0, fx.o(s * 1.6));
+        n = T.rate('m', 3); for (let i = 0; i < n; i++) fx.spawn(PHYS.bloodMist, x + fx.r(-0.3, 0.3) * s, y + fx.r(0.8, H * 0.8), z + fx.r(-0.3, 0.3) * s, 0, 0.2, 0, fx.o(s * 1.5));
         break;
       case 'speed': case 'haste':
-        n = T.rate('w', 30); for (let i = 0; i < n; i++) { const a = fx.r(0, TAU); fx.spawn(A.wind, x + Math.cos(a) * 0.5 * s, y + fx.r(0.2, H), z + Math.sin(a) * 0.5 * s, 0, fx.r(3, 5), 0, fx.o(s, t)); }
+        n = T.rate('w', 40); for (let i = 0; i < n; i++) { const a = fx.r(0, TAU); fx.spawn(A.wind, x + Math.cos(a) * 0.55 * s, y + fx.r(0.1, H), z + Math.sin(a) * 0.55 * s, 0, fx.r(3, 6), 0, fx.o(s * 1.8, t)); }
+        if (T.rate('d', 8)) fx.spawn(PHYS.dust, x + fx.r(-0.3, 0.3), y + 0.15, z + fx.r(-0.3, 0.3), fx.r(-1, 1), 0.3, fx.r(-1, 1), fx.o(s * 0.6, null));
         break;
       case 'ghost':
         n = T.rate('w', 8); for (let i = 0; i < n; i++) fx.spawn(A.ghostWisp, x + fx.r(-0.5, 0.5) * s, y + fx.r(0.2, H), z + fx.r(-0.5, 0.5) * s, 0, 0.6, 0, fx.o(s));
@@ -867,12 +878,12 @@ export const COUNTER = {
     fx.at(CW.flare, c, v.s, [0.5, 0.8, 1.6]);
     fx.at(CW.star, c, v.s, [0.6, 0.85, 1.6], { rot: 0.3 });
     fx.at(GEN.flash, c, v.s * 2.4, [0.4, 0.7, 1.5]);
-    T.hold(CW.pulse, 0, v.h * 0.6, 0, { tint: [0.35, 0.65, 1.4], scale: v.s * 1.3 });
+    T.hold(CW.pulse, 0, v.h * 0.6, 0, { tint: [0.3, 0.55, 1.2], scale: v.s * 0.75 });
   },
   tick(T) {
     const fx = T.fx, v = T.v, P0 = T.pos, s = v.s;
     if (T.rate('ring', 5)) {
-      fx.at(CW.ring, _p.set(P0.x, P0.y + v.h * 0.6, P0.z), s * 1.3, [0.5, 0.8, 1.6]);
+      fx.at(CW.ring, _p.set(P0.x, P0.y + v.h * 0.6, P0.z), s * 0.7, [0.45, 0.75, 1.5]);
       fx.at(CW.flat, _p.set(P0.x, fx.gy(P0.x, P0.z, P0.y) + 0.08, P0.z), s * 0.7 * v.r / 1.6, [0.35, 0.65, 1.5]);
     }
     const n = T.rate('sh', 70 * s);
@@ -933,7 +944,7 @@ export const LOOT_BEAM = {
     const gi = gradeOf(p.grade ?? 3), G0 = GRADES[gi];
     v.g = gi;
     v.c = col(p.color ?? G0.c, 1, [0, 0, 0]); v.c2 = G0.c2 ? col(G0.c2, 1, [0, 0, 0]) : null;
-    const H = 3.5 + gi * 1.1, Rr = 0.16 + gi * 0.025, k = 1.3 + gi * 0.2;
+    const H = 3.5 + gi * 1.0, Rr = 0.15 + gi * 0.018, k = 1.15 + gi * 0.09;
     const gy = fx.gy(T.pos.x, T.pos.z, T.pos.y);
     v.pil = fx.meshes.pillars.spawn(T.pos.x, gy, T.pos.z, Rr, H, Infinity, 1, [v.c[0] * k, v.c[1] * k, v.c[2] * k], 0.3);
     if (v.c2) v.pil2 = fx.meshes.pillars.spawn(T.pos.x, gy, T.pos.z, Rr * 2.2, H * 0.7, Infinity, 1, [v.c2[0] * 0.7, v.c2[1] * 0.7, v.c2[2] * 0.7], 0.4);

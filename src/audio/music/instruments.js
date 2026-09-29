@@ -112,7 +112,7 @@ export class Ens extends Inst {
     if (o.hp) { const f = biq(this.ctx, 'highpass', o.hp, 0.7); h.connect(f); h = f; }
     this.lpf = biq(this.ctx, 'lowpass', 20000 * clamp(o.bright ?? 1, 0.1, 1) ** 2, 0.5); h.connect(this.lpf); h = this.lpf;
     if (o.eq) h = eqChain(this.ctx, h, o.eq);
-    return o.wide === false ? h : widen(this.tr, h, { mix: o.wideMix ?? 0.5 });
+    return o.wide === false || this.a.lite ? h : widen(this.tr, h, { mix: o.wideMix ?? 0.5 }); // quality 'low': no widener
   }
   brighten(v, t, glide = 1) { this.lpf.frequency.setTargetAtTime(20000 * clamp(v, 0.1, 1) ** 2, t, glide / 3); }
   zone(m) { const i = clamp(Math.round((m - this.lo) / this.step), 0, this.z.length - 1); return this.z[i]; }
@@ -346,7 +346,7 @@ export class Horn extends Inst {
     else { out.gain.linearRampToValueAtTime(pk, t + a); out.gain.linearRampToValueAtTime(pk * 0.85, t + a + 0.15); out.gain.setValueAtTime(pk * 0.85, t + hold); }
     out.gain.setTargetAtTime(0, t + hold, r / 3.5);
     const end = t + hold + r * 1.7;
-    const vg = art === 'stab' || dur < 0.3 ? null : this.vib(t, end, 5, brassy ? 3 : 4.5, 0.3);
+    const vg = art === 'stab' || dur < 0.3 || this.a.lite ? null : this.vib(t, end, 5, brassy ? 3 : 4.5, 0.3);
     for (const d of [-5, 5]) {
       const osc = this.osc('sawtooth', f, t, end, lp, d);
       osc.detune.setValueAtTime(d - (brassy ? 18 : 28), t); osc.detune.linearRampToValueAtTime(d, t + 0.06);
@@ -409,7 +409,7 @@ export class Wind extends Inst {
       if (grace) { osc.frequency.setValueAtTime(grace, t); osc.frequency.setValueAtTime(f, t + 0.045); }
       if (vg) vg.connect(osc.detune);
     }
-    if (this.breath > 0) {
+    if (this.breath > 0 && !this.a.lite) {
       const bg = this.gainNode(pk * 0.32 * this.breath, out), bp = biq(this.ctx, 'bandpass', clamp(f * 2, 400, 9000), 2.5); bp.connect(bg);
       this.noise(t, end, bp);
       if (dur > 0.18) {

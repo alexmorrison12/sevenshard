@@ -6,11 +6,27 @@
 // per spec (not from the creature's spec literals, whose varied shapes make V8 box every double it loads), no closures,
 // no temporary objects, indexed loops.
 import * as THREE from 'three';
-import { Gait } from './gait2.js';
+import { Gait, GIN } from './gait2.js';
 import { sstep, clamp01, mix, TAU, env } from '../kit/rig.js';
 
 const NOINFO = { dur: 0 };
 const EMPTY = {};
+
+// ---- boxing-free pose writes for the per-frame controller paths: callers fill RV (a Float64Array) and pass only objects,
+// so no double crosses a (possibly non-inlined) call boundary. rotA(q): q := q · Ry(RV[1]) · Rx(RV[0]) · Rz(RV[2])
+// (exactly Pose.rot's ry→rx→rz post-multiplication); moveA(v): v += RV.
+export const RV = new Float64Array(3);
+export function rotA(q) {
+  const hx = RV[0] * 0.5, hy = RV[1] * 0.5, hz = RV[2] * 0.5;
+  const c1 = Math.cos(hx), s1 = Math.sin(hx), c2 = Math.cos(hy), s2 = Math.sin(hy), c3 = Math.cos(hz), s3 = Math.sin(hz);
+  const bx = s1 * c2 * c3 + c1 * s2 * s3, by = c1 * s2 * c3 - s1 * c2 * s3, bz = c1 * c2 * s3 - s1 * s2 * c3, bw = c1 * c2 * c3 + s1 * s2 * s3;
+  const ax = q._x, ay = q._y, az = q._z, aw = q._w;
+  q._x = ax * bw + aw * bx + ay * bz - az * by;
+  q._y = ay * bw + aw * by + az * bx - ax * bz;
+  q._z = az * bw + aw * bz + ax * by - ay * bx;
+  q._w = aw * bw - ax * bx - ay * by - az * bz;
+}
+export function moveA(v) { v.x += RV[0]; v.y += RV[1]; v.z += RV[2]; }
 
 // ================================================================================================ action defs
 /** Normalised, fixed-shape action definition (the authored literal is kept as `src`; extra fields are copied too). */
@@ -92,6 +108,8 @@ export class Actions {
     for (let i = 0; i < L.length; i++) { const a = L[i]; if (!a.done && !(a.out && a.w <= 0.001)) L[j++] = a; }
     L.length = j;
   }
+  /** update() reading dt from the controller (no boxed argument) */
+  step() { this.update(this.ctl.dt); }
   apply() { const L = this.list; for (let i = 0; i < L.length; i++) { const a = L[i]; if (a.w > 0) a.d.fn(this.ctl, a, a.w); } }
 }
 
@@ -147,7 +165,7 @@ export class BaseCtl {
     this.combat = 0; this.run = 0; this.turnSm = 0; this.speedSm = 0; this.accel = 0;
     this.air = 0; this.fly = 0; this.flyT = 0; this.locoW = 1; this.restW = 0;
     this.jaw = 0; this.ear = 0; this.hackle = 0; this.glow = 1; this.flame = 1; this.charge = 0; this.wingSpread = 0; this.flap = 0; this.wt = Math.random() * 10; this.wingBeat = 0;
-    this._speed = 0; this._turn = 0; this._strafe = 0;
+    this._speed = 0; this._turn = 0; this._strafe = 0; this.dt = 0.016; this._idleW = 0;
     this.look = { y: 0, p: 0, ty: 0, tp: 0, timer: 1 + Math.random() * 3 };
     this.fidgetTimer = 3 + Math.random() * 5;
     this._sd = false; this._sdown = false;
@@ -180,7 +198,9 @@ export class BaseCtl {
     return r;
   }
   /** state transitions shared by every controller; sets this._speed / _turn / _strafe (model units) */
-  _state(state, dt) {
+  _state(state, dt) { this.dt = dt; this._stateS(state); }
+  _stateS(state) {
+    const dt = this.dt;
     this.state = state;
     const dead = !!state.dead, down = !!state.down;
     if (dead && !this.dead) this.play('death');
@@ -195,7 +215,7 @@ export class BaseCtl {
     const A = this.acts;
     if (stun && !A.has('stun') && A.defs.stun) A.play('stun', 0, true);
     if (!stun && A.has('stun')) A.stop('stun');
-    A.update(dt);
+    A.step();
     let restW = 0;
     const L = A.list;
     for (let i = 0; i < L.length; i++) { const a = L[i]; if ((a.d.rest || a.d.state) && a.w > restW) restW = a.w; }
@@ -209,8 +229,9 @@ export class BaseCtl {
     this._turn = off || tu === undefined ? 0 : tu;
     this._strafe = off || st === undefined ? 0 : st / sc;
   }
-  _fidget(dt, idle) {
-    const F = this.spec.fidgets;
+  _fidget(dt, idle) { this.dt = dt; this._idleW = idle; this._fidgetS(); }
+  _fidgetS() {
+    const F = this.spec.fidgets, dt = this.dt, idle = this._idleW;
     if (!F || idle < 0.9 || this.dead || this.isDown || this.combat > 0.3 || this.acts.list.length) return;
     this.fidgetTimer -= dt;
     if (this.fidgetTimer > 0) return;
@@ -220,16 +241,18 @@ export class BaseCtl {
     let r = Math.random() * tot;
     for (let i = 0; i < F.length; i++) { r -= F[i].w; if (r <= 0) { this.acts.play(F[i].name); break; } }
   }
-  _look(dt, idle, combatK = 0.7) {
-    const L = this.look;
+  _look(dt, idle, combatK = 0.7) { this.dt = dt; this._idleW = idle; this._lookS(combatK); }
+  _lookS(combatK) {
+    const L = this.look, dt = this.dt, idle = this._idleW;
     L.timer -= dt;
     if (L.timer <= 0) { L.timer = 1.5 + Math.random() * 3.5; L.ty = Math.random() < 0.3 ? 0 : (Math.random() - 0.5) * 1.3; L.tp = (Math.random() - 0.4) * 0.3; }
     const lookK = idle * (1 - this.combat * combatK);
     const k = 1 - Math.exp(-3 * dt);
     L.y += (L.ty * lookK - L.y) * k; L.p += (L.tp * lookK - L.p) * k;
   }
-  _wings(dt, P) {
-    const K = this.k; if (!K.hasWings) return;
+  _wings(dt, P) { this.dt = dt; this._wingsS(P); }
+  _wingsS(P) {
+    const K = this.k, dt = this.dt; if (!K.hasWings) return;
     const b = this.b, fl = Math.max(this.fly, this.flap);
     this.wt += dt * TAU * mix(K.wIdleF, K.wFlapF, fl);
     const beat = Math.sin(this.wt), beat2 = Math.sin(this.wt - 1.1);
@@ -238,12 +261,12 @@ export class BaseCtl {
     const fold = K.wFold * (1 - clamp01(spread + fl)) * (1 - this.combat * 0.3);
     const wl = b.wingL, wr = b.wingR;
     if (wl) {
-      P.rot(wl[0], -0.25 * fl * beat - K.wTilt * (1 - fl), fold - spread * 0.35 + 0.075 * fl * beat2, -(amp * beat + spread * K.wLift));
-      if (wl.length > 1) P.rot(wl[1], 0, fold * K.wFold2 - spread * 0.4, -(amp * 0.55 * beat2 + spread * 0.2));
+      (RV[0] = -0.25 * fl * beat - K.wTilt * (1 - fl), RV[1] = fold - spread * 0.35 + 0.075 * fl * beat2, RV[2] = -(amp * beat + spread * K.wLift), rotA(P.lq[wl[0]]));
+      if (wl.length > 1) (RV[0] = 0, RV[1] = fold * K.wFold2 - spread * 0.4, RV[2] = -(amp * 0.55 * beat2 + spread * 0.2), rotA(P.lq[wl[1]]));
     }
     if (wr) {
-      P.rot(wr[0], -0.25 * fl * beat - K.wTilt * (1 - fl), -(fold - spread * 0.35 + 0.075 * fl * beat2), amp * beat + spread * K.wLift);
-      if (wr.length > 1) P.rot(wr[1], 0, -(fold * K.wFold2 - spread * 0.4), amp * 0.55 * beat2 + spread * 0.2);
+      (RV[0] = -0.25 * fl * beat - K.wTilt * (1 - fl), RV[1] = -(fold - spread * 0.35 + 0.075 * fl * beat2), RV[2] = amp * beat + spread * K.wLift, rotA(P.lq[wr[0]]));
+      if (wr.length > 1) (RV[0] = 0, RV[1] = -(fold * K.wFold2 - spread * 0.4), RV[2] = amp * 0.55 * beat2 + spread * 0.2, rotA(P.lq[wr[1]]));
     }
     this.wingBeat = beat;
   }
@@ -272,8 +295,8 @@ export class BipedCtl extends BaseCtl {
   update(dt, state = EMPTY) {
     dt = Math.min(dt, 0.1);
     const P = this.pose, b = this.b, spec = this.spec, G = this.gait, K = this.k;
-    this.t += dt;
-    this._state(state, dt);
+    this.t += dt; this.dt = dt;
+    this._stateS(state);
     const speed = this._speed, turn = this._turn, strafe = this._strafe;
     this.speedSm += (speed - this.speedSm) * (1 - Math.exp(-6 * dt));
     this.turnSm += (turn - this.turnSm) * (1 - Math.exp(-4 * dt));
@@ -283,7 +306,7 @@ export class BipedCtl extends BaseCtl {
     this.air = Math.max(fly, this.air * Math.exp(-10 * dt));
     const lw = this.locoW * (1 - fly * 0.95);
     P.reset();
-    G.update(dt, speed * lw, turn * lw, strafe * lw);
+    GIN[0] = dt; GIN[1] = speed * lw; GIN[2] = turn * lw; GIN[3] = strafe * lw; G.step();
     const act = G.act * (1 - fly), idle = 1 - clamp01(act * 1.5), ph = G.phase * TAU, cph = Math.cos(ph), sph = Math.sin(ph);
     this.flap = Math.max(0, this.flap - dt * 2.5);
     // ---------- pelvis & spine ----------
@@ -291,46 +314,46 @@ export class BipedCtl extends BaseCtl {
     const flyLean = fly * clamp01(asp / 4) * K.flyLean;
     const lean = K.leanWalk * clamp01(asp / 1.5) * (1 - this.run) + K.leanRun * this.run + K.leanCombat * this.combat;
     const twA = K.twist * act, wad = K.waddle * act;
-    G.adaptBody(dt, false);
+    G.adaptStep(false);
     const hov = fly * (K.flyH + Math.sin(this.wt) * K.flyBob);
-    P.move(b.hips, G.sway * (1 - fly), (G.bob - K.crouch * this.combat - 0.02 * this.run) * (1 - fly) + G.gOff + hov, 0);
-    P.rot(b.hips, G.pitch - lean * 0.3 - flyLean, -twA * cph, G.roll + wad * sph + this.turnSm * clamp01(asp / 3) * (0.08 + fly * 0.25));
-    P.rot(b.spine, -lean * 0.4 + 0.015 * breath, twA * 0.6 * cph, -wad * 0.5 * sph);
-    P.rot(b.chest, -lean * 0.3 - 0.01 * breath, twA * 0.6 * cph, -(G.roll + wad * sph) * 0.5);
-    P.sc[b.chest].setScalar(1 + breath * K.breathe);
+    (RV[0] = G.sway * (1 - fly), RV[1] = (G.bob - K.crouch * this.combat - 0.02 * this.run) * (1 - fly) + G.gOff + hov, RV[2] = 0, moveA(P.lt[b.hips]));
+    (RV[0] = G.pitch - lean * 0.3 - flyLean, RV[1] = -twA * cph, RV[2] = G.roll + wad * sph + this.turnSm * clamp01(asp / 3) * (0.08 + fly * 0.25), rotA(P.lq[b.hips]));
+    (RV[0] = -lean * 0.4 + 0.015 * breath, RV[1] = twA * 0.6 * cph, RV[2] = -wad * 0.5 * sph, rotA(P.lq[b.spine]));
+    (RV[0] = -lean * 0.3 - 0.01 * breath, RV[1] = twA * 0.6 * cph, RV[2] = -(G.roll + wad * sph) * 0.5, rotA(P.lq[b.chest]));
+    { const sc = P.sc[b.chest], v = 1 + breath * K.breathe; sc.x = v; sc.y = v; sc.z = v; }
     // ---------- look & head ----------
-    this._look(dt, idle, 0.6);
+    this._idleW = idle; this._lookS(0.6);
     const lk = this.look;
     const headStab = (lean + flyLean - G.pitch) * 0.85;
-    if (b.neck !== undefined) P.rot(b.neck, headStab * 0.4 + lk.p * 0.4, lk.y * 0.4 + this.turnSm * 0.1, 0);
-    P.rot(b.head, headStab * (b.neck !== undefined ? 0.5 : 0.8) + lk.p * 0.6 + G.nod * (1 - fly), lk.y * 0.6 + this.turnSm * 0.12 - twA * 0.8 * cph, -(G.roll + wad * sph) * 0.3);
+    if (b.neck !== undefined) (RV[0] = headStab * 0.4 + lk.p * 0.4, RV[1] = lk.y * 0.4 + this.turnSm * 0.1, RV[2] = 0, rotA(P.lq[b.neck]));
+    (RV[0] = headStab * (b.neck !== undefined ? 0.5 : 0.8) + lk.p * 0.6 + G.nod * (1 - fly), RV[1] = lk.y * 0.6 + this.turnSm * 0.12 - twA * 0.8 * cph, RV[2] = -(G.roll + wad * sph) * 0.3, rotA(P.lq[b.head]));
     // ---------- arms ----------
     const swing = (K.swing * act * (1 - this.run * 0.3) + K.runSwing * this.run * act) * this.locoW;
     const out = K.armOut + K.runOut * this.run + K.combatOut * this.combat + fly * K.flyOut;
     const elbow = K.elbow + K.runElbow * this.run + K.combatElbow * this.combat + fly * K.flyElbow;
     const up0 = K.combatUp * this.combat + 0.02 * breath + fly * K.flyUp;
-    if (b.armL) { const fw = -cph; P.rot(b.armL[0], swing * fw + up0, 0, -out); P.rot(b.armL[1], elbow + Math.max(0, swing * fw) * 0.5, 0, 0); if (b.armL.length > 2) P.rot(b.armL[2], K.wrist, 0, 0); }
-    if (b.armR) { const fw = cph * K.weaponSwing; P.rot(b.armR[0], swing * fw + up0, 0, out); P.rot(b.armR[1], elbow + Math.max(0, swing * fw) * 0.5, 0, 0); if (b.armR.length > 2) P.rot(b.armR[2], K.wrist, 0, 0); }
+    if (b.armL) { const fw = -cph; (RV[0] = swing * fw + up0, RV[1] = 0, RV[2] = -out, rotA(P.lq[b.armL[0]])); (RV[0] = elbow + Math.max(0, swing * fw) * 0.5, RV[1] = 0, RV[2] = 0, rotA(P.lq[b.armL[1]])); if (b.armL.length > 2) (RV[0] = K.wrist, RV[1] = 0, RV[2] = 0, rotA(P.lq[b.armL[2]])); }
+    if (b.armR) { const fw = cph * K.weaponSwing; (RV[0] = swing * fw + up0, RV[1] = 0, RV[2] = out, rotA(P.lq[b.armR[0]])); (RV[0] = elbow + Math.max(0, swing * fw) * 0.5, RV[1] = 0, RV[2] = 0, rotA(P.lq[b.armR[1]])); if (b.armR.length > 2) (RV[0] = K.wrist, RV[1] = 0, RV[2] = 0, rotA(P.lq[b.armR[2]])); }
     // ---------- tail / ears ----------
     const tl = b.tail;
     if (tl) { const n = tl.length, lift = (K.tailLift * this.run + fly * K.tailFly) / n - 0.05; for (let i = 0; i < n; i++) {
       const wv = Math.sin(this.t * 2.2 - i * 0.8) * (0.15 + 0.1 * i) * (1 - act * 0.5) + Math.sin(ph - i) * 0.15 * act;
-      P.rot(tl[i], lift, wv - this.turnSm * 0.2 / n, 0);
+      (RV[0] = lift, RV[1] = wv - this.turnSm * 0.2 / n, RV[2] = 0, rotA(P.lq[tl[i]]));
     } }
     this.jaw = 0; this.ear = this.run * 0.5 + this.combat * 0.4; this.wingSpread = 0; this.glow = 1;
-    this._fidget(dt, idle);
+    this._fidgetS();
     if (spec.pose) spec.pose(this, dt);
     this.acts.apply();
     if (spec.post) spec.post(this, dt);
-    this._wings(dt, P);
+    this._wingsS(P);
     const ears = b.ears;
     if (ears) for (let i = 0; i < ears.length; i++) {
       const s = i === 0 ? 1 : -1, tw = Math.pow(Math.max(0, Math.sin(this.t * 1.9 + i * 2.3)), 30) * idle;
-      P.rot(ears[i], this.ear * 0.6 + tw * 0.3, 0, s * (this.ear * 0.4 + tw * 0.3));
+      (RV[0] = this.ear * 0.6 + tw * 0.3, RV[1] = 0, RV[2] = s * (this.ear * 0.4 + tw * 0.3), rotA(P.lq[ears[i]]));
     }
-    if (b.jaw !== undefined) P.rx(b.jaw, -this.jaw);
+    if (b.jaw !== undefined) (RV[0] = -this.jaw, RV[1] = 0, RV[2] = 0, rotA(P.lq[b.jaw]));
     P.fk();
-    G.solve(P, this.air * this.locoW, K.airPaw);
+    GIN[4] = this.air * this.locoW; GIN[5] = K.airPaw; G.solveStep(P);
     P.apply(this.inst.bones);
     this._uniforms();
   }
@@ -350,8 +373,8 @@ export class QuadCtl extends BaseCtl {
   update(dt, state = EMPTY) {
     dt = Math.min(dt, 0.1);
     const P = this.pose, b = this.b, spec = this.spec, G = this.gait, K = this.k;
-    this.t += dt;
-    this._state(state, dt);
+    this.t += dt; this.dt = dt;
+    this._stateS(state);
     const speed = this._speed, turn = this._turn, strafe = this._strafe;
     const k6 = 1 - Math.exp(-6 * dt);
     const prevS = this.speedSm;
@@ -365,28 +388,28 @@ export class QuadCtl extends BaseCtl {
     this.air = Math.max(fly, this.air * Math.exp(-10 * dt));
     const lw = this.locoW * (1 - fly * 0.95);
     P.reset();
-    G.update(dt, speed * lw, turn * lw, strafe * lw);
+    GIN[0] = dt; GIN[1] = speed * lw; GIN[2] = turn * lw; GIN[3] = strafe * lw; G.step();
     const idle = 1 - clamp01(G.act * 1.5);
     this.flap = Math.max(0, this.flap - dt * 2.5);
     // ---------- body ----------
     const breath = Math.sin(this.t * TAU * mix(0.28, 0.9, Math.max(this.run, this.combat * 0.5)));
-    P.sc[b.chest].setScalar(1 + breath * K.breathe);
+    { const sc = P.sc[b.chest], v = 1 + breath * K.breathe; sc.x = v; sc.y = v; sc.z = v; }
     const crouch = K.combatCrouch * this.combat * (1 - this.run);
     const lean = clamp01(this.accel * 0.05) * 0.12 - clamp01(-this.accel * 0.05) * 0.1;
-    G.adaptBody(dt);
+    G.adaptStep(true);
     const hov = fly * (K.flyH + Math.sin(this.wt) * K.flyBob);
-    P.move(b.body, G.sway, G.bob - crouch - this.run * K.runDrop + G.gOff + hov, 0);
-    P.rot(b.body, G.pitch - lean * 0.5 + K.combatPitch * this.combat + G.gPitch, 0, G.roll + this.turnSm * clamp01(asp / 4) * 0.12 + G.gRoll);
-    P.rx(b.chest, G.flex - crouch * 0.6);
-    P.rx(b.hips, -G.flex * 0.8);
+    (RV[0] = G.sway, RV[1] = G.bob - crouch - this.run * K.runDrop + G.gOff + hov, RV[2] = 0, moveA(P.lt[b.body]));
+    (RV[0] = G.pitch - lean * 0.5 + K.combatPitch * this.combat + G.gPitch, RV[1] = 0, RV[2] = G.roll + this.turnSm * clamp01(asp / 4) * 0.12 + G.gRoll, rotA(P.lq[b.body]));
+    (RV[0] = G.flex - crouch * 0.6, RV[1] = 0, RV[2] = 0, rotA(P.lq[b.chest]));
+    (RV[0] = -G.flex * 0.8, RV[1] = 0, RV[2] = 0, rotA(P.lq[b.hips]));
     // ---------- look ----------
-    this._look(dt, idle, 0.7);
+    this._idleW = idle; this._lookS(0.7);
     const L = this.look;
     // ---------- neck & head ----------
     const stab = -(G.pitch + G.flex) * K.nStab;
     const neckP = K.nPitch + K.nRun * this.run + K.nCombat * this.combat + K.nWalk * walkK * (1 - this.run);
-    P.rot(b.neck, neckP + stab * 0.4 + L.p * 0.4, L.y * 0.45 + this.turnSm * 0.12, 0);
-    P.rot(b.head, stab * 0.6 + G.nod + L.p * 0.6 - neckP * K.nComp + K.nHeadCombat * this.combat, L.y * 0.55 + this.turnSm * 0.1, -L.y * 0.25);
+    (RV[0] = neckP + stab * 0.4 + L.p * 0.4, RV[1] = L.y * 0.45 + this.turnSm * 0.12, RV[2] = 0, rotA(P.lq[b.neck]));
+    (RV[0] = stab * 0.6 + G.nod + L.p * 0.6 - neckP * K.nComp + K.nHeadCombat * this.combat, RV[1] = L.y * 0.55 + this.turnSm * 0.1, RV[2] = -L.y * 0.25, rotA(P.lq[b.head]));
     // ---------- tail ----------
     const tl = b.tail;
     if (tl) {
@@ -396,25 +419,25 @@ export class QuadCtl extends BaseCtl {
       for (let i = 0; i < n; i++) {
         const ph = this.t * TAU * K.tWagF - i * 0.9;
         const sway = Math.sin(ph) * wagA * (0.6 + i * 0.3) + Math.sin(G.phase * TAU * 2 - i) * 0.1 * G.act;
-        P.rot(tl[i], pitch0 + Math.sin(this.t * 2.1 - i) * 0.03, sway + this.turnSm * 0.15, 0);
+        (RV[0] = pitch0 + Math.sin(this.t * 2.1 - i) * 0.03, RV[1] = sway + this.turnSm * 0.15, RV[2] = 0, rotA(P.lq[tl[i]]));
       }
     }
     this.jaw = 0; this.ear = this.run * 0.6 + this.combat * 0.5; this.wingSpread = 0; this.glow = 1;
     this.hackle = mix(this.hackle, this.combat, 1 - Math.exp(-5 * dt));
-    this._fidget(dt, idle);
+    this._fidgetS();
     if (spec.pose) spec.pose(this, dt);
     this.acts.apply();
     if (spec.post) spec.post(this, dt);
-    this._wings(dt, P);
+    this._wingsS(P);
     const ears = b.ears;
     if (ears) for (let i = 0; i < ears.length; i++) {
       const s = i === 0 ? 1 : -1;
       const tw = Math.pow(Math.max(0, Math.sin(this.t * 1.7 + i * 2.1)), 40) * 0.5 * idle;
-      P.rot(ears[i], this.ear * 0.8 + tw * 0.3, 0, s * (this.ear * 0.3 + tw * 0.25));
+      (RV[0] = this.ear * 0.8 + tw * 0.3, RV[1] = 0, RV[2] = s * (this.ear * 0.3 + tw * 0.25), rotA(P.lq[ears[i]]));
     }
-    if (b.jaw !== undefined) P.rx(b.jaw, -this.jaw);
+    if (b.jaw !== undefined) (RV[0] = -this.jaw, RV[1] = 0, RV[2] = 0, rotA(P.lq[b.jaw]));
     P.fk();
-    G.solve(P, this.air * this.locoW, K.airPaw);
+    GIN[4] = this.air * this.locoW; GIN[5] = K.airPaw; G.solveStep(P);
     P.apply(this.inst.bones);
     this._uniforms();
   }
@@ -436,8 +459,8 @@ export class HoverCtl extends BaseCtl {
   update(dt, state = EMPTY) {
     dt = Math.min(dt, 0.1);
     const P = this.pose, b = this.b, spec = this.spec, K = this.k;
-    this.t += dt;
-    this._state(state, dt);
+    this.t += dt; this.dt = dt;
+    this._stateS(state);
     const speed = this._speed * this.locoW, turn = this._turn * this.locoW;
     const k6 = 1 - Math.exp(-4 * dt);
     const prevS = this.speedSm;
@@ -450,8 +473,8 @@ export class HoverCtl extends BaseCtl {
     const idle = 1 - moveK;
     P.reset();
     const bob = Math.sin(this.t * TAU * K.bobF) * K.bob;
-    P.move(b.root, Math.sin(this.t * 0.9) * 0.015, bob * this.locoW, 0);
-    P.rot(b.root, -K.hLean * moveK * Math.sign(this.speedSm) - clamp01(this.accel * 0.1) * 0.1, 0, this.turnSm * K.bank);
+    (RV[0] = Math.sin(this.t * 0.9) * 0.015, RV[1] = bob * this.locoW, RV[2] = 0, moveA(P.lt[b.root]));
+    (RV[0] = -K.hLean * moveK * Math.sign(this.speedSm) - clamp01(this.accel * 0.1) * 0.1, RV[1] = 0, RV[2] = this.turnSm * K.bank, rotA(P.lq[b.root]));
     // trailing chains: damped springs driven by speed, acceleration & turning
     const tr = b.trail;
     if (tr) {
@@ -460,22 +483,22 @@ export class HoverCtl extends BaseCtl {
         const target = drive + Math.sin(this.t * 2.1 + c) * 0.04;
         this.lagV[c] += ((target - this.lag[c]) * 40 - this.lagV[c] * 7) * dt; this.lag[c] += this.lagV[c] * dt;
         const ch = tr[c], n = ch.length;
-        for (let i = 0; i < n; i++) P.rot(ch[i], (this.lag[c] + Math.sin(this.t * 2.6 - i * 0.9 + c) * fl) * (0.6 + i * 0.25), -this.turnSm * 0.1 * (i + 1) / n, Math.sin(this.t * 1.7 - i + c * 2) * fl * 0.6);
+        for (let i = 0; i < n; i++) (RV[0] = (this.lag[c] + Math.sin(this.t * 2.6 - i * 0.9 + c) * fl) * (0.6 + i * 0.25), RV[1] = -this.turnSm * 0.1 * (i + 1) / n, RV[2] = Math.sin(this.t * 1.7 - i + c * 2) * fl * 0.6, rotA(P.lq[ch[i]]));
       }
     }
-    this._look(dt, idle, 0.5);
+    this._idleW = idle; this._lookS(0.5);
     const L = this.look;
-    if (b.spine !== undefined) P.rx(b.spine, 0.02 * Math.sin(this.t * 1.3));
-    P.rot(b.head, L.p * 0.6 + K.headLean * moveK, L.y * 0.6 + this.turnSm * 0.15, 0);
+    if (b.spine !== undefined) (RV[0] = 0.02 * Math.sin(this.t * 1.3), RV[1] = 0, RV[2] = 0, rotA(P.lq[b.spine]));
+    (RV[0] = L.p * 0.6 + K.headLean * moveK, RV[1] = L.y * 0.6 + this.turnSm * 0.15, RV[2] = 0, rotA(P.lq[b.head]));
     const up = K.armUp + K.combatUp * this.combat - K.armTrail * moveK, out = K.armOut + 0.1 * this.combat, el = K.elbow + K.combatElbow * this.combat;
-    if (b.armL) { P.rot(b.armL[0], up + Math.sin(this.t * 1.1 + 2) * 0.06, 0, -out); P.rot(b.armL[1], el, 0, 0); }
-    if (b.armR) { P.rot(b.armR[0], up + Math.sin(this.t * 1.1) * 0.06, 0, out); P.rot(b.armR[1], el, 0, 0); }
+    if (b.armL) { (RV[0] = up + Math.sin(this.t * 1.1 + 2) * 0.06, RV[1] = 0, RV[2] = -out, rotA(P.lq[b.armL[0]])); (RV[0] = el, RV[1] = 0, RV[2] = 0, rotA(P.lq[b.armL[1]])); }
+    if (b.armR) { (RV[0] = up + Math.sin(this.t * 1.1) * 0.06, RV[1] = 0, RV[2] = out, rotA(P.lq[b.armR[0]])); (RV[0] = el, RV[1] = 0, RV[2] = 0, rotA(P.lq[b.armR[1]])); }
     this.jaw = 0; this.glow = 1;
-    this._fidget(dt, idle);
+    this._fidgetS();
     if (spec.pose) spec.pose(this, dt);
     this.acts.apply();
     if (spec.post) spec.post(this, dt);
-    if (b.jaw !== undefined) P.rx(b.jaw, -this.jaw);
+    if (b.jaw !== undefined) (RV[0] = -this.jaw, RV[1] = 0, RV[2] = 0, rotA(P.lq[b.jaw]));
     P.fk();
     P.apply(this.inst.bones);
     this._uniforms();

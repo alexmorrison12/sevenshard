@@ -247,7 +247,9 @@ export function createHero(opts = {}) {
     old.dispose();
     mesh.geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, base.height * 0.5, 0), base.height * 0.9);
     // rune glow (legion set)
-    U.uRune.value.set(1.0, 0.1, 0.04, g.runes ? 1.6 : 0);
+    if (g.runes) U.uRune.value.set(1.0, 0.1, 0.04, 1.6);
+    else if (g.accent) { const ac = new THREE.Color(g.accent); U.uRune.value.set(ac.r, ac.g, ac.b, 0.9); }
+    else U.uRune.value.set(1, 0.1, 0.04, 0);
     // scale / sizes
     const hk = Math.max(0.9, Math.min(1.1, L.height ?? 1));
     inner.scale.setScalar(hk * (1 + demon * 0.18));

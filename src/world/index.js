@@ -8,7 +8,10 @@ import * as test from './zones/test.js';
 import * as solhaven from './zones/solhaven.js';
 import * as chaosRift from './zones/chaos_rift.js';
 import * as frostmere from './zones/frostmere.js';
-import { placeholder } from './zones/placeholder.js';
+import { buildThrone, buildKennels } from './zones/throne.js';
+import * as crucible from './zones/crucible.js';
+import * as inferno from './zones/inferno.js';
+import * as stronghold from './zones/stronghold.js';
 export { applyEnv, makeEnv, PRESETS } from './env.js';
 
 export const ZONES = {
@@ -23,17 +26,16 @@ export const ZONES = {
   stronghold: { name: 'Brightwater Isle', kind: 'stronghold', size: 120 },
 };
 
-const ring = (n, r, prefix, cz = 0) => Object.fromEntries(Array.from({ length: n }, (_, i) => [`${prefix}${i + 1}`, [Math.cos(i / n * 6.283) * r, cz + Math.sin(i / n * 6.283) * r, 0]]));
 const BUILDERS = {
   test: test.build,
   solhaven: solhaven.build,
   chaos_rift: chaosRift.build,
   frostmere: frostmere.build,
-  throne_of_horns: placeholder({ half: 28, layer: 'bloodstone', preset: 'blood', region: 'Throne of Horns', anchors: { spawn: [0, 22], boss: [0, -8, Math.PI], ...ring(8, 20, 'pillar:') } }),
-  kennels: placeholder({ half: 24, layer: 'bloodstone', preset: 'blood', region: 'The Kennels', anchors: { spawn: [0, 18], boss: [0, -8, Math.PI], 'boss:skarn': [-6, -8, Math.PI], 'boss:vesk': [6, -8, Math.PI] } }),
-  crucible: placeholder({ half: 22, layer: 'flagstone', preset: 'dusk', region: 'The Crucible', anchors: { spawn: [0, 16], 'team:a1': [-4, 16], 'team:a2': [0, 16], 'team:a3': [4, 16], 'team:b1': [-4, -16, Math.PI], 'team:b2': [0, -16, Math.PI], 'team:b3': [4, -16, Math.PI] } }),
-  inferno: placeholder({ half: 25, layer: 'obsidian', preset: 'volcanic', region: 'Inferno Descent', anchors: { spawn: [0, 18], exit: [0, -20], boss: [0, -8, Math.PI], ...ring(10, 12, 'spawn:m') } }),
-  stronghold: placeholder({ half: 50, layer: 'grass', region: 'Brightwater Isle', anchors: { spawn: [0, 20], 'dock:ship': [0, 45] } }),
+  throne_of_horns: buildThrone,
+  kennels: buildKennels,
+  crucible: crucible.build,
+  inferno: inferno.build,
+  stronghold: stronghold.build,
 };
 /** Register / replace a zone builder at runtime (used as real builders land). */
 export function registerZone(id, def, build) { if (def) ZONES[id] = def; BUILDERS[id] = build; }

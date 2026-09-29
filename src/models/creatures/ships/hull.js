@@ -94,10 +94,11 @@ export function sweep(wb, path, profile, o = {}) {
     const base = wb.count;
     for (let i = 0; i < n; i++) {
       const { o: p, A, B } = path[i];
+      const k = o.scale ? o.scale(i / (n - 1)) : 1;
       const nx = A.x * na + B.x * nb, ny = A.y * na + B.y * nb, nz = A.z * na + B.z * nb;
       const c0 = typeof col === 'function' ? col(p, i / (n - 1)) : col;
-      wb.vert(p.x + A.x * a0 + B.x * b0, p.y + A.y * a0 + B.y * b0, p.z + A.z * a0 + B.z * b0, nx, ny, nz, c0, cum[i] / TU, GV0 + 0.02, o);
-      wb.vert(p.x + A.x * a1 + B.x * b1, p.y + A.y * a1 + B.y * b1, p.z + A.z * a1 + B.z * b1, nx, ny, nz, c0, cum[i] / TU, GV1 - 0.02, o);
+      wb.vert(p.x + (A.x * a0 + B.x * b0) * k, p.y + (A.y * a0 + B.y * b0) * k, p.z + (A.z * a0 + B.z * b0) * k, nx, ny, nz, c0, cum[i] / TU, GV0 + 0.02, o);
+      wb.vert(p.x + (A.x * a1 + B.x * b1) * k, p.y + (A.y * a1 + B.y * b1) * k, p.z + (A.z * a1 + B.z * b1) * k, nx, ny, nz, c0, cum[i] / TU, GV1 - 0.02, o);
     }
     // winding check with the first quad
     let flip = false;
@@ -222,4 +223,40 @@ export function buildHull(wb, H, paint, opt = {}) {
     for (let k = 0; k <= 6; k++) path.push({ o: V3(lerp(-w, w, k / 6), hi, z), A: V3(0, 0, aftHigh ? -1 : 1), B: V3(0, 1, 0) });
     sweep(wb, path, [[-0.02, -0.16], [0.07, -0.16], [0.07, 0.03], [-0.02, 0.03]], { color: paint.cap, metal: paint.capMetal || 0, d: 0.8, closed: false });
   }
+}
+
+// ------------------------------------------------------------------------------------------------ waterline foam skirt
+/** Two strips (port / starboard) from the bow to the stern at y ≈ 0: inner edge tucked under the hull, outer edge
+ *  width(u) out (wider bow wave). uv.x = metres from the bow, uv.y = 0 hull → 1 outer; colour.r = strength. */
+export function buildFoam(H, o = {}) {
+  const n = o.n ?? 40, pos = [], uv = [], col = [], idx = [];
+  const y = o.y ?? 0.04;
+  const width = o.width || (u => 0.8 + 1.5 * smooth(0.7, 1.0, u) + 0.7 * smooth(0.25, 0.0, u));
+  const strength = o.strength || (u => 0.55 + 0.45 * smooth(0.6, 1.0, u) + 0.2 * smooth(0.2, 0.0, u));
+  for (const side of [-1, 1]) {
+    const base = pos.length / 3;
+    let along = 0, prev = null;
+    for (let i = 0; i <= n; i++) {
+      const u = 1 - i / n, uu = Math.min(0.995, Math.max(0.005, u));
+      const p = H.P(uu, 0, side);
+      const f = H.frame(uu, 0.02, side);
+      const N = f.N.clone().setY(0).normalize();
+      if (prev) along += p.distanceTo(prev);
+      prev = p.clone();
+      const w = width(u), k = strength(u) * smooth(0.0, 0.08, u);
+      pos.push(p.x - N.x * 0.08, y, p.z - N.z * 0.08, p.x + N.x * w, y, p.z + N.z * w);
+      uv.push(along, 0, along, 1);
+      col.push(k, 0, 0, k, 0, 0);
+    }
+    for (let i = 0; i < n; i++) {
+      const a = base + i * 2, b = a + 2;
+      if (side < 0) idx.push(a, a + 1, b, a + 1, b + 1, b); else idx.push(a, b, a + 1, a + 1, b, b + 1);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  g.setIndex(idx); g.computeBoundingSphere();
+  return g;
 }

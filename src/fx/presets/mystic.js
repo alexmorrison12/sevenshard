@@ -1,6 +1,6 @@
 // Mystic presets — Starcaller (meteors, fire, frost, lightning, runes, void) and Songweaver (harp: notes, heals, buffs).
 import * as THREE from 'three';
-import { ctx, tc, vec, groundSmash, skyBolt, along, risingRing, groundPulse, lightPillar, GEN, PHYS, FIRE, FROST, HOLY, STORM, DARK, ARC, HEAL, MUSIC, TAU, UP, hue, shockwave, decal, hit, explosion, S, R, P } from './lib.js';
+import { KEYS, ctx, tc, vec, groundSmash, skyBolt, along, risingRing, groundPulse, lightPillar, GEN, PHYS, FIRE, FROST, HOLY, STORM, DARK, ARC, HEAL, MUSIC, TAU, UP, hue, shockwave, decal, hit, explosion, S, R, P } from './lib.js';
 
 const K = {};
 const _a = new THREE.Vector3(), _b = new THREE.Vector3();
@@ -109,7 +109,7 @@ K.punishing_bolt = (fx, p) => {      // giant lightning from the sky
   fx.task(REBOLT, { pos: vec(x, y, z), s, color: tc(c.tint, 0x9ab8ff, 1.8) });
   fx.flash(0.15, [0.7, 0.8, 1.2]);
 };
-const REBOLT = { name: 'rebolt', init(T) { T.dur = 0.5; }, tick(T) { for (let k = 0; k < 3; k++) if (T.once('b' + k, 0.1 + k * 0.12)) skyBolt(T.fx, T.pos.x + T.fx.r(-1, 1), T.pos.y, T.pos.z + T.fx.r(-1, 1), T.p.s, T.p.color, { decal: false, shake: 0.12 }); } };
+const REBOLT = { name: 'rebolt', init(T) { T.dur = 0.5; }, tick(T) { for (let k = 0; k < 3; k++) if (T.once(KEYS[k], 0.1 + k * 0.12)) skyBolt(T.fx, T.pos.x + T.fx.r(-1, 1), T.pos.y, T.pos.z + T.fx.r(-1, 1), T.p.s, T.p.color, { decal: false, shake: 0.12 }); } };
 K.lightning_vortex = {               // holding: a spinning storm of bolts around the caster
   name: 'lightning_vortex', fade: 0.3, group: 'Starcaller',
   init(T) { const c = ctx(T.fx, T.p, T.v.c = {}, 4); T.v.col = tc(c.tint, 0x9ab8ff, 1.7); T.dur = T.p.dur ?? 2; },
@@ -118,7 +118,8 @@ K.lightning_vortex = {               // holding: a spinning storm of bolts aroun
     if (T.stopping) return;
     if (T.rate('b', 9)) { const a = fx.r(0, TAU), r = fx.r(1.5, c.R); skyBolt(fx, p.x + Math.cos(a) * r, gy, p.z + Math.sin(a) * r, 0.55 * c.s, T.v.col, { decal: false, shake: 0.05 }); }
     const n = T.rate('s', 60);
-    for (let i = 0; i < n; i++) fx.spawn(GEN.orbitMote, p.x, gy + fx.r(0.3, 2.5), p.z, fx.r(1, c.R), fx.r(0, TAU), 4, fx.o(c.s, hue(T.v.col, [0, 0, 0])));
+    const vh = T.v.hue || (T.v.hue = hue(T.v.col, [0, 0, 0]));
+    for (let i = 0; i < n; i++) fx.spawn(GEN.orbitMote, p.x, gy + fx.r(0.3, 2.5), p.z, fx.r(1, c.R), fx.r(0, TAU), 4, fx.o(c.s, vh));
   },
 };
 K.black_hole = {                     // Void Rift: dark sphere, accretion swirl, everything is pulled in, then it implodes

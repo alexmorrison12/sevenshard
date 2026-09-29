@@ -82,7 +82,7 @@ export function createAudio(opts = {}) {
     get currentAmbience() { return e.amb ? e.amb.kind : (e._pendingAmb ? e._pendingAmb[0] : null); },
     /** 'high' (default) | 'low' — thinner per-note synthesis for weak CPUs */
     setQuality(q) { e.setQuality(q); },
-    /** Pre-render loop buffers (e.g. behind a loading screen). */
+    /** Pre-bake behind a loading screen: SFX loops, tracks / stingers / songs, ambience kinds (default: SFX loops). */
     prepare(names) { return e.prepare(names); },
     stats() {
       const mu = e.mu, s = e.stats;

@@ -46,7 +46,7 @@ export class Raid extends Track {
   setup(phase, first = false) {
     this.phase = phase; this.sh = phase === 2 ? 1 : 0;
     this.tempo(phase === 2 ? 156 : 150, 4);
-    this.form = first ? ['onslaught', 'chant', 'titan', 'heroes', 'bridge', 'onslaught', 'titan'] : phase === 2 ? ['titan', 'chant', 'onslaught', 'heroes', 'titan', 'bridge'] : ['onslaught', 'heroes', 'chant', 'titan', 'bridge'];
+    this.form = first ? ['onslaught', 'chant', 'titan', 'heroes', 'bridge', 'onslaught', 'titan', 'chant'] : phase === 2 ? ['titan', 'chant', 'onslaught', 'heroes', 'titan', 'bridge', 'chant'] : ['onslaught', 'heroes', 'chant', 'titan', 'bridge', 'chant', 'onslaught'];
     this.ach = this.rng.pick(ONS_CH); this.cch = this.rng.pick(CHANT_CH);
     this.si = 0; this.sb = 0; this.nextPhase = 0;
   }

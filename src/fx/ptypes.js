@@ -98,7 +98,7 @@ export const HOLY = {
   mote: P({ sprite: S.dot, ramp: R.holyWarm, life: [0.8, 1.4], size: [0.05, 0.1], end: 0.4, drag: 0.8, accY: 1.6, turb: 0.3, i: [4, 7] }),
   spark: P({ sprite: S.spark, ramp: R.holyWarm, life: [0.35, 0.6], size: [0.05, 0.08], orient: 'stretch', stretch: 1, drag: 2.5, accY: 1, i: [4, 6] }),
   riseSpark: P({ sprite: S.spark, ramp: R.holyWarm, life: [0.8, 1.4], size: [0.06, 0.1], orient: 'stretch', stretch: 0.35, drag: 0.4, accY: 1.5, turb: 0.2, i: [5, 8] }),
-  flash: P({ sprite: S.flash, ramp: R.wFlash, life: 0.22, size: 2.2, end: 1.5, ease: 2, color: [1, 0.85, 0.45], i: 2.2, noGround: true }),
+  flash: P({ sprite: S.flash, ramp: R.wFlash, life: 0.2, size: 2.0, end: 1.5, ease: 2, color: [1, 0.85, 0.45], i: 1.5, noGround: true }),
   pillar: P({ sprite: S.beam, ramp: R.wInOut, life: 0.7, size: 1.4, end: 0.8, orient: 'axisY', stretch: 6, color: [1, 0.82, 0.4], i: 3 }),
   ring: P({ sprite: S.shock, ramp: R.holy, life: 0.55, size: 0.5, end: 10, ease: 2.5, orient: 'flat', i: 2.4 }),
   ringThin: P({ sprite: S.ring, ramp: R.holy, life: 0.7, size: 0.8, end: 8, ease: 2.2, orient: 'flat', i: 2.6 }),

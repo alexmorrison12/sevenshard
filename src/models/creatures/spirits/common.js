@@ -82,13 +82,13 @@ export class Pile {
       const spread = o.spread ?? 0.3;
       let tx = mix(_b.x, o.cx ?? 0, o.pull ?? 0.35) + (hash(i * 13 + 8, seed) - 0.5) * spread + (per?.dx ?? 0);
       let tz = mix(_b.z, o.cz ?? 0, o.pull ?? 0.35) + (hash(i * 13 + 9, seed) - 0.5) * spread + (per?.dz ?? 0);
-      const ty = -minY * (per?.sink ?? 1) + (per?.lift ?? hash(i * 13 + 10, seed) * (o.stack ?? 0.03));
+      const ty = -minY * (per?.sink ?? 1) + (per?.lift ?? hash(i * 13 + 10, seed) * (o.stack ?? 0.03)) + (o.bury ? minY * 2 * o.bury : 0);
       // pivot = target centroid − q·(centroid − rest pivot)
       _c.set(s.c[0], s.c[1], s.c[2]).sub(P.rest[i]).applyQuaternion(q);
       this.p[i].set(tx, ty, tz).sub(_c);
       const drop = Math.max(0, _b.y - ty);
       const dl = o.delay ?? [0.2, 0.45];
-      this.d[i] = per?.delay ?? mix(dl[0], dl[1], hash(i * 13 + 11, seed));
+      this.d[i] = per?.delay ?? (o.order === 'height' ? mix(dl[0], dl[1], clamp01(s.c[1] / (o.H ?? 2)) * 0.85 + hash(i * 13 + 11, seed) * 0.15) : mix(dl[0], dl[1], hash(i * 13 + 11, seed)));
       this.f[i] = 0.12 + (o.fall ?? 0.32) * Math.sqrt(drop);
       this.hop[i] = (per?.hop ?? o.hop ?? 0.05) * (0.5 + hash(i * 13 + 12, seed));
       this.roll[i] = per?.roll ?? 0;
@@ -205,4 +205,33 @@ export function lathe(profile, seg, pos, normal, spin = 0, disp = null) {
   m.premultiply(new THREE.Matrix4().makeRotationFromQuaternion(new THREE.Quaternion().setFromUnitVectors(Y, new V3(...normal).normalize())));
   m.setPosition(pos[0], pos[1], pos[2]);
   return { g, m };
+}
+
+/**
+ * Faceted boulder (flat shaded): icosphere displaced by position-hashed noise and chiselled by a few random planes, then
+ * scaled by radii [x,y,z], rotated (euler YXZ) and moved to pos. Returns a non-indexed BufferGeometry in model space.
+ */
+export function rockGeo(pos, radii, rot, seed, detail = 1, o = {}) {
+  const g = new THREE.IcosahedronGeometry(1, detail);
+  const pa = g.attributes.position, v = new V3();
+  const cuts = [];
+  const nc = o.cuts ?? 5;
+  for (let i = 0; i < nc; i++) {
+    const u = hash(i * 3 + 1, seed) * 2 - 1, a = hash(i * 3 + 2, seed) * TAU, s = Math.sqrt(1 - u * u);
+    cuts.push([new V3(s * Math.cos(a), u, s * Math.sin(a)), 0.72 + hash(i * 3 + 3, seed) * 0.2]);
+  }
+  const bump = o.bump ?? 0.12;
+  for (let i = 0; i < pa.count; i++) {
+    v.fromBufferAttribute(pa, i);
+    const key = Math.round(v.x * 997) * 7 + Math.round(v.y * 991) * 13 + Math.round(v.z * 983) * 17;
+    let r = 1 + (hash(key, seed) - 0.5) * 2 * bump;
+    v.multiplyScalar(r);
+    for (const [n, d] of cuts) { const k = v.dot(n); if (k > d) v.addScaledVector(n, d - k); }
+    if (o.flatBottom !== undefined && v.y < -o.flatBottom) v.y = -o.flatBottom;
+    pa.setXYZ(i, v.x * radii[0], v.y * radii[1], v.z * radii[2]);
+  }
+  const m = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(rot[0], rot[1], rot[2], 'YXZ')).setPosition(pos[0], pos[1], pos[2]);
+  g.applyMatrix4(m);
+  g.computeVertexNormals(); // non-indexed → flat facets
+  return g;
 }

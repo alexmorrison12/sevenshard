@@ -8,8 +8,8 @@
 // Buses: music, sfx, ambience, ui (ui follows the sfx volume unless set separately).
 import { Kit } from './kit.js';
 import { SFX, ALIAS } from './sfx/index.js';
-import { MusicEngine, TRACKS } from './music/index.js';
-import { Ambience } from './ambience.js';
+import { MusicEngine, TRACKS, STINGERS, SONGS, MUSIC_ALIAS } from './music/index.js';
+import { Ambience, KINDS, AMBIENCE_ALIAS, prepareAmbience } from './ambience.js';
 import { makeNoise, makeIR, safetyCurve, ksBuffer, loopify, clamp, fromDb, driveCurve } from './util.js';
 
 // Internal bus trims (dB) — the designed mix at user volume 1.0.
@@ -279,9 +279,17 @@ export class Engine {
     this.baked.set(name, p);
     return p;
   }
+  // Pre-bake for a loading screen: SFX loop names, music tracks / stingers / songs (their instruments), ambience
+  // kinds. No argument = every SFX loop. Resolves when done (no-op while locked).
   prepare(names) {
     if (!this.ctx) return Promise.resolve();
-    return Promise.all((names || Object.keys(SFX)).filter((n) => SFX[n] && SFX[n].loop).map((n) => this.bake(n)));
+    const list = names || Object.keys(SFX).filter((n) => SFX[n].loop), ps = [];
+    for (const n of list) {
+      if (SFX[n] && SFX[n].loop) ps.push(this.bake(n));
+      else if (TRACKS[n] || STINGERS[n] || SONGS[n] || n in MUSIC_ALIAS) ps.push(this._mus().prepare(n));
+      else if (KINDS[n] || n in AMBIENCE_ALIAS) ps.push(prepareAmbience(this, n));
+    }
+    return Promise.all(ps);
   }
   setQuality(q) { this.lite = q === 'low'; }
   // PeriodicWave cache (per context) from harmonic amplitudes [h1, h2, ...]

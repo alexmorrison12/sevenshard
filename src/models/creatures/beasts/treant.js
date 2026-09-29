@@ -13,7 +13,7 @@ import { sweep, rigid, bez, taper, leafGeo } from '../../kit/geo.js';
 import { col } from '../../kit/sdf.js';
 import { lerp3 } from '../../kit/parts.js';
 import { sstep, clamp01, mix, TAU } from '../../kit/rig.js';
-import { hsh, ov, cancelRestOnMove, prepLegs } from './util.js';
+import { hsh, ov, cancelRestOnMove, prepLegs, surfaceCrack } from './util.js';
 
 const PAL = {
   oak: { bark: 0x4c3c2e, dark: 0x160f0a, ridge: 0x7e6c56, face: 0x6e5a46, moss: 0x587a2a, moss2: 0x8aa83e, leaf: 0x1c3612, leaf2: 0x3c6a20, leaf3: 0x86ac38, glow: 0xffa02a, core: 0xfff0b0, eye: 0xffc040, cap: 0xc03a24, spot: 0xf4ecd8, shelf: 0xd6a060, twig: 0x4a3c2e, bloom: 0xf4e8a8 },
@@ -77,9 +77,9 @@ export const treant = {
     // ---- face (own finer surface): heavy brow, deep sockets, knot nose, hollow mouth, cheekbones
     const f = { group: 2 };
     S.ell('head', [0, 3.0, -0.34], [0.35, 0.33, 0.2], { ...f, k: 0.1, col: c.face, tag: 'face', dtl: barkS });
-    S.ell('head', [0, 3.14, -0.52], [0.36, 0.08, 0.1], { ...f, k: 0.07, col: c.ridge, tag: 'brow', rot: [0.2, 0, 0], dtl: bark });
+    for (const s of [-1, 1]) S.ell('head', [s * 0.15, 3.13, -0.53], [0.2, 0.075, 0.11], { ...f, k: 0.06, col: c.ridge, tag: 'brow', rot: [0.25, 0, -s * 0.38], dtl: bark });
     for (const s of [-1, 1]) {
-      S.sph('head', [s * 0.14, 3.02, -0.54], 0.09, { ...f, k: 0.04, sub: true, col: c.dark, tag: 'socket' });
+      S.sph('head', [s * 0.145, 3.02, -0.55], 0.1, { ...f, k: 0.04, sub: true, col: c.dark, tag: 'socket' });
       S.ell('head', [s * 0.22, 2.88, -0.46], [0.12, 0.1, 0.1], { ...f, k: 0.06, col: c.face, tag: 'cheek', dtl: barkS });
       S.cone('head', [s * 0.3, 3.17, -0.44], [s * 0.5, 3.36, -0.32], 0.075, 0.02, { ...f, k: 0.05, col: c.ridge, tag: 'brow', dtl: bark }); // brow horns
     }
@@ -135,9 +135,7 @@ export const treant = {
     // heartwood glow: fissures on the chest / belly / arms + a lens-shaped split over the heart
     const f1 = Math.abs(Math.sin(ang * 3.2 + y * 2.3 + Math.sin(y * 6.1) * 0.7));
     const fis = (1 - sstep(0.0, 0.05, f1)) * (v.t('trunk') + v.t('rib') * 0.6 + v.t('arm') * 0.5) * sstep(-0.1, 0.4, -nz) * (y > 1.2 && y < 2.8 ? 1 : 0);
-    const hy = (y - 2.3) / 0.38, lens = Math.abs(x) < 0.075 * Math.max(0, 1 - hy * hy) && z < -0.3 ? 1 - sstep(0.4, 1, Math.abs(hy)) : 0;
-    const glow = Math.max(fis * 0.9, lens);
-    if (glow > 0.02) { v.mix(lerp3(col(c.glow), col(c.core), lens * 0.6), glow * 0.95); v.emis = Math.max(v.emis, glow * (1.3 + lens * 1.8)); }
+    if (fis > 0.02) { v.mix(c.glow, fis * 0.6); v.emis = Math.max(v.emis, fis * 0.8); }
     // face: sockets & mouth glow from within
     if (v.t('mouth') > 0.2) { const d = sstep(0.2, 0.8, v.t('mouth')) * sstep(0.1, 0.6, -nz * 0 + ny * -1 + 0.5); v.mix(c.dark, 0.85); v.mix(c.glow, d * 0.9); v.emis = Math.max(v.emis, 2.2 * d); }
     if (v.t('socket') > 0.3) v.mix(c.dark, 0.9);
@@ -150,8 +148,11 @@ export const treant = {
     const twigCol = (p, nn, uv) => lerp3(tw, tk, sstep(0.5, 1, uv[1]) * 0.5 + sstep(0.4, 0.9, Math.sin(uv[1] * 30)) * 0.15);
     // ---- burning knot-hole eyes
     for (const s of [-1, 1]) {
-      acc.add(new THREE.SphereGeometry(0.07, 8, 6), { matrix: new THREE.Matrix4().makeTranslation(s * 0.14, 3.025, -0.5), skin: rigid(b('head')), color: c.eye, emis: 4.5, dtl: [0, 0, 0, 0] });
-      acc.add(new THREE.IcosahedronGeometry(0.032, 0), { matrix: new THREE.Matrix4().makeTranslation(s * 0.135, 3.03, -0.565), skin: rigid(b('head')), color: c.core, emis: 7, dtl: [0, 0, 0, 0] });
+      const em = new THREE.Matrix4().makeTranslation(s * 0.145, 3.02, -0.52).multiply(new THREE.Matrix4().makeRotationZ(s * 0.38)).multiply(new THREE.Matrix4().makeScale(1, 0.55, 0.6));
+      acc.add(new THREE.SphereGeometry(0.085, 8, 6), { matrix: em, skin: rigid(b('head')), color: c.eye, emis: 3.4, dtl: [0, 0, 0, 0] });
+      acc.add(new THREE.IcosahedronGeometry(0.03, 0), { matrix: new THREE.Matrix4().makeTranslation(s * 0.14, 3.02, -0.565), skin: rigid(b('head')), color: c.core, emis: 5, dtl: [0, 0, 0, 0] });
+      // angry V brow ridge (crisper than the SDF can carve at this voxel size)
+      acc.add(sweep(bez([s * 0.03, 3.06, -0.61], [s * 0.2, 3.15, -0.6], [s * 0.42, 3.27, -0.46], 5), taper(5, 0.065, 0.025), { radial: 5, capStart: true }), { skin: rigid(b('head')), color: (pp, nn, uv) => lerp3(col(c.ridge), col(c.dark), sstep(0.2, -0.6, nn.y) * 0.8), dtl: [0, 0.1, 0.3, 0.5] });
     }
     // ---- twig fingers (4 + thumb) on the finger bone: knobbly, tapering, hooked tips
     for (const s of [-1, 1]) {
@@ -190,6 +191,32 @@ export const treant = {
         acc.add(sweep(bez(p0, p1, p2, 5), taper(5, 0.1, 0.018, 0.9), { radial: 4, capStart: true }), { skin: rigid(b('foot' + n)), dtl: [0, 0.1, 0.3, 0.8], color: (pp, nn, uv) => lerp3(lerp3(col(c.bark), tk, uv[1] * 0.5), mo, sstep(0.75, 0.95, nn.y) * 0.5 * (1 - uv[1])) });
       }
     }
+    // ---- heartwood cracks: crisp glowing ribbons on the chest, back, shoulders and upper arms
+    const ck = { core: c.core, edge: c.glow, emis: 2.4 };
+    surfaceCrack(acc, S, [[0.02, 2.76, -0.62], [-0.04, 2.62, -0.64], [0.05, 2.47, -0.64], [-0.03, 2.32, -0.62], [0.04, 2.17, -0.58], [-0.02, 2.02, -0.52], [0.03, 1.86, -0.48]], { ...ck, width: 0.034, seed: 1 });
+    surfaceCrack(acc, S, [[0.05, 2.47, -0.64], [0.12, 2.4, -0.62], [0.2, 2.3, -0.58], [0.27, 2.2, -0.52]], { ...ck, width: 0.022, seed: 2 });
+    surfaceCrack(acc, S, [[-0.03, 2.32, -0.62], [-0.12, 2.26, -0.6], [-0.21, 2.14, -0.55], [-0.28, 2.06, -0.5]], { ...ck, width: 0.022, seed: 3 });
+    surfaceCrack(acc, S, [[0.05, 3.0, 0.58], [-0.05, 2.78, 0.64], [0.06, 2.55, 0.6], [-0.02, 2.3, 0.54], [0.05, 2.05, 0.46]], { ...ck, width: 0.032, seed: 4 });
+    for (const s of [-1, 1]) {
+      surfaceCrack(acc, S, [[s * 0.4, 3.02, 0.12], [s * 0.55, 3.02, 0.05], [s * 0.68, 2.98, 0.08], [s * 0.8, 2.86, 0.06]], { ...ck, width: 0.026, seed: 5 + s });
+      surfaceCrack(acc, S, [[s * 0.8, 2.6, -0.1], [s * 0.86, 2.4, -0.06], [s * 0.9, 2.2, -0.02]], { ...ck, width: 0.02, emis: 1.8, seed: 8 + s });
+    }
+    // ---- bark fissures: dark crisp grooves running up the trunk, legs and upper arms (bark reads at any distance)
+    const fz = { width: 0.03, core: 0x0a0604, edge: c.dark, emis: 0, lift: 0.006 };
+    for (let i = 0; i < 9; i++) {
+      const a0 = (i + 0.5) / 9 * TAU;
+      if (Math.abs(Math.sin(a0 / 2 - Math.PI / 2)) < 0.3) continue; // leave the glowing front clear
+      const pts = [];
+      for (let j = 0; j < 7; j++) { const y = 1.2 + j * 0.27, a = a0 + 0.14 * Math.sin(y * 3.3 + i) + (j - 3) * 0.04; pts.push([Math.sin(a) * 0.9, y, Math.cos(a) * 0.9]); }
+      surfaceCrack(acc, S, pts, { ...fz, seed: 20 + i });
+    }
+    for (const s of [-1, 1]) {
+      for (let k = 0; k < 2; k++) {
+        const o = (k ? 0.5 : -0.4);
+        surfaceCrack(acc, S, [[s * 0.75, 1.32, 0.05 + o * 0.4], [s * 0.78, 1.0, -0.05 + o * 0.4], [s * 0.8, 0.7, -0.1 + o * 0.4], [s * 0.82, 0.42, -0.02 + o * 0.4]], { ...fz, width: 0.026, seed: 40 + k + s });
+      }
+      surfaceCrack(acc, S, [[s * 0.8, 2.85, 0.35], [s * 1.0, 2.55, 0.35], [s * 1.15, 2.25, 0.35]], { ...fz, width: 0.024, seed: 50 + s });
+    }
     // ---- moss beard hanging from the chin
     for (let i = 0; i < 5; i++) {
       const x = (i - 2) * 0.085, L = 0.38 + 0.18 * hsh(i + 30) - Math.abs(i - 2) * 0.06;
@@ -205,18 +232,18 @@ export const treant = {
     branch('crown', [[0.12, 4.15, 0.22], [0.22, 4.48, 0.36], [0.06, 4.72, 0.5]], 0.06);
     // ---- foliage: ~140 small two-sided leaves dressing the dark canopy core, tilted out of the surface (fluffy rim)
     let li = 0;
-    const leaf = leafGeo(1, 1, 0.02, 0, 0.2, { nu: 2, nv: 3, pw: 0.6, tipW: 0.02 }); // unit diamond leaf, 8 tris
+    const leaf = leafGeo(1, 1, 0.02, 0, 0.2, { nu: 2, nv: 3, pw: 0.42, tipW: 0.05 }); // unit leaf, 8 tris
     let area = 0; for (let i = 0; i < LOBES.length; i++) area += LOBES[i][2] * LOBES[i][2];
     const _q = new THREE.Quaternion(), _m = new THREE.Matrix4(), X = new THREE.Vector3(), Y = new THREE.Vector3(), Z = new THREE.Vector3(), UP = new THREE.Vector3(0, 1, 0);
     for (let i = 0; i < LOBES.length; i++) {
       const [bone, C0, r] = LOBES[i];
-      const n = Math.round(150 * r * r / area);
+      const n = Math.round(140 * r * r / area);
       for (let j = 0; j < n; j++, li++) {
         const u = hsh(li * 3 + 1) * TAU, vv = Math.asin(-0.45 + hsh(li * 3 + 2) * 1.45);
         const dir = new THREE.Vector3(Math.cos(u) * Math.cos(vv), Math.sin(vv), Math.sin(u) * Math.cos(vv));
         const pos = new THREE.Vector3(C0[0], C0[1], C0[2]).addScaledVector(dir, r * 0.86);
         if (S.sdf(pos.x, pos.y, pos.z, 3) < -0.09) continue; // buried inside a neighbouring lobe
-        const size = 0.2 + 0.1 * hsh(li + 70);
+        const size = 0.2 + 0.14 * hsh(li + 70);
         // leaf axes: Y along the leaf (down-slope, lifted out of the surface), Z = −front = into the lobe
         Y.set(Math.cos(hsh(li + 5) * TAU), 0, Math.sin(hsh(li + 5) * TAU)).addScaledVector(UP, -1.2).addScaledVector(dir, -dir.dot(Y)).normalize();
         const lift = 0.3 + 0.7 * hsh(li + 33);
@@ -301,8 +328,8 @@ const ACTIONS = {
     P.rot(b.spine, (-0.2 * raise + 0.45 * slam + trem) * w, 0, trem * w);
     P.rot(b.chest, (-0.15 * raise + 0.25 * slam) * w, 0, 0);
     P.rot(b.head, (-0.35 * raise + 0.2 * slam) * w, 0, 0);
-    for (let s = -1; s <= 1; s += 2) armRot(ctl, s, 2.9 * raise + 1.1 * slam + trem * 4, 0.35 * raise + 0.1 * slam, w, 0.25 * raise - 0.2 * slam, 0);
-    ctl.grip = Math.max(ctl.grip, (0.2 * raise + 1 * slam) * w);
+    for (let s = -1; s <= 1; s += 2) armRot(ctl, s, 2.35 * raise + 1.1 * slam + trem * 4, 0.3 * raise + 0.1 * slam, w, 0.6 * raise - 0.25 * slam, -0.3 * raise);
+    ctl.grip = Math.max(ctl.grip, (-0.6 * raise * (1 - slam) + 1 * slam) * w);
     ctl.jaw = Math.max(ctl.jaw, (0.6 * raise + 0.8 * slam) * w);
     ctl.glow = mix(ctl.glow, 1 + 2.4 * sstep(0.05, 0.55, k) * (1 - sstep(0.62, 0.8, k)), w);
     ctl.charge = Math.max(ctl.charge, sstep(0.05, 0.5, k) * (1 - sstep(0.56, 0.62, k)) * w);
@@ -466,7 +493,7 @@ const SPEC = {
   },
   arm: { swing: 0.22, out: 0.12, elbow: 0.25, runSwing: 0.45, runOut: 0.1, runElbow: 0.4, combatUp: 0.35, combatElbow: 0.35, combatOut: 0.15 },
   lean: { walk: 0.06, run: 0.14, combat: 0.1 }, twist: 0.1, waddle: 0.06, crouch: 0.06, breathe: 0.01,
-  fidgets: [{ name: 'idle_alt', w: 1 }], fidgetGap: 7, chargeK: 0.3,
+  fidgets: [{ name: 'idle_alt', w: 1 }], fidgetGap: 7, chargeK: 0.08,
   pose(ctl) {
     cancelRestOnMove(ctl);
     const P = ctl.pose, b = ctl.b;

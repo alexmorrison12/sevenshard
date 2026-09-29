@@ -26,7 +26,7 @@ export function supportEvent(now = Date.now()) {
 const ENERGY_RATE = 0.465;
 export const TRANSFER = {
   from: 'vanguard', to: 'horned', minHone: 12,
-  cost: { weapon: { horn_shard: 10, gold: 300, shards: 6000 }, armor: { horn_shard: 6, gold: 150, shards: 3500 } },
+  cost: { weapon: { horn_shard: 10, gold: 200, shards: 4000 }, armor: { horn_shard: 6, gold: 100, shards: 2500 } },
 };
 
 // ------------------------------------------------------------------------------------------------ chance & cost

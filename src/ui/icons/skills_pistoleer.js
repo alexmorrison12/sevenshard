@@ -11,14 +11,15 @@ const at = (x, px, py, rot, s, fn, o) => { x.save(); x.translate(px, py); x.rota
 const tracer = (x, x0, y0, x1, y1, col = ORNG) => streak(x, x0, y0, x1, y1, 1.6, col, { bias: 2 });
 
 export const PISTOLEER = {
-  quick_shot(x, R) {
+  quick_shot(x, R) { // backstep and fire
     backdrop(x, R, SMOKE, { angle: 0 });
-    speedLines(x, R, 12, [40, 20, 100, 90], PI, '#e0c0a0', { len: 30, w: 1.4, a: 0.4 });
+    speedLines(x, R, 14, [0, 24, 50, 90], PI, '#e0c0a0', { len: 26, w: 1.4, a: 0.45 });
     smoke(x, R, 6, 70, 40, 16, '#6a6058', 0.35, 10);
-    glow(x, 70, 42, 30, ORNG, 0.6);
-    at(x, 34, 56, -0.12, 1.15, pistol, {});
-    at(x, 74, 43, -0.12, 1, (xx) => muzzle(xx, R, 0.9, ORNG));
-    tracer(x, 76, 40, 98, 34); tracer(x, 78, 48, 98, 46);
+    glow(x, 70, 40, 30, ORNG, 0.65);
+    for (const [dx, a] of [[-22, 0.14], [-11, 0.3]]) { x.globalAlpha = a; at(x, 38 + dx, 56, -0.14, 1.2, pistol, {}); }
+    x.globalAlpha = 1; at(x, 38, 56, -0.14, 1.2, pistol, {});
+    at(x, 79, 42, -0.14, 1, (xx) => muzzle(xx, R, 0.95, ORNG));
+    tracer(x, 82, 38, 100, 34); tracer(x, 84, 45, 100, 44); tracer(x, 80, 50, 98, 56);
   },
   spiral_tracker(x, R) {
     backdrop(x, R, ['#7a5230', '#261608', '#050302'], { angle: -0.6 });
@@ -51,24 +52,22 @@ export const PISTOLEER = {
     embers(x, R, 10, 60, 40, 30, [ORNG, HOT]);
   },
   dual_buckshot(x, R) {
-    backdrop(x, R, ['#8a3a1e', '#2a0e06', '#060201'], { angle: 0 });
-    glow(x, 66, 46, 40, '#ff5a1e', 0.65);
-    // pellet cone
-    for (let i = 0; i < 16; i++) { const a = -0.45 + R() * 0.9 - 0.12, d = 30 + R() * 34, px = 54 + Math.cos(a) * d, py = 46 + Math.sin(a) * d; tracer(x, 54 + Math.cos(a) * (d - 12), 46 + Math.sin(a) * (d - 12), px, py, '#ff7a30'); x.fillStyle = HOT; circle(x, px, py, 0.9); x.fill(); }
-    at(x, 16, 60, -0.12, 0.9, shotgun, {});
-    at(x, 58, 48, -0.12, 1.1, (xx) => muzzle(xx, R, 1, '#ff5a1e'));
-    smoke(x, R, 5, 30, 40, 14, '#5a4a40', 0.3, 8);
+    backdrop(x, R, ['#8a3a1e', '#2a0e06', '#060201'], { angle: -0.5 });
+    glow(x, 70, 36, 40, '#ff5a1e', 0.65);
+    for (let i = 0; i < 18; i++) { const a = -0.55 + (R() - 0.5) * 0.9, d = 22 + R() * 30, px = 60 + Math.cos(a) * d, py = 48 + Math.sin(a) * d; tracer(x, 60 + Math.cos(a) * (d - 12), 48 + Math.sin(a) * (d - 12), px, py, '#ff7a30'); x.fillStyle = HOT; circle(x, px, py, 0.9); x.fill(); }
+    at(x, 26, 76, -0.55, 0.88, shotgun, {});
+    at(x, 61, 49, -0.55, 1.05, (xx) => muzzle(xx, R, 1, '#ff5a1e'));
+    smoke(x, R, 5, 40, 40, 14, '#5a4a40', 0.3, 8);
   },
   shotgun_rapid_fire(x, R) {
     backdrop(x, R, ['#7a2e1a', '#240a04', '#050201'], { angle: 0 });
-    glow(x, 70, 50, 38, '#ff5a1e', 0.6);
-    at(x, 58, 44, -0.08, 0.75, (xx) => muzzle(xx, R, 1, '#ff6a2a'));
-    at(x, 64, 52, 0.05, 0.9, (xx) => muzzle(xx, R, 1, '#ff5a1e'));
-    at(x, 58, 60, 0.15, 0.7, (xx) => muzzle(xx, R, 1, '#ff6a2a'));
-    at(x, 14, 64, -0.05, 0.95, shotgun, {});
-    // ejected shells
-    for (const [px, py, a] of [[26, 26, 0.6], [36, 18, -0.4], [18, 36, 1.2]]) { x.save(); x.translate(px, py); x.rotate(a); x.beginPath(); x.roundRect(-4, -2, 8, 4, 1); x.fillStyle = lg(x, 0, -2, 0, 2, [[0, '#ff6a5a'], [1, '#6a0a0a']]); x.fill(); x.fillStyle = metalLG(x, 2, -2, 4, 2, 'brass'); x.fillRect(2, -2, 2.4, 4); x.strokeStyle = 'rgba(0,0,0,.8)'; x.lineWidth = 0.5; x.strokeRect(-4, -2, 8.4, 4); x.restore(); }
-    smoke(x, R, 5, 40, 30, 16, '#5a4a40', 0.3, 8);
+    glow(x, 76, 50, 36, '#ff5a1e', 0.6);
+    at(x, 70, 42, -0.1, 0.72, (xx) => muzzle(xx, R, 1, '#ff6a2a'));
+    at(x, 76, 52, 0.04, 0.92, (xx) => muzzle(xx, R, 1, '#ff5a1e'));
+    at(x, 70, 62, 0.16, 0.7, (xx) => muzzle(xx, R, 1, '#ff6a2a'));
+    at(x, 34, 60, -0.04, 0.9, shotgun, {});
+    for (const [px, py, a] of [[40, 24, 0.6], [52, 16, -0.4], [30, 34, 1.2], [60, 28, 0.2]]) { x.save(); x.translate(px, py); x.rotate(a); x.beginPath(); x.roundRect(-4, -2, 8, 4, 1); x.fillStyle = lg(x, 0, -2, 0, 2, [[0, '#ff6a5a'], [1, '#6a0a0a']]); x.fill(); x.fillStyle = metalLG(x, 2, -2, 4, 2, 'brass'); x.fillRect(2, -2, 2.4, 4); x.strokeStyle = 'rgba(0,0,0,.8)'; x.lineWidth = 0.5; x.strokeRect(-4, -2, 8.4, 4); x.restore(); }
+    smoke(x, R, 5, 50, 30, 16, '#5a4a40', 0.3, 8);
   },
   last_request(x, R) {
     backdrop(x, R, ['#b0481a', '#3a1206', '#070201']);
@@ -89,22 +88,22 @@ export const PISTOLEER = {
     embers(x, R, 16, 56, 46, 40, ['#ff7a2a', '#ffd060', HOT]);
   },
   focused_shot(x, R) {
-    backdrop(x, R, ['#2e4a60', '#0c1620', '#020406'], { angle: 0 });
-    glow(x, 80, 38, 26, ICE, 0.7);
-    streak(x, 58, 38, 100, 38, 1.4, ICE, { even: true });
-    x.strokeStyle = rgba(ICE, 0.9); x.lineWidth = 1.2; circle(x, 84, 38, 7); x.stroke(); circle(x, 84, 38, 1.5); x.stroke();
-    x.beginPath(); x.moveTo(84, 27); x.lineTo(84, 33); x.moveTo(84, 43); x.lineTo(84, 49); x.stroke();
-    at(x, 34, 52, -0.18, 0.9, rifle, { lens: ICE });
-    for (let i = 0; i < 3; i++) runeCircle(x, R, 62 + i * 6, 38 + (i - 1) * 0, 6 - i, ICE, { sy: 1, points: 5, w: 0.6, glowA: 0.2 });
+    backdrop(x, R, ['#2e4a60', '#0c1620', '#020406'], { angle: -0.5 });
+    glow(x, 84, 30, 26, ICE, 0.7);
+    streak(x, 72, 44, 100, 28, 1.3, ICE, { even: true });
+    x.strokeStyle = rgba(ICE, 0.9); x.lineWidth = 1.2; circle(x, 86, 31, 7); x.stroke(); circle(x, 86, 31, 1.5); x.stroke();
+    x.beginPath(); x.moveTo(86, 20); x.lineTo(86, 26); x.moveTo(86, 36); x.lineTo(86, 42); x.moveTo(75, 31); x.lineTo(81, 31); x.moveTo(91, 31); x.lineTo(97, 31); x.stroke();
+    at(x, 26, 70, -0.5, 0.8, rifle, { lens: ICE });
+    for (let i = 0; i < 3; i++) runeCircle(x, R, 58 + i * 5, 51 - i * 2.7, 5.4 - i, ICE, { sy: 1, points: 5, w: 0.6, glowA: 0.2 });
   },
   perfect_shot(x, R) {
     backdrop(x, R, ['#2a5a80', '#0a1a2c', '#020408'], { angle: 0 });
-    glow(x, 60, 42, 50, ICE, 0.6);
-    add(x); x.fillStyle = lg(x, 0, 34, 0, 50, [[0, rgba(ICE, 0)], [0.3, rgba(ICE, 0.7)], [0.5, '#ffffff'], [0.7, rgba(ICE, 0.7)], [1, rgba(ICE, 0)]]); poly(x, [[46, 38], [104, 30], [104, 54], [46, 46]]); x.fill(); norm(x);
-    ring(x, 58, 42, 5, 14, ICE, 1.6);
-    ring(x, 72, 42, 4, 12, ICE, 1.2, 0.8);
-    at(x, 24, 50, -0.1, 0.82, rifle, { lens: ICE });
-    sparkle(x, 50, 42, 13, '#ffffff');
+    glow(x, 64, 46, 50, ICE, 0.6);
+    add(x); x.fillStyle = lg(x, 0, 38, 0, 58, [[0, rgba(ICE, 0)], [0.3, rgba(ICE, 0.7)], [0.5, '#ffffff'], [0.7, rgba(ICE, 0.7)], [1, rgba(ICE, 0)]]); poly(x, [[68, 44], [104, 34], [104, 60], [68, 50]]); x.fill(); norm(x);
+    ring(x, 72, 47, 4, 13, ICE, 1.6);
+    ring(x, 84, 46, 3.4, 11, ICE, 1.2, 0.8);
+    at(x, 28, 62, -0.2, 0.74, rifle, { lens: ICE });
+    sparkle(x, 68, 47, 13, '#ffffff');
   },
   target_down(x, R) {
     backdrop(x, R, ['#4a3a30', '#16100c', '#040302']);

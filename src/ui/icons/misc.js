@@ -180,10 +180,10 @@ const STATUS = {
     for (const [px, py, a] of [[30, 30, -0.6], [72, 70, 0.8]]) { x.save(); x.translate(px, py); x.rotate(a); poly(x, [[-4, -3], [5, -2], [3, 4], [-3, 3]]); x.fillStyle = '#8a92a0'; x.fill(); outline(x, INK, 0.8); x.restore(); }
   },
   weaken(x, R) {
-    sBg(x, R, '#a04a8a');
-    at(x, 34, 82, 0.62, 0.9, greatsword, { metal: 'iron' });
-    x.fillStyle = 'rgba(40,10,40,.35)'; x.fillRect(0, 0, 100, 100);
-    arrowUp(x, 74, 64, 1.9, '#e070c0', { down: true });
+    sBg(x, R, '#c050a0');
+    at(x, 30, 84, 0.62, 1, greatsword, { metal: 'steel' });
+    glowPath(x, xx => poly(xx, [[44, 34], [50, 42], [46, 48], [52, 56]], false), '#ff80d0', 1.4);
+    arrowUp(x, 74, 64, 2, '#ff70c0', { down: true });
   },
   def_up(x, R) { sBg(x, R, '#3a9aff'); heaterPath(x, 44, 54, 1); fillSym(x, '#9ad0ff', 2.2); heaterPath(x, 44, 54, 0.7); x.strokeStyle = rgba('#ffffff', 0.7); x.lineWidth = 1.6; x.stroke(); arrowUp(x, 76, 34, 1.7, '#9ae0ff'); },
   regen(x, R) {

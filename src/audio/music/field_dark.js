@@ -85,7 +85,8 @@ export class FieldDark extends Track {
           this.pad(I.horns, t, B * 2, ch, { n: 2, lo: 48, hi: 60, vel: 0.46, art: 'swell', a: 1.5, key: 'hornL' });
         }
         I.tkm.hit(t, 0.55); I.tkm.hit(this.bt(t, 2), 0.4); if (sb % 2) I.tkm.hit(this.bt(t, 3.5), 0.35);
-        if (sb === 2 || sb === 6) this.line(I.horn, t, [{ b: 0, d: 1.5, m: 60 }, { b: 1.5, d: 0.5, m: 61 }, { b: 2, d: 2, m: 60 }], { vel: 0.5 });
+        // the half-step menace (root → b2 → root) on the chord's own root, so it bites without clashing
+        if (sb === 2 || sb === 6) { const rm = 60 + ((c.root % 12) + 12) % 12 - (c.root % 12 > 6 ? 12 : 0); this.line(I.horn, t, [{ b: 0, d: 1.5, m: rm }, { b: 1.5, d: 0.5, m: rm + 1 }, { b: 2, d: 2, m: rm }], { vel: 0.5 }); }
         if (sb === 7) { I.cym.swell(this.bt(t, 1), B - s, 0.45); I.timp.roll(this.bt(t, 2), 36, B * 0.5 - 0.05, 0.05, 0.6, { hit: false }); }
         break;
       }

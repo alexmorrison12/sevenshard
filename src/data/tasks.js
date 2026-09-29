@@ -3,7 +3,7 @@
 //   { id, name, desc ({n} = need), events: [event], match: { key: value | [values] }, need, amount: 'count'|'dist'|1, reward, rep }
 const D = (id, name, desc, events, match, need, reward, amount = 'count') => ({ id, name, desc, events: [].concat(events), match, need, amount, reward, rep: 100 });
 const DAILY_REWARD = { silver: 35000, shards: 1500, leapstone: 6 };
-const DAILY_REWARD_GOLD = { silver: 25000, gold: 30, leapstone: 4 };
+const DAILY_REWARD_GOLD = { silver: 25000, gold: 60, leapstone: 4 };
 export const DAILY_TASKS = [
   D('slay_demons', 'Demon Culling', 'Defeat {n} demons.', 'kill', { family: 'demon' }, 60, DAILY_REWARD),
   D('slay_beasts', 'Pest Control', 'Defeat {n} beasts in the fields.', 'kill', { family: 'beast' }, 40, DAILY_REWARD),

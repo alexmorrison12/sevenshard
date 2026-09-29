@@ -449,8 +449,8 @@ const M = {
   },
   // ---- extra materials & consumables (src/data/items.js)
   horn_shard(x, R) {
-    glow(x, 50, 56, 36, '#ff3a3a', 0.45);
-    x.save(); x.translate(26, 84); x.rotate(-0.75);
+    glow(x, 50, 56, 40, '#ff3a3a', 0.5);
+    x.save(); x.translate(18, 88); x.rotate(-0.78); x.scale(1.3, 1.3);
     ribbon(x, bez([0, 0], [10, -6], [30, -8], [62, 4]), t => 22 * (1 - t * 0.85) + 1, 24);
     x.fillStyle = lg(x, 0, -12, 62, 8, [[0, '#4a2a1e'], [0.35, '#b8a288'], [0.8, '#f0e4d0'], [1, '#ffffff']]); x.fill(); outline(x, INK, 1.2);
     x.strokeStyle = 'rgba(70,40,20,.6)'; x.lineWidth = 0.8; for (let i = 1; i < 7; i++) { const p = bez([0, 0], [10, -6], [30, -8], [62, 4])(i / 8), w = (22 * (1 - (i / 8) * 0.85) + 1) / 2; x.beginPath(); x.moveTo(p[0] - 1, p[1] - w); x.lineTo(p[0] + 1, p[1] + w); x.stroke(); }

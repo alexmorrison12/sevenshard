@@ -80,8 +80,9 @@ export class AllyAI {
     if (boss && boss.data.destruction && !boss.data.destruction.broken && Math.random() < 0.3 * this.p.skill) { const i = kit.items.findIndex(it => it.id === 'destruction_bomb' && it.count > 0 && it.cd <= 0); if (i >= 0 && dist < 10) { kit.useItem(i, this.aim); return; } }
     // identity & awakening
     const idh = kit.hudIdentity();
-    if (idh?.ready && !idh.active && Math.random() < 0.3) { if (kit.identityKey('z', this.aim)) return; }
+    if (idh?.ready && !idh.active && idh.kind !== 'stance' && Math.random() < 0.3) { if (kit.identityKey('z', this.aim)) return; }
     if (idh?.orbs >= 2 && Math.random() < 0.2) { if (kit.identityKey('x', this.aim)) return; }
+    if (idh?.kind === 'stance' && idh.ready && !idh.active && Math.random() < 0.4) { if (kit.identityKey('x', this.aim)) return; }
     if (boss && kit.awakenUses > 0 && u.cdLeft(kit.awaken.id) <= 0 && (boss.data.groggy || boss.hp / boss.hpMax < 0.5) && Math.random() < 0.05 && dist < 8) { kit.awakenCast(this.aim); return; }
     // rotation
     this.slotOrder.sort(() => Math.random() - 0.5);

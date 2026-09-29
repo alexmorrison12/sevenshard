@@ -52,14 +52,14 @@ export class Stronghold extends Track {
       case 'A1': {
         this.line(I.flute, t, this.barSlice(HEARTH, sb, 3), { vel: 0.52 });
         this.pick(t, c, 0.44);
-        if (sb % 4 === 0) this.pad(I.pad, t, B * 4, c, { n: 3, lo: 51, hi: 63, vel: 0.26, a: 1.5, r: 1.5, art: 'pad' });
+        this.pad(I.pad, t, B, c, { n: 3, lo: 51, hi: 63, vel: 0.26, a: sb === 0 ? 1.5 : 0.6, r: 1.2, art: 'pad' }); // follows every chord
         if (sb === 15) I.harp.gliss(this.bt(t, 1), this.tones(c, 63, 8), s * 1.5, 0.28);
         break;
       }
       case 'A2': {
         this.line(I.clar, t, this.barSlice(HEARTH, sb, 3), { vel: 0.55, tr: -12 });
         this.arp(I.harp, t, 3, c, { pat: [0, 1, 2, 3, 2, 1], lo: 51, vel: 0.26 });
-        if (sb % 2 === 0) { this.pad(I.str, t, B * 2, c, { n: 3, lo: 55, hi: 67, vel: 0.26, a: 0.8, r: 1 }); this.pad(I.horns, t + 0.05, B * 2, c, { n: 2, lo: 51, hi: 60, vel: 0.26, a: 1, key: 'horns' }); }
+        this.pad(I.str, t, B, c, { n: 3, lo: 51, hi: 63, vel: 0.26, a: 0.5, r: 0.8 }); if (sb % 2 === 0) this.pad(I.horns, t + 0.05, B, c, { n: 2, lo: 48, hi: 58, vel: 0.26, a: 0.6, key: 'horns' });
         I.pizz.note(t, this.bassPitch(c, 39, 51, 'pz'), s, 0.4, { art: 'pizz' });
         break;
       }
@@ -74,7 +74,7 @@ export class Stronghold extends Track {
       }
       case 'window': {
         this.line(I.oboe, t, this.barSlice(S.mel, sb, 3), { vel: 0.4, hum: 8 });
-        if (sb % 2 === 0) { this.pad(I.pad, t, B * 2, c, { n: 3, lo: 53, hi: 67, vel: 0.3, a: 1.2, r: 1.8, art: 'pad' }); I.low.note(t, this.bassPitch(c, 31, 43, 'lb'), B * 2, 0.28, { a: 1, r: 1.5 }); }
+        this.pad(I.pad, t, B, c, { n: 3, lo: 53, hi: 65, vel: 0.3, a: sb === 0 ? 1.2 : 0.6, r: 1.5, art: 'pad' }); I.low.note(t, this.bassPitch(c, 31, 43, 'lb'), B, 0.28, { a: 0.6, r: 1.2 });
         if (this.rng.chance(0.55)) { const tn = this.tones(c, 75, 5); I.cel.note(this.bt(t, this.rng.pick([0.5, 1, 1.5, 2])), this.rng.pick(tn), 1, 0.28); }
         if (this.rng.chance(0.5)) this.arp(I.harp, t, 3, c, { pat: [0, 2, 4], step: 1, lo: 51, vel: 0.2, len: 3 });
         break;

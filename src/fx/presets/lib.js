@@ -10,6 +10,9 @@ import { shockwave, decal, explosion, meteorImpact, hit, burst, slash, angRad } 
 export { S, R, P, GEN, PHYS, FIRE, FROST, HOLY, STORM, CHI, DARK, ARC, HEAL, MUSIC, WATER, POI, CRIM, AMB, TAU, UP, col, hue, v3, shockwave, decal, explosion, meteorImpact, hit, burst, slash, angRad };
 
 const _v = new THREE.Vector3(), _w = new THREE.Vector3();
+/** precomputed task event keys (no per-frame string building): T.once(KEYS[i], t) */
+export const KEYS = Array.from({ length: 64 }, (_, i) => 'k' + i);
+export const KEYS2 = Array.from({ length: 64 }, (_, i) => 'q' + i);
 
 /**
  * Parse common preset params into a context object (fields reused — copy what you keep).
@@ -83,9 +86,9 @@ export function groundPulse(fx, x, y, z, R, tint, k = 1) {
 export function lightPillar(fx, x, y, z, R, H, c, dur = 0.9, style = 0, delay = 0) {
   fx.meshes.pillars.spawn(x, y, z, R, H, dur, style, c, 0.08, 1, delay);
   const p = vec(x, y, z);
-  const o = fx.o(R / 0.8, hue(c, [0, 0, 0])); o.dt = delay;
+  const o = fx.o(Math.min(R / 0.8, 2.5), hue(c, [0, 0, 0])); o.dt = delay; o.i = 0.55;
   fx.spawn(GEN.flatGlow, x, y + 0.06, z, 0, 0, 0, o);
-  fx.spawn(GEN.flash, x, y + 1, z, 0, 0, 0, o);
+  o.i = 0.7; fx.spawn(GEN.glowFade, x, y + 1, z, 0, 0, 0, o);
   return p;
 }
 export { _v as tmpV };

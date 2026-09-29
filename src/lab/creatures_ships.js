@@ -34,12 +34,27 @@ const list = [];   // { s, x, z, heading }
 const api = (window.__ships = { lab, list, state, SHIPS });
 
 function clear() { for (const it of list) it.s.dispose(); list.length = 0; }
+// placeholder 1.85 m captain on the helm socket + muzzle markers (toggle: captain=0, markers=1)
+function dressShip(s) {
+  if (Q.get('captain') !== '0') {
+    const g = new THREE.Group(), m = new THREE.MeshLambertMaterial({ color: 0x8a2a2a }), sk = new THREE.MeshLambertMaterial({ color: 0xe0b090 });
+    const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.24, 1.0, 4, 8), m); body.position.y = 0.95; g.add(body);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.15, 12, 8), sk); head.position.y = 1.7; g.add(head);
+    g.traverse(o => { if (o.isMesh) o.castShadow = true; });
+    s.sockets.helm.add(g);
+  }
+  if (Q.get('markers') === '1') for (const k of ['cannonsL', 'cannonsR']) for (const o of s.sockets[k]) {
+    const a = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.6, 6), new THREE.MeshBasicMaterial({ color: k === 'cannonsL' ? 0xff3030 : 0x30ff30 }));
+    a.rotation.x = -Math.PI / 2; a.position.z = -0.3; o.add(a);   // cone tip along local −Z (out of the muzzle)
+  }
+}
 function spawn() {
   clear();
   const t0 = performance.now();
   const types = type === 'fleet' ? Object.keys(SHIPS) : [type];
   types.forEach((t, i) => {
     const s = createShip(t);
+    dressShip(s);
     const x = type === 'fleet' ? (i - (types.length - 1) / 2) * 16 : 0;
     s.root.position.set(x, 0, 0);
     lab.scene.add(s.root);

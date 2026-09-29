@@ -1,7 +1,7 @@
 // Ambient loops (torch, brazier, campfire, fountain, forge sparks) and combat utility presets (counter hit, stagger
 // break, part break, level up, revive, spawn puff, footstep dust, spike line, ground zones zone_<kind>).
 import * as THREE from 'three';
-import { ctx, tc, vec, groundSmash, along, risingRing, groundPulse, lightPillar, GEN, PHYS, FIRE, FROST, HOLY, STORM, DARK, ARC, HEAL, WATER, POI, CRIM, AMB, MUSIC, TAU, UP, hue, shockwave, decal, hit, explosion, S, R, P, v3 } from './lib.js';
+import { KEYS, ctx, tc, vec, groundSmash, along, risingRing, groundPulse, lightPillar, GEN, PHYS, FIRE, FROST, HOLY, STORM, DARK, ARC, HEAL, WATER, POI, CRIM, AMB, MUSIC, TAU, UP, hue, shockwave, decal, hit, explosion, S, R, P, v3 } from './lib.js';
 
 const K = {};
 const _a = new THREE.Vector3();
@@ -153,7 +153,6 @@ K.spike_line = {                     // boss special: a line of sequential circl
     }
   },
 };
-const KEYS = Array.from({ length: 32 }, (_, i) => 'k' + i);
 
 // ------------------------------------------------------------------ ground zones (fx.play('zone_<kind>', { pos, r, dur }))
 function zone(kind, decalKind, col, emit) {

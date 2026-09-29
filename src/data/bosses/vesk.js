@@ -6,7 +6,7 @@ import { shared, charge, twinHowl, crossfire, onStart, onBossDeath, partMech, HO
 
 export default {
   id: 'vesk', model: 'vesk', name: 'Vesk', title: 'the Void Hound', kind: 'legion', element: 'void',
-  radius: 2.2, height: 4.1, hp: 33000, atk: 0.15, bars: 90, speed: 5.6, turnRate: 4.5, enrage: 600,
+  radius: 2.2, height: 4.1, hp: 33000, atk: 0.16, bars: 90, speed: 5.6, turnRate: 4.5, enrage: 600,
   music: 'boss_hounds', arena: 'kennels', anims: HOUND_ANIMS,
   moves: {
     ...shared,

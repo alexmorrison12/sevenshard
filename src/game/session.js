@@ -20,6 +20,7 @@ import { refFor } from './ai/mob.js';
 import { AllyAI } from './ai/ally.js';
 if (typeof window !== 'undefined') window.__AllyAI = AllyAI;
 import { dayId, fmt, uid } from '../core/util.js';
+import { exportCode, importCode } from './save.js';
 import { openLobby, NetBadge } from '../net/lobby.js';
 import { CITY_NPCS } from '../data/npcs.js';
 import { Emitter } from '../core/events.js';
@@ -40,9 +41,10 @@ const NEWS = [
 
 export class Session {
   constructor() {
-    this.game = new Game({ quality: q.q || 'high' });
+    const phone = matchMedia?.('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 820;
     this.account = Account.load();
-    this.game.renderer.setQuality(this.account.settings.quality || q.q || 'high');
+    if (!this.account.data.settings?.qualityChosen && phone) this.account.settings.quality = 'medium';
+    this.game = new Game({ quality: q.q || this.account.settings.quality || 'high' });
     equip(this.game, { onAction: (t, p) => this.onAction(t, p) });
     this.ui = this.game.ui; this.game.session = this;
     this.stage = new MenuStage(this.game);
@@ -212,7 +214,8 @@ export class Session {
   spawnMe(at) {
     const c = this.heroChar(this.char);
     const st = heroStats(c, { rosterLevel: this.account.roster.level });
-    const kit = this.game.spawnHero({ ...c, gear: { tier: gearTier(c) }, weapon: { tier: gearTier(c), hone: c.equip.weapon?.hone || 0 } }, st, at || { x: 0, z: 0 });
+    const look = { tier: c.gear?.lookTier ?? gearTier(c), dye: c.gear?.dye || null };
+    const kit = this.game.spawnHero({ ...c, gear: look, weapon: { tier: gearTier(c), hone: c.equip.weapon?.hone || 0 } }, st, at || { x: 0, z: 0 });
     kit.items = (c.items || []).map(it => ({ id: it.id, count: Math.min(it.count, this.account.count(it.id) || it.count), cd: 0 }));
     kit.u.data.title = c.title;
     this.game.player.setMoveButton(this.account.settings.moveButton || 'right');
@@ -335,6 +338,7 @@ export class Session {
     switch (action) {
       case 'content': return this.contentMenu('chaos');
       case 'honing': return this.honingMenu();
+      case 'partyfinder': return this.menu('partyfinder');
       case 'shop:general': this.vendorOpen = { ...this.vendorData('general', n), kind: 'general' }; return this.ui.open('vendor', this.vendorOpen);
       case 'tasks': return this.ui.toast('Wayfarer’s Tasks refresh daily at 10:00 UTC.', 'info');
       default: this.ui.toast(`${n.name}: this service opens soon.`, 'info');
@@ -537,7 +541,7 @@ export class Session {
   }
   setting(key, v) {
     const s = this.account.settings;
-    if (key === 'quality') { s.quality = v; this.game.renderer.setQuality(v); }
+    if (key === 'quality') { s.quality = v; s.qualityChosen = true; this.game.renderer.setQuality(v); }
     else if (['master', 'music', 'sfx', 'ambience'].includes(key)) { s[key] = v; this.applyVolumes(); }
     else if (key === 'moveButton') { s.moveButton = v; this.game.player?.setMoveButton(v); }
     else if (key === 'cameraShake') { s.shake = v; }
@@ -548,6 +552,8 @@ export class Session {
     this.ui.close('gamemenu');
     if (id === 'settings') return this.openSettings();
     if (id === 'host') { if (!this.game.net) { this.hostMode = true; this.startHosting(); } return; }
+    if (id === 'export') { this.account.save(true); exportCode(this.account.data).then(code => { navigator.clipboard?.writeText(code).then(() => this.ui.toast('Save code copied to the clipboard. Paste it into Import on another browser.', 'success'), () => this.ui.prompt({ title: 'Your save code', text: 'Copy this code:', value: code })); }); return; }
+    if (id === 'import') { this.ui.prompt({ title: 'Import a save', text: 'Paste a SEVENSHARD save code. This replaces the roster in this browser.', placeholder: 'SSZ1…', maxLength: 2000000 }).then(async code => { if (!code) return; try { const data = await importCode(code); if (!data?.roster || !Array.isArray(data.chars)) throw new Error('bad'); this.account.data = data; this.account.migrate(); this.account.save(true); this.ui.toast('Save imported. Welcome back!', 'success'); this.leaveWorld(); await this.backdrop(); this.charSelect(); } catch { this.ui.toast('That doesn\u2019t look like a SEVENSHARD save code.', 'error'); } }); return; }
     if (id === 'charselect' || id === 'logout') { this.account.save(true); this.leaveWorld(); return this.backdrop().then(() => this.charSelect()); }
     if (id === 'title') { this.account.save(true); this.leaveWorld(); return this.backdrop().then(() => this.title()); }
   }
@@ -628,5 +634,5 @@ export class Session {
 }
 const SERVICE_LABELS = { honing: 'Hone my gear', market: 'Browse the market', storage: 'Open roster storage', guild: 'Guild services', cards: 'Cards & engravings', 'shop:general': 'Browse goods', songs: 'Learn songs', pvp: 'Enter the Proving Grounds', sail: 'Set sail', stronghold: 'Ferry to Brightwater Isle', tasks: 'Read the notices', gems: 'Gems', wardrobe: 'Wardrobe', mounts: 'Mounts', content: 'Open the Rift Nexus', mail: 'Read mail', partyfinder: 'Find a party', story: 'Ask about the Shards', rapport: null };
 const TIPS = ['Hit a boss while it glows blue with a counter skill to stun it.', 'Stand behind bosses: Back Attack skills deal more damage from behind.', 'Press Space to dash through danger. Knocked down? Space stands you back up.', 'Artisan’s Energy fills with every failed honing attempt. At 100% success is guaranteed.', 'Supports decide raids. Stay close to your Songweaver and Oathkeeper.', 'The Pips hid 120 seeds across Solmara. Some are in plain sight.', 'Rest bonus builds up for dailies you skip. Your chaos rewards double while it lasts.'];
-const gameMenuItems = () => [{ id: 'host', label: 'Play Together: Host', glyph: 'users' }, { id: 'settings', label: 'Settings', glyph: 'gear' }, { id: 'charselect', label: 'Character Select', glyph: 'user' }, { id: 'title', label: 'Title Screen', glyph: 'door' }];
+const gameMenuItems = () => [{ id: 'host', label: 'Play Together: Host', glyph: 'users' }, { id: 'settings', label: 'Settings', glyph: 'gear' }, { id: 'export', label: 'Export Save', glyph: 'upload' }, { id: 'import', label: 'Import Save', glyph: 'download' }, { id: 'charselect', label: 'Character Select', glyph: 'user' }, { id: 'title', label: 'Title Screen', glyph: 'door' }];
 function gearTier(c) { const s = c.equip?.chest?.set || c.equip?.weapon?.set; return s === 'horned' ? 2 : s === 'vanguard' ? 1 : 0; }

@@ -490,6 +490,6 @@ const ACTIONS = {
 const SPEC = {
   bones: { body: 'body', abd: 'abdomen', silk: 'silk', chelL: 'chelL', chelR: 'chelR', palpL: 'palpL', palpR: 'palpR', palp2L: 'palp2L', palp2R: 'palp2R' },
   fidgets: [{ name: 'tap', w: 3 }, { name: 'idle_alt', w: 2 }, { name: 'roar', w: 0.5 }],
-  fidgetGap: 3.5, chargeK: 0.35,
+  fidgetGap: 3.5, chargeK: 0.07,
   actions: ACTIONS,
 };

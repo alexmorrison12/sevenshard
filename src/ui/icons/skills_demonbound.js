@@ -9,7 +9,7 @@ import { glaive, claws, chain, batWing, demonHead, eye, figure, clawMarks, great
 const PUR = '#b232ff', RED = '#ff2a3a', HOT = '#ffd0f0', BLOOD = '#c0101e';
 const ABYSS = ['#4e1c50', '#180818', '#030103'];
 const GORE = ['#8a1420', '#280408', '#050001'];
-const HELL = fireLayers('#1a0022', '#6a10a0', '#e060ff', '#ffe8ff');
+const HELL = [['#1a0022', 1, 1, 0.95], ['#5a0a90', 0.86, 0.82, 0.95], ['#9a2ad0', 0.66, 0.6, 0.85], ['#d060ff', 0.46, 0.42, 0.7], ['#ffc8ff', 0.22, 0.2, 0.55]];
 const glv = (x, px, py, rot, s, o = {}) => { x.save(); x.translate(px, py); x.rotate(rot); x.scale(s, s); glaive(x, { metal: 'obsidian', bands: 'crimson', ...o }); x.restore(); };
 function drop(x, cx, cy, r, col = BLOOD) {
   x.beginPath(); x.moveTo(cx, cy - r * 1.6); x.bezierCurveTo(cx + r * 0.4, cy - r * 0.8, cx + r, cy - r * 0.2, cx + r, cy + r * 0.3); x.arc(cx, cy + r * 0.3, r, 0, PI); x.bezierCurveTo(cx - r, cy - r * 0.2, cx - r * 0.4, cy - r * 0.8, cx, cy - r * 1.6); x.closePath();
@@ -115,8 +115,8 @@ export const DEMONBOUND = {
     ring(x, 50, 88, 36, 8, PUR, 1.8);
     cracks(x, R, 50, 88, 7, 30, PUR, { sy: 0.3, w: 1 });
     slashAB(x, 14, 66, 62, 84, -14, 7, PUR, { hot: '#f0c0ff' });
+    glv(x, 74, 58, -0.75, 0.72, { glow: PUR, edge: RED });
     figure(x, { head: [54, 24], neck: [52, 30], sh: [[44, 32], [58, 34]], el: [[40, 20], [62, 22]], ha: [[46, 12], [56, 12]], hip: [48, 52], kn: [[38, 58], [60, 52]], ft: [[30, 70], [66, 64]] }, { col: '#0a040e', rim: '#d080ff', s: 1.25 });
-    glv(x, 52, 16, 0.55, 0.78, { glow: PUR, edge: RED });
     speedLines(x, R, 8, [20, 30, 80, 60], PI / 2 + 0.3, '#d8a0ff', { len: 16, w: 1 });
   },
   demon_vision(x, R) {
@@ -168,7 +168,7 @@ export const DEMONBOUND = {
   hellfire_wings(x, R) {
     backdrop(x, R, ['#6a1a3a', '#1e0612', '#030101']);
     glow(x, 50, 56, 50, '#ff4a6a', 0.55);
-    fire(x, R, 50, 100, 50, 90, 0, { n: 9, layers: fireLayers('#2a0010', '#a01040', '#ff6a8a', '#ffe0e8') });
+    fire(x, R, 50, 100, 54, 92, 0, { n: 9, layers: [['#2a0008', 1, 1, 0.95], ['#8a0a24', 0.86, 0.82, 0.95], ['#d02a3a', 0.66, 0.6, 0.85], ['#ff6a4a', 0.46, 0.42, 0.7], ['#ffd0a0', 0.22, 0.2, 0.55]] });
     x.save(); x.translate(50, 56); batWing(x, -1, 1.02, '#2a0a1a', { fire: '#ff5a7a' }); batWing(x, 1, 1.02, '#2a0a1a', { fire: '#ff5a7a' }); x.restore();
     glow(x, 50, 56, 12, '#ffb0c0', 0.9);
   },

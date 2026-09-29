@@ -3,7 +3,7 @@
 // locks), quicksand, and a Sandstorm that drags everyone toward its maw before it snaps shut.
 //  75% the dunes shift (burrow chain) · 50% SANDMAW COILS TO DEVOUR (stagger) · 25% frenzy
 import { DEG, rot, fwd, back, rnd, tele, wait, strike, smash, volley, act, counter, pool, onNav, behind, farthest, dirTo,
-  someHeroes, visual, scaleHp, fx, sfx } from './kit.js';
+  someHeroes, visual, scaleHp, fx, sfx, standardStart, partyK } from './kit.js';
 
 async function emergeUnder(B, prey, track = 1.1, lock = 0.95) {
   const u = B.u, L = B.level;
@@ -22,7 +22,7 @@ async function emergeUnder(B, prey, track = 1.1, lock = 0.95) {
 
 export default {
   id: 'sandmaw', model: 'sandmaw', name: 'Sandmaw', title: 'the Dune Devourer', kind: 'guardian',
-  radius: 3.2, height: 9.8, hp: 48000, atk: 0.14, bars: 200, speed: 3.2, turnRate: 2.6, enrage: 600,
+  radius: 3.2, height: 9.8, hp: 48000, atk: 0.155, bars: 200, speed: 3.2, turnRate: 2.6, enrage: 600,
   music: 'boss', arena: 'frostmere',
   anims: {
     burrow: { dur: 2.6, hits: [1.3] }, emerge: { dur: 2.4, hits: [0.5] }, bite: { dur: 1.9, hits: [1.02] },
@@ -109,7 +109,7 @@ export default {
       const tg = B.tele('circle', { r: 11, dur, color: 'purple', follow: u, safe: true });
       const pull = B.level.every(1.2, () => { if (!u.dead && u.data.stagger) smash(B, 'all', { coef: 0.05, knock: 'pull', kb: 1.4 }); });
       try {
-        await B.staggerCheck(Math.round(460 * (B.mods.hard ? 1.08 : 1)), dur, { groggy: 5, label: 'Devour', onFail: async () => {
+        await B.staggerCheck(Math.round(460 * partyK(B) * (B.mods.hard ? 1.08 : 1)), dur, { groggy: 5, label: 'Devour', onFail: async () => {
           tg.alive = false;
           smash(B, 'circle', { r: 11, coef: 3.6, knock: 'up', fx: 'burrow_plume', fxR: 10, sfx: 'explosion_big', shake: 0.9 });
           smash(B, 'donut', { r: 40, inner: 11, coef: 1.2, knock: 'push', kb: 4 });
@@ -124,5 +124,5 @@ export default {
       act(B, 'sandstorm', 1.4); await wait(B, 1.4);
     } },
   ],
-  onStart(enc) { if (enc.o.hard) for (const b of enc.bosses) scaleHp(b, 1.2); },
+  onStart: standardStart,
 };

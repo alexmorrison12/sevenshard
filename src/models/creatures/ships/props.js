@@ -40,6 +40,7 @@ export function gunport(wb, H, o) {
   wb.add(box(w + t * 2, t, 0.09), m(0, h / 2 + t / 2, 0.02), { color: fr, metal: o.frameMetal || 0, d: 0.6 });
   wb.add(box(w + t * 2, t, 0.09), m(0, -h / 2 - t / 2, 0.02), { color: fr, metal: o.frameMetal || 0, d: 0.6 });
   for (const sx of [-1, 1]) wb.add(box(t, h, 0.09), m(sx * (w / 2 + t / 2), 0, 0.02), { color: fr, metal: o.frameMetal || 0, d: 0.6 });
+  if (o.lid === false) return;
   // lid hinged at the top edge, swung outward/up
   const lid = o.lid ?? 0.95;
   const hinge = new THREE.Matrix4().makeBasis(f.X, f.U, f.N).setPosition(f.o).multiply(M(0, h / 2 + t, 0.06)).multiply(M(0, 0, 0, -lid)).multiply(M(0, -h / 2, 0.03));
@@ -199,7 +200,7 @@ export function capstan(wb, x, y, z, o = {}) {
   wb.add(lathe([[0.001, 0], [0.42, 0], [0.4, 0.1], [0.26, 0.2], [0.22, 0.6], [0.3, 0.7], [0.34, 0.85], [0.001, 0.86]], 12), M(x, y, z), { uv: 'keep', color: wd, d: 1 });
   for (let i = 0; i < 4; i++) {
     const a = i / 4 * Math.PI;
-    wb.add(box(1.5, 0.06, 0.07), M(x, y + 0.78, z, 0, a), { color: o.bar || wd, d: 0.6 });
+    wb.add(box(o.bars ?? 1.5, 0.06, 0.07), M(x, y + 0.78, z, 0, a), { color: o.bar || wd, d: 0.6 });
   }
 }
 export function bell(wb, x, y, z, o = {}) {

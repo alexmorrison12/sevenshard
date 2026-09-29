@@ -21,7 +21,8 @@ function frame(base) {
   const cr = d.cranium, bk = d.back;
   const E1 = { c: hp(cr.c), r: V(cr.r[0] * s, cr.r[1] * s, cr.r[2] * s) };
   const E2 = { c: hp(bk.c), r: V(bk.r[0] * s, bk.r[1] * s, bk.r[2] * s) };
-  return { d, s, H: V(...H), hp, E1, E2, J: base.JJ.J };
+  const face = { c: hp([0, 0.04, -0.075]), r: V(0.066 * s, 0.085 * s, 0.07 * s) };
+  return { d, s, H: V(...H), hp, E1, E2, face, J: base.JJ.J };
 }
 /** push p outside both skull ellipsoids by `off` (returns true if moved) */
 function pushSkull(F, p, off) {
@@ -32,6 +33,21 @@ function pushSkull(F, p, off) {
     if (l < 1) { p.set(E.c.x + qx / l * (E.r.x + off), E.c.y + qy / l * (E.r.y + off), E.c.z + qz / l * (E.r.z + off)); moved = true; }
   }
   return moved;
+}
+/** snap p onto the cranium shell at `off` (locks hug the scalp before they fall) */
+function snapSkull(F, p, off) {
+  const E = F.E1;
+  const qx = (p.x - E.c.x) / (E.r.x + off), qy = (p.y - E.c.y) / (E.r.y + off), qz = (p.z - E.c.z) / (E.r.z + off);
+  const l = Math.hypot(qx, qy, qz) || 1;
+  p.set(E.c.x + qx / l * (E.r.x + off), E.c.y + qy / l * (E.r.y + off), E.c.z + qz / l * (E.r.z + off));
+  pushSkull(F, p, off);
+}
+/** keep hair out of the face (eyes, nose, mouth) */
+function pushFace(F, p, off) {
+  const c = F.face.c, r = F.face.r;
+  const qx = (p.x - c.x) / (r.x + off), qy = (p.y - c.y) / (r.y + off), qz = (p.z - c.z) / (r.z + off);
+  const l = Math.hypot(qx, qy, qz);
+  if (l < 1 && l > 1e-6) p.set(c.x + qx / l * (r.x + off), c.y + qy / l * (r.y + off), c.z + qz / l * (r.z + off));
 }
 /** push p out of the torso / neck by `off` using the body SDF gradient */
 function pushBody(base, p, off) {
@@ -73,7 +89,8 @@ function growLock(F, base, root, o) {
     d.normalize();
     p.addScaledVector(d, L / n);
     const off = (o.off ?? 0.006) + (o.lift ?? 0.012) * Math.sin(Math.min(1, t * 1.6) * Math.PI * 0.5);
-    pushSkull(F, p, off);
+    if (t <= (o.hug ?? 0)) snapSkull(F, p, off); else pushSkull(F, p, off);
+    if (o.face !== false) pushFace(F, p, 0.01);
     if (p.y < F.H.y + 0.02) pushBody(base, p, 0.012 + (o.bodyOff ?? 0.012));
     // re-aim along the actual step so the lock flows around obstacles
     const st = p.clone().sub(pts[pts.length - 1]); if (st.lengthSq() > 1e-8) d.lerp(st.normalize(), 0.6).normalize();
@@ -122,7 +139,7 @@ function buildStyle(F, base, style, sex, rng) {
       const r = scalp(F, th, ph);
       const dir = o.dir(r, th, ph);
       const L = (typeof o.L === 'function' ? o.L(th, ph) : o.L) * (1 + (rng.next() - 0.5) * (o.Ljit ?? 0.2)) * s;
-      add({ ...growLock(F, base, r, { L, r0: (o.r0 ?? 0.016) * s * (0.85 + rng.next() * 0.3), r1: (o.r1 ?? 0.0018) * s, dir, grav: o.grav ?? 1, gravStart: o.gravStart, lift: (o.lift ?? 0.012) * s, off: (o.off ?? 0.004) * s, seg: o.seg, curl: o.curl ? o.curl(r, th, ph) : null, curlK: o.curlK, taperPow: o.taperPow, bodyOff: o.bodyOff }) }, o.tag ?? 0);
+      add({ ...growLock(F, base, r, { L, r0: (o.r0 ?? 0.016) * s * (0.85 + rng.next() * 0.3) * (o.tag ? 1.3 : 1), r1: (o.r1 ?? 0.0018) * s, dir, grav: o.grav ?? 1, gravStart: o.gravStart, lift: (o.lift ?? 0.012) * s, off: (o.off ?? 0.004) * s, seg: o.seg, hug: o.hug ?? 0.55, curl: o.curl ? o.curl(r, th, ph) : null, curlK: o.curlK, taperPow: o.taperPow, bodyOff: o.bodyOff }) }, o.tag ?? 0);
     }
   };
   const back = (r) => r.down.clone().multiplyScalar(-1);            // up the meridian → over the crown → down the back
@@ -133,39 +150,39 @@ function buildStyle(F, base, style, sex, rng) {
     // ---------------- male ----------------
     case 'swept': { // heroic swept-back mane with lift at the front and a few fallen strands
       cap(0.007);
-      field({ th: [-1.0, 1.0], ph: [0.62, 0.8], nT: 9, nP: 2, L: 0.19, r0: 0.02, dir: back, grav: 0.5, gravStart: 0.45, lift: 0.028, seg: 9 });
-      field({ th: [-0.7, 0.7], ph: [0.95, 1.25], nT: 6, nP: 2, L: 0.15, r0: 0.018, dir: back, grav: 0.6, gravStart: 0.3, lift: 0.02 });
+      field({ th: [-1.0, 1.0], ph: [0.62, 0.8], nT: 9, nP: 2, L: 0.22, r0: 0.02, dir: back, grav: 0.7, gravStart: 0.6, lift: 0.016, seg: 10, hug: 0.72 });
+      field({ th: [-0.7, 0.7], ph: [0.95, 1.25], nT: 6, nP: 2, L: 0.17, r0: 0.018, dir: back, grav: 0.8, gravStart: 0.5, lift: 0.012, hug: 0.6 });
       for (const sg of [-1, 1]) field({ th: [sg * 1.05, sg * 1.9], ph: [0.25, 0.75], nT: 4, nP: 2, L: 0.1, r0: 0.014, dir: (r) => back(r).multiplyScalar(0.5).addScaledVector(r.side, -sg * 0.2).add(V(0, 0, 0.6)).normalize(), grav: 0.7, lift: 0.008 });
-      field({ th: [2.1, 4.2], ph: [-0.1, 0.8], nT: 7, nP: 3, L: 0.11, r0: 0.016, dir: down, grav: 1, lift: 0.01 });
-      for (const th of [-0.12, 0.18]) { const r = scalp(F, th, 0.72); add(growLock(F, base, r, { L: 0.11 * s, r0: 0.008 * s, dir: r.down.clone().addScaledVector(r.n, 0.4).normalize(), grav: 0.8, lift: 0.012 * s, seg: 7, curl: V(th > 0 ? -0.2 : 0.25, 0, 0) })); }
+      field({ th: [2.1, 4.2], ph: [-0.1, 0.8], nT: 7, nP: 3, L: 0.12, r0: 0.016, dir: down, grav: 1, lift: 0.01, hug: 0.5 });
+      for (const th of [-0.12, 0.18]) { const r = scalp(F, th, 0.72); add(growLock(F, base, r, { L: 0.1 * s, r0: 0.008 * s, dir: r.down.clone().addScaledVector(r.n, 0.5).normalize(), grav: 0.8, lift: 0.014 * s, seg: 7, curl: V(th > 0 ? -0.25 : 0.3, 0, 0) })); }
       break;
     }
     case 'short': { // textured crop: short tousled spikes, tidy sides
       cap(0.006, { side: 0.06 });
-      field({ th: [-0.8, 0.8], ph: [0.6, 1.0], nT: 8, nP: 2, L: 0.07, r0: 0.014, dir: (r, th) => r.down.clone().multiplyScalar(-0.6).addScaledVector(r.n, 0.7).add(V(0, 0, -0.35)).normalize(), grav: 0.2, lift: 0.006, seg: 5 });
-      field({ th: [-0.6, 0.6], ph: [1.05, 1.4], nT: 6, nP: 2, L: 0.07, r0: 0.014, dir: out(0.9), grav: 0.2, lift: 0.004, seg: 5 });
+      field({ th: [-0.8, 0.8], ph: [0.6, 1.0], nT: 8, nP: 2, L: 0.075, r0: 0.014, dir: (r, th) => r.down.clone().multiplyScalar(-0.8).addScaledVector(r.n, 0.45).add(V(0, 0, -0.2)).normalize(), grav: 0.3, lift: 0.006, seg: 5, hug: 0.3 });
+      field({ th: [-0.6, 0.6], ph: [1.05, 1.4], nT: 6, nP: 2, L: 0.065, r0: 0.014, dir: (r) => r.down.clone().multiplyScalar(-1).addScaledVector(r.n, 0.5).normalize(), grav: 0.3, lift: 0.004, seg: 5, hug: 0.3 });
       field({ th: [1.0, 5.28], ph: [0.0, 0.85], nT: 12, nP: 3, L: 0.05, r0: 0.012, dir: (r) => r.down.clone().addScaledVector(r.n, 0.35).normalize(), grav: 0.6, lift: 0.004, seg: 4 });
       break;
     }
     case 'long': { // shoulder-length, centre part, framing the face
       cap(0.008, { ears: false, side: 0.05, nape: -0.1 });
       for (const sg of [-1, 1]) {
-        field({ th: [sg * 0.15, sg * 2.9], ph: [1.1, 1.35], nT: 7, nP: 1, L: 0.3, r0: 0.02, dir: (r) => r.side.clone().multiplyScalar(sg).addScaledVector(r.down, 0.6).normalize(), grav: 1, gravStart: 0.2, lift: 0.014, seg: 10, bodyOff: 0.01 }, 1);
-        field({ th: [sg * 0.45, sg * 1.3], ph: [0.45, 0.9], nT: 4, nP: 2, L: 0.28, r0: 0.018, dir: down, grav: 1, lift: 0.012, seg: 9 }, 1);
+        field({ th: [sg * 0.25, sg * 2.9], ph: [1.12, 1.38], nT: 7, nP: 1, L: 0.32, r0: 0.02, dir: (r) => r.down.clone().addScaledVector(r.side, sg * 0.25).normalize(), grav: 1, gravStart: 0.35, lift: 0.012, seg: 11, bodyOff: 0.01, hug: 0.4 }, 1);
+        field({ th: [sg * 0.8, sg * 1.45], ph: [0.45, 0.9], nT: 3, nP: 2, L: 0.28, r0: 0.018, dir: down, grav: 1, lift: 0.012, seg: 9, hug: 0.25 }, 1);
       }
-      field({ th: [2.2, 4.1], ph: [-0.2, 0.9], nT: 7, nP: 3, L: 0.26, r0: 0.02, dir: down, grav: 1, lift: 0.012, seg: 9 }, 1);
+      field({ th: [2.2, 4.1], ph: [-0.2, 0.9], nT: 7, nP: 3, L: 0.26, r0: 0.02, dir: down, grav: 1, lift: 0.012, seg: 9, hug: 0.3 }, 1);
       break;
     }
     case 'ponytail': { // slicked back into a low tail
       cap(0.007);
-      field({ th: [-1.0, 1.0], ph: [0.62, 0.95], nT: 9, nP: 2, L: 0.16, r0: 0.014, dir: back, grav: 0.4, gravStart: 0.6, lift: 0.006, seg: 8 });
-      field({ th: [1.05, 5.23], ph: [0.2, 0.9], nT: 10, nP: 2, L: 0.1, r0: 0.013, dir: (r) => V(0, -0.2, 1).addScaledVector(r.side, 0).normalize(), grav: 0.3, lift: 0.004, seg: 6 });
+      field({ th: [-1.0, 1.0], ph: [0.62, 0.95], nT: 9, nP: 2, L: 0.2, r0: 0.014, dir: back, grav: 0.4, gravStart: 0.7, lift: 0.005, seg: 9, hug: 0.9 });
+      field({ th: [1.05, 5.23], ph: [0.2, 0.9], nT: 10, nP: 2, L: 0.11, r0: 0.013, dir: (r) => V(0, -0.2, 1).addScaledVector(r.side, 0).normalize(), grav: 0.3, lift: 0.004, seg: 6, hug: 0.9 });
       tail(F, base, sd, [0, 0.02, 0.105], 0.3, 0.03, 0.01, rng, locks);
       break;
     }
     case 'topknot': { // shaved sides, top swept up into a knot
       cap(0.004, { side: 0.075 });
-      field({ th: [-0.9, 0.9], ph: [0.8, 1.2], nT: 7, nP: 2, L: 0.13, r0: 0.016, dir: back, grav: 0.1, lift: 0.01, seg: 7 });
+      field({ th: [-0.9, 0.9], ph: [0.8, 1.2], nT: 7, nP: 2, L: 0.13, r0: 0.016, dir: back, grav: 0.1, lift: 0.006, seg: 7, hug: 0.9 });
       const knot = F.hp([0, 0.2, 0.04]);
       sd.sphere(knot.toArray(), 0.038 * s, { k: 0.01 * s, tag: 0 });
       sd.torus(F.hp([0, 0.18, 0.04]).toArray(), 0.03 * s, 0.009 * s, { k: 0.005 * s, tag: 0 });
@@ -185,33 +202,33 @@ function buildStyle(F, base, style, sex, rng) {
     }
     case 'backbraid': { // swept back into a long braid
       cap(0.007);
-      field({ th: [-1.0, 1.0], ph: [0.62, 1.0], nT: 9, nP: 2, L: 0.18, r0: 0.014, dir: back, grav: 0.4, gravStart: 0.55, lift: 0.008, seg: 8 });
-      field({ th: [1.05, 5.23], ph: [0.2, 0.9], nT: 10, nP: 2, L: 0.1, r0: 0.013, dir: () => V(0, -0.1, 1), grav: 0.3, lift: 0.004, seg: 6 });
+      field({ th: [-1.0, 1.0], ph: [0.62, 1.0], nT: 9, nP: 2, L: 0.2, r0: 0.014, dir: back, grav: 0.4, gravStart: 0.7, lift: 0.006, seg: 9, hug: 0.9 });
+      field({ th: [1.05, 5.23], ph: [0.2, 0.9], nT: 10, nP: 2, L: 0.11, r0: 0.013, dir: () => V(0, -0.1, 1), grav: 0.3, lift: 0.004, seg: 6, hug: 0.9 });
       braid(F, base, sd, [0, 0.04, 0.1], [0, -1, 0.25], 0.36, 0.026, 1);
       break;
     }
     // ---------------- female ----------------
     case 'fem_long': { // long straight hair with a side-swept fringe
       cap(0.008, { ears: false, side: 0.045, nape: -0.12, foreY: 0.03 });
-      for (const sg of [-1, 1]) field({ th: [sg * 0.35, sg * 2.8], ph: [1.0, 1.3], nT: 7, nP: 1, L: sg < 0 ? 0.48 : 0.46, r0: 0.02, dir: (r) => r.side.clone().multiplyScalar(sg).addScaledVector(r.down, 0.7).normalize(), grav: 1, gravStart: 0.15, lift: 0.014, seg: 12, bodyOff: 0.012 }, 1);
-      for (const sg of [-1, 1]) field({ th: [sg * 0.9, sg * 1.5], ph: [0.35, 0.8], nT: 3, nP: 2, L: 0.42, r0: 0.017, dir: down, grav: 1, lift: 0.012, seg: 11 }, 1);
-      field({ th: [2.3, 4.0], ph: [-0.3, 0.9], nT: 8, nP: 3, L: 0.46, r0: 0.02, dir: down, grav: 1, lift: 0.012, seg: 12 }, 1);
+      for (const sg of [-1, 1]) field({ th: [sg * 0.35, sg * 2.8], ph: [1.0, 1.3], nT: 7, nP: 1, L: sg < 0 ? 0.48 : 0.46, r0: 0.02, dir: (r) => r.down.clone().addScaledVector(r.side, sg * 0.3).normalize(), grav: 1, gravStart: 0.3, lift: 0.012, seg: 12, bodyOff: 0.012, hug: 0.35 }, 1);
+      for (const sg of [-1, 1]) field({ th: [sg * 0.95, sg * 1.5], ph: [0.35, 0.8], nT: 3, nP: 2, L: 0.42, r0: 0.017, dir: down, grav: 1, lift: 0.012, seg: 11, hug: 0.2 }, 1);
+      field({ th: [2.3, 4.0], ph: [-0.3, 0.9], nT: 8, nP: 3, L: 0.46, r0: 0.02, dir: down, grav: 1, lift: 0.012, seg: 12, hug: 0.25 }, 1);
       fringe(F, base, add, rng, { side: 1, n: 6, L: 0.13 });
       break;
     }
     case 'fem_ponytail': { // high ponytail, side bangs
       cap(0.006, { foreY: 0.035 });
-      field({ th: [-1.1, 1.1], ph: [0.55, 0.95], nT: 10, nP: 2, L: 0.14, r0: 0.012, dir: back, grav: 0.1, lift: 0.004, seg: 7 });
-      field({ th: [1.1, 5.18], ph: [0.0, 0.8], nT: 10, nP: 2, L: 0.13, r0: 0.012, dir: (r) => r.down.clone().multiplyScalar(-1).add(V(0, 0.3, 0.4)).normalize(), grav: 0, lift: 0.003, seg: 6 });
-      tail(F, base, sd, [0, 0.19, 0.075], 0.55, 0.032, 0.012, rng, locks, V(0, 0.55, 1));
+      field({ th: [-1.1, 1.1], ph: [0.55, 0.95], nT: 10, nP: 2, L: 0.16, r0: 0.012, dir: back, grav: 0.1, lift: 0.004, seg: 7, hug: 0.95 });
+      field({ th: [1.1, 5.18], ph: [0.0, 0.8], nT: 10, nP: 2, L: 0.14, r0: 0.012, dir: (r) => r.down.clone().multiplyScalar(-1).add(V(0, 0.3, 0.4)).normalize(), grav: 0, lift: 0.003, seg: 6, hug: 0.95 });
+      tail(F, base, sd, [0, 0.19, 0.075], 0.55, 0.034, 0.012, rng, locks, V(0, 0.2, 1));
       for (const sg of [-1, 1]) { const r = scalp(F, sg * 0.95, 0.4); add(growLock(F, base, r, { L: 0.2 * s, r0: 0.009 * s, dir: r.down, grav: 1, lift: 0.006 * s, seg: 8 }), 0); }
       fringe(F, base, add, rng, { side: -1, n: 5, L: 0.1 });
       break;
     }
     case 'fem_bun': { // bun at the back of the crown, loose strands framing the face
       cap(0.006, { foreY: 0.035 });
-      field({ th: [-1.1, 1.1], ph: [0.55, 0.95], nT: 10, nP: 2, L: 0.14, r0: 0.012, dir: back, grav: 0.1, lift: 0.004, seg: 7 });
-      field({ th: [1.1, 5.18], ph: [0.0, 0.8], nT: 10, nP: 2, L: 0.12, r0: 0.012, dir: (r) => r.down.clone().multiplyScalar(-1).add(V(0, 0.2, 0.5)).normalize(), grav: 0, lift: 0.003, seg: 6 });
+      field({ th: [-1.1, 1.1], ph: [0.55, 0.95], nT: 10, nP: 2, L: 0.16, r0: 0.012, dir: back, grav: 0.1, lift: 0.004, seg: 7, hug: 0.95 });
+      field({ th: [1.1, 5.18], ph: [0.0, 0.8], nT: 10, nP: 2, L: 0.13, r0: 0.012, dir: (r) => r.down.clone().multiplyScalar(-1).add(V(0, 0.2, 0.5)).normalize(), grav: 0, lift: 0.003, seg: 6, hug: 0.95 });
       bun(F, sd, [0, 0.16, 0.1], 0.052);
       for (const sg of [-1, 1]) { const r = scalp(F, sg * 1.0, 0.38); add(growLock(F, base, r, { L: 0.22 * s, r0: 0.008 * s, dir: r.down, grav: 1, lift: 0.006 * s, seg: 8, curl: V(-sg * 0.1, 0, -0.1) }), 0); }
       fringe(F, base, add, rng, { side: 1, n: 4, L: 0.08 });
@@ -236,7 +253,7 @@ function buildStyle(F, base, style, sex, rng) {
       cap(0.006, { foreY: 0.035 });
       field({ th: [-1.1, 1.1], ph: [0.55, 1.0], nT: 10, nP: 2, L: 0.12, r0: 0.012, dir: (r, th) => r.down.clone().multiplyScalar(-1).addScaledVector(r.side, th > 0 ? 0.6 : -0.6).normalize(), grav: 0.1, lift: 0.004, seg: 6 });
       field({ th: [1.2, 5.08], ph: [0.0, 0.9], nT: 10, nP: 2, L: 0.11, r0: 0.012, dir: (r, th) => V(Math.sin(th) > 0 ? 0.6 : -0.6, 0.3, 0.3).normalize(), grav: 0.1, lift: 0.003, seg: 6 });
-      for (const sg of [-1, 1]) tail(F, base, sd, [sg * 0.095, 0.1, 0.045], 0.42, 0.028, 0.01, rng, locks, V(sg * 0.8, 0.2, 0.3), sg < 0 ? 2 : 3);
+      for (const sg of [-1, 1]) tail(F, base, sd, [sg * 0.1, 0.1, 0.045], 0.42, 0.03, 0.01, rng, locks, V(sg * 0.5, -0.2, 0.2), sg < 0 ? 2 : 3);
       fringe(F, base, add, rng, { side: 0, n: 7, L: 0.09 });
       break;
     }
@@ -250,8 +267,8 @@ function buildStyle(F, base, style, sex, rng) {
     }
     case 'fem_swept': { // side-swept long hair gathered over the left shoulder
       cap(0.008, { ears: false, side: 0.045, nape: -0.1, foreY: 0.03 });
-      field({ th: [-2.9, 2.9], ph: [0.95, 1.3], nT: 12, nP: 1, L: 0.46, r0: 0.02, dir: (r) => r.side.clone().multiplyScalar(-1).addScaledVector(r.down, 0.5).add(V(-0.4, 0, 0.1)).normalize(), grav: 1, gravStart: 0.3, lift: 0.016, seg: 12, bodyOff: 0.014 }, 1);
-      field({ th: [2.2, 4.1], ph: [-0.2, 0.8], nT: 6, nP: 2, L: 0.4, r0: 0.018, dir: (r) => V(-0.5, -1, 0.1).normalize(), grav: 1, lift: 0.012, seg: 11 }, 1);
+      field({ th: [-2.9, 2.9], ph: [0.95, 1.3], nT: 12, nP: 1, L: 0.46, r0: 0.02, dir: (r) => r.down.clone().addScaledVector(r.side, -0.35).normalize(), grav: 1.2, gravStart: 0.35, lift: 0.014, seg: 12, bodyOff: 0.014, hug: 0.45, curl: () => V(-0.18, 0, -0.05) }, 1);
+      field({ th: [2.2, 4.1], ph: [-0.2, 0.8], nT: 6, nP: 2, L: 0.4, r0: 0.018, dir: (r) => V(-0.3, -1, 0.1).normalize(), grav: 1.2, lift: 0.012, seg: 11, hug: 0.3, curl: () => V(-0.15, 0, -0.1) }, 1);
       field({ th: [-1.7, -0.6], ph: [0.3, 0.8], nT: 4, nP: 2, L: 0.44, r0: 0.018, dir: down, grav: 1, lift: 0.012, seg: 11 }, 1);
       fringe(F, base, add, rng, { side: -1, n: 6, L: 0.14 });
       break;
@@ -263,19 +280,19 @@ function buildStyle(F, base, style, sex, rng) {
     for (let i = 0; i < lk.pts.length - 1; i++) {
       const a = lk.pts[i], b = lk.pts[i + 1];
       const hanging = lk.tag !== 0 && b.y < F.H.y + 0.02;
-      sd.cone(a.toArray(), b.toArray(), lk.rad[i], lk.rad[i + 1], { k: (i === 0 ? 0.012 : 0.0045) * s, tag: hanging ? lk.tag : 0 });
+      sd.cone(a.toArray(), b.toArray(), lk.rad[i], lk.rad[i + 1], { k: (i === 0 ? 0.012 : lk.tag ? 0.008 : 0.005) * s, tag: hanging ? lk.tag : 0 });
     }
   }
   return sd;
 }
 
 function fringe(F, base, add, rng, o) { // bangs across the forehead, swept to one side (o.side −1 / 0 / +1)
-  const n = o.n || 6;
+  const n = (o.n || 6) + 2;
   for (let i = 0; i < n; i++) {
-    const th = lerp(-0.7, 0.7, i / (n - 1)) + (rng.next() - 0.5) * 0.06;
+    const th = lerp(-0.72, 0.72, i / (n - 1)) + (rng.next() - 0.5) * 0.06;
     const r = scalp(F, th, 0.92 + 0.06 * Math.cos(th * 2));
     const dir = r.down.clone().addScaledVector(r.side, (o.side ?? 0) * 0.45 - th * 0.2).addScaledVector(r.n, 0.25).normalize();
-    add(growLock(F, base, r, { L: o.L * F.s * (o.blunt ? 1 : 0.85 + rng.next() * 0.3), r0: 0.011 * F.s, r1: o.blunt ? 0.005 * F.s : 0.0015 * F.s, dir, grav: 0.45, lift: 0.014 * F.s, seg: 6 }), 0);
+    add(growLock(F, base, r, { L: o.L * F.s * (o.blunt ? 1 : 0.85 + rng.next() * 0.3), r0: 0.015 * F.s, r1: o.blunt ? 0.006 * F.s : 0.002 * F.s, dir, grav: 0.45, lift: 0.012 * F.s, seg: 6, hug: 0.25 }), 0);
   }
 }
 function tail(F, base, sd, at, L, r0, r1, rng, locks, dir0 = V(0, -0.3, 1), tag = 1) { // gathered tail (ponytail / twin tail)
@@ -284,7 +301,7 @@ function tail(F, base, sd, at, L, r0, r1, rng, locks, dir0 = V(0, -0.3, 1), tag 
   for (let k = 0; k < 5; k++) { // a bundle of strands flowing out of the tie
     const off = V((rng.next() - 0.5) * r0 * s, (rng.next() - 0.5) * r0 * s, (rng.next() - 0.5) * r0 * s * 0.5);
     const r = { p: root.clone().add(off), n: dir0.clone(), down: V(0, -1, 0), side: V(1, 0, 0) };
-    const lk = growLock(F, base, r, { L: L * s * (0.85 + rng.next() * 0.25), r0: r0 * s * 0.65, r1: r1 * s * 0.4, dir: dir0.clone().add(V((rng.next() - 0.5) * 0.3, 0, 0)), grav: 1.1, gravStart: 0.05, lift: 0, off: 0.005 * s, seg: 10, bodyOff: 0.02 });
+    const lk = growLock(F, base, r, { L: L * s * (0.85 + rng.next() * 0.25), r0: r0 * s * 0.75, r1: r1 * s * 0.4, dir: dir0.clone().normalize().add(V((rng.next() - 0.5) * 0.25, -0.35, 0)), grav: 2.4, gravStart: 0.0, lift: 0, off: 0.005 * s, seg: 11, bodyOff: 0.02 });
     locks.push({ ...lk, tag });
   }
 }

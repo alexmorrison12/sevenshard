@@ -272,7 +272,7 @@ const BOAR_SPEC = {
   },
   neck: { pitch: 0, run: -0.15, combat: -0.25, walk: -0.04, headCombat: 0.05, comp: 0.3, stab: 0.6 },
   tail: { wag: 0.5, wagF: 2.2, run: 0.3, combat: 0.2 },
-  breathe: 0.018, combatCrouch: 0.04, combatPitch: -0.04, runDrop: 0.02, chargeK: 0.35,
+  breathe: 0.018, combatCrouch: 0.04, combatPitch: -0.04, runDrop: 0.02, chargeK: 0.05,
   fidgets: [{ name: 'idle_alt', w: 3 }, { name: 'snort', w: 2 }],
   fidgetGap: 4,
   pose(ctl) {

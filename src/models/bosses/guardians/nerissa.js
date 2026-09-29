@@ -47,11 +47,13 @@ function rig(R) {
 const skinD = [0, 0.05, 0.15, 0], scale = [0, 0.4, 0.15, 0], shellD = [0, 0.1, 0.2, 0.3];
 function sculpt(S) {
   // tail: serpentine, flattening a little towards the fluke; hips flare into it
-  const tr = (i) => 0.4 - i * 0.03 + 0.05 * Math.exp(-i * 0.7);
+  const tr = (f) => 0.4 - f * 0.031 + 0.05 * Math.exp(-f * 0.7);
   S.ell('hips', [0, 3.1, 0.02], [0.44, 0.5, 0.36], { k: 0.2, col: C.tail, tag: 'hips', dtl: scale });
-  for (let i = 0; i < NT; i++) {
-    const a = J.tail[i], bb = i < NT - 1 ? J.tail[i + 1] : J.fluke;
-    S.cone('tail' + i, a, bb, tr(i), tr(i + 1), { k: 0.28, col: C.tail, tag: 'tail', b2: i < NT - 1 ? 'tail' + (i + 1) : undefined, t0: 0.55, t1: 1, dtl: scale });
+  // sculpted along the smooth spline through the joints (no knuckles where segments meet)
+  const per = (TAILPTS.length - 1) / NT;
+  for (let k = 0; k < TAILPTS.length - 1; k++) {
+    const f0 = k / per, f1 = (k + 1) / per, bi = Math.min(NT - 1, Math.floor(f0));
+    S.cone('tail' + bi, TAILPTS[k], TAILPTS[k + 1], tr(f0), tr(f1), { k: 0.06, col: C.tail, tag: 'tail', dtl: scale });
   }
   // torso: narrow waist, ribcage, nacre bodice sculpted as raised shells
   S.ell('spine', [0, 3.72, 0.02], [0.3, 0.42, 0.24], { k: 0.16, col: C.skin, tag: 'waist', dtl: skinD });
@@ -93,12 +95,13 @@ function paint(v) {
   // skin: slightly darker extremities
   v.mix(C.skinDk, (v.t('hand') + v.t('fore')) * sstep(3.9, 3.2, y) * 0.5);
   // song-runes: glowing glyph bands along the tail and the forearms
-  const runeZone = v.t('tail') * sstep(0.1, 0.5, ny + 0.3) + v.t('fore') * sstep(-0.2, 0.4, -nz) + v.t('waist') * 0.6;
+  const runeZone = v.t('tail') * sstep(0.35, 0.75, ny + 0.15) + v.t('fore') * sstep(-0.2, 0.4, -nz) + v.t('waist') * 0.6;
   if (runeZone > 0.15) {
-    const along = v.t('fore') > 0.3 ? y * 9 : (Math.hypot(x, z) + y) * 3.1;
-    const band = Math.abs(((along % 1) + 1) % 1 - 0.5) * 2;
-    const glyph = (1 - sstep(0.06, 0.14, band)) + (1 - sstep(0.03, 0.08, Math.abs(Math.sin(along * 2.7 + x * 11) * Math.cos(z * 9)))) * 0.6;
-    const r = Math.min(1, glyph) * runeZone;
+    const along = v.t('fore') > 0.3 ? y * 9 : (Math.hypot(x, z) + y) * 2.3;
+    const cell = Math.floor(along), fr = along - cell;
+    const h = Math.sin(cell * 91.7 + 7.1) * 43758.5453, on = (h - Math.floor(h)) > 0.35;        // some glyphs missing
+    const glyph = on ? (1 - sstep(0.05, 0.12, Math.abs(fr - 0.5) * 2 - 0.55)) * (1 - sstep(0.02, 0.07, Math.abs(Math.sin(fr * 9 + cell * 2.3) * 0.5 + x * 0.8 - 0.1))) : 0;
+    const r = Math.min(1, glyph + (1 - sstep(0.015, 0.05, Math.abs(Math.sin(along * 3.14159)))) * 0.35 * (on ? 1 : 0)) * runeZone;
     if (r > 0.1) { v.emis = r * 1.6; v.kind = K.mouth; v.gm = 1; v.mix(C.rune, r * 0.5); }
   }
   v.mix(0x0a1a1c, v.t('socket'));

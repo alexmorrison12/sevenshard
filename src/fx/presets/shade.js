@@ -1,6 +1,6 @@
 // Shade presets — Bladedancer (twin blades: afterimages, surges, blade storms) and Demonbound (glaive, blood, demonform).
 import * as THREE from 'three';
-import { ctx, tc, vec, groundSmash, along, GEN, PHYS, DARK, CRIM, TAU, UP, hue, shockwave, decal, hit, slash, S, R, P, v3 } from './lib.js';
+import { KEYS, ctx, tc, vec, groundSmash, along, GEN, PHYS, DARK, CRIM, TAU, UP, hue, shockwave, decal, hit, slash, S, R, P, v3 } from './lib.js';
 
 const K = {};
 const _a = new THREE.Vector3(), _b = new THREE.Vector3();
@@ -33,10 +33,11 @@ K.blade_storm = {                    // Maelstrom / blade storm: a storm of flas
       slash(fx, { pos: _a, dir: _b, radius: fx.r(1.2, 2.1) * c.s, style: 'd', tilt: fx.r(-1.3, 1.3), color: v.col, intensity: 1, dur: 0.18, sweep: 0.35, height: fx.r(0.6, 1.6), sparks: false, glow: false, width: 0.45 * c.s });
     }
     const m = T.rate('b', 50);
-    const o = fx.o(c.s, hue(v.col, [0, 0, 0]));
+    const vh = v.hue || (v.hue = hue(v.col, [0, 0, 0]));
+    const o = fx.o(c.s, vh);
     for (let i = 0; i < m; i++) { o.rot = fx.r(0, TAU); fx.spawn(BLADE_SPR, p.x + fx.r(-1, 1) * c.R * 0.8, gy + fx.r(0.4, 2), p.z + fx.r(-1, 1) * c.R * 0.8, 0, 0, 0, o); }
     const q = T.rate('o', 30);
-    for (let i = 0; i < q; i++) fx.spawn(ORBIT_BLADE, p.x, gy + fx.r(0.3, 1.8), p.z, fx.r(0.5, c.R), fx.r(0, TAU), fx.r(5, 9) * (Math.random() < 0.5 ? -1 : 1), fx.o(c.s, hue(v.col, [0, 0, 0])));
+    for (let i = 0; i < q; i++) fx.spawn(ORBIT_BLADE, p.x, gy + fx.r(0.3, 1.8), p.z, fx.r(0.5, c.R), fx.r(0, TAU), fx.r(5, 9) * (Math.random() < 0.5 ? -1 : 1), fx.o(c.s, vh));
     if (T.rate('d', 20)) fx.spawn(PHYS.dust, p.x + fx.r(-1, 1) * c.R, gy + 0.2, p.z + fx.r(-1, 1) * c.R, 0, 0.5, 0, fx.o(c.s, null));
   },
 };
@@ -78,7 +79,7 @@ K.surge_dash = {                     // Surge: dash-through leaves a blade line 
   },
   tick(T) {
     const fx = T.fx, v = T.v, c = v.c, n = 3 + v.orbs;
-    for (let i = 0; i < n; i++) if (T.once('x' + i, 0.3 + i * 0.05)) {
+    for (let i = 0; i < n; i++) if (T.once(KEYS[i], 0.3 + i * 0.05)) {
       const u = (i + 0.5) / n, x = c.x + v.f.x * v.L * u, z = c.z + v.f.z * v.L * u;
       slash(fx, { pos: vec(x, c.y, z), dir: v.f, style: i % 2 ? 'x' : 'd', tilt: 0.8, radius: fx.r(1.6, 2.2) * c.s, color: v.col, intensity: 1, dur: 0.24, glow: true, sparkCount: 6 });
       fx.at(GEN.starFlash, vec(x, c.y + 1, z), 1.3 * c.s, hue(v.col, [0, 0, 0]));
@@ -145,7 +146,7 @@ K.blood_pillars = {                  // pillars of blood erupt around the target
   },
   tick(T) {
     const fx = T.fx, v = T.v, c = v.c;
-    for (let i = 0; i < v.n; i++) if (T.once('p' + i, 0.12 + i * 0.09)) {
+    for (let i = 0; i < v.n; i++) if (T.once(KEYS[i], 0.12 + i * 0.09)) {
       const a = i / v.n * TAU + 0.4, r = i === 0 ? 0 : c.R * 0.6;
       const x = v.cx + Math.cos(a) * r, z = v.cz + Math.sin(a) * r, y = v.cy, s = c.s * (i === 0 ? 1.3 : 1);
       fx.meshes.pillars.spawn(x, y, z, 0.7 * s, 5.5 * s, 0.9, 2, [2.2, 0.08, 0.12], 0.05);

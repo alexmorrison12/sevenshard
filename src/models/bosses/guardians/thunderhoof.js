@@ -39,23 +39,24 @@ const fur = [0.45, 0, 0.12, 0], furS = [0.3, 0, 0.1, 0], skinD = [0, 0, 0.15, 0]
 const hs = (i) => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
 function sculpt(S) {
   // bison silhouette: towering hump over the shoulders, deep chest, lean hindquarters
-  S.ell('chest', [0, 2.9, -0.95], [0.95, 1.1, 1.05], { k: 0.4, col: C.fur, tag: 'body', dtl: fur });
-  S.ell('chest', [0, 3.55, -0.75], [0.8, 0.75, 0.95], { k: 0.4, col: C.mane, tag: 'hump', dtl: fur });
+  S.ell('chest', [0, 2.9, -0.95], [1.08, 1.2, 1.15], { k: 0.45, col: C.fur, tag: 'body', dtl: fur });
+  S.ell('chest', [0, 3.7, -0.8], [0.98, 0.95, 1.15], { k: 0.45, col: C.mane, tag: 'hump', dtl: fur });
+  S.ell('chest', [0, 3.35, -1.55], [0.9, 0.85, 0.7], { k: 0.4, col: C.mane, tag: 'hump', dtl: fur });
   S.ell('body', [0, 2.7, 0.35], [0.85, 0.9, 1.2], { k: 0.4, col: C.fur, tag: 'body', dtl: fur });
   S.ell('hips', [0, 2.62, 1.6], [0.72, 0.78, 0.8], { k: 0.35, col: C.fur, tag: 'body', dtl: fur });
-  S.ell('chest', [0, 2.2, -1.35], [0.65, 0.6, 0.55], { k: 0.35, col: C.mane, tag: 'brisket', dtl: fur });
+  S.ell('chest', [0, 2.15, -1.4], [0.78, 0.7, 0.62], { k: 0.4, col: C.mane, tag: 'brisket', dtl: fur });
   // shaggy mane: clumps over the hump, neck and forelegs (bases on the surface, tips hanging / flaring)
   let hi = 0;
   const clump = (bone, base, dir, L, r0) => { const d = norm(dir); S.cone(bone, base, addS(base, d, L), r0, 0.03, { k: 0.12, col: C.mane, tip: { col: C.maneTip, from: 0.55 }, tag: 'mane', dtl: fur }); };
-  for (let i = 0; i < 26; i++) {
-    const a = -2.2 + (i % 13) / 12 * 4.4, row = Math.floor(i / 13);
-    const z = -1.55 + row * 0.75, y = 3.1 + Math.cos(a) * 0.95 - row * 0.1;
-    const base = [Math.sin(a) * 0.95, y, z];
-    clump(row ? 'chest' : 'neck', base, [Math.sin(a) * 0.8, -0.6 - 0.3 * hs(hi), 0.25 + 0.3 * hs(hi + 1)], 0.55 + 0.35 * hs(hi++), 0.26);
+  for (let i = 0; i < 39; i++) {
+    const a = -2.3 + (i % 13) / 12 * 4.6, row = Math.floor(i / 13);
+    const z = -1.75 + row * 0.6, y = 3.2 + Math.cos(a) * (1.05 - row * 0.05) + row * 0.12;
+    const base = [Math.sin(a) * 1.05, y, z];
+    clump(row ? 'chest' : 'neck', base, [Math.sin(a) * 0.8, -0.55 - 0.35 * hs(hi), 0.2 + 0.3 * hs(hi + 1)], 0.7 + 0.45 * hs(hi++), 0.28);
   }
   for (const [s, n] of SIDES) for (let k = 0; k < 4; k++) clump('fU' + n, [0.78 * s + 0.1 * s, 2.2 - k * 0.3, -1.2 - k * 0.04], [0.5 * s, -1, -0.1], 0.5, 0.2);
   // neck + head: low-slung, massive brow, broad muzzle, silver beard
-  S.cone('neck', [0, 3.0, -1.6], J.head, 0.75, 0.55, { k: 0.3, col: C.mane, tag: 'neck', b2: 'head', t0: 0.6, t1: 1, dtl: fur });
+  S.cone('neck', [0, 3.05, -1.6], J.head, 0.88, 0.6, { k: 0.35, col: C.mane, tag: 'neck', b2: 'head', t0: 0.6, t1: 1, dtl: fur });
   S.ell('head', [0, 2.6, -2.85], [0.52, 0.5, 0.62], { k: 0.2, col: C.fur, tag: 'head', dtl: furS });
   S.ell('head', [0, 2.95, -2.7], [0.55, 0.28, 0.4], { k: 0.2, col: C.mane, tag: 'brow', dtl: fur });
   S.cone('head', [0, 2.45, -3.1], [0, 2.3, -3.62], 0.42, 0.34, { k: 0.18, col: C.muzzle, tag: 'muzzle', dtl: skinD });
@@ -66,12 +67,13 @@ function sculpt(S) {
     S.cone('head', [0.35 * s, 3.0, -2.62], [0.5 * s, 3.12, -2.58], 0.18, 0.15, { k: 0.08, col: C.horn, tag: 'boss', dtl: skinD });
   }
   S.cone('jaw', [0, 2.2, -2.95], [0, 2.1, -3.52], 0.3, 0.24, { group: 1, k: 0.12, col: C.muzzle, tag: 'jaw', dtl: skinD });
-  for (let i = 0; i < 7; i++) { const x = (i - 3) * 0.1; S.cone('jaw', [x, 2.02, -3.1 - Math.abs(x) * 0.2], [x * 1.4, 1.35 - 0.2 * hs(i + 40), -3.0], 0.12, 0.02, { group: 1, k: 0.06, col: C.beard, tag: 'beard', dtl: fur }); }
+  S.ell('jaw', [0, 1.95, -3.05], [0.26, 0.2, 0.3], { group: 1, k: 0.1, col: C.beard, tag: 'beard', dtl: fur });
+  for (let i = 0; i < 7; i++) { const x = (i - 3) * 0.11; S.cone('jaw', [x, 1.95, -3.08 - Math.abs(x) * 0.2 + (i % 2) * 0.12], [x * 1.6, 1.25 - 0.25 * hs(i + 40), -2.95 + (i % 2) * 0.15], 0.1, 0.015, { group: 1, k: 0.04, col: C.beard, tag: 'beard', dtl: fur }); }
   // legs: long upper legs lost in fur, slim cannons, cloven hooves
   for (const [s, n] of SIDES) {
     const u = X(J.fU, s), l = X(J.fL, s), p = X(J.fP, s), toe = X(J.fToe, s);
-    S.ell('fU' + n, add(u, [0.04 * s, -0.25, 0]), [0.42, 0.75, 0.55], { k: 0.25, col: C.fur, tag: 'shoulder', dtl: fur });
-    S.cone('fU' + n, u, l, 0.34, 0.2, { k: 0.15, col: C.fur, tag: 'leg', b2: 'fL' + n, t0: 0.8, t1: 1, dtl: fur });
+    S.ell('fU' + n, add(u, [0.06 * s, -0.25, 0]), [0.5, 0.85, 0.62], { k: 0.3, col: C.fur, tag: 'shoulder', dtl: fur });
+    S.cone('fU' + n, u, l, 0.4, 0.24, { k: 0.15, col: C.fur, tag: 'leg', b2: 'fL' + n, t0: 0.8, t1: 1, dtl: fur });
     S.cone('fL' + n, l, p, 0.18, 0.12, { k: 0.1, col: C.furDk, tag: 'cannon', b2: 'fP' + n, t0: 0.85, t1: 1, dtl: furS });
     S.cone('fP' + n, p, add(toe, [0, 0.12, 0.02]), 0.13, 0.16, { k: 0.06, col: C.hoof, tag: 'hoof', dtl: skinD });
     const t = X(J.rT, s), sh = X(J.rS, s), m = X(J.rM, s), rp = X(J.rP, s), rt = X(J.rToe, s);
@@ -95,7 +97,7 @@ function paint(v) {
   // lightning scars: jagged glowing lines raked across the flanks
   const scar = Math.abs(((y * 2.2 + Math.sin(z * 5.1) * 0.35 + Math.sin(z * 13) * 0.08) % 1 + 1) % 1 - 0.5);
   const flank = (v.t('body') + v.t('haunch')) * sstep(0.35, 0.7, Math.abs(x)) * (z > -0.5 && z < 2.0 ? 1 : 0) * (Math.sin(z * 2.3 + x) > 0.35 ? 1 : 0);
-  if (flank > 0.3 && scar < 0.03) { v.mix(0x9ad8ff, 0.8); v.emis = 1.2; v.kind = K.eye; v.gm = 1; }
+  if (flank > 0.3 && scar < 0.025) { v.mix(0x9ad8ff, 0.6); v.emis = 0.7; v.kind = K.eye; v.gm = 1; }
   v.mix(0x050608, v.t('socket') + v.t('nostril') * 0.9);
   if (v.group === 1 && ny > 0.5 && z < -3.0) { v.mix(0x3a1414, 0.8); v.kind = K.mouth; v.emis = 0.2; }
 }
@@ -110,9 +112,9 @@ function dress({ acc, facc, S, b }) {
     const tipsPts = [];
     const vein = (t, uv) => { const v = Math.abs(Math.sin(uv[0] * Math.PI * 2 * 3 + t * 20)); return v < 0.12 ? 1 : 0; };
     acc.addRaw(loft(beam, 8, (t) => { const r = 0.2 * (1 - t * 0.72) + 0.02; return [r, r * 0.85]; }, [0, 1, 0]), {
-      skin: rigid(bone), kind: K.crystal, gm: 1, dtl: [0, 0.1, 0.25, 0.3],
+      skin: rigid(bone), kind: K.hard, gm: 1, dtl: [0, 0.1, 0.25, 0.3],
       color: (t, p, nn, uv) => vein(t, uv) ? lc(C.bolt, 0xffffff, t) : lc(C.antlerDk, C.antler, sstep(0.0, 0.3, t)),
-      emis: (t, p, uv) => vein(t, uv) ? 0.6 + 1.2 * t : 0.02 + 0.7 * Math.pow(t, 6),
+      emis: (t, p, uv) => vein(t, uv) ? 0.35 + 0.6 * t : 0.4 * Math.pow(t, 8),
     });
     tipsPts.push(beam[18]);
     // tines branching off the beam, pointing up / forward
@@ -121,21 +123,21 @@ function dress({ acc, facc, S, b }) {
       const bp = beam[Math.round(f * 18)];
       const path = hornPath(bp, d, L, norm(cross(norm(d), [0, 1, 0.3])), 0.35 * s, 7);
       acc.addRaw(loft(path, 6, taper(0.11 * (1 - f * 0.4), { pow: 0.8 }), [0, 1, 0]), {
-        skin: rigid(bone), kind: K.crystal, gm: 1, dtl: [0, 0.1, 0.25, 0.3],
+        skin: rigid(bone), kind: K.hard, gm: 1, dtl: [0, 0.1, 0.25, 0.3],
         color: (t, p, nn, uv) => vein(t, uv) ? C.bolt : lc(C.antler, 0xe8f4ff, Math.pow(t, 3)),
-        emis: (t, p, uv) => vein(t, uv) ? 0.5 + t : 0.02 + 1.4 * Math.pow(t, 5),
+        emis: (t, p, uv) => vein(t, uv) ? 0.3 + 0.6 * t : 1.1 * Math.pow(t, 7),
       });
       tipsPts.push(path[7]);
     }
     // crackling arcs between neighbouring tine tips (strobing, re-zagging bolt kind in the additive mesh)
-    for (let k = 0; k < tipsPts.length - 1; k += 1) {
-      const A = tipsPts[k], B = tipsPts[(k + 2) % tipsPts.length];
+    for (const k of [1, 3, 5]) {
+      const A = tipsPts[k], B = tipsPts[k + 1];
       const pts = []; for (let i = 0; i <= 8; i++) pts.push(lerp3(A, B, i / 8));
       const m = loft(pts, 4, () => [0.03, 0.03], [0, 1, 0]);
       const id = arcId++;
-      facc.addRaw(m, { skin: rigid(bone), kind: K.bolt, color: C.bolt, emis: 1.3, gm: 1, part: id, dtl: [0, 0, 0, 0], uv: (uv, t) => [uv[0], t] });
+      facc.addRaw(m, { skin: rigid(bone), kind: K.bolt, color: C.bolt, emis: 1.0, gm: 1, part: id, dtl: [0, 0, 0, 0], uv: (uv, t) => [uv[0], t] });
       // glow sheath around the arc
-      facc.addRaw(loft(pts, 5, () => [0.1, 0.1], [0, 1, 0]), { skin: rigid(bone), kind: K.bolt, color: C.bolt, emis: 0.1, gm: 1, part: id, dtl: [0, 0, 0, 0], uv: (uv, t) => [uv[0], t] });
+      facc.addRaw(loft(pts, 5, () => [0.08, 0.08], [0, 1, 0]), { skin: rigid(bone), kind: K.bolt, color: C.bolt, emis: 0.06, gm: 1, part: id, dtl: [0, 0, 0, 0], uv: (uv, t) => [uv[0], t] });
     }
     // stump: splintered base left when the antler breaks (hidden until then)
     const st = bezier([root, X([0.85, 3.35, -2.45], s), X([1.1, 3.55, -2.35], s)], 4);
@@ -153,7 +155,7 @@ function dress({ acc, facc, S, b }) {
 
 export const thunderhoof = {
   info: {
-    name: 'Old Thunderhoof', title: 'the Storm That Walks', height: 5.9, radius: 2.6,
+    name: 'Old Thunderhoof', title: 'the Storm That Walks', height: 5.9, radius: 2.8,
     parts: ['antlerL', 'antlerR'],
     actions: {
       idle: { dur: 4, hits: [], loop: true },
@@ -172,7 +174,7 @@ export const thunderhoof = {
   },
   config() { return { h: 0.068, ao: { dist: 0.1, str: 0.8 }, grad: { top: 0.15, bottom: 0.3, y0: 0, y1: 2.5, low: 0.22 }, dtl: [0.4, 0, 0.12, 0] }; },
   rig, sculpt, paint, dress,
-  look: { glow: 0x7ad0ff, glowI: 1.8, glow2: 0xe0f4ff, glow2I: 2.0, pulse: 2.6, dfreq: 1.2, enrage: 0xffd040, flash: 0x9ad8ff },
+  look: { glow: 0x7ad0ff, glowI: 1.5, glow2: 0xe0f4ff, glow2I: 1.6, pulse: 2.6, dfreq: 1.2, enrage: 0xffd040, flash: 0x9ad8ff },
   mat: { body: { rim: 0.3, rimColor: 0xd8e8ff, spec: 0.25, shine: 20 }, flame: {} },
   sockets: {
     head: ['head', [0, 3.2, -2.9]], mouth: ['head', [0, 2.2, -3.65]], chest: ['chest', [0, 2.3, -1.6]], back: ['chest', [0, 4.2, -0.8]],

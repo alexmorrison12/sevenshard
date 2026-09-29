@@ -4,7 +4,7 @@
 // and the charge loses its lava trail and knockdown.
 //  90% horn bar · 65% Molten Core (chain charges, bigger pools) · 40% MAGMA OVERLOAD (stagger) · 20% eruption frenzy
 import { fwd, back, rnd, tele, wait, strike, smash, volley, act, counter, pool, onNav, behind, farthest, reachAlong,
-  someHeroes, scaleHp, fx, sfx } from './kit.js';
+  someHeroes, scaleHp, fx, sfx, standardStart, partyK } from './kit.js';
 
 const cw = B => 2 * (B.u.radius + 0.6);
 const lavaR = B => (B.phase >= 1 ? 2.6 : 2.1);
@@ -25,7 +25,7 @@ async function moltenCharge(B, tgt, teleDur, withCounter) {
 
 export default {
   id: 'cinderhorn', model: 'cinderhorn', name: 'Cinderhorn', title: 'the Molten Juggernaut', kind: 'guardian',
-  radius: 3, height: 4.6, hp: 44000, atk: 0.14, bars: 190, speed: 4.6, turnRate: 3, enrage: 600,
+  radius: 3, height: 4.6, hp: 44000, atk: 0.16, bars: 190, speed: 4.6, turnRate: 3, enrage: 600,
   music: 'boss', arena: 'frostmere',
   anims: {
     gore: { dur: 1.6, hits: [0.78] }, charge: { dur: 3.6, hits: [1.5, 2.1, 2.7] }, stomp: { dur: 2.0, hits: [1.05] },
@@ -119,7 +119,7 @@ export default {
       const tg = B.tele('circle', { r: 40, dur, color: 'purple', follow: u, safe: true });
       try {
         B.anim('stomp', dur);
-        await B.staggerCheck(Math.round(440 * (B.mods.hard ? 1.08 : 1)), dur, { groggy: 5, label: 'Magma Overload', onFail: async () => {
+        await B.staggerCheck(Math.round(440 * partyK(B) * (B.mods.hard ? 1.08 : 1)), dur, { groggy: 5, label: 'Magma Overload', onFail: async () => {
           tg.alive = false;
           smash(B, 'all', { coef: 3.2, knock: 'up', fx: 'explosion_big', fxR: 12, fxColor: 'lava', sfx: 'explosion_big', shake: 0.9 });
           B.banner('Cinderhorn erupts — the arena floods with lava!', 'fail');
@@ -135,5 +135,5 @@ export default {
       act(B, 'roar', 1.0); await wait(B, 1.2);
     } },
   ],
-  onStart(enc) { if (enc.o.hard) for (const b of enc.bosses) scaleHp(b, 1.2); },
+  onStart: standardStart,
 };

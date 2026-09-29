@@ -78,7 +78,7 @@ const FRAG_COLOR = /* glsl */`
   vec4 tX = texture2D( uDetail, P.zy ); vec4 tY = texture2D( uDetail, P.zx ); vec4 tZ = texture2D( uDetail, P.xy );
   vec4 tt = tX * bw.x + tY * bw.y + tZ * bw.z;
   diffuseColor.rgb *= max( 0.0, 1.0 + dot( tt - 0.5, vDtl ) * 2.0 ) * uColorMul;
-  gSpecMask = kind < 0.5 ? 0.12 : kind < 1.5 ? 1.0 : kind < 2.5 ? 2.2 : kind < 3.5 ? 0.25 : kind < 4.5 ? 0.0 : kind < 5.5 ? 2.0 : kind < 6.5 ? 0.6 : kind < 7.5 ? 1.4 : kind < 8.5 ? 0.3 : kind < 9.5 ? 1.2 : 0.0;
+  gSpecMask = kind < 0.5 ? 0.12 : kind < 1.5 ? 1.0 : kind < 2.5 ? 1.1 : kind < 3.5 ? 0.25 : kind < 4.5 ? 0.0 : kind < 5.5 ? 2.0 : kind < 6.5 ? 0.6 : kind < 7.5 ? 1.4 : kind < 8.5 ? 0.3 : kind < 9.5 ? 1.2 : 0.0;
   if ( abs( kind - 3.0 ) < 0.5 ) {
     // membrane: veins radiating from the bones, capillary net, frosted underside
     float u = vUv2.x, v = vUv2.y;
@@ -144,7 +144,7 @@ const FRAG_EMIS = /* glsl */`
     gFlameA = tongue * ( 1.0 - smoothstep( 0.8, 1.0, f ) ) * clamp( vAux.x, 0.0, 1.5 );
   } else if ( abs( kind - 10.0 ) < 0.5 ) {   // lightning arc: strobing on / off per arc, white-hot core
     float tq = floor( uTime * 14.0 + vAux.w * 3.7 );
-    float on = step( 0.5 - 0.25 * uHeat, fract( sin( tq * 12.9898 + vAux.w * 78.233 ) * 43758.5453 ) );
+    float on = step( 0.62 - 0.3 * uHeat, fract( sin( tq * 12.9898 + vAux.w * 78.233 ) * 43758.5453 ) );
     ec = mix( uGlowCol, vec3( 3.0, 3.2, 3.6 ), 0.45 );
     em = vAux.x * on * ( 0.5 + uHeat ) * uGlowK;
     gFlameA = on * min( 1.0, 0.4 + uHeat );

@@ -43,7 +43,13 @@ export class Game {
     const loop = now => {
       if (!this.running) return;
       const raw = Math.min(0.1, (now - last) / 1000); last = now;
-      this.frame(Math.min(0.05, raw) * this.timeScale, raw);
+      try { this.frame(Math.min(0.05, raw) * this.timeScale, raw); }
+      catch (e) {
+        // never let one bad frame freeze the game: log each distinct error once, keep rendering
+        const k = String(e?.message); this._errs ||= new Set();
+        if (!this._errs.has(k)) { this._errs.add(k); console.error('[frame]', e); }
+        try { this.renderer.render(raw, this.time); this.input.endFrame(); } catch { /* */ }
+      }
       requestAnimationFrame(loop);
     };
     requestAnimationFrame(loop);

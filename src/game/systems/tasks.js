@@ -9,6 +9,7 @@ import { RNG } from '../../core/noise.js';
 import { dayId, weekId, nextDaily, nextWeekly } from '../../core/util.js';
 import { track as titlesTrack } from './titles.js';
 import { guildTrack } from './guild.js';
+import { boardsTrack } from './boards.js';
 import { ok, fail, grantBundle, bundleRows, rosterSeed, onTrack, itemInfo, MIN, HOUR, DAY } from './common.js';
 
 const TPL = Object.fromEntries([...DAILY_TASKS, ...WEEKLY_TASKS].map(t => [t.id, t]));
@@ -97,6 +98,7 @@ export function track(account, char, event, data = {}) {
   }
   out.push(...titlesTrack(account, char, event, data));
   out.push(...guildTrack(account, char, event, data));
+  out.push(...boardsTrack(account, char, event, data));
   account.save();
   return out;
 }

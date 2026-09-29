@@ -85,7 +85,13 @@ export class NetGuest {
         this.send({ t: 'ready' });
         return;
       }
-      case 'wl': this.youHostId = m.you; for (const rec of m.units) this.puppet(rec); return;
+      case 'wl': {
+        this.youHostId = m.you; for (const rec of m.units) this.puppet(rec);
+        const lead = this.hostIds.get(m.lead);
+        if (lead && me) this.teleport(lead.pos.x + 1.5, lead.pos.z + 1.5);
+        return;
+      }
+      case 'tp': this.teleport(m.x, m.z); return;
       case 'sp': if (!this.building && m.u.id !== this.youHostId) this.puppet(m.u); return;
       case 'ds': { const u = this.hostIds.get(m.id); if (u) { L.remove(u); this.hostIds.delete(m.id); } return; }
       case 'sn': this.snapshot(m); return;
@@ -135,6 +141,12 @@ export class NetGuest {
       case 'rs': this.s.onResult?.(m.r); return;
       case 'bye': this.s.onClose?.('The host closed the world.'); return;
     }
+  }
+  teleport(x, z) {
+    const me = this.me, L = this.level; if (!me || !L) return;
+    const p = L.nav.nearest(x, z, 6, 0.4) || { x, z };
+    me.pos.x = p.x; me.pos.z = p.z; me.pos.y = L.heightAt(p.x, p.z); me.kb.t = 0;
+    this.game.player?.stop?.(); this.game.cam.snap(me.pos);
   }
   /** a source we don't know yet (spawn raced the attack): borrow numbers from the hud */
   stub(id) { return { id, team: 1, pos: { x: 0, y: 0, z: 0 }, st: { atk: this.lastAtk || 5000 }, data: {}, statuses: [], shields: [], _statDirty: true, baseSuperArmor: 0, facing: 0, fx: 0, fz: -1 }; }

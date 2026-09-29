@@ -1,7 +1,7 @@
 // Starcaller — cosmic violet, icy blue and fire; staff with a star orb.
 import {
   PI, TAU, lg, rg, poly, circle, ellipse, star, glow, sparkle, slash, slashAB, streak, ring, rays, burst, embers, rocks,
-  speedLines, backdrop, rgba, shade, mix, outline, fire, fireLayers, bolt, crystal, runeCircle, add, norm, glowPath, clouds,
+  speedLines, backdrop, rgba, shade, mix, outline, fire, fireLayers, bolt, crystal, runeCircle, add, norm, glowPath, clouds, ribbon,
 } from './core.js';
 import { staff, meteor, figure } from './motifs.js';
 
@@ -75,17 +75,28 @@ export const STARCALLER = {
   },
   lightning_vortex(x, R) {
     backdrop(x, R, ['#4a3aa0', '#12103a', '#02020a']);
-    glow(x, 50, 50, 46, '#8a8aff', 0.5);
-    for (let k = 0; k < 4; k++) glowPath(x, xx => { xx.beginPath(); for (let t = 0; t <= 1.001; t += 0.02) { const a = t * TAU * 1.3 + k * PI / 2, r = 4 + t * 38; const px = 50 + Math.cos(a) * r, py = 50 + Math.sin(a) * r * 0.8; t ? xx.lineTo(px, py) : xx.moveTo(px, py); } }, k % 2 ? ICE : '#b89aff', 1.5);
-    for (let i = 0; i < 4; i++) { const a = R() * TAU; bolt(x, R, 50, 50, 50 + Math.cos(a) * 42, 50 + Math.sin(a) * 34, { col: '#c0d0ff', w: 1.2, gens: 4 }); }
-    x.fillStyle = rg(x, 50, 50, 0, 10, [[0, '#ffffff'], [1, 'rgba(200,200,255,0)']]); circle(x, 50, 50, 10); x.fill();
+    glow(x, 50, 50, 48, '#8a8aff', 0.55);
+    for (let k = 0; k < 3; k++) {
+      const f = t => { const a = t * TAU * 1.05 + k * TAU / 3, r = 5 + t * 40; return [50 + Math.cos(a) * r, 50 + Math.sin(a) * r * 0.82]; };
+      add(x); ribbon(x, f, t => 1 + t * 9 * (1 - t * 0.5), 40); x.fillStyle = rgba(k === 1 ? ICE : '#b89aff', 0.35); x.fill(); norm(x);
+      glowPath(x, xx => { const p0 = f(0); xx.beginPath(); xx.moveTo(p0[0], p0[1]); for (let t = 0.02; t <= 1.001; t += 0.02) { const p = f(t); xx.lineTo(p[0], p[1]); } }, k === 1 ? ICE : '#c8b0ff', 1.3);
+    }
+    for (let i = 0; i < 7; i++) { const a = (i / 7) * TAU + R() * 0.5; bolt(x, R, 50 + Math.cos(a) * 8, 50 + Math.sin(a) * 8, 50 + Math.cos(a) * 44, 50 + Math.sin(a) * 38, { col: '#c0d0ff', w: 1.3, gens: 4, jit: 0.3 }); }
+    glow(x, 50, 50, 16, '#ffffff', 0.9);
+    x.fillStyle = rg(x, 50, 50, 0, 9, [[0, '#ffffff'], [1, 'rgba(200,210,255,0)']]); circle(x, 50, 50, 9); x.fill();
   },
-  inferno_wave(x, R) {
+  inferno_wave(x, R) { // a breaking wave of fire, curling forward
     backdrop(x, R, EMBER, { angle: 0 });
-    glow(x, 50, 64, 50, FIRE, 0.6);
-    for (let i = 0; i < 7; i++) { const px = 10 + i * 13, h = 26 + i * 7; fire(x, R, px, 94, h, 18 + i, 0.35, { n: 4 }); }
-    speedLines(x, R, 10, [0, 20, 50, 70], 0, '#ffb070', { len: 20, w: 1.2 });
-    embers(x, R, 18, 60, 50, 40, [FIRE, '#ffd070']);
+    glow(x, 60, 50, 50, FIRE, 0.6);
+    const wave = () => { x.beginPath(); x.moveTo(-4, 100); x.bezierCurveTo(14, 70, 40, 34, 66, 20); x.bezierCurveTo(80, 12, 94, 14, 96, 26); x.bezierCurveTo(98, 36, 90, 42, 82, 38); x.bezierCurveTo(88, 32, 84, 26, 76, 30); x.bezierCurveTo(62, 40, 56, 66, 50, 100); x.closePath(); };
+    wave(); x.fillStyle = lg(x, 10, 100, 80, 20, [[0, '#3a0600'], [0.4, '#b0240a'], [0.75, '#ff7a1a'], [1, '#ffd060']]); x.fill(); outline(x, 'rgba(40,6,0,.8)', 1);
+    add(x); wave(); x.fillStyle = rg(x, 80, 26, 1, 40, [[0, rgba('#fff4c0', 0.8)], [1, rgba('#ff6a1a', 0)]]); x.fill(); norm(x);
+    // interior darker trough
+    x.beginPath(); x.moveTo(50, 100); x.bezierCurveTo(56, 66, 62, 42, 76, 30); x.bezierCurveTo(70, 44, 66, 70, 64, 100); x.closePath(); x.fillStyle = 'rgba(60,8,0,.55)'; x.fill();
+    for (const [px, py, h, a] of [[22, 70, 22, 0.55], [38, 50, 26, 0.6], [54, 34, 28, 0.75], [70, 22, 24, 0.95], [88, 16, 18, 1.3]]) fire(x, R, px, py, h, h * 0.55, a, { n: 3 });
+    glowPath(x, xx => { xx.beginPath(); xx.moveTo(2, 94); xx.bezierCurveTo(18, 68, 42, 36, 66, 22); xx.bezierCurveTo(80, 14, 93, 16, 95, 27); }, '#ffe080', 1.8);
+    speedLines(x, R, 8, [0, 60, 30, 96], -0.8, '#ffb070', { len: 16, w: 1.2 });
+    embers(x, R, 16, 64, 36, 34, [FIRE, '#ffd070']);
   },
   blink(x, R) {
     backdrop(x, R, SPACE);

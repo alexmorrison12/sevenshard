@@ -13,11 +13,11 @@ const mulTable = (list, m, skip = []) => list.map(e => (skip.includes(e.id) || !
 // ------------------------------------------------------------------------------------------------ chaos dungeons
 // base: every clear. resonance: the first two clears each day (×2 with 20 rest bonus). extras: rolled with the
 // resonance chest (rest bonus rolls them twice).
-const CHAOS_BASE = [E('silver', 26000, 34000), E('shards', 1700, 2300), E('guardian_stone', 520, 680), E('destruction_stone', 160, 210), E('leapstone', 8, 11), E('fusion', 3, 5)];
-const CHAOS_RES = [E('silver', 24000, 30000), E('shards', 2000, 2600), E('guardian_stone', 850, 1050), E('destruction_stone', 260, 330), E('leapstone', 13, 17), E('fusion', 6, 9), E('solar_grace', 2, 4, 0.5), E('solar_blessing', 1, 1, 0.15)];
+const CHAOS_BASE = [E('silver', 25000, 31000), E('shards', 1100, 1500), E('guardian_stone', 380, 480), E('destruction_stone', 120, 160), E('leapstone', 8, 11), E('fusion', 4, 6)];
+const CHAOS_RES = [E('silver', 25000, 31000), E('shards', 1400, 1800), E('guardian_stone', 650, 800), E('destruction_stone', 200, 250), E('leapstone', 12, 16), E('fusion', 9, 12), E('solar_grace', 2, 4, 0.5), E('solar_blessing', 1, 1, 0.15)];
 const TIER_MUL = { 1: 1, 2: 1.3, 3: 1.7, 4: 2.2 };
-const CHAOS_HORN = { 1: [E('horn_shard', 1, 2, 0.6)], 2: [E('horn_shard', 1, 3, 0.8)], 3: [E('horn_shard', 4, 6)], 4: [E('horn_shard', 6, 9)] };
-const CHAOS_HORN_RES = { 1: [E('horn_shard', 2, 3, 0.7)], 2: [E('horn_shard', 2, 4)], 3: [E('horn_shard', 5, 8)], 4: [E('horn_shard', 8, 12)] };
+const CHAOS_HORN = { 1: [E('horn_shard', 1, 2, 0.6)], 2: [E('horn_shard', 2, 3)], 3: [E('horn_shard', 13, 18)], 4: [E('horn_shard', 18, 24)] };
+const CHAOS_HORN_RES = { 1: [E('horn_shard', 2, 3, 0.7), E('gold', 10, 20)], 2: [E('horn_shard', 3, 5), E('gold', 20, 30)], 3: [E('horn_shard', 14, 18), E('gold', 30, 50)], 4: [E('horn_shard', 20, 26), E('gold', 50, 70)] };
 const CHAOS_EXTRAS = {
   1: [E('acc:4', 1, 1, 0.45), E('acc:5', 1, 1, 0.05), E('gem:1-3', 1, 1, 0.35), E('card_pack', 1, 1, 0.35), E('card_pack_epic', 1, 1, 0.04), E('stone:4', 1, 1, 0.08), E('stone:5', 1, 1, 0.02), E('bracelet:4', 1, 1, 0.04), E('book:4', 1, 1, 0.06)],
   2: [E('acc:4', 1, 1, 0.45), E('acc:5', 1, 1, 0.1), E('gem:1-4', 1, 1, 0.38), E('card_pack', 1, 1, 0.4), E('card_pack_epic', 1, 1, 0.06), E('stone:4', 1, 1, 0.08), E('stone:5', 1, 1, 0.04), E('bracelet:4', 1, 1, 0.04), E('bracelet:5', 1, 1, 0.01), E('book:4', 1, 1, 0.08)],
@@ -35,13 +35,13 @@ export const REST_COST = 20;             // rest bonus consumed by one doubled r
 
 // ------------------------------------------------------------------------------------------------ guardian hunts
 const GUARD_BASE = [E('silver', 16000, 21000), E('leapstone', 18, 24), E('guardian_stone', 220, 300), E('destruction_stone', 80, 110), E('shards', 700, 950)];
-const GUARD_RES = [E('silver', 12000, 16000), E('leapstone', 26, 34), E('fusion', 5, 8), E('shards', 900, 1200), E('solar_grace', 2, 3, 0.5), E('solar_blessing', 1, 1, 0.25)];
+const GUARD_RES = [E('silver', 15000, 19000), E('leapstone', 26, 34), E('fusion', 7, 10), E('shards', 900, 1200), E('solar_grace', 2, 3, 0.5), E('solar_blessing', 1, 1, 0.25)];
 const G = (id, name, ilvl, m, horn, hornRes, extras, mins) => ({ id, name, ilvl, mins, base: [...mulTable(GUARD_BASE, m), ...horn], resonance: [...mulTable(GUARD_RES, m), ...hornRes], extras });
 export const GUARDIAN_LOOT = {
   rimewing: G('rimewing', 'Rimewing', 1100, 1, [E('horn_shard', 1, 3, 0.7)], [E('horn_shard', 2, 3)], [E('gem:1-3', 1, 1, 0.25), E('card_pack', 1, 1, 0.3), E('book:4', 1, 1, 0.05), E('card:rimewing', 1, 1, 0.03)], 6),
-  cinderhorn: G('cinderhorn', 'Cinderhorn', 1250, 1.3, [E('horn_shard', 2, 4)], [E('horn_shard', 3, 5)], [E('gem:1-4', 1, 1, 0.28), E('card_pack', 1, 1, 0.35), E('book:4', 1, 1, 0.06), E('card:cinderhorn', 1, 1, 0.03)], 7),
-  sandmaw: G('sandmaw', 'Sandmaw', 1370, 1.7, [E('horn_shard', 6, 9)], [E('horn_shard', 8, 12)], [E('gem:2-5', 1, 1, 0.3), E('card_pack', 1, 1, 0.4), E('book:4', 1, 1, 0.08), E('card:sandmaw', 1, 1, 0.03)], 8),
-  kurai: G('kurai', 'Kurai the Pyrefox', 1460, 2.2, [E('horn_shard', 9, 13)], [E('horn_shard', 12, 16)], [E('gem:3-6', 1, 1, 0.32), E('card_pack', 1, 1, 0.45), E('card_pack_epic', 1, 1, 0.08), E('book:4', 1, 1, 0.1), E('card:kurai', 1, 1, 0.03)], 9),
+  cinderhorn: G('cinderhorn', 'Cinderhorn', 1250, 1.3, [E('horn_shard', 3, 5)], [E('horn_shard', 4, 6), E('gold', 10, 20)], [E('gem:1-4', 1, 1, 0.28), E('card_pack', 1, 1, 0.35), E('book:4', 1, 1, 0.06), E('card:cinderhorn', 1, 1, 0.03)], 7),
+  sandmaw: G('sandmaw', 'Sandmaw', 1370, 1.7, [E('horn_shard', 14, 18)], [E('horn_shard', 16, 22), E('gold', 30, 50)], [E('gem:2-5', 1, 1, 0.3), E('card_pack', 1, 1, 0.4), E('book:4', 1, 1, 0.08), E('card:sandmaw', 1, 1, 0.03)], 8),
+  kurai: G('kurai', 'Kurai the Pyrefox', 1460, 2.2, [E('horn_shard', 18, 24)], [E('horn_shard', 22, 28), E('gold', 50, 70)], [E('gem:3-6', 1, 1, 0.32), E('card_pack', 1, 1, 0.45), E('card_pack_epic', 1, 1, 0.08), E('book:4', 1, 1, 0.1), E('card:kurai', 1, 1, 0.03)], 9),
 };
 export const GUARDIAN_RESONANCE_RUNS = 2;
 
@@ -52,11 +52,11 @@ export const ABYSS_LOOT = {
     id: 'oratory', name: 'The Sunken Oratory', ilvl: 1325,
     gates: [
       { name: 'The Drowned Choir', boss: 'nerissa', mins: 9,
-        first: [E('gold', 250), E('silver', 40000, 50000), E('leapstone', 34, 44), E('fusion', 10, 14), E('guardian_stone', 1300, 1600), E('destruction_stone', 420, 520), E('shards', 3200, 4000), E('horn_shard', 16, 22)],
+        first: [E('gold', 250), E('silver', 40000, 50000), E('leapstone', 34, 44), E('fusion', 10, 14), E('guardian_stone', 1300, 1600), E('destruction_stone', 420, 520), E('shards', 3200, 4000), E('horn_shard', 24, 30)],
         extras: [E('acc:5', 1, 1, 0.5), E('gem:2-4', 1, 1, 0.5), E('book:4', 1, 1, 0.2), E('card_pack_epic', 1, 1, 0.2), E('stone:5', 1, 1, 0.15), E('card:nerissa', 1, 1, 0.05)],
         repeat: [E('silver', 18000, 24000), E('shards', 1400, 1800), E('guardian_stone', 420, 520), E('leapstone', 9, 13), E('horn_shard', 3, 5)] },
       { name: 'Oracle of the Deep', boss: 'deep_oracle', mins: 10,
-        first: [E('gold', 400), E('silver', 50000, 60000), E('leapstone', 44, 54), E('fusion', 14, 18), E('guardian_stone', 1600, 1900), E('destruction_stone', 520, 620), E('shards', 4000, 5000), E('horn_shard', 22, 28)],
+        first: [E('gold', 400), E('silver', 50000, 60000), E('leapstone', 44, 54), E('fusion', 14, 18), E('guardian_stone', 1600, 1900), E('destruction_stone', 520, 620), E('shards', 4000, 5000), E('horn_shard', 30, 36)],
         extras: [E('acc:5', 1, 1, 1), E('gem:2-5', 1, 1, 0.6), E('book:4', 1, 1, 0.3), E('stone:5', 1, 1, 0.25), E('bracelet:5', 1, 1, 0.15), E('card:deep_oracle', 1, 1, 0.05)],
         repeat: [E('silver', 22000, 28000), E('shards', 1700, 2100), E('guardian_stone', 500, 620), E('leapstone', 11, 15), E('horn_shard', 4, 6)] },
     ],
@@ -97,8 +97,8 @@ export const FIELD_LOOT = {
   mob: { name: 'Monster', table: [E('silver', 30, 90, 0.35), E('hp_potion', 1, 1, 0.01), E('herb', 1, 2, 0.015), E('ore', 1, 2, 0.015)] },
   elite: { name: 'Elite', table: [E('silver', 500, 1100), E('guardian_stone', 20, 50, 0.6), E('destruction_stone', 8, 20, 0.4), E('leapstone', 1, 2, 0.25), E('card_pack', 1, 1, 0.01), E('acc:4', 1, 1, 0.005)] },
   named: { name: 'Named Foe', table: [E('silver', 3000, 5000), E('guardian_stone', 80, 140), E('leapstone', 2, 4), E('card_pack', 1, 1, 0.08), E('gem:1-2', 1, 1, 0.05)] },
-  fieldboss: { name: 'Old Thunderhoof', mins: 6, table: [E('silver', 50000, 70000), E('gold', 80, 120), E('shards', 2500, 3500), E('guardian_stone', 600, 900), E('leapstone', 15, 22), E('fusion', 6, 10), E('horn_shard', 3, 6), E('card_pack', 1, 2), E('gem:2-4', 1, 1, 0.35), E('acc:4', 1, 1, 0.6), E('acc:5', 1, 1, 0.1), E('book:4', 1, 1, 0.08), E('card:thunderhoof', 1, 1, 0.06)] },
-  chaosgate: { name: 'Chaos Gate', mins: 8, table: [E('silver', 40000, 55000), E('gold', 60, 100), E('shards', 2000, 3000), E('guardian_stone', 800, 1100), E('destruction_stone', 250, 350), E('leapstone', 10, 16), E('fusion', 5, 8), E('horn_shard', 2, 5), E('acc:4', 1, 1, 1), E('acc:5', 1, 1, 0.15), E('gem:2-4', 1, 1, 0.3), E('stone:5', 1, 1, 0.06), E('map', 1, 1, 0.2), E('card_pack', 1, 1, 0.5)] },
+  fieldboss: { name: 'Old Thunderhoof', mins: 6, table: [E('silver', 50000, 70000), E('gold', 120, 180), E('shards', 2500, 3500), E('guardian_stone', 600, 900), E('leapstone', 15, 22), E('fusion', 6, 10), E('horn_shard', 5, 9), E('card_pack', 1, 2), E('gem:2-4', 1, 1, 0.35), E('acc:4', 1, 1, 0.6), E('acc:5', 1, 1, 0.1), E('book:4', 1, 1, 0.08), E('card:thunderhoof', 1, 1, 0.06)] },
+  chaosgate: { name: 'Chaos Gate', mins: 8, table: [E('silver', 40000, 55000), E('gold', 90, 140), E('shards', 2000, 3000), E('guardian_stone', 800, 1100), E('destruction_stone', 250, 350), E('leapstone', 10, 16), E('fusion', 5, 8), E('horn_shard', 4, 7), E('acc:4', 1, 1, 1), E('acc:5', 1, 1, 0.15), E('gem:2-4', 1, 1, 0.3), E('stone:5', 1, 1, 0.06), E('map', 1, 1, 0.2), E('card_pack', 1, 1, 0.5)] },
   ghostship: { name: 'Ghost Ship', mins: 8, table: [E('pirate', 300, 450), E('gold', 80, 120), E('leapstone', 8, 12), E('tokens', 2, 4), E('card_pack', 1, 2), E('card:ghost_captain', 1, 1, 0.08), E('gem:2-4', 1, 1, 0.25)] },
   treasure: { name: 'Buried Treasure', mins: 3, table: [E('silver', 20000, 40000), E('pirate', 50, 100), E('gem:1-3', 1, 1, 0.3), E('card_pack', 1, 1, 0.3), E('relic_shard', 5, 12)] },
 };

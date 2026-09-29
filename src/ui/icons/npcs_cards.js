@@ -42,9 +42,9 @@ export const PEOPLE = {
 };
 export const PIPS = {
   rapport3: { body: '#e0c070', leaf: '#6ac850', backpack: true, prop: 'seed' },
-  puddlebutton: { body: '#e8c878', leaf: '#5ab848', hat: 'top_hat', mustache: '#6a4a20', sash: '#c02a3a' },
+  puddlebutton: { body: '#e8c878', leaf: '#5ab848', hat: 'top_hat', mustache: '#6a4a20', chain: true },
   sprig: { body: '#f0d890', leaf: '#8ae060', small: true, prop: 'seed' },
-  captain_acorn: { body: '#d8b068', leaf: '#6ac850', hat: 'pirate', sash: '#2a4a8a', bg: ['#6ab0d0', '#1a3a50', '#030a10'] },
+  captain_acorn: { body: '#d8b068', leaf: '#6ac850', hat: 'pirate', eyepatch: true, scarf: '#c83a3a', bg: ['#6ab0d0', '#1a3a50', '#030a10'] },
   mossy_gran: { body: '#d8c088', leaf: '#4a9a38', glasses: true, shawl: '#5a8a3a', mood: 'sleepy', prop: 'mug' },
 };
 

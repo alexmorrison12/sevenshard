@@ -198,7 +198,11 @@ class UI {
     if (this.modals.open) { if (e.key === 'Escape') { this.modals.closeTop(); e.preventDefault(); } return; }
     if (field) return;
     if (this.npc.active) { if (this.npc.key(e)) e.preventDefault(); return; }
-    if (this.current) { if (this.current.key && this.current.key(e)) { e.preventDefault(); return; } if (!this.current.constructor.overlay) return; }
+    if (this.current) {
+      if (this.windows.hasOpenModal()) return; // e.g. the raid auction open over the results screen
+      if (this.current.key && this.current.key(e)) { e.preventDefault(); return; }
+      if (!this.current.constructor.overlay) return;
+    }
     if (!this.hotkeys) return;
     if (e.key === 'Escape') {
       e.preventDefault();

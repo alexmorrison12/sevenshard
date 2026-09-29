@@ -2,17 +2,18 @@
 // 'cutscene_sad' — D minor, 58 BPM: the hero's call slowed and broken on solo cello; an oboe remembers over harp while
 //   the SHARD motif glints on celesta; violins + "oo" choir weep; a sparse ending. ≈100 s per cycle.
 // 'cutscene_heroic' — D major, 84 BPM: the HERO theme reborn in major. rise (timpani roll, low strings, a distant horn
-//   call) → resolve (horns + strings) → triumph (tutti, choir, taiko, crashes) → glory (Bb–C–D). ≈90 s per cycle.
+//   call) → resolve (horns + strings) → march (the call climbing through the orchestra over spiccato + snare) →
+//   triumph (tutti, choir, taiko, crashes) → glory (Bb–C–D). ≈92 s per cycle.
 import { Track } from './track.js';
-import { Ens, Solo, Wind, Harp, Horn, Mallet, Timpani, Taiko, Cymbal, Fx } from './instruments.js';
+import { Ens, Solo, Wind, Harp, Horn, Mallet, Timpani, Taiko, Cymbal, Fx, Strings, Snare } from './instruments.js';
 import { mel } from './theory.js';
-import { SHARD, SHARD_MAJ } from './motifs.js';
+import { SHARD, SHARD_MAJ, CALL_MAJ } from './motifs.js';
 
 const LAMENT = mel('A3:2 D4:2 | F4:3 E4:.5 D4:.5 | D4:2 Bb3:1 G3:1 | A3:3 C#4:1 | D4:2 F4:1 A4:1 | G4:2 F4:1 E4:1 | D4:2 C#4:2 | D4:4');
 const LAMENT_CH = ['Dm', 'Bb', 'Gm', 'A', 'Dm', 'Gm/Bb', ['Asus4', 'A'], 'Dm'];
 const WEEP = mel('D5:3 C5:1 | C5:2 A4:2 | Bb4:1.5 A4:.5 G4:2 | A4:4 | G4:2 Bb4:1 Eb5:1 | D5:3 F5:1 | E5:2 D5:2 | C#5:4');
 const WEEP_CH = ['Bb', 'F/A', 'Gm', 'Dm/F', 'Eb', 'Bb/D', 'Asus4', 'A'];
-const MEM_CH = ['Dm', 'F', 'C', 'Dm', 'Bb', 'F', 'Gm', 'A'];
+const MEM_CH = LAMENT_CH; // the oboe remembers the lament: same harmony, new colours
 
 export class CutsceneSad extends Track {
   constructor(e, n, t0, seed) {
@@ -41,8 +42,7 @@ export class CutsceneSad extends Track {
         break;
       case 'memory':
         this.line(I.oboe, t, this.barSlice(LAMENT, sb, 4), { vel: 0.46, tr: 12 });
-        each((c, tt) => this.arp(I.harp, tt, 4, c, { pat: [0, 1, 2, 3, 2, 1], step: 0.5 * cs.length, lo: 50, vel: 0.22, len: 4 }));
-        if (sb % 2 === 0) this.pad(I.str, t, B * 2, cs[0], { n: 3, lo: 50, hi: 65, vel: 0.22, a: 1.5, r: 1.5, art: 'pad' });
+        each((c, tt, d) => { this.arp(I.harp, tt, 4 / cs.length, c, { pat: [0, 1, 2, 3, 2, 1], step: 0.5, lo: 50, vel: 0.22, len: 4 }); this.pad(I.str, tt, d, c, { n: 3, lo: 48, hi: 62, vel: 0.22, a: 1, r: 1.5, art: 'pad' }); });
         if (sb === 2 || sb === 6) this.line(I.cel, this.bt(t, 1), SHARD, { vel: 0.3, tr: -12, hum: 3 });
         break;
       case 'weep':
@@ -61,6 +61,8 @@ export class CutsceneSad extends Track {
   }
 }
 
+// the call's rising sequence (march section): D – E – F#m – G – A (bars of 2)
+const MARCH_CH = ['D', 'D', 'G', 'G', 'A', 'A', 'Bm', 'A'];
 // HERO in D major (bar 2 re-shaped for the major mode)
 const HERO_MAJ = mel('D4:1.5! A4:.5 D5:2 | C#5:.5 B4:.5 A4:1 F#4:1 D4:1 | F#4:1.5! C#5:.5 F#5:2 | E5:.5 D5:.5 C#5:1 A4:1 E4:1 | G4:1 B4:1 D5:1.5 C#5:.5 | B4:1 D5:1 F#5:2! | E5:.5 D5:.5 C#5:.5 B4:.5 A4:1 C#5:1 | D5:4');
 const HERO_MAJ_CH = ['D', 'Bm7', 'F#m', 'A', 'Em', 'Bm', ['Em', 'A'], 'D'];
@@ -83,13 +85,15 @@ export class CutsceneHeroic extends Track {
     this.I('taiko', Taiko, { size: 'big', rev: 0.4 });
     this.I('cym', Cymbal, { rev: 0.55 });
     this.I('fx', Fx, { rev: 0.45 });
-    this.form = ['rise', 'resolve', 'triumph', 'glory']; this.si = 0; this.sb = 0; this.cycle = 0;
+    this.I('spc', Strings, { pan: 0.2, rev: 0.3, bright: 0.95 });
+    this.I('snare', Snare, { rev: 0.3 });
+    this.form = ['rise', 'resolve', 'march', 'triumph', 'glory']; this.si = 0; this.sb = 0; this.cycle = 0;
   }
   playBar(bar, t) {
     const I = this.inst, B = this.barDur, s = this.spb;
     const type = this.form[this.si], sb = this.sb, len = type === 'rise' || type === 'glory' ? 4 : 8;
-    const raw = type === 'rise' ? ['D', 'D', 'G/D', 'A'][sb] : type === 'glory' ? ['Bb', 'C', 'D', 'D'][sb] : HERO_MAJ_CH[sb];
-    const cs = Array.isArray(raw) ? raw : [raw], each = (fn) => cs.forEach((c, i) => fn(c, t + i * (B / cs.length), B / cs.length));
+    const raw0 = type === 'rise' ? ['D', 'D', 'G/D', 'A'][sb] : type === 'glory' ? ['Bb', 'C', 'D', 'D'][sb] : type === 'march' ? MARCH_CH[sb] : HERO_MAJ_CH[sb];
+    const raw = raw0, cs = Array.isArray(raw) ? raw : [raw], each = (fn) => cs.forEach((c, i) => fn(c, t + i * (B / cs.length), B / cs.length));
     const mel8 = this.barSlice(HERO_MAJ, sb, 4);
     switch (type) {
       case 'rise':
@@ -106,6 +110,18 @@ export class CutsceneHeroic extends Track {
         if (sb === 0 || sb === 4) I.timp.hit(t, 38, 0.55);
         if (sb === 7) { I.cym.swell(this.bt(t, 1), B - s, 0.5); I.timp.roll(this.bt(t, 2), 45, B * 0.5 - 0.05, 0.1, 0.7, { hit: false }); }
         break;
+      case 'march': {
+        // the call passed up through the orchestra in sequence over a driving spiccato + snare
+        const bm = this.bassPitch(cs[0], 38, 50, 'mb');
+        for (let k = 0; k < 8; k++) I.spc.note(this.bt(t, k * 0.5), bm + (k % 4 === 2 ? 7 : 0), s * 0.4, k % 2 ? 0.36 : 0.52, { d: 0.12 });
+        for (const [b, v] of [[0, 0.5], [1, 0.3], [1.5, 0.25], [2, 0.45], [3, 0.3], [3.5, 0.28]]) I.snare.hit(this.bt(t, b), v);
+        if (sb % 2 === 0) { const who = sb < 4 ? I.horn : I.tpt, tr = [0, 5, 7, 12][sb / 2]; this.line(who, t, CALL_MAJ, { vel: 0.66 + sb * 0.02, tr }); } // D4 → G4 → A4 → D5
+        each((c, tt, d) => { this.pad(I.str, tt, d, c, { n: 4, lo: 45, hi: 62, vel: 0.34 + sb * 0.02, a: 0.2 }); I.low.note(tt, this.bassPitch(c, 31, 43, 'lb'), d, 0.42, { a: 0.1 }); });
+        if (sb % 4 === 3) this.pad(I.horns, t, B, cs[0], { n: 3, lo: 50, hi: 62, vel: 0.5, art: 'swell', a: 1 });
+        if (sb === 0 || sb === 4) I.timp.hit(t, bm - 12 < 36 ? bm : bm - 12, 0.6);
+        if (sb === 7) { I.snare.roll(this.bt(t, 2), B * 0.5, 0.2, 0.7, { rate: 18 }); I.cym.swell(this.bt(t, 1), B - s, 0.55); I.timp.roll(this.bt(t, 2), 45, B * 0.5 - 0.05, 0.1, 0.8, { hit: false }); }
+        break;
+      }
       case 'triumph':
         this.line(I.horn, t, mel8, { vel: 0.84 }); this.line(I.tpt, t, mel8, { vel: 0.6, tr: 12 }); this.line(I.vln, t, mel8, { vel: 0.62, tr: 12, a: 0.05, r: 0.4 });
         each((c, tt, d) => {

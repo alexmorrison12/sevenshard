@@ -8,6 +8,7 @@ import { QuestTracker } from './quests.js';
 import { Chat } from './chat.js';
 import { MenuStrip } from './menu.js';
 import { Toasts, LootFeed, CastBar, Prompt, Progress, Timer } from './center.js';
+import { ShipHud } from './ship.js';
 
 export class Hud {
   constructor(ui, layer) {
@@ -31,6 +32,7 @@ export class Hud {
     this.prompt = new Prompt(el);
     this.prompt.el.addEventListener('click', () => ui.emit('hud:interact', {}));
     this.cluster = new SkillCluster(ui, el);
+    this.ship = new ShipHud(ui, el);
     this.state = null;
     this.visible = true;
   }
@@ -51,6 +53,8 @@ export class Hud {
     this.cast.update(s.cast || null);
     this.prompt.update(s.interact || null);
     if (s.badges) for (const k in s.badges) this.menu.badge(k, s.badges[k]);
+    this.ship.update(s.ship || null);
+    setCls(this.el, 'is-sailing', !!s.ship);
     this.ui.touchLayer?.update(s);
     setCls(this.el, 'has-boss', !!s.boss);
     setCls(this.el, 'is-dead', !!s.dead || s.hp <= 0);

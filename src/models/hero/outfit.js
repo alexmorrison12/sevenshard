@@ -2,7 +2,8 @@
 // panels, headgear, class extras) fitted to a body base. All pieces are cached per base + spec.
 import { SLOT } from './palette.js';
 import { ringPiece, pauldronPiece, headgearPiece, capePiece, skirtPiece, panelPiece, copPiece, cuffPiece, beltPiece, strapPiece, lamesPiece, limbPlatesPiece } from './pieces.js';
-import { hoodPiece } from './hair.js';
+import { maskPiece, hood2Piece } from './headwear.js';
+import { cuirassPiece, tassetsPiece, limbShellPiece, pantsPiece } from './armor.js';
 import { headbandPiece, hatPiece, tailsPiece, scarfPiece, collarPiece, coatTailsPiece, bandolierPiece, chainsPiece, gauntletPiece, hipChainPiece } from './extras.js';
 
 /** list of { p: piece } for a base + resolved gear spec; also reports whether hair is hidden */
@@ -28,7 +29,13 @@ export function outfitPieces(base, g) {
   }
   if (ct === 'tunic' || ct === 'shirt' || ct === 'rags') add(ringPiece(base, 'torso', J.hips[1] - 0.06 * legScale, { profile: 'tube', w: 0.016, slot: SLOT.CLOTH2, off: 0.01 }));
   if (chest.straps && ct !== 'robe') add(strapPiece(base, { off: ct === 'mail' ? 0.018 : 0.014 }));
-  if (ct === 'plate') add(lamesPiece(base, { count: 3, trim: tier >= 1 }));
+  if (ct === 'plate' && !g.cuirass) add(lamesPiece(base, { count: 3, trim: tier >= 1 }));
+  if (g.cuirass) add(cuirassPiece(base, { ...g.cuirass, runes: !!g.runes }));
+  if (g.tassets) add(tassetsPiece(base, { ...g.tassets, runes: !!g.runes }));
+  if (g.pants) for (const pp of pantsPiece(base, g.pants)) add(pp);
+  if (g.greaves) for (const s of ['L', 'R']) add(limbShellPiece(base, 'leg' + s, g.greaves.from ?? 1.08, g.greaves.to ?? 1.95, { front: g.greaves.front, runes: !!g.runes }));
+  if (g.cuisses) for (const s of ['L', 'R']) add(limbShellPiece(base, 'leg' + s, g.cuisses.from ?? 0.25, g.cuisses.to ?? 0.9, { front: true, backCut: -0.02, runes: !!g.runes }));
+  if (g.vambraces) for (const s of ['L', 'R']) add(limbShellPiece(base, 'arm' + s, g.vambraces.from ?? 1.25, g.vambraces.to ?? 1.9, { runes: !!g.runes, t: 0.012, target: 380 }));
   if (ct === 'plate' || g.legs?.type === 'plate') {
     add(limbPlatesPiece(base, { arms: ct === 'plate' ? [0.45, 1.3] : [], legs: g.legs?.type === 'plate' ? [0.13, 0.72, 1.3] : [] }));
   }
@@ -59,13 +66,13 @@ export function outfitPieces(base, g) {
     if (g.shoulders.side && g.shoulders.side !== s) continue;
     add(pauldronPiece(base, s, { ...g.shoulders, tier, runes: !!g.runes }));
   }
-  if (g.legs?.kneepads) for (const s of ['L', 'R']) add(copPiece(base, s, 'knee', { slot: g.legs.type === 'leather' ? SLOT.ARMOR2 : SLOT.ARMOR1, size: g.legs.type === 'plate' ? 1.15 : 1, rim: g.legs.type === 'plate' && tier >= 1, spike: tier >= 2 }));
+  if (g.legs?.kneepads) for (const s of ['L', 'R']) add(copPiece(base, s, 'knee', { slot: SLOT.ARMOR1, size: g.legs.type === 'plate' ? 1.15 : 1, rim: g.legs.type === 'plate' && tier >= 1, spike: tier >= 2 }));
   if (ct === 'plate' && tier >= 1) for (const s of ['L', 'R']) add(copPiece(base, s, 'elbow', { slot: SLOT.ARMOR1, size: 1.1, rim: true }));
   let hideHair = false;
   const ht = g.head?.type;
-  if (ht === 'hood') { add(hoodPiece(base)); hideHair = true; }
+  if (ht === 'hood') { add(hood2Piece(base, { trim: tier >= 1 })); hideHair = true; }
   else if (ht) { add(headgearPiece(base, { type: ht, gem: g.head.gem, glowTrim: g.head.glowTrim })); if (/helm|horned|winged|bandana|cap/.test(ht)) hideHair = true; }
-  if (g.head?.mask) add(headgearPiece(base, { type: 'none', mask: true }));
+  if (g.head?.mask) add(maskPiece(base, { trim: false }));
   if (g.cloak) add(capePiece(base, { len: g.cloak.len, trim: g.cloak.trim, emblem: g.cloak.emblem, glowTrim: g.cloak.glowTrim, hem: g.cloak.hem || (tier >= 2 && g.cloak.trim ? 'v' : 'round') }));
   if (ct === 'robe' || g.skirt) {
     const sk = g.skirt || {};
@@ -74,8 +81,8 @@ export function outfitPieces(base, g) {
   }
   if (g.tabard) {
     const tb = g.tabard;
-    const top = tb.short ? J.spine[1] - 0.06 : undefined;
-    add(panelPiece(base, { emblem: tb.emblem, back: tb.back, slot: SLOT.TABARD, trim: !tb.short, top, tatter: tb.tatter, hw: tb.hw, runes: !!g.runes, trimSlot: g.runes ? SLOT.RUNE : SLOT.TRIM }));
+    const top = tb.short ? J.spine[1] - 0.06 : tb.top === 'chest' ? J.chest[1] + 0.12 : undefined;
+    add(panelPiece(base, { emblem: tb.emblem, back: tb.back, slot: SLOT.TABARD, trim: tb.trim ?? true, top, tatter: tb.tatter, hem: tb.hem, hw: tb.hw, runes: !!g.runes, trimSlot: g.runes ? SLOT.RUNE : SLOT.TRIM, folds: tb.folds, bottom: tb.bottom }));
   }
   if (g.apron) add(panelPiece(base, { top: J.chest[1] + 0.06, bottom: J.shinL[1] + 0.02, hw: base.P.core[1] * 0.95, slot: SLOT.TABARD }));
   for (const ex of g.extras || []) {

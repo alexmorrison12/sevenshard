@@ -400,26 +400,23 @@ export function rimewingSpec(J) {
     } },
 
     death: { dur: 3.6, hold: true, fin: 0.05, fn(ctl, a, w) {
+      // a last shriek with wings half raised, a stagger, then she crashes onto her chest with both wings spread flat
+      // on the ground, neck laid out, head on its cheek — a clear, spread-eagled silhouette from the game camera
       const P = ctl.P, b = ctl.b, t = a.t;
-      const throe = bump(t, 0, 0.35, 0.6, 1.1), fall = sm((t - 0.7) / 1.5), settle = sstep(2.2, 3.4, t);
-      const bounce = t > 2.2 ? Math.sin(clamp01((t - 2.2) / 0.3) * Math.PI) * 0.06 : 0;
-      P.move(b.body, (0.35 * fall) * w, (0.35 * throe - 1.28 * fall + bounce) * w, 0);
-      P.rot(b.body, (0.35 * throe - 0.08 * fall) * w, 0.12 * fall * w, (1.15 * fall) * w);
-      const nf = [-0.3, -0.25, -0.2, -0.1];
-      for (let i = 0; i < 4; i++) P.rot(b['neck' + (i + 1)], (0.2 * throe + nf[i] * fall) * w, (0.12 * fall) * w, (-0.3 * fall) * w);
-      P.rot(b.head, (0.45 * throe + 0.2 * fall) * w, 0, (-0.5 * fall) * w);
-      for (let i = 0; i < 8; i++) P.rot(b['tail' + (i + 1)], (i < 3 ? 0.12 : -0.02) * fall * w, 0.07 * fall * w, 0);
-      ctl.ch.jaw = Math.max(ctl.ch.jaw, (0.9 * throe + 0.35 * fall) * w);
-      ctl.ch.throat = Math.max(ctl.ch.throat, 0.8 * throe * w);
+      const throe = bump(t, 0, 0.35, 0.6, 1.1), stag = bump(t, 0.5, 0.9, 1.3, 1.7), fall = sm((t - 1.3) / 0.9), settle = sstep(2.4, 3.4, t);
+      const bounce = t > 2.2 ? Math.sin(clamp01((t - 2.2) / 0.28) * Math.PI) * 0.1 : 0;
+      P.move(b.body, 0.15 * stag * w, (0.35 * throe - 0.2 * stag - 1.3 * fall + bounce) * w, (0.2 * stag - 0.35 * fall) * w);
+      P.rot(b.body, (0.3 * throe - 0.12 * stag + 0.08 * fall) * w, 0.12 * stag * w, (0.1 * stag - 0.06 * fall) * w);
+      const nf = [-0.22, -0.28, -0.22, -0.1];
+      for (let i = 0; i < 4; i++) P.rot(b['neck' + (i + 1)], (0.2 * throe + nf[i] * fall) * w, (0.1 * fall) * w, (-0.12 * fall) * w);
+      P.rot(b.head, (0.5 * throe + 0.12 * fall) * w, 0.2 * fall * w, (-0.7 * fall) * w);
+      for (let i = 0; i < 8; i++) P.rot(b['tail' + (i + 1)], (i < 3 ? 0.14 : 0.01) * fall * w, (0.05 + 0.02 * i) * fall * w, 0);
+      ctl.ch.jaw = Math.max(ctl.ch.jaw, (0.95 * throe + 0.3 * fall) * w);
+      ctl.ch.throat = Math.max(ctl.ch.throat, 0.9 * throe * w);
       ctl.ch.eye = Math.min(ctl.ch.eye, 1 - settle);
-      // legs go limp and splay; the upper wing drapes open over the body
-      for (const L of ctl.gait.legs) {
-        const up = L.side > 0, front = L.id[0] === 'F';
-        const x = L.toe.x * (front ? 1.4 : 1.2), z = L.toe.z + (front ? -0.4 : 0.4);
-        setLegOv(L, x + (up ? 0.4 : -0.3), up ? 0.9 : 0.05, z, fall * w, true, -0.6);
-      }
-      wing(ctl, { open: 0.55 * fall, flap: -0.3 * fall, sweep: 0.3 * fall, fan: 0.5 }, w, 'R');
-      wing(ctl, { open: 0.35 * fall, flap: 0.6 * fall, sweep: -0.1 * fall }, w, 'L');
+      // hind legs fold under the body; wings: flail open, then lie spread flat, tips curled onto the ground
+      for (const L of ctl.gait.legs) if (L.id[0] === 'H') setLegOv(L, L.toe.x * 1.35, 0.2, L.toe.z + 0.55, fall * w, false, 0.4);
+      wing(ctl, { open: Math.max(0.6 * throe, stag, fall), flap: 0.45 * throe + 0.3 * Math.sin(t * 9) * stag - 0.34 * fall, sweep: 0.1 * fall, fan: 0.6 * fall, twist: -0.1 * fall, lag: -0.15 * fall, curl: 0.15 * settle }, w);
     } },
   };
 

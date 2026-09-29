@@ -5,7 +5,7 @@ import {
   bez, qbez, cracks, speedLines, blur, noBlur, rocks,
 } from './core.js';
 import {
-  greatsword, longsword, curvedBlade, glaive, pistol, rifle, harp, fist, palm, boot, claws, chain, featherWing, batWing,
+  greatsword, longsword, curvedBlade, glaive, pistol, rifle, harp, fist, palm, boot, claws, chain, featherWing, batWing, muzzle,
   demonHead, eye, skull, moon, arrowUp, figure, bootUp, clawMarks,
 } from './motifs.js';
 import { heaterPath, heater } from './generic.js';
@@ -224,7 +224,7 @@ const E = {
     ring(x, 50, 72, 24, 7, '#c0a0ff', 1.6);
     for (let i = 0; i < 5; i++) sparkle(x, 26 + R() * 48, 18 + R() * 36, 3 + R() * 3);
   },
-  last_refrain(x, R) { field(x, R, '#f09a8a', { glowA: 0.6 }); for (let i = 3; i >= 1; i--) { x.globalAlpha = 0.5 - i * 0.1; note(x, 36 + i * 11, 62 - i * 6, 1.1, '#ffd8d0', 0, { glow: false }); } x.globalAlpha = 1; note(x, 38, 66, 1.6, '#ffb0a0', 0); for (let i = 0; i < 3; i++) glowPath(x, xx => { xx.beginPath(); xx.arc(40, 62, 30 + i * 8, -1.2, -0.2); }, '#ffc0b0', 1.2 - i * 0.3); },
+  last_refrain(x, R) { field(x, R, '#f07a8a', { glowA: 0.7, k: -0.5 }); for (let i = 0; i < 3; i++) glowPath(x, xx => { xx.beginPath(); xx.arc(40, 62, 28 + i * 8, -1.25, -0.15); }, '#ffc0c8', 1.6 - i * 0.35); for (let i = 3; i >= 1; i--) { x.globalAlpha = 0.55 - i * 0.12; note(x, 36 + i * 11, 60 - i * 6, 1.05, '#ffe0e4', 0, { glow: false }); } x.globalAlpha = 1; note(x, 38, 66, 1.7, '#ffd0d8', 0); },
   heart_of_courage(x, R) { field(x, R, '#ff5a4a', { rays: 10 }); flame(x, R, 50, 74, 50); heart(x, 50, 56, 1.25, '#ff4a4a'); note(x, 47, 60, 0.6, '#ffffff', 0, { outline: false }); },
   afterglow(x, R) { field(x, R, '#b58cff'); moon(x, 50, 50, 28, '#d8c0ff', { bite: 0.42, biteY: 0.3, biteR: 0.86 }); sparkle(x, 66, 36, 8); sparkle(x, 72, 60, 5); },
   stormsurge(x, R) {
@@ -397,7 +397,7 @@ const C = {
   reaver(x, R) { crest(x, CLASS_COLORS.reaver, () => { flame(x, R, 50, 94, 60, '#ff5a3a'); at(x, 50, 78, 0, 0.82, greatsword, { metal: 'steel', rune: '#ff4050' }); }); },
   oathkeeper(x, R) { crest(x, '#3a5aa0', () => { rays(x, R, 50, 40, 16, 8, 50, '#ffe8a0', { alpha: 0.6 }); x.fillStyle = rg(x, 50, 40, 0, 14, [[0, '#ffffff'], [0.6, '#ffe070'], [1, 'rgba(255,200,80,0)']]); circle(x, 50, 40, 14); x.fill(); at(x, 50, 76, 0, 0.9, longsword, { metal: 'silver', guard: 'gold', gem: '#4ab0ff' }); }); },
   stormfist(x, R) { crest(x, CLASS_COLORS.stormfist, () => { for (let i = 0; i < 3; i++) bolt(x, R, 50, 20, 20 + i * 30, 90, { col: '#bfe8ff', w: 1.2, gens: 4 }); at(x, 42, 50, -PI / 2, 1, fist, { metal: 'silver', cuff: '#16305a', glow: '#8ad8ff' }); }); },
-  pistoleer(x, R) { crest(x, '#8a5a2a', () => { glow(x, 50, 46, 22, '#ffb040', 0.7); x.save(); x.translate(24, 74); x.rotate(-PI / 4); x.scale(1.15, 1.15); pistol(x, {}); x.restore(); x.save(); x.translate(76, 74); x.scale(-1, 1); x.rotate(-PI / 4); x.scale(1.15, 1.15); pistol(x, {}); x.restore(); }); },
+  pistoleer(x, R) { crest(x, '#8a5a2a', () => { glow(x, 50, 36, 26, '#ffb040', 0.6); for (const s of [-1, 1]) { x.save(); x.translate(50 + s * 21, 70); if (s > 0) x.scale(-1, 1); x.rotate(-0.95); x.scale(1.12, 1.12); pistol(x, {}); x.save(); x.translate(35, -8); muzzle(x, R, 0.5, '#ff9a30'); x.restore(); x.restore(); } }); },
   starcaller(x, R) { crest(x, CLASS_COLORS.starcaller, () => { for (let i = 0; i < 12; i++) glow(x, 20 + R() * 60, 16 + R() * 60, 1 + R() * 1.4, '#ffffff', 0.7); star(x, 50, 44, 8, 7, 24); x.fillStyle = lg(x, 30, 24, 70, 64, [[0, '#ffffff'], [0.5, '#d8c0ff'], [1, '#6a3ab0']]); x.fill(); outline(x, INK, 1); x.fillStyle = rg(x, 48, 42, 0, 8, [[0, '#ffffff'], [1, '#7ad8ff']]); circle(x, 50, 44, 6.5); x.fill(); }); },
   songweaver(x, R) { crest(x, '#b85a6a', () => { at(x, 50, 72, 0, 0.95, harp, { gem: '#36d8c6' }); note(x, 72, 36, 0.55, '#36d8c6', 0); }); },
   bladedancer(x, R) { crest(x, '#5a3a90', () => { moon(x, 50, 40, 16, '#e0d0ff', { bite: 0.5, biteY: 0.2 }); at(x, 36, 76, 0.55, 0.9, curvedBlade, { metal: 'silver', edgeGlow: '#e0b0ff' }); x.save(); x.translate(64, 76); x.rotate(-0.55); x.scale(-0.9, 0.9); curvedBlade(x, { metal: 'silver', edgeGlow: '#e0b0ff' }); x.restore(); }); },

@@ -84,7 +84,7 @@ export function nerissaSpec(J, D) {
       pose(ctl, { armsUp: 0.8, arms: 0.5, headUp: 0.45 + 0.1 * beat, hairUp: 0.8, rise: 0.5, sway: 1.4, tailCurl: 0.5, twist: Math.sin(t * 0.8) * 0.3 }, w);
       ctl.ch.jaw = Math.max(ctl.ch.jaw, (0.45 + 0.2 * beat) * w);
       ctl.ch.sing = Math.max(ctl.ch.sing, (0.8 + 0.8 * beat) * w);
-      ctl.ch.flash = Math.max(ctl.ch.flash, 0.25 * beat * w);
+      ctl.ch.flash = Math.max(ctl.ch.flash, 0.1 * beat * w);
     } },
 
     tail_slap: { dur: 2.0, fin: 0.15, fout: 0.4, fn(ctl, a, w) {

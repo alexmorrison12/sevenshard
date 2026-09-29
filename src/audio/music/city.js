@@ -14,7 +14,7 @@ const TUNE_B_CH = ['Em', 'Am', 'D', 'G', 'C', 'Am', 'B7', 'Em'];
 const MARKET_CH = [['G', 'D', 'Em', 'C', 'G', 'D', 'C', 'D'], ['G', 'Em', 'C', 'D', 'G', 'Em', 'Am', 'D']];
 const EVE_CH = [['Em', 'C', 'G', 'D', 'Em', 'C', 'Am', 'D'], ['C', 'G/B', 'Am', 'Em', 'F', 'C', 'Am', 'D']];
 const FORMS = [['A', 'B', 'square', 'market', 'B', 'evening', 'A'], ['A', 'market', 'B', 'evening', 'square', 'B'], ['B', 'A', 'evening', 'market', 'square', 'A']];
-const NIGHT_FORMS = [['evening', 'A', 'evening', 'B'], ['A', 'evening', 'B', 'evening'], ['evening', 'B', 'A', 'evening']];
+const NIGHT_FORMS = [['evening', 'A', 'evening', 'B', 'evening', 'A'], ['A', 'evening', 'B', 'evening', 'A', 'evening'], ['evening', 'B', 'A', 'evening', 'B', 'evening']];
 
 export class City extends Track {
   constructor(e, n, t0, seed, dest, night = false) {
@@ -93,7 +93,7 @@ export class City extends Track {
         if (S.type === 'B' && S.v > 0.45) this.line(I.rec, t, notes, { vel: 0.32, tr: -12, hum: 5 });
         this.strumPat(t, c, 0.44, S.type === 'B' ? 2 : (sb % 4 === 3 ? 1 : 0));
         I.pizz.note(t, this.bassPitch(c, 36, 48, 'pz'), s * 2, 0.5, { art: 'pizz' });
-        if (sb % 4 === 0) this.pad(I.str, t, B * 4, c, { n: 3, lo: 50, hi: 64, vel: 0.28, a: 1.2, r: 1.2, art: 'pad' });
+        this.pad(I.str, t, B, c, { n: 3, lo: 48, hi: 62, vel: 0.26, a: sb === 0 ? 1 : 0.4, r: 0.8, art: 'pad' }); // follows every chord
         this.drums(t, S.type === 'B' ? 1 : 0.85, S.type === 'B');
         break;
       }
@@ -124,7 +124,7 @@ export class City extends Track {
       case 'evening': {
         this.line(I.flute, t, this.barSlice(S.mel, sb, 6), { vel: 0.42, hum: 8 });
         this.arp(I.harp, t, 6, c, { pat: [0, 1, 2, 3, 2, 1], step: 1, lo: 50, vel: 0.26, len: 4 });
-        if (sb % 2 === 0) { this.pad(I.str, t, B * 2, c, { n: 3, lo: 52, hi: 67, vel: 0.26, a: 1.2, r: 1.5, art: 'pad' }); I.low.note(t, this.bassPitch(c, 36, 48, 'lowb'), B * 2, 0.3, { a: 0.8, r: 1 }); }
+        this.pad(I.str, t, B, c, { n: 3, lo: 50, hi: 64, vel: 0.26, a: sb === 0 ? 1 : 0.5, r: 1.1, art: 'pad' }); I.low.note(t, this.bassPitch(c, 36, 48, 'lowb'), B, 0.3, { a: 0.5, r: 0.8 });
         if (sb === 7) I.glock.note(t + 3 * s, 86, 1, 0.25);
         break;
       }

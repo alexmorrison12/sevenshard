@@ -71,5 +71,8 @@ export function buildSkill(kit, level = 1, picks = [-1, -1, -1]) {
     tp.apply(d);
     d.picked.push(tp.id);
   });
+  // timelines run in array order: keep every list sorted by time
+  const byT = (a, b) => (a.t || 0) - (b.t || 0);
+  for (const l of [d.events, d.end, d.loop?.events, ...(d.stages || []).map(st => st.events)]) if (Array.isArray(l)) l.sort(byT);
   return d;
 }

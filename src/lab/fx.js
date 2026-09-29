@@ -163,6 +163,24 @@ function telegraphGallery(page = 0) {
     fx.telegraph({ ...s, pos: along ? pos.clone().add(new THREE.Vector3(0, 0, 1.1)) : pos, dir, color: c, dur: (c === 'yellow' || c === 'white') ? undefined : 3 + i * 0.3 + j * 0.15 });
   }));
 }
+const dummies = [];
+function auraGallery() {
+  fx.reset(); boss.root.visible = false; hero.root.visible = false;
+  for (const d of dummies) d.root.parent?.remove(d.root);
+  dummies.length = 0;
+  const kinds = ['burst', 'holy', 'shield', 'demon', 'fire', 'freeze', 'poison', 'shock', 'bleed', 'heal', 'speed', 'buff', 'enrage', 'ghost', 'stun', 'chi', 'music', 'overload', 'brand', 'counter'];
+  kinds.forEach((k, i) => {
+    const d = capsuleHero(0x5a6a8a); d.root.position.set(-9 + (i % 7) * 3, 0, -6 + Math.floor(i / 7) * 4.5); lab.add(d.root); dummies.push(d);
+    fx.aura({ attach: d.root, kind: k, dur: 60 });
+  });
+}
+function showcase() {  // loot beams, portal, counter window, pickups side by side
+  fx.reset(); hero.root.visible = true; boss.root.visible = true;
+  for (let g = 0; g < 8; g++) fx.lootBeam({ pos: new THREE.Vector3(-8 + g * 2.3, 0, 2.2), grade: g });
+  fx.portal({ pos: new THREE.Vector3(-7, 0, -1), color: 0x9a5aff, dir: new THREE.Vector3(0, 0, 1) });
+  fx.portal({ pos: new THREE.Vector3(7, 0, -1), color: 0x39e6d8, flat: true, radius: 1.8 });
+  fx.counterWindow({ attach: boss.root, dur: 30, height: boss.height, scale: 1.6 });
+}
 function numberStorm(n = 300) {
   const styles = ['normal', 'normal', 'normal', 'crit', 'crit', 'back', 'head', 'counter', 'heal', 'shield', 'miss', 'immune', 'dot', 'hurt'];
   let k = 0;
@@ -226,6 +244,8 @@ P.button('Reset', () => { fx.reset(); stress(false); boss.root.visible = true; h
 P.button('Stress (4 players × 60 mobs)', () => stress());
 P.button('Telegraph gallery', telegraphGallery);
 P.button('Damage-number storm', () => numberStorm());
+P.button('Aura gallery', () => auraGallery());
+P.button('Loot / portal / counter showcase', () => showcase());
 P.select('weather', ['none', 'snow', 'rain', 'ash', 'embers', 'fireflies', 'dust', 'leaves', 'petals'], 'none', v => setWeather(v));
 P.label('Primitives');
 P.buttons(Object.keys(PRIM), k => PRIM[k]());
@@ -236,6 +256,25 @@ for (const g in groups) { P.label(g); P.buttons(groups[g], k => play(k)); }
 let wx = null;
 function setWeather(kind) { wx?.stop(); wx = kind && kind !== 'none' ? fx.weather(kind) : null; }
 
-window.fxLab = { fx, lab, hero, boss, party, mobs, play, prim: k => PRIM[k](), PRIM, at, resume, gallery: telegraphGallery, storm: numberStorm, stress, weather: setWeather, reset: () => { fx.reset(); boss.root.visible = true; hero.root.visible = true; }, swing };
+// contact sheet: for each preset: reset → play at the hero → step t seconds → render → draw into a grid (returns dataURL)
+function sheet(names, t = 0.3, cols = 4, cw = 400, labelled = true) {
+  const rows = Math.ceil(names.length / cols), ch = Math.round(cw * 9 / 16);
+  const cv = document.createElement('canvas'); cv.width = cols * cw; cv.height = rows * ch;
+  const g = cv.getContext('2d'); g.font = 'bold 14px system-ui'; g.textBaseline = 'top';
+  lab.paused = true;
+  names.forEach((name, i) => {
+    const [nm, tt] = name.includes('@') ? [name.split('@')[0], +name.split('@')[1]] : [name, t];
+    fx.reset(); boss.root.visible = true; hero.root.visible = true;
+    lab.step(2);
+    try { play(nm); } catch (e) { console.error(nm, e); }
+    const n = Math.round(tt * 60);
+    for (let k = 0; k < n; k++) lab.step(1, 1 / 60);
+    lab.renderer.render(1 / 60, lab.time);
+    g.drawImage(lab.renderer.canvas, (i % cols) * cw, Math.floor(i / cols) * ch, cw, ch);
+    if (labelled) { g.fillStyle = 'rgba(0,0,0,.6)'; g.fillRect((i % cols) * cw, Math.floor(i / cols) * ch, cw, 20); g.fillStyle = '#ffe070'; g.fillText(nm + ' @' + tt + 's', (i % cols) * cw + 6, Math.floor(i / cols) * ch + 3); }
+  });
+  return cv.toDataURL('image/jpeg', 0.85);
+}
+window.fxLab = { fx, lab, hero, boss, party, mobs, play, prim: k => PRIM[k](), PRIM, at, resume, gallery: telegraphGallery, auras: auraGallery, showcase, sheet, storm: numberStorm, stress, weather: setWeather, reset: () => { fx.reset(); boss.root.visible = true; hero.root.visible = true; }, swing };
 if (Q.get('fx')) { const t = +(Q.get('t') || 0); setTimeout(() => { if (t > 0) at(Q.get('fx'), t); else if (PRIM[Q.get('fx')]) PRIM[Q.get('fx')](); else play(Q.get('fx')); }, 300); }
 console.log('[fx-lab] ready', fx.stats());

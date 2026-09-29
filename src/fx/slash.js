@@ -68,7 +68,8 @@ void main() {
   float streak = smoothstep(0.28, 0.82, n) * 0.75 + n2 * 0.25;
   float ends = smoothstep(0.0, 0.07, u) * smoothstep(1.0, 0.9, u);
   // dissolve: tail first, noisy
-  float dp = clamp((T - sweep * 0.7) / max(1.0 - sweep * 0.7, 0.05), 0.0, 1.0);
+  float d0 = (flags & 8) != 0 ? 0.6 : sweep * 0.7;       // travelling waves hold their shape, then dissolve
+  float dp = clamp((T - d0) / max(1.0 - d0, 0.05), 0.0, 1.0);
   float keep = smoothstep(dp * 1.25 - 0.12, dp * 1.25, n * 0.45 + u * 0.55 + (1.0 - ed) * 0.1);
   float headGlow = exp(-sq((uu - head) * vLen / 0.45)) * step(head, 1.1) * (0.3 + 0.7 * vUv.y);
   float mask = reveal * ends * keep;

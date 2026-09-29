@@ -8,12 +8,12 @@ import { sweep, eyeGeo, rigid, bez, taper, leafGeo, eyeMatrix } from '../../kit/
 import { col } from '../../kit/sdf.js';
 import { lerp3 } from '../../kit/parts.js';
 import { sstep, clamp01, mix, bell } from '../../kit/rig.js';
-import { hsh, ov, cancelRestOnMove, prepLegs, sidePair } from './util.js';
+import { hsh, ov, cancelRestOnMove, prepLegs, sidePair, surfaceCrack } from './util.js';
 
 const PAL = {
-  grey: { base: 0x66696f, dark: 0x2b2c31, belly: 0xcdc6ba, mane: 0x8b8e95, maneTip: 0x34353b, muzzle: 0xdad3c6, mask: 0x3a3b40, leg: 0xa7a6a6, nose: 0x121012, eye: 0xf0b020, earIn: 0xb49a8e, tail: 0x5e6168, glow: 0xff4a1a },
-  brown: { base: 0x80593a, dark: 0x3a2517, belly: 0xe0c092, mane: 0xa27a4e, maneTip: 0x3a2416, muzzle: 0xe8d0a6, mask: 0x4a2f1c, leg: 0xc09a6c, nose: 0x1a1210, eye: 0xf6c830, earIn: 0xc09078, tail: 0x72502f, glow: 0xff4a1a },
-  black: { base: 0x2c2b30, dark: 0x121114, belly: 0x5e5a60, mane: 0x3c3b42, maneTip: 0x0e0d10, muzzle: 0x77717a, mask: 0x131215, leg: 0x45434a, nose: 0x080708, eye: 0xffd23a, earIn: 0x5a4648, tail: 0x232226, glow: 0xff4a1a },
+  grey: { base: 0x74777e, dark: 0x2c2e33, belly: 0xd6d0c4, mane: 0x979aa1, maneTip: 0xcfd1d5, muzzle: 0xe0dace, mask: 0x3e3f45, leg: 0xb0afae, nose: 0x121012, eye: 0xe0a424, earIn: 0xb49a8e, tail: 0x6c6f76, glow: 0xff6a2a },
+  brown: { base: 0x86603e, dark: 0x3a2517, belly: 0xe0c092, mane: 0xa8804f, maneTip: 0x4a2e1a, muzzle: 0xe8d0a6, mask: 0x4a2f1c, leg: 0xc09a6c, nose: 0x1a1210, eye: 0xf6c830, earIn: 0xc09078, tail: 0x72502f, glow: 0xff4a1a },
+  black: { base: 0x2c2b30, dark: 0x121114, belly: 0x5e5a60, mane: 0x3c3b42, maneTip: 0x0e0d10, muzzle: 0x77717a, mask: 0x131215, leg: 0x45434a, nose: 0x080708, eye: 0xd8a830, earIn: 0x5a4648, tail: 0x232226, glow: 0xff4a1a },
   duskfang: { base: 0x34302f, dark: 0x151213, belly: 0x77706a, mane: 0xcfcac2, maneTip: 0x6a6664, muzzle: 0x8a827a, mask: 0x1a1718, leg: 0x4a4546, nose: 0x080606, eye: 0xffb830, earIn: 0x6a4c4a, tail: 0x2e2a2a, scar: 0xc88a84, glow: 0xff7a18 },
 };
 
@@ -27,7 +27,7 @@ export const wolf = {
     const v = PAL[variant] ? variant : (opts.elite ? 'duskfang' : 'grey');
     const elite = v === 'duskfang' || !!opts.elite;
     const pal = PAL[elite ? 'duskfang' : v];
-    return { variant: elite ? 'duskfang' : v, pal, elite, shapeKey: elite ? 'elite' : 'base', scale: elite ? 1.4 : 1, h: elite ? 0.043 : 0.048, hg: elite ? { 1: 0.03, 2: 0.028 } : { 1: 0.034, 2: 0.032 }, mat: { dfreq: 2.4, rim: 0.3, rimColor: 0xfff0dc }, aoScale: 1 };
+    return { variant: elite ? 'duskfang' : v, pal, elite, shapeKey: elite ? 'elite' : 'base', scale: elite ? 1.4 : 1, h: elite ? 0.046 : 0.052, hg: elite ? { 1: 0.03, 2: 0.029, 3: 0.032 } : { 1: 0.034, 2: 0.033, 3: 0.04 }, mat: { dfreq: 2.4, rim: 0.3, rimColor: 0xfff0dc }, aoScale: 1 };
   },
   rig(R) {
     R.add('body', null, [0, 0.80, 0.02]);
@@ -104,24 +104,25 @@ export const wolf = {
     // lower jaw (own surface so the mouth can open)
     S.cone('jaw', hx([0, 0.963, -0.7]), hx([0, 0.958, -0.915]), hr(0.052), hr(0.03), { group: 1, k: 0.03, col: c.muzzle, tag: 'jaw', dtl: furS });
     S.ell('jaw', hx([0, 0.944, -0.75]), [hr(0.055), hr(0.033), hr(0.075)], { group: 1, k: 0.03, col: c.muzzle, tag: 'jaw', dtl: furS });
-    // ---- legs: slim with knobbly joints, neat paws
+    // ---- legs: upper legs blend into the body; lower legs + paws are their own finer surface (thin shapes survive)
+    const lg = { group: 3 };
     for (const s of [-1, 1]) {
       const n = s < 0 ? 'L' : 'R';
       S.ell('fU' + n, [s * 0.12, 0.66, -0.3], [0.068, 0.12, 0.085], { k: 0.06, col: c.base, tag: 'shoulder', rot: [-0.2, 0, 0], dtl: fur });
-      S.cone('fU' + n, [s * 0.14, 0.72, -0.32], [s * 0.15, 0.44, -0.2], 0.06, 0.045, { k: 0.05, col: c.base, b2: 'fL' + n, t0: 0.75, t1: 1, dtl: fur });
-      S.cone('fL' + n, [s * 0.15, 0.44, -0.2], [s * 0.15, 0.13, -0.28], 0.042, 0.029, { k: 0.035, col: c.leg, tag: 'leg', b2: 'fP' + n, t0: 0.85, t1: 1, dtl: furS });
-      S.cone('fL' + n, [s * 0.15, 0.45, -0.18], [s * 0.155, 0.36, -0.1], 0.03, 0.008, { k: 0.022, col: c.base, tag: 'tuft', dtl: fur });
-      S.sph('fP' + n, [s * 0.15, 0.13, -0.275], 0.03, { k: 0.02, col: c.leg, tag: 'leg', dtl: furS });
-      S.cone('fP' + n, [s * 0.15, 0.13, -0.28], [s * 0.15, 0.05, -0.32], 0.028, 0.035, { k: 0.03, col: c.leg, tag: 'leg', dtl: furS });
-      S.ell('fP' + n, [s * 0.15, 0.04, -0.34], [0.044, 0.038, 0.06], { k: 0.035, col: c.leg, tag: 'paw', dtl: furS });
+      S.cone('fU' + n, [s * 0.14, 0.72, -0.32], [s * 0.15, 0.44, -0.2], 0.062, 0.048, { k: 0.05, col: c.base, b2: 'fL' + n, t0: 0.75, t1: 1, dtl: fur });
+      S.cone('fL' + n, [s * 0.15, 0.46, -0.21], [s * 0.15, 0.13, -0.28], 0.046, 0.032, { ...lg, k: 0.035, col: c.leg, tag: 'leg', b2: 'fP' + n, t0: 0.85, t1: 1, dtl: furS });
+      S.cone('fL' + n, [s * 0.15, 0.45, -0.18], [s * 0.155, 0.35, -0.1], 0.034, 0.008, { ...lg, k: 0.022, col: c.base, tag: 'tuft', dtl: fur });
+      S.sph('fP' + n, [s * 0.15, 0.13, -0.275], 0.033, { ...lg, k: 0.02, col: c.leg, tag: 'leg', dtl: furS });
+      S.cone('fP' + n, [s * 0.15, 0.13, -0.28], [s * 0.15, 0.05, -0.32], 0.031, 0.037, { ...lg, k: 0.03, col: c.leg, tag: 'leg', dtl: furS });
+      S.ell('fP' + n, [s * 0.15, 0.04, -0.34], [0.046, 0.039, 0.062], { ...lg, k: 0.035, col: c.leg, tag: 'paw', dtl: furS });
       S.ell('rT' + n, [s * 0.115, 0.67, 0.34], [0.08, 0.155, 0.118], { k: 0.07, col: c.base, tag: 'haunch', rot: [0.25, 0, 0], dtl: fur });
-      S.cone('rT' + n, [s * 0.13, 0.76, 0.38], [s * 0.15, 0.49, 0.25], 0.07, 0.048, { k: 0.05, col: c.base, b2: 'rS' + n, t0: 0.8, t1: 1, dtl: fur });
-      S.cone('rS' + n, [s * 0.15, 0.49, 0.25], [s * 0.15, 0.24, 0.49], 0.046, 0.028, { k: 0.035, col: c.leg, tag: 'leg', b2: 'rM' + n, t0: 0.85, t1: 1, dtl: furS });
-      S.cone('rS' + n, [s * 0.15, 0.5, 0.27], [s * 0.155, 0.41, 0.37], 0.032, 0.008, { k: 0.022, col: c.base, tag: 'tuft', dtl: fur });
-      S.sph('rM' + n, [s * 0.15, 0.245, 0.51], 0.027, { k: 0.02, col: c.leg, tag: 'leg', dtl: furS });
-      S.cone('rM' + n, [s * 0.15, 0.24, 0.49], [s * 0.15, 0.075, 0.45], 0.027, 0.025, { k: 0.025, col: c.leg, tag: 'leg', b2: 'rP' + n, t0: 0.8, t1: 1, dtl: furS });
-      S.cone('rP' + n, [s * 0.15, 0.075, 0.45], [s * 0.15, 0.045, 0.41], 0.026, 0.034, { k: 0.03, col: c.leg, tag: 'leg', dtl: furS });
-      S.ell('rP' + n, [s * 0.15, 0.04, 0.395], [0.043, 0.037, 0.058], { k: 0.035, col: c.leg, tag: 'paw', dtl: furS });
+      S.cone('rT' + n, [s * 0.13, 0.76, 0.38], [s * 0.15, 0.49, 0.25], 0.07, 0.05, { k: 0.05, col: c.base, b2: 'rS' + n, t0: 0.8, t1: 1, dtl: fur });
+      S.cone('rS' + n, [s * 0.15, 0.51, 0.25], [s * 0.15, 0.24, 0.49], 0.048, 0.031, { ...lg, k: 0.035, col: c.leg, tag: 'leg', b2: 'rM' + n, t0: 0.85, t1: 1, dtl: furS });
+      S.cone('rS' + n, [s * 0.15, 0.5, 0.27], [s * 0.155, 0.4, 0.37], 0.036, 0.008, { ...lg, k: 0.022, col: c.base, tag: 'tuft', dtl: fur });
+      S.sph('rM' + n, [s * 0.15, 0.245, 0.51], 0.03, { ...lg, k: 0.02, col: c.leg, tag: 'leg', dtl: furS });
+      S.cone('rM' + n, [s * 0.15, 0.24, 0.49], [s * 0.15, 0.075, 0.45], 0.03, 0.028, { ...lg, k: 0.025, col: c.leg, tag: 'leg', b2: 'rP' + n, t0: 0.8, t1: 1, dtl: furS });
+      S.cone('rP' + n, [s * 0.15, 0.075, 0.45], [s * 0.15, 0.045, 0.41], 0.029, 0.036, { ...lg, k: 0.03, col: c.leg, tag: 'leg', dtl: furS });
+      S.ell('rP' + n, [s * 0.15, 0.04, 0.395], [0.045, 0.038, 0.06], { ...lg, k: 0.035, col: c.leg, tag: 'paw', dtl: furS });
     }
     // ---- tail: plume carried low, smooth taper, fluffy clumps, dark tip
     S.cone('tail1', [0, 0.85, 0.43], [0, 0.8, 0.58], 0.045, 0.065, { k: 0.05, col: c.tail, tag: 'tail', b2: 'tail2', t0: 0.5, t1: 1, dtl: fur });
@@ -166,13 +167,7 @@ export const wolf = {
     // paw pads/toes darker
     v.mix(c.dark, v.t('paw') * sstep(0.025, 0.0, y) * 0.8);
     if (cfg.elite) {
-      // three claw scars raked across the left eye and muzzle, a long flank scar, frosted muzzle
-      for (let i = 0; i < 3; i++) {
-        const d = Math.abs((y - 1.07) * 0.8 + (z + 0.82) * 0.5 - (i - 1) * 0.026);
-        v.mix(c.scar, (1 - sstep(0.004, 0.011, d)) * (x < -0.015 ? 1 : 0) * (z < -0.66 ? 1 : 0) * (y > 0.97 ? 1 : 0) * 0.9);
-      }
-      const fs = Math.abs((y - 0.78) - (z - 0.05) * 0.6);
-      v.mix(c.scar, (1 - sstep(0.006, 0.014, fs)) * (x > 0.1 ? 1 : 0) * sstep(-0.15, -0.05, z) * (1 - sstep(0.15, 0.25, z)) * 0.85);
+      // frosted, grizzled muzzle (the scars are crisp ribbons, see parts)
       v.mix(c.mane, v.t('lip') * 0.35 + v.t('jaw') * 0.3);
     }
     v.mul(1 + Math.sin(x * 9 + z * 5) * Math.sin(y * 7) * 0.05);
@@ -189,7 +184,7 @@ export const wolf = {
       acc.add(g, {
         matrix: eyeMatrix(S, hx([s * 0.058, 1.088, -0.772]), [s * 0.7, 0.08, -1], 0.023 * HS, 0.5, 2, 0.72), skin: rigid(b('head')),
         color: (p, n, uv) => uv[0] === 0 ? dark : uv[0] === 1 ? ecol : rim,
-        emis: (p, uv) => E ? (uv[0] === 1 ? 4.2 : uv[0] === 0 ? 1.6 : 0) : (uv[0] === 1 ? 0.12 : 0), dtl: [0, 0, 0, 0],
+        emis: (p, uv) => E ? (uv[0] === 1 ? 4.2 : uv[0] === 0 ? 1.6 : 0) : (uv[0] === 1 ? 0.04 : 0), dtl: [0, 0, 0, 0],
       });
     }
     // ears: leaf plates, concave pale inner face, tilted back & out (Duskfang's right ear is torn)
@@ -227,6 +222,13 @@ export const wolf = {
       acc.add(sweep([[x, 0.03, z0 + 0.02], [x, 0.016, z0 - 0.015]], [0.009, 0.002], { radial: 5 }), { skin: rigid(b(paw + (s < 0 ? 'L' : 'R'))), color: claw, dtl: [0, 0, 0, 0] });
     }
     if (E) {
+      // three claw scars raked across the left eye down the cheek, and a long pale scar along the right flank
+      const sc = { core: c.scar, edge: 0x5a2e2c, emis: 0, lift: 0.004 };
+      for (let i = 0; i < 3; i++) {
+        const o = (i - 1) * 0.026;
+        surfaceCrack(acc, S, [hx([-0.02 + o * 0.4, 1.17, -0.7 + o]), hx([-0.05 + o * 0.5, 1.12, -0.74 + o]), hx([-0.08 + o * 0.5, 1.06, -0.77 + o]), hx([-0.1 + o * 0.4, 1.0, -0.79 + o])], { ...sc, width: 0.011, group: 2, seed: i });
+      }
+      surfaceCrack(acc, S, [[0.2, 0.86, -0.2], [0.2, 0.8, -0.1], [0.19, 0.74, 0.0], [0.17, 0.7, 0.1], [0.15, 0.68, 0.18]], { ...sc, width: 0.016, seed: 9 });
       // a broken hunter's arrow lodged in the left shoulder: splintered shaft + torn fletching
       const base = [-0.17, 0.83, -0.24], tip = [-0.33, 1.02, -0.13];
       acc.add(sweep([base, [mix(base[0], tip[0], 0.5), mix(base[1], tip[1], 0.5), mix(base[2], tip[2], 0.5)], tip], [0.011, 0.01, 0.009], { radial: 5, capStart: true }), { skin: rigid(b('chest')), color: (p, n, uv) => lerp3(col(0x3a2616), col(0x8a6a44), uv[1]), dtl: [0, 0, 0.2, 0.3] });
@@ -411,7 +413,7 @@ const WOLF_SPEC = {
   },
   neck: { pitch: 0, run: -0.3, combat: -0.38, walk: -0.06, headCombat: 0.2, comp: 0.55 },
   tail: { wag: 0.22, wagF: 0.5, run: 0.55, combat: 0.35 },
-  combatCrouch: 0.07, combatPitch: -0.06, runDrop: 0.05, chargeK: 0.35,
+  combatCrouch: 0.07, combatPitch: -0.06, runDrop: 0.05, chargeK: 0.05,
   fidgets: [{ name: 'idle_alt', w: 3 }, { name: 'yawn', w: 1 }, { name: 'scratch', w: 1 }, { name: 'shake', w: 1 }],
   fidgetGap: 5,
   pose(ctl) {

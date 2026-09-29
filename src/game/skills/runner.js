@@ -77,7 +77,7 @@ export class SkillRun {
     if (this.done) return;
     const def = this.def, u = this.u;
     // casting: fill the cast bar first
-    if (this.castLeft > 0) { this.castLeft -= dt; this.level.emit('cast', { unit: u, run: this, pct: 1 - this.castLeft / this.casting }); if (this.castLeft > 0) return; }
+    if (this.castLeft > 0) { this.castLeft -= dt; this.level.emit('castProgress', { unit: u, run: this, pct: 1 - this.castLeft / this.casting }); if (this.castLeft > 0) return; }
     // charging: hold until release or max
     if (def.type === 'charge' && !this.chargeDone) {
       this.charge = Math.min(1, this.charge + dt / (def.chargeTime || 1));
@@ -88,8 +88,11 @@ export class SkillRun {
       if (!this.chargeDone) return;
     }
     this.t += dt;
-    // holding: loop events while held
+    // holding: play the opening timeline (animation, FX), then loop while held
     if (def.type === 'holding' && this.held && def.loop) {
+      if (this.idx === undefined) this.idx = 0;
+      const tl0 = this.timeline;
+      while (this.idx < tl0.length && tl0[this.idx].t <= this.t) this.exec(tl0[this.idx++]);
       if (def.turnWhileHeld !== false && u.ctrl?.aim) { this.setAim(u.ctrl.aim.x, u.ctrl.aim.z); u.facing = this.facing; }
       const L = def.loop;
       if (L.walk && u.ctrl?.aim) {
@@ -218,7 +221,7 @@ export class SkillRun {
       const nx = tx ? tx.x : u.pos.x + this.dx * dist, nz = tx ? tx.z : u.pos.z + this.dz * dist;
       const p = this.level.nav.nearest(nx, nz, 4, u.radius * 0.6);
       if (p) { u.pos.x = p.x; u.pos.z = p.z; }
-      if (tx) u.faceTo(tx.fx, tx.fz);
+      if (tx) { u.faceTo(tx.fx, tx.fz); this.setAim(tx.fx, tx.fz); }
       this.level.emit('blink', { unit: u });
       return;
     }
@@ -226,6 +229,8 @@ export class SkillRun {
     const dur = (ev.dur ?? 0.25);
     this.moveState = { left: dur, dur, vx: this.dx * sign * Math.max(0, dist) / dur, vz: this.dz * sign * Math.max(0, dist) / dur, height: ev.height || 0, t: 0 };
     if (ev.iframes) u.invuln = Math.max(u.invuln, ev.iframes);
+    // dashes pass through enemies (bosses would otherwise block them); cleared on a level timer so a cancel can't strand it
+    if (ev.kind === 'dash' || ev.kind === 'toAim' || ev.kind === 'leap') { u.data.ghostWalk = true; const L = this.level; clearTimeout(u._ghostTm); L.after(dur + 0.05, () => { if (!u.skill?.moveState) u.data.ghostWalk = false; }); }
   }
   behindTarget() {
     const t = this.level.nearestEnemy(this.u, 10); if (!t) return null;

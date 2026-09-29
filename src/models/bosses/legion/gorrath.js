@@ -825,19 +825,21 @@ A.horn_charge = {
   ev: [[0.35, 'snort'], [0.85, 'snort'], [1.0, 'charge', 'head'], [2.55, 'skid', 'feetL']],
 };
 
+// leap onto a target and slam. The encounter moves the root along its own arc (B.leap), so the model only poses:
+// crouch → push-off (~30% of the time to impact) → airborne tuck with the axe overhead → slam on landing.
 A.leap_slam = {
-  dur: 3.0, hits: [1.85], hitAt: ['weaponTip2'], lock: 1, move: [{ t: [0.8, 1.8], dist: 'target' }],
+  dur: 3.0, hits: [1.85], hitAt: ['weaponTip2'], lock: 1, move: [{ t: [0.55, 1.85], dist: 'target', height: 7 }],
   keys: [
     [0, {}],
-    [0.6, { $hips: [0, -0.24, 0.04], 'spine+': [-0.2, 0, 0], 'chest+': [-0.12, 0, 0], $handR: [0.45, 1.32, 0.22], $aimR: aim([0.08, 0.78, 0.62], [0, 0.62, -0.78]), $gripL: 1, $charge: 0.4 }, 'o'],
-    [0.82, { $hips: [0, 0.4, 0], $air: 0.9, 'spine+': [0.05, 0, 0], 'chest+': [0.1, 0, 0], $handR: [0.25, 1.95, 0.05], $aimR: aim([0.02, 0.5, 0.86], [0, 0.86, -0.5]), $gripL: 1 }, 'o'],
-    [1.3, K2(OVERHEAD_BACK, { $hips: [0, 1.35, 0], $air: 1, 'spine+': [0.18, 0, 0], 'chest+': [0.22, 0, 0], 'head+': [0.15, 0, 0], $gripL: 1, $charge: 1 }), 'o'],
-    [1.7, K2(OVERHEAD_BACK, { $hips: [0, 0.45, 0], $air: 1, 'spine+': [0.12, 0, 0], 'chest+': [0.15, 0, 0], $gripL: 1, $charge: 1 }), 'i'],
+    [0.45, { $hips: [0, -0.24, 0.04], 'spine+': [-0.2, 0, 0], 'chest+': [-0.12, 0, 0], $handR: [0.45, 1.32, 0.22], $aimR: aim([0.08, 0.78, 0.62], [0, 0.62, -0.78]), $gripL: 1, $charge: 0.4 }, 'o'],
+    [0.62, { $hips: [0, 0.08, 0], $air: 0.9, 'spine+': [0.05, 0, 0], 'chest+': [0.1, 0, 0], $handR: [0.25, 1.95, 0.05], $aimR: aim([0.02, 0.5, 0.86], [0, 0.86, -0.5]), $gripL: 1 }, 'o'],
+    [1.2, K2(OVERHEAD_BACK, { $hips: [0, 0.12, 0], $air: 1, 'spine+': [0.18, 0, 0], 'chest+': [0.22, 0, 0], 'head+': [0.15, 0, 0], $gripL: 1, $charge: 1 }), 'o'],
+    [1.7, K2(OVERHEAD_BACK, { $hips: [0, 0.05, 0], $air: 1, 'spine+': [0.12, 0, 0], 'chest+': [0.15, 0, 0], $gripL: 1, $charge: 1 }), 'io'],
     [1.85, K2(SLAM, { $hips: [0, -0.2, -0.08], $air: 0, 'spine+': [-0.24, 0, 0], 'chest+': [-0.32, 0, 0], 'head+': [-0.12, 0, 0], $gripL: 1, $charge: 1, $shake: 0.5 }), 'i'],
     [2.35, K2(SLAM, { $hips: [0, -0.17, -0.07], 'spine+': [-0.2, 0, 0], 'chest+': [-0.26, 0, 0], $gripL: 1, $charge: 0.4 }), 'o'],
     [3.0, { $gripL: 0, $charge: 0 }],
   ],
-  ev: [[0.8, 'jump', 'feetL'], [1.85, 'land', 'weaponTip2']],
+  ev: [[0.55, 'jump', 'feetL'], [1.85, 'land', 'weaponTip2']],
 };
 
 A.axe_throw = {
@@ -937,25 +939,27 @@ A.enrage = {
   ev: [[1.3, 'roar', 'mouth']],
 };
 
+// intro: drops from the sky into a crouched landing (fist on the ground, axe out), holds (stretchable), rises and
+// roars with the axe raised. The encounter plays it at ~2.4 s; longer cinematics extend the crouch hold.
 A.intro = {
-  dur: 6.5, hits: [1.15, 4.3], hitAt: ['feetL', 'mouth'], lock: 1, fadeIn: 0.01,
+  dur: 3.8, hits: [0.55, 2.6], hitAt: ['feetL', 'mouth'], lock: 1, fadeIn: 0.01, stretch: [0.8, 1.9],
   keys: [
     [0, { $hips: [0, 9, 0], $air: 1, 'chest+': [-0.2, 0, 0], armUL: [2.4, 0, -0.4], armLL: [0.4, 0, 0], $handR: [0.3, 2.08, 0.05], $aimR: aim([0.02, 0.4, 0.92], [0, 0.92, -0.4]) }],
-    [1.0, { $hips: [0, 0.7, 0], $air: 1, 'chest+': [-0.25, 0, 0], armUL: [2.2, 0, -0.5] }, 'i'],
-    [1.15, K2(KNEEL_R, { $hips: [0, -0.42, -0.02], $air: 0, 'chest+': [-0.38, 0, 0], 'spine+': [-0.15, 0, 0], 'head+': [-0.35, 0, 0], armUL: null, armLL: null, $handL: [-0.52, 0.12, -0.48], $handR: [0.98, 0.72, -0.22], $aimR: aim([0.5, -0.5, -0.7], [0.3, -0.7, 0.6]), $shake: 0.6 }), 'i'],
-    [2.7, K2(KNEEL_R, { $hips: [0, -0.4, -0.02], 'chest+': [-0.32, 0, 0], 'spine+': [-0.12, 0, 0], 'head+': [-0.25, 0, 0], $handL: [-0.52, 0.12, -0.48], $handR: [0.98, 0.74, -0.22], $aimR: aim([0.5, -0.5, -0.7], [0.3, -0.7, 0.6]), $shake: 0.2 })],
-    [3.7, { $footR: null, $footL: null, $hips: [0, 0, 0], 'chest+': [0.05, 0, 0], 'spine+': [0, 0, 0], 'head+': [0.1, 0, 0], $handL: null, $handR: [0.8, 1.0, -0.25], $aimR: aim([0.22, -0.66, -0.72], [0.25, 0.9, -0.2]) }, 'io'],
-    [4.3, { 'chest+': [-0.1, 0, 0], 'head+': [-0.15, 0, 0], jaw: [-0.55, 0, 0], armUL: [0.35, 0, -1.2], armLL: [1.2, 0, 0], fingL: [-0.35, 0, 0], $hips: [0, -0.05, 0], $handR: [0.82, 2.06, -0.12], $aimR: aim([0.15, 1, 0.1], [0, 0.1, -1]), $shake: 1, $enrage: 0.5, $charge: 1 }, 'i'],
-    [5.5, { 'chest+': [-0.08, 0, 0], jaw: [-0.5, 0, 0], armUL: [0.35, 0, -1.15], armLL: [1.2, 0, 0], $handR: [0.82, 2.04, -0.12], $aimR: aim([0.15, 1, 0.1], [0, 0.1, -1]), $shake: 0.8, $enrage: 0.4, $charge: 1 }],
-    [6.5, { jaw: [0, 0, 0], armUL: null, armLL: null, fingL: null, $enrage: 0, $charge: 0 }],
+    [0.45, { $hips: [0, 0.7, 0], $air: 1, 'chest+': [-0.25, 0, 0], armUL: [2.2, 0, -0.5] }, 'i'],
+    [0.55, K2(KNEEL_R, { $hips: [0, -0.42, -0.02], $air: 0, 'chest+': [-0.38, 0, 0], 'spine+': [-0.15, 0, 0], 'head+': [-0.35, 0, 0], armUL: null, armLL: null, $handL: [-0.52, 0.12, -0.48], $handR: [0.98, 0.72, -0.22], $aimR: aim([0.5, -0.5, -0.7], [0.3, -0.7, 0.6]), $shake: 0.6 }), 'i'],
+    [1.9, K2(KNEEL_R, { $hips: [0, -0.4, -0.02], 'chest+': [-0.32, 0, 0], 'spine+': [-0.12, 0, 0], 'head+': [-0.25, 0, 0], $handL: [-0.52, 0.12, -0.48], $handR: [0.98, 0.74, -0.22], $aimR: aim([0.5, -0.5, -0.7], [0.3, -0.7, 0.6]), $shake: 0.2 })],
+    [2.3, { $footR: null, $footL: null, $hips: [0, 0, 0], 'chest+': [0.05, 0, 0], 'spine+': [0, 0, 0], 'head+': [0.1, 0, 0], $handL: null, $handR: [0.8, 1.0, -0.25], $aimR: aim([0.22, -0.66, -0.72], [0.25, 0.9, -0.2]) }, 'io'],
+    [2.6, { 'chest+': [-0.1, 0, 0], 'head+': [-0.15, 0, 0], jaw: [-0.55, 0, 0], armUL: [0.35, 0, -1.2], armLL: [1.2, 0, 0], fingL: [-0.35, 0, 0], $hips: [0, -0.05, 0], $handR: [0.82, 2.06, -0.12], $aimR: aim([0.15, 1, 0.1], [0, 0.1, -1]), $shake: 1, $enrage: 0.5, $charge: 1 }, 'i'],
+    [3.3, { 'chest+': [-0.08, 0, 0], jaw: [-0.5, 0, 0], armUL: [0.35, 0, -1.15], armLL: [1.2, 0, 0], $handR: [0.82, 2.04, -0.12], $aimR: aim([0.15, 1, 0.1], [0, 0.1, -1]), $shake: 0.8, $enrage: 0.4, $charge: 1 }],
+    [3.8, { jaw: [0, 0, 0], armUL: null, armLL: null, fingL: null, $enrage: 0, $charge: 0 }],
   ],
-  ev: [[1.15, 'land', 'feetL'], [1.9, 'snort'], [2.5, 'snort'], [4.3, 'roar', 'mouth']],
+  ev: [[0.55, 'land', 'feetL'], [1.1, 'snort'], [1.7, 'snort'], [2.6, 'roar', 'mouth']],
 };
 
 // game-driven leap (the encounter moves the root along an arc with B.leap): pose only — crouch, airborne tuck with
 // the axe overhead, slam on landing (hits[0] = landing)
 A.leap = {
-  dur: 2.3, hits: [1.5], hitAt: ['weaponTip2'], lock: 1,
+  dur: 2.3, hits: [1.5], hitAt: ['weaponTip2'], lock: 1, move: [{ t: [0.45, 1.5], dist: 'target', height: 6 }],
   keys: [
     [0, {}],
     [0.3, { $hips: [0, -0.22, 0.04], 'spine+': [-0.18, 0, 0], 'chest+': [-0.1, 0, 0], $handR: [0.45, 1.32, 0.22], $aimR: aim([0.08, 0.78, 0.62], [0, 0.62, -0.78]), $gripL: 1, $charge: 0.4 }, 'o'],

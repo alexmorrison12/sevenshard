@@ -103,8 +103,9 @@ export class SailBuilder {
  * Returns { corners: { clewL, clewR }, yardDir, top } for rigging.
  */
 export function squareSail(sb, o) {
-  const yd = V3(Math.cos(o.brace || 0), 0, -Math.sin(o.brace || 0));
-  const fwd = V3().crossVectors(UP, yd);                    // −Z when unbraced
+  const cr = Math.cos(o.roll || 0);
+  const yd = V3(Math.cos(o.brace || 0) * cr, Math.sin(o.roll || 0), -Math.sin(o.brace || 0) * cr);
+  const fwd = V3().crossVectors(UP, yd).normalize();        // −Z when unbraced
   const top = V3(o.x || 0, o.y, o.z).addScaledVector(fwd, o.fwd ?? 0.32);
   const Wt = o.Wt, Wb = o.Wb ?? o.Wt, Hh = o.H, roach = o.roach ?? 0.25;
   const pos = (a, b) => {

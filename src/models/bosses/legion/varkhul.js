@@ -147,7 +147,8 @@ export const varkhul = {
       X[0] = 0.34;
       v.mix(C.ironL, sstep(0.3, 0.95, ny) * 0.22);
       // brass trim on plate rims (normals facing down/out)
-      v.mix(C.trim, sstep(-0.4, -0.8, ny) * 0.9 * (v.group === 2 ? 0.3 : 1)); if (ny < -0.55) X[0] = 0.6;
+      const rimK = (v.t('pauldron') > 0.3 || v.t('lame') > 0.3) ? sstep(-0.4, -0.8, ny) : sstep(-0.8, -0.95, ny);
+      v.mix(C.trim, rimK * 0.9 * (v.group === 2 ? 0.3 : 1)); if (rimK > 0.5) X[0] = 0.6;
       // burning seams: sparse fissures in the plates (breastplate, thighs); pauldrons mostly clean
       X[2] = (y > 1.2 && y < 1.58 && Math.abs(x) < 0.24 ? 0.5 : y > 0.6 && y < 1.0 ? 0.3 : 0.1) * (v.group === 2 ? 0.3 : 1) * (v.t('pauldron') > 0.3 ? 0.35 : 1);
     }
@@ -381,7 +382,7 @@ function buildSword() {
   }
   // blade: tapered, serrated near the guard, molten fuller down the middle and a burning edge band
   const NU = 7, NV = 16, P = [], UV = [], I = [];
-  const half = (v) => 0.075 * (1 - v * 0.55) * (v > 0.9 ? (1 - v) / 0.1 : 1) + 0.004 + (v < 0.35 ? Math.max(0, Math.sin(v * 60)) * 0.012 : 0);
+  const half = (v) => 0.09 * (1 - v * 0.5) * (v > 0.9 ? (1 - v) / 0.1 : 1) + 0.004 + (v < 0.35 ? Math.max(0, Math.sin(v * 60)) * 0.012 : 0);
   const th = (u) => 0.022 * (1 - Math.abs(u) ** 1.5) + 0.002;
   const vert = (u, v, side) => { const d = BLADE0 + v * (BLADE1 - BLADE0); return at(d).addScaledVector(bl, u * half(v)).addScaledVector(n, side * th(u) * 0.5); };
   for (const side of [1, -1]) {
@@ -453,7 +454,7 @@ A.fire_wave = {
 
 // game-driven leap (root arc by the encounter): crouch, airborne with the blade overhead, slam on landing
 A.leap = {
-  dur: 2.4, hits: [1.5], hitAt: ['weaponTip'], lock: 1, move: [{ t: [0.45, 1.5], dist: 'target' }],
+  dur: 2.4, hits: [1.5], hitAt: ['weaponTip'], lock: 1, move: [{ t: [0.45, 1.5], dist: 'target', height: 4 }],
   keys: [
     [0, {}],
     [0.3, { $hips: [0, -0.18, 0.04], 'spine+': [-0.15, 0, 0], $handR: [0.4, 1.25, 0.18], $aimR: aim([0.08, 0.75, 0.66], [0, 0.66, -0.75]), $gripL: 1, $charge: 0.5 }, 'o'],
@@ -519,17 +520,17 @@ A.death = {
 };
 
 A.intro = {
-  dur: 5.0, hits: [1.45, 3.4], hitAt: ['weaponTip', 'chest'], lock: 1, fadeIn: 0.01,
+  dur: 3.5, hits: [1.0, 2.3], hitAt: ['weaponTip', 'chest'], lock: 1, fadeIn: 0.01, stretch: [0.1, 0.6],
   keys: [
     [0, K2(KNEEL_R, { $hips: [0, -0.38, 0.05], $handR: [0.12, 1.12, -0.36], $aimR: aim([0, -1, -0.06], [1, 0, 0]), $gripL: 1, 'head+': [-0.45, 0, 0], 'chest+': [-0.2, 0, 0], $body: 0.3 })],
-    [0.9, K2(KNEEL_R, { $hips: [0, -0.36, 0.05], $handR: [0.12, 1.14, -0.36], $aimR: aim([0, -1, -0.06], [1, 0, 0]), $gripL: 1, 'head+': [0.05, 0, 0], 'chest+': [0, 0, 0], $body: 0.6 }), 'io'],
-    [1.45, { $footR: null, $footL: null, $hips: [0, -0.05, 0], $handR: [0.62, 1.28, -0.35], $aimR: aim([0.75, 0.3, -0.58], [0.5, -0.1, 0.85]), $gripL: 0, armUL: [0.1, 0, -0.5], 'head+': [0, -0.2, 0], $charge: 1, $body: 0.4 }, 'i'],
-    [2.5, { $hips: [0, 0, 0], $handR: [0.66, 1.2, -0.2], $aimR: aim([0.65, -0.55, -0.3], [0.3, -0.3, 0.9]), armUL: [0.05, 0, -0.3], $charge: 0.6 }, 'io'],
-    [3.4, { $handR: [0.36, 1.45, -0.62], $aimR: aim([0.2, 0.2, -0.96], [0, 1, 0.2]), armUL: [0.35, 0, -0.9], armLL: [1.2, 0, 0], fingL: [1.2, 0, 0], 'head+': [0.25, 0, 0], 'chest+': [0.08, 0, 0], $charge: 1, $shake: 0.6, $body: 0.8 }, 'i'],
-    [4.3, { $handR: [0.36, 1.43, -0.6], $aimR: aim([0.2, 0.2, -0.96], [0, 1, 0.2]), armUL: [0.3, 0, -0.85], armLL: [1.2, 0, 0], $charge: 0.8, $shake: 0.3, $body: 0.6 }],
-    [5.0, { armUL: null, armLL: null, fingL: null, $charge: 0, $body: 0 }],
+    [0.621, K2(KNEEL_R, { $hips: [0, -0.36, 0.05], $handR: [0.12, 1.14, -0.36], $aimR: aim([0, -1, -0.06], [1, 0, 0]), $gripL: 1, 'head+': [0.05, 0, 0], 'chest+': [0, 0, 0], $body: 0.6 }), 'io'],
+    [1, { $footR: null, $footL: null, $hips: [0, -0.05, 0], $handR: [0.62, 1.28, -0.35], $aimR: aim([0.75, 0.3, -0.58], [0.5, -0.1, 0.85]), $gripL: 0, armUL: [0.1, 0, -0.5], 'head+': [0, -0.2, 0], $charge: 1, $body: 0.4 }, 'i'],
+    [1.7, { $hips: [0, 0, 0], $handR: [0.66, 1.2, -0.2], $aimR: aim([0.65, -0.55, -0.3], [0.3, -0.3, 0.9]), armUL: [0.05, 0, -0.3], $charge: 0.6 }, 'io'],
+    [2.3, { $handR: [0.36, 1.45, -0.62], $aimR: aim([0.2, 0.2, -0.96], [0, 1, 0.2]), armUL: [0.35, 0, -0.9], armLL: [1.2, 0, 0], fingL: [1.2, 0, 0], 'head+': [0.25, 0, 0], 'chest+': [0.08, 0, 0], $charge: 1, $shake: 0.6, $body: 0.8 }, 'i'],
+    [2.975, { $handR: [0.36, 1.43, -0.6], $aimR: aim([0.2, 0.2, -0.96], [0, 1, 0.2]), armUL: [0.3, 0, -0.85], armLL: [1.2, 0, 0], $charge: 0.8, $shake: 0.3, $body: 0.6 }],
+    [3.5, { armUL: null, armLL: null, fingL: null, $charge: 0, $body: 0 }],
   ],
-  ev: [[1.45, 'wave', 'weaponTip'], [3.4, 'roar', 'mouth']],
+  ev: [[1.0, 'wave', 'weaponTip'], [2.3, 'roar', 'mouth']],
 };
 
 A.hit = { dur: 0.5, hits: [], fadeIn: 0.04, keys: [[0, {}], [0.12, { 'chest+': [0.12, 0.08, 0.05], 'head+': [0.2, 0.1, 0], $hips: [0, -0.02, 0.03] }, 'o'], [0.5, {}]] };

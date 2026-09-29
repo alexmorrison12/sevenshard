@@ -6,13 +6,13 @@
 // overridden for bird wings: folded on the ground, flapping (downstroke extended, upstroke wrist-flexed), gliding
 // (seagull), bounding flight (songbird: flap bursts + wing tucks). The game moves flyers; `fly` lifts the model by flyH.
 import * as THREE from 'three';
-import { BipedCtl, legsLocal, legsPlant } from '../ctl.js';
+import { BipedCtl, legsLocal } from '../ctl.js';
 import { bDeath, bKnockback } from '../acts.js';
 import { sweep, rigid, bez, taper, eyeGeo, aim } from '../../kit/geo.js';
 import { col } from '../../kit/sdf.js';
 import { addHorn, lerp3 } from '../../kit/parts.js';
 import { sstep, clamp01, mix, bell, TAU, fract } from '../../kit/rig.js';
-import { loftZ, chainSkin, gridSheet, limb, V3, L2 } from './common.js';
+import { loftZ, chainSkin, gridSheet, limb, ov, V3, L2 } from './common.js';
 
 // ------------------------------------------------------------------------------------------------ shared builders
 /** eye on a lofted head: eyeGeo aimed along dir at pos (no SDF needed) */
@@ -100,49 +100,50 @@ const L3 = (a, b, t) => lerp3(hx(a), hx(b), clamp01(t));
 
 // ------------------------------------------------------------------------------------------------ bird controller
 /**
- * BipedCtl + feathered wings. spec.bw = { L, flapF, amp, mid, glide (0..1 share of cruise spent gliding),
- * bound (songbird bounding flight), hoverF, foldTilt, armFold }
+ * Birds use the framework's BipedCtl (IK legs, hops/walks, state.fly hover & lean) plus `birdWings` as the spec's
+ * documented `post` hook (runs after actions): folded on the ground; flapping in flight (downstroke extended, upstroke
+ * wrist-flexed); gliding (gull); bounding flight (songbird: flap bursts + tucks). spec.bw = { L, flapF, hoverF, amp, mid,
+ * glide, bound, foldRoll, foldYaw, foldPitch, foldOut, foldUp, armFold }.
  */
-export class BirdCtl extends BipedCtl {
-  constructor(inst, spec) {
-    super(inst, spec);
-    inst.material.side = THREE.DoubleSide; // single-sheet feathers
-    this.open = 0; this.glideT = Math.random() * 10; this.bnd = Math.random();
+export function birdController(inst, spec) {
+  inst.material.side = THREE.DoubleSide; // single-sheet feathers
+  const c = new BipedCtl(inst, spec);
+  c.open = 0; c.glideT = Math.random() * 10; c.bnd = Math.random();
+  return c;
+}
+function birdWings(ctl, dt) {
+  const W = ctl.spec.bw, b = ctl.b, P = ctl.pose;
+  const fly = ctl.fly, sp = Math.abs(ctl.speedSm);
+  // cruise mode: glide share (gull) / bounding tucks (songbird)
+  ctl.glideT += dt;
+  const cruise = fly * sstep(0.8, 2.5, sp);
+  let glide = 0, tuck = 0;
+  if (W.glide) glide = cruise * sstep(0.35, 0.6, 0.5 + 0.5 * Math.sin(ctl.glideT * TAU / 5.2)) * W.glide;
+  if (W.bound) { ctl.bnd = fract(ctl.bnd + dt / 0.75); tuck = cruise * sstep(0.62, 0.7, ctl.bnd) * (1 - sstep(0.94, 1, ctl.bnd)); }
+  const flapA = Math.max(fly * (1 - glide) * (1 - tuck), ctl.flap);
+  const openT = Math.max(fly * (1 - tuck * 0.85), ctl.flap, ctl.wingSpread);
+  ctl.open += (openT - ctl.open) * (1 - Math.exp(-(openT > ctl.open ? 14 : 6) * dt));
+  const open = clamp01(ctl.open);
+  const f = mix(W.flapF, W.hoverF ?? W.flapF * 1.4, fly * (1 - sstep(0.3, 1.5, sp)));
+  ctl.wt += dt * TAU * f * (flapA > 0.02 ? 1 : 0.2);
+  const beat = Math.sin(ctl.wt), up = Math.cos(ctl.wt);
+  const fold = 1 - open;
+  for (let s = -1; s <= 1; s += 2) {
+    const w = s < 0 ? b.wingL : b.wingR;
+    const roll = (W.mid + W.amp * beat * flapA + glide * 0.1 - tuck * 0.2) * open;
+    // folded: yaw back along the body, lie over the back like a roof, arm compressed (wrist near the shoulder)
+    P.rot(w[0], fold * (W.foldRoll ?? -0.3), -s * fold * (Math.PI / 2 - (W.foldYaw ?? 0.08)), s * roll);
+    P.move(w[0], s * (W.foldOut ?? 0) * fold, (W.foldUp ?? 0) * fold, 0);
+    if (W.foldPitch) P.prot(w[0], X_AXIS, W.foldPitch * fold); // folded tips follow the sloping back
+    P.sc[w[0]].set(1 - fold * (1 - (W.armFold ?? 0.3)), 1, 1);
+    P.move(w[1], -s * W.L * ARM * fold * (1 - (W.armFold ?? 0.3)), 0, 0);
+    // hand: flexes back on the upstroke, lags the beat, droops slightly when gliding
+    const flex = Math.max(0, up) * flapA * 0.7 * open;
+    P.rot(w[1], 0, s * (flex * 0.9) + s * fold * 0.06, s * (W.amp * 0.35 * Math.sin(ctl.wt - 0.9) * flapA * open - glide * 0.12));
   }
-  _wings(dt, P) {
-    const W = this.spec.bw, b = this.b;
-    const fly = this.fly, sp = Math.abs(this.speedSm);
-    // cruise mode: glide share (gull) / bounding tucks (songbird)
-    this.glideT += dt;
-    const cruise = fly * sstep(0.8, 2.5, sp);
-    let glide = 0, tuck = 0;
-    if (W.glide) glide = cruise * sstep(0.35, 0.6, 0.5 + 0.5 * Math.sin(this.glideT * TAU / 5.2)) * W.glide;
-    if (W.bound) { this.bnd = fract(this.bnd + dt / 0.75); tuck = cruise * sstep(0.62, 0.7, this.bnd) * (1 - sstep(0.94, 1, this.bnd)); }
-    const flapA = Math.max(fly * (1 - glide) * (1 - tuck), this.flap);
-    const openT = Math.max(fly * (1 - tuck * 0.85), this.flap, this.wingSpread);
-    this.open += (openT - this.open) * (1 - Math.exp(-(openT > this.open ? 14 : 6) * dt));
-    const open = clamp01(this.open);
-    const f = mix(W.flapF, W.hoverF ?? W.flapF * 1.4, fly * (1 - sstep(0.3, 1.5, sp)));
-    this.wt += dt * TAU * f * (flapA > 0.02 ? 1 : 0.2);
-    const beat = Math.sin(this.wt), up = Math.cos(this.wt);
-    const fold = 1 - open;
-    for (let s = -1; s <= 1; s += 2) {
-      const w = s < 0 ? b.wingL : b.wingR;
-      const roll = (W.mid + W.amp * beat * flapA + glide * 0.1 - tuck * 0.2) * open;
-      // folded: yaw back along the body, roll the sheet upright (leading edge up), arm compressed
-      P.rot(w[0], fold * (W.foldRoll ?? -0.3), -s * fold * (Math.PI / 2 - (W.foldYaw ?? 0.08)), s * roll);
-      P.move(w[0], s * (W.foldOut ?? 0) * fold, (W.foldUp ?? 0) * fold, 0);
-      if (W.foldPitch) P.prot(w[0], X_AXIS, W.foldPitch * fold); // folded tips follow the sloping back
-      P.sc[w[0]].set(1 - fold * (1 - (W.armFold ?? 0.3)), 1, 1);
-      P.move(w[1], -s * W.L * ARM * fold * (1 - (W.armFold ?? 0.3)), 0, 0);
-      // hand: flexes back on the upstroke, lags the beat, droops slightly when gliding
-      const flex = Math.max(0, up) * flapA * 0.7 * open;
-      P.rot(w[1], 0, s * (flex * 0.9) + s * fold * 0.06, s * (W.amp * 0.35 * Math.sin(this.wt - 0.9) * flapA * open - glide * 0.12));
-    }
-    // tail fans in flight
-    P.sc[b.tail[0]].set(1 + 0.6 * open * fly, 1, 1);
-    this.wingBeat = beat;
-  }
+  // tail fans in flight
+  P.sc[b.tail[0]].set(1 + 0.6 * open * fly, 1, 1);
+  ctl.wingBeat = beat;
 }
 
 // ------------------------------------------------------------------------------------------------ shared actions
@@ -190,8 +191,12 @@ const birdPose = (extra) => (ctl, dt) => {
   const hp = fract(G.phase * 2), v = clamp01(Math.abs(ctl.speedSm) / (ctl.spec.bobV ?? 0.5));
   const hold = hp < 0.65 ? hp / 0.65 : 1 - (hp - 0.65) / 0.35;
   P.move(B.head, 0, 0, (hold - 0.5) * (ctl.spec.bobZ ?? 0.03) * ctl.H * v * G.act * (1 - ctl.fly));
-  // flight posture: tail streams, head levels, feet tuck
+  // flight posture: tail streams, feet tucked up & back under the tail
   P.rx(B.tail[0], 0.15 * ctl.fly);
+  if (ctl.fly > 0.01) for (const L of G.legs) {
+    const hip = P.rest[L.idx[0]];
+    ov(L, L.toe.x * 0.7, hip.y * 0.62, hip.z + hip.y * 0.55, ctl.fly, true, -1.3);
+  }
   if (extra) extra(ctl, dt);
 };
 
@@ -246,7 +251,7 @@ export const bird = {
   },
   sockets: { head: ['head', [0, 0.16, -0.045]], mouth: ['jaw', [0, 0.126, -0.086]], center: ['spine', [0, 0.1, 0]], back: ['spine', [0, 0.124, 0.004]], chest: ['chest', [0, 0.094, -0.035]] },
   height: 0.16, radius: 0.07,
-  controller(inst) { return new BirdCtl(inst, SB_SPEC); },
+  controller(inst) { return birdController(inst, SB_SPEC); },
   get actionList() { return SB_ACTIONS; },
 };
 const SB_ACTIONS = {
@@ -274,10 +279,11 @@ const SB_SPEC = {
     ],
   },
   lean: { walk: 0.05, run: 0.15, combat: 0 }, twist: 0.02, crouch: 0.01, breathe: 0.05,
-  bw: { L: SB.wingL, flapF: 11, hoverF: 15, amp: 1.05, mid: 0.25, bound: true, foldRoll: -0.35, foldYaw: 0.1, armFold: 0.3, foldOut: 0.006, foldUp: 0.01, foldPitch: -0.14 },
+  bw: { L: SB.wingL, flapF: 11, hoverF: 15, amp: 1.05, mid: 0.25, bound: true, foldRoll: -0.25, foldYaw: 0.1, armFold: 0.3, foldOut: 0.005, foldUp: 0.004, foldPitch: 0.12 },
   flyH: 1.5, flyBob: 0.05, flyLean: 0.45, airPaw: -1.0, bobV: 0.3, bobZ: 0.02,
   fidgets: [{ name: 'peck', w: 3 }, { name: 'look', w: 2 }, { name: 'hop', w: 2 }, { name: 'sing', w: 1 }, { name: 'preen', w: 1 }], fidgetGap: 1.6,
   pose: birdPose((ctl) => { ctl.pose.rx(ctl.b.hips, 0.12 * ctl.fly * (1 - sstep(0.3, 1.5, Math.abs(ctl.speedSm)))); }),
+  post: birdWings,
   actions: SB_ACTIONS,
 };
 
@@ -333,7 +339,7 @@ export const seagull = {
   },
   sockets: { head: ['head', [0, 0.43, -0.16]], mouth: ['jaw', [0, 0.35, -0.26]], center: ['spine', [0, 0.27, -0.01]], back: ['spine', [0, 0.32, 0.0]], chest: ['chest', [0, 0.25, -0.1]] },
   height: 0.42, radius: 0.16,
-  controller(inst) { return new BirdCtl(inst, SG_SPEC); },
+  controller(inst) { return birdController(inst, SG_SPEC); },
   get actionList() { return SG_ACTIONS; },
 };
 const SG_ACTIONS = {
@@ -362,10 +368,11 @@ const SG_SPEC = {
     ],
   },
   lean: { walk: 0.08, run: 0.25, combat: 0 }, twist: 0.05, waddle: 0.12, crouch: 0.01, breathe: 0.03,
-  bw: { L: SG.wingL, flapF: 3.0, hoverF: 4.2, amp: 0.65, mid: 0.18, glide: 0.85, foldRoll: -0.42, foldYaw: 0.1, armFold: 0.25, foldOut: 0.018, foldUp: 0.022, foldPitch: -0.2 },
+  bw: { L: SG.wingL, flapF: 3.0, hoverF: 4.2, amp: 0.65, mid: 0.18, glide: 0.85, foldRoll: -0.2, foldYaw: 0.1, armFold: 0.25, foldOut: 0.012, foldUp: -0.006, foldPitch: 0.16 },
   flyH: 2.6, flyBob: 0.12, flyLean: 0.3, airPaw: -1.2, bobV: 0.5, bobZ: 0.025,
   fidgets: [{ name: 'peck', w: 3 }, { name: 'look', w: 2 }, { name: 'squawk', w: 1 }, { name: 'preen', w: 1 }], fidgetGap: 2.5,
   pose: birdPose(),
+  post: birdWings,
   actions: SG_ACTIONS,
 };
 
@@ -386,7 +393,7 @@ export const chicken = {
   variants: ['white', 'brown', 'black', 'rooster'],
   config(variant) {
     const v = CK_PAL[variant] ? variant : 'white';
-    return { variant: v, pal: CK_PAL[v], rooster: v === 'rooster', shapeKey: v === 'rooster' ? 'rooster' : 'hen', h: 0.024, scale: v === 'rooster' ? 1.12 : 1, mat: { dfreq: 6, rim: 0.25 }, ao: { dist: 0.02, str: 0.7 } };
+    return { variant: v, pal: CK_PAL[v], rooster: v === 'rooster', shapeKey: v === 'rooster' ? 'rooster' : 'hen', h: 0.028, scale: v === 'rooster' ? 1.12 : 1, mat: { dfreq: 6, rim: 0.25 }, ao: { dist: 0.02, str: 0.7 } };
   },
   rig(R) { birdRig(R, CK); },
   sculpt(S, cfg) {
@@ -421,7 +428,7 @@ export const chicken = {
   },
   sockets: { head: ['head', [0, 0.46, -0.1]], mouth: ['jaw', [0, 0.38, -0.16]], center: ['spine', [0, 0.25, 0]], back: ['spine', [0, 0.33, 0.02]], chest: ['chest', [0, 0.25, -0.1]] },
   height: 0.46, radius: 0.13,
-  controller(inst) { return new BirdCtl(inst, CK_SPEC); },
+  controller(inst) { return birdController(inst, CK_SPEC); },
   get actionList() { return CK_ACTIONS; },
 };
 const CK_ACTIONS = {
@@ -472,5 +479,6 @@ const CK_SPEC = {
   flyH: 0.6, flyBob: 0.06, flyLean: 0.4, airPaw: -0.8, bobV: 0.5, bobZ: 0.035,
   fidgets: [{ name: 'peck', w: 4 }, { name: 'scratch', w: 2 }, { name: 'cluck', w: 2 }, { name: 'look', w: 1 }, { name: 'flap', w: 1 }], fidgetGap: 2,
   pose: birdPose(),
+  post: birdWings,
   actions: CK_ACTIONS,
 };

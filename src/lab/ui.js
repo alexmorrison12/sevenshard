@@ -27,6 +27,8 @@ if (q.touch === 'skills') ui.setTouch(true, { skills: true });
 const mock = createMockHud({ cls: q.cls, raid: q.raid === '1', noboss: q.noboss === '1', chaos: q.chaos === '1', solo: q.solo === '1' });
 window.__mock = mock;
 if (q.cast) mock.state.cast = { label: { charge: 'Hell Blade', cast: 'Punishing Bolt', channel: 'Lightning Vortex', hold: 'Whirlwind Edge' }[q.cast] || 'Casting', kind: q.cast, t: 0.35, perfect: q.cast === 'charge' ? [0.72, 0.9] : null, icon: 'skill:reaver:r' };
+if (q.ship) { mock.state.boss = null; mock.state.zone = { name: 'The Glass Sea', sub: 'Southern Reach' }; mock.state.ship = { name: 'Dawnrunner', crew: 12, hp: 8420, hpMax: 10000, speed: 14.2, speedMax: 22, sails: 2, heading: -0.9, wind: 0.6, windSpeed: 18, dest: { name: 'Lantern Isle', dist: 1240 },
+  skills: [{ id: 'full_sail', name: 'Full Sail', icon: 'skill:any:dash', key: 'Q', cd: 30, cdLeft: 12, desc: 'Burst of speed.' }, { id: 'repair', name: 'Repair', icon: 'item:hp_potion', key: 'W', cd: 60, cdLeft: 0, desc: 'Mend the hull.' }, { id: 'volley', name: 'Cannon Volley', icon: 'item:destruction_bomb', key: 'E', cd: 8, cdLeft: 3, desc: 'Broadside!' }, { id: 'brace', name: 'Brace', icon: 'status:shield', key: 'R', cd: 45, cdLeft: 0, desc: 'Reduce storm and cannon damage.' }] }; }
 if (q.interact) mock.state.interact = { key: 'G', label: 'Talk', name: 'Commander Brannoc' };
 
 const screen = q.screen || 'hud';

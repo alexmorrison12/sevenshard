@@ -1,7 +1,7 @@
 // Boss attacks (guardians + legion): breaths, spikes, gusts, lava, burrows, fox-fire, siren, kraken, eye beams,
 // axe shockwaves, the 8-wedge rift carve, horn charges, roars, ghost phase — plus the generic monster hit names.
 import * as THREE from 'three';
-import { ctx, tc, vec, groundSmash, along, GEN, PHYS, FIRE, FROST, HOLY, STORM, DARK, ARC, WATER, CRIM, AMB, TAU, UP, hue, shockwave, decal, hit, explosion, slash, S, R, P, v3 } from './lib.js';
+import { KEYS, ctx, tc, vec, groundSmash, along, GEN, PHYS, FIRE, FROST, HOLY, STORM, DARK, ARC, WATER, CRIM, AMB, TAU, UP, hue, shockwave, decal, hit, explosion, slash, S, R, P, v3 } from './lib.js';
 
 const K = {};
 const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _q = new THREE.Quaternion();
@@ -185,7 +185,7 @@ K.foxfire_orbs = {                   // Kurai: blue fox-fire orbs circle the bos
       const o = v.orbs[i];
       if (!launched) { const a = T.age * 2.2 + i / v.n * TAU; o.pos.set(p.x + Math.cos(a) * c.R, fx.gy(p.x, p.z, p.y) + 2.2 + Math.sin(T.age * 3 + i) * 0.3, p.z + Math.sin(a) * c.R); }
       else { const a = i / v.n * TAU + v.launch * 2.2; o.pos.x += Math.cos(a) * 16 * dt; o.pos.z += Math.sin(a) * 16 * dt; }
-      if (T.rate('f' + i, 30)) fx.spawn(FOXORB, o.pos.x, o.pos.y, o.pos.z, 0, 0.5, 0, fx.o(c.s, null));
+      if (T.rate(KEYS[i], 30)) fx.spawn(FOXORB, o.pos.x, o.pos.y, o.pos.z, 0, 0.5, 0, fx.o(c.s, null));
     }
   },
   stop(T) { for (const o of T.v.orbs) { o.alive = false; hit(T.fx, { pos: o.pos, element: 'arcane', scale: 1.2 }); } },
@@ -253,8 +253,9 @@ K.eye_beam = {                       // Deep Oracle: a beam sweeps from the eye 
     const fx = T.fx, v = T.v, c = v.c;
     v.hitP.lerpVectors(v.a, v.b, Math.min(1, T.age / T.dur));
     const n = T.rate('s', 60);
-    for (let i = 0; i < n; i++) { fx.rdir(_a, UP, 1.2); fx.spawn(GEN.spark, v.hitP.x, v.hitP.y + 0.1, v.hitP.z, _a.x * 6, _a.y * 6, _a.z * 6, fx.o(c.s, hue(v.col, [0, 0, 0]))); }
-    if (T.rate('f', 20)) fx.at(GEN.glowFade, _b.set(v.hitP.x, v.hitP.y + 0.3, v.hitP.z), 2 * c.s, hue(v.col, [0, 0, 0]));
+    const vh = v.hue || (v.hue = hue(v.col, [0, 0, 0]));
+    for (let i = 0; i < n; i++) { fx.rdir(_a, UP, 1.2); fx.spawn(GEN.spark, v.hitP.x, v.hitP.y + 0.1, v.hitP.z, _a.x * 6, _a.y * 6, _a.z * 6, fx.o(c.s, vh)); }
+    if (T.rate('f', 20)) fx.at(GEN.glowFade, _b.set(v.hitP.x, v.hitP.y + 0.3, v.hitP.z), 2 * c.s, vh);
     if (T.rate('m', 10)) fx.spawn(DARK.smoke, v.hitP.x, v.hitP.y + 0.3, v.hitP.z, 0, 1, 0, fx.o(c.s, null));
     if (v.last.distanceToSquared(v.hitP) > 1.2) { decal(fx, { pos: v.last.clone(), dir: vec(v.hitP.x - v.last.x, 0, v.hitP.z - v.last.z), radius: 0.8 * c.s, length: v.last.distanceTo(v.hitP) + 0.4, kind: 'fissure', dur: 4, color: [v.col[0] * 0.8, v.col[1] * 0.8, v.col[2] * 0.8] }); v.last.copy(v.hitP); }
   },
@@ -287,7 +288,7 @@ K.rift_carve = {                     // Gorrath: 8-wedge carve — alternating w
     const fx = T.fx, v = T.v, c = v.c;
     for (let k = 0; k < 2; k++) {
       if (k === 1 && !v.tele2) break;
-      if (T.once('e' + k, v.delay + k * (v.delay + 0.4))) {
+      if (T.once(KEYS[k], v.delay + k * (v.delay + 0.4))) {
         const ph = k ? 1 - v.phase : v.phase, sw = TAU / v.n;
         for (let i = 0; i < v.n; i++) {
           if (((i + ph) % 2) !== 0) continue;

@@ -11,7 +11,7 @@ import { rimewingSpec } from './rimewing_anim.js';
 const C = {
   back: 0x142440, flank: 0x3a6292, belly: 0xd4e8f6, stripe: 0x0a1226, pale: 0xe6f3fb, face: 0x2a456c,
   horn: 0xcfe2f0, hornTip: 0xffffff, claw: 0x16202e, clawTip: 0xb8d4e6,
-  crystal: 0x6fd4ff, crystalTip: 0xeefcff, membrane: 0x1a3160, memEdge: 0xb4e2ff, mouth: 0x0e1c30, tongue: 0x2d557a,
+  crystal: 0x1f5c9a, crystalTip: 0xa8ecff, membrane: 0x1a3160, memEdge: 0xb4e2ff, mouth: 0x0e1c30, tongue: 0x2d557a,
   tooth: 0xf0f8ff, toothBase: 0x9ab4c8, eye: 0xc8f6ff, throat: 0x2a6fa8,
 };
 

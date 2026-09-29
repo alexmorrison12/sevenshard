@@ -13,9 +13,13 @@ const C = {
   obs: 0x110d0c, obsHi: 0x2a201d, hide: 0x3a2a24, belly: 0x4a3830, horn: 0x121010, hornTip: 0x5a4034,
   eye: 0xffc040, mouth: 0x5a1406, claw: 0x0e0b0a, clawTip: 0x4a3a30,
 };
+// the head (skull, jaw, horn, eyes, tusks) is modelled at rhino proportions and scaled up 1.25× around its pivot
+const HP = [0, 2.2, -3.1], HS = 1.25;
+const hx = (p) => [HP[0] + (p[0] - HP[0]) * HS, HP[1] + (p[1] - HP[1]) * HS, HP[2] + (p[2] - HP[2]) * HS];
+const hr = (r) => r * HS;
 export const J = {
   body: [0, 2.45, 0.2], chest: [0, 2.55, -1.2], hips: [0, 2.5, 1.5], neck: [0, 2.45, -2.45], head: [0, 2.2, -3.1],
-  jaw: [0, 1.82, -3.2], horn: [0, 2.28, -3.95], stump: [0, 2.28, -3.95], crest: [0, 2.95, -2.7],
+  jaw: hx([0, 1.82, -3.2]), horn: hx([0, 2.28, -3.95]), stump: hx([0, 2.28, -3.95]), crest: [0, 2.95, -2.7],
   fU: [1.02, 2.15, -1.65], fL: [1.1, 1.2, -1.5], fP: [1.12, 0.36, -1.62], fToe: [1.12, 0, -1.85],
   rT: [0.98, 2.25, 1.6], rS: [1.08, 1.35, 1.12], rM: [1.08, 0.62, 1.66], rP: [1.08, 0.2, 1.55], rToe: [1.08, 0, 1.3],
   tail: [[0, 2.4, 2.85], [0, 2.1, 3.5], [0, 1.8, 4.05]], club: [0, 1.55, 4.5],
@@ -47,15 +51,15 @@ function sculpt(S) {
   S.cone('neck', [0, 2.6, -1.9], J.head, 0.95, 0.7, { k: 0.35, col: C.obs, tag: 'neck', b2: 'head', t0: 0.6, t1: 1, dtl: rock });
   S.ell('neck', [0, 2.95, -2.3], [1.05, 0.6, 0.55], { k: 0.3, col: C.obs, tag: 'collar', rot: [-0.3, 0, 0], dtl: rock });
   // head: massive wedge, flat armoured brow, blunt snout (horn socket), heavy jaw below
-  S.ell('head', [0, 2.25, -3.2], [0.78, 0.66, 0.82], { k: 0.25, col: C.obs, tag: 'head', dtl: rock });
-  S.cone('head', [0, 2.2, -3.4], [0, 2.1, -4.1], 0.62, 0.42, { k: 0.25, col: C.obs, tag: 'snout', dtl: rock });
+  S.ell('head', hx([0, 2.25, -3.2]), [hr(0.78), hr(0.66), hr(0.82)], { k: 0.25, col: C.obs, tag: 'head', dtl: rock });
+  S.cone('head', hx([0, 2.2, -3.4]), hx([0, 2.1, -4.1]), hr(0.62), hr(0.42), { k: 0.25, col: C.obs, tag: 'snout', dtl: rock });
   for (const s of [-1, 1]) {
-    S.ell('head', [0.58 * s, 2.4, -3.2], [0.3, 0.26, 0.45], { k: 0.15, col: C.obsHi, tag: 'brow', rot: [0.1, s * 0.3, s * 0.3], dtl: rockS });
-    S.ell('head', [0.5 * s, 2.3, -3.55], [0.09, 0.08, 0.1], { k: 0.04, sub: true, col: 0x050302, tag: 'socket' });
+    S.ell('head', hx([0.58 * s, 2.4, -3.2]), [hr(0.3), hr(0.26), hr(0.45)], { k: 0.15, col: C.obsHi, tag: 'brow', rot: [0.1, s * 0.3, s * 0.3], dtl: rockS });
+    S.ell('head', hx([0.5 * s, 2.3, -3.55]), [hr(0.09), hr(0.08), hr(0.1)], { k: 0.04, sub: true, col: 0x050302, tag: 'socket' });
   }
-  S.cone('head', [0, 1.9, -3.4], [0, 1.88, -4.1], 0.32, 0.2, { k: 0.08, sub: true, col: C.mouth, tag: 'mouthroof' });
-  S.cone('jaw', [0, 1.8, -3.2], [0, 1.72, -4.05], 0.5, 0.32, { group: 1, k: 0.18, col: C.obs, tag: 'jaw', dtl: rock });
-  S.cone('jaw', [0, 1.95, -3.35], [0, 1.9, -4.0], 0.28, 0.18, { group: 1, k: 0.08, sub: true, col: C.mouth, tag: 'mouth' });
+  S.cone('head', hx([0, 1.9, -3.4]), hx([0, 1.88, -4.1]), hr(0.32), hr(0.2), { k: 0.08, sub: true, col: C.mouth, tag: 'mouthroof' });
+  S.cone('jaw', hx([0, 1.8, -3.2]), hx([0, 1.72, -4.05]), hr(0.5), hr(0.32), { group: 1, k: 0.18, col: C.obs, tag: 'jaw', dtl: rock });
+  S.cone('jaw', hx([0, 1.95, -3.35]), hx([0, 1.9, -4.0]), hr(0.28), hr(0.18), { group: 1, k: 0.08, sub: true, col: C.mouth, tag: 'mouth' });
   // legs: columnar, plated, elephantine feet
   for (const [s, n] of SIDES) {
     const u = X(J.fU, s), l = X(J.fL, s), p = X(J.fP, s), toe = X(J.fToe, s);
@@ -86,7 +90,7 @@ function paint(v) {
   v.emis = Math.max(0, seam) * 1.0 + v.t('club') * 0.9;
   // molten underbelly glow + hot mouth
   v.mix(C.belly, v.t('belly') * sstep(-0.2, -0.7, ny) * 0.8);
-  if ((v.group === 1 && ny > 0.3 && z < -3.35) || v.t('mouth') > 0.3 || v.t('mouthroof') > 0.3) { v.mix(C.mouth, 0.9); v.kind = K.mouth; v.emis = 1.4; v.gm = 0.75; }
+  if ((v.group === 1 && ny > 0.3 && z < -3.45) || v.t('mouth') > 0.3 || v.t('mouthroof') > 0.3) { v.mix(C.mouth, 0.9); v.kind = K.mouth; v.emis = 1.4; v.gm = 0.75; }
   v.mix(0x050302, v.t('socket'));
   v.mul(1 + Math.sin(x * 5 + z * 3) * Math.sin(y * 4) * 0.06);
 }
@@ -96,21 +100,21 @@ function dress({ acc, S, b }) {
   const skinAt = (p) => { const s = S.sampleAt(p[0], p[1], p[2]); return { si: s.si, sw: s.sw }; };
   const head = b('head');
   // ---- the great horn (breakable): obsidian, molten core vein up the front, glowing tip
-  const hb = [0, 2.25, -3.95];
-  const path = bezier([hb, [0, 2.65, -4.75], [0, 4.25, -4.95]], 16);
-  acc.addRaw(loft(path, 12, (t) => { const r = 0.46 * Math.pow(1 - t, 0.8) + 0.015; return [r * 0.85, r]; }, [0, 0, -1]), {
+  const hb = hx([0, 2.3, -3.95]);
+  const path = bezier([hb, add(hb, [0, 0.35, -1.25]), add(hb, [0, 2.1, -1.45]), add(hb, [0, 2.75, -0.85])], 18);
+  acc.addRaw(loft(path, 12, (t) => { const r = 0.62 * Math.pow(1 - t, 0.85) + 0.02; return [r * 0.85, r]; }, [0, 0, -1]), {
     skin: rigid(b('horn')), kind: K.lava, color: (t) => lc(C.horn, C.hornTip, Math.pow(t, 2)),
     emis: (t, p, uv) => { const front = Math.max(0, Math.cos((uv[0] - 0.75) * Math.PI * 2)); return 0.25 + 0.9 * Math.pow(front, 6) + 1.6 * Math.pow(t, 5); }, gm: 1, dtl: [0, 0.1, 0.2, 0],
   });
   // ridges spiralling up the horn
   for (let k = 0; k < 4; k++) {
     const a = k / 4 * Math.PI * 2;
-    const rp = path.map((p, i) => { const t = i / (path.length - 1), r = (0.46 * Math.pow(1 - t, 0.8)) * 0.92; return [p[0] + Math.cos(a + t * 1.4) * r, p[1] + Math.sin(a + t * 1.4) * r * 0.3, p[2] + Math.sin(a + t * 1.4) * r * 0.8]; });
+    const rp = path.map((p, i) => { const t = i / (path.length - 1), r = (0.62 * Math.pow(1 - t, 0.85)) * 0.92; return [p[0] + Math.cos(a + t * 1.4) * r, p[1] + Math.sin(a + t * 1.4) * r * 0.3, p[2] + Math.sin(a + t * 1.4) * r * 0.8]; });
     acc.addRaw(loft(rp.slice(0, 12), 5, taper(0.07), [0, 1, 0]), { skin: rigid(b('horn')), kind: K.hard, color: C.horn, dtl: [0, 0.1, 0.2, 0] });
   }
   // stump (appears when the horn is broken): jagged glowing break
-  const sp = bezier([hb, [0, 2.42, -4.25], [0, 2.62, -4.45]], 4);
-  acc.addRaw(loft(sp, 12, (t) => { const r = 0.46 * (1 - t * 0.15); return [r * 0.85, r]; }, [0, 0, -1]), { skin: rigid(b('stump')), kind: K.lava, color: C.horn, emis: (t) => 0.3 + 2.2 * Math.pow(t, 3), gm: 1, dtl: [0, 0.1, 0.2, 0] });
+  const sp = bezier([hb, add(hb, [0, 0.12, -0.45]), add(hb, [0, 0.3, -0.62])], 4);
+  acc.addRaw(loft(sp, 12, (t) => { const r = 0.62 * (1 - t * 0.15); return [r * 0.85, r]; }, [0, 0, -1]), { skin: rigid(b('stump')), kind: K.lava, color: C.horn, emis: (t) => 0.3 + 2.2 * Math.pow(t, 3), gm: 1, dtl: [0, 0.1, 0.2, 0] });
   for (let k = 0; k < 7; k++) {
     const a = k / 7 * Math.PI * 2, base = add(sp[4], [Math.cos(a) * 0.3, Math.sin(a) * 0.1, Math.sin(a) * 0.25]);
     acc.addRaw(crystal(base, norm([Math.cos(a) * 0.3, 0.9, -0.5]), 0.18 + 0.12 * ((k * 7) % 3), 0.07, 4, k), { skin: rigid(b('stump')), kind: K.lava, color: C.horn, emis: (t) => 1.5 * t, gm: 1, dtl: [0, 0, 0, 0] });
@@ -142,13 +146,13 @@ function dress({ acc, S, b }) {
   }
   // ---- eyes: small, sunken, molten
   for (const s of [-1, 1]) {
-    const e = eyeball([0.5 * s, 2.3, -3.55], 0.085, [0.85 * s, 0.1, -0.5], [0, 1, 0], 8);
+    const e = eyeball(hx([0.5 * s, 2.3, -3.55]), hr(0.085), [0.85 * s, 0.1, -0.5], [0, 1, 0], 8);
     acc.addRaw(e, { skin: rigid(head), kind: K.eye, color: C.eye, emis: (t) => t > 0.2 ? 2.4 : 0.3, gm: 0.4, dtl: [0, 0, 0, 0] });
   }
   // ---- tusks / mandible prongs and teeth
   for (const s of [-1, 1]) {
-    acc.addRaw(loft(hornPath([0.42 * s, 1.72, -3.75], [0.35 * s, 0.4, -1], 0.75, [1, 0, 0], 0.9, 6), 7, taper(0.12, { flat: 0.8 }), [0, 1, 0]), { skin: rigid(b('jaw')), kind: K.hard, color: (t) => lc(C.horn, C.hornTip, t), dtl: [0, 0.1, 0.1, 0] });
-    for (let k = 0; k < 4; k++) acc.addRaw(crystal([0.22 * s, 1.93, -3.55 - k * 0.14], [0, -1, 0], 0.16, 0.04, 4, k), { skin: rigid(head), kind: K.hard, color: 0x2a201c, dtl: [0, 0, 0, 0] });
+    acc.addRaw(loft(hornPath(hx([0.42 * s, 1.72, -3.75]), [0.35 * s, 0.4, -1], 0.95, [1, 0, 0], 0.9, 6), 7, taper(0.15, { flat: 0.8 }), [0, 1, 0]), { skin: rigid(b('jaw')), kind: K.hard, color: (t) => lc(C.horn, C.hornTip, t), dtl: [0, 0.1, 0.1, 0] });
+    for (let k = 0; k < 4; k++) acc.addRaw(crystal(hx([0.22 * s, 1.93, -3.55 - k * 0.14]), [0, -1, 0], 0.2, 0.05, 4, k), { skin: rigid(head), kind: K.hard, color: 0x2a201c, dtl: [0, 0, 0, 0] });
   }
   // ---- feet: blunt obsidian nails
   for (const [s, n] of SIDES) for (const [paw, toe] of [['fP', J.fToe], ['rP', J.rToe]]) for (let k = -1; k <= 1; k++) {
@@ -156,7 +160,7 @@ function dress({ acc, S, b }) {
     acc.addRaw(crystal(base, norm([k * 0.3, -0.35, -1]), 0.26, 0.1, 4, 0.8), { skin: rigid(b(paw + n)), kind: K.hard, color: C.claw, dtl: [0, 0, 0, 0] });
   }
   // ---- lava drips from the jaw and belly plates
-  const drips = [[0.3, 1.45, -3.7], [-0.25, 1.5, -3.5], [0.1, 1.42, -3.95]];
+  const drips = [hx([0.3, 1.5, -3.7]), hx([-0.25, 1.55, -3.5]), hx([0.1, 1.5, -3.95])];
   for (let i = 0; i < drips.length; i++) {
     const p = drips[i], bone = i < 2 ? b('jaw') : b('body');
     acc.addRaw(loft([add(p, [0, 0.1, 0]), p, add(p, [0, -0.28, 0])], 5, (t) => { const r = 0.045 * (1 - t * 0.6) + 0.03 * Math.sin(t * Math.PI); return [r, r]; }, [0, 0, 1]), { skin: rigid(bone), kind: K.lava, color: 0x5a2008, emis: 2.2, gm: 1, dtl: [0, 0, 0, 0] });
@@ -165,7 +169,7 @@ function dress({ acc, S, b }) {
 
 export const cinderhorn = {
   info: {
-    name: 'Cinderhorn', title: 'the Molten Juggernaut', height: 4.6, radius: 3.0, burrowDepth: 5,
+    name: 'Cinderhorn', title: 'the Molten Juggernaut', height: 5.2, radius: 3.0, burrowDepth: 5,
     parts: ['horn'],
     actions: {
       idle: { dur: 4, hits: [], loop: true },
@@ -188,11 +192,11 @@ export const cinderhorn = {
   config() { return { h: 0.075, ao: { dist: 0.12, str: 0.85 }, grad: { top: 0.18, bottom: 0.35, y0: 0, y1: 2.2, low: 0.25 }, dtl: [0, 0.2, 0.3, 0] }; },
   rig, sculpt, paint, dress,
   look: { glow: 0xff5a10, glowI: 1.7, glow2: 0xffb040, glow2I: 1.8, pulse: 1.6, dfreq: 0.9, crackF: 1.35, enrage: 0xff2a08, flash: 0xff6a18 },
-  mat: { body: { rim: 0.22, rimColor: 0xffa070, spec: 0.45, shine: 70 } },
+  mat: { body: { rim: 0.22, rimColor: 0xffa070, spec: 0.3, shine: 60 } },
   sockets: {
-    head: ['head', [0, 2.8, -3.3]], mouth: ['head', [0, 1.85, -4.05]], chest: ['chest', [0, 2.2, -2.1]], back: ['body', [0, 3.4, 0]],
-    handL: ['fPL', [-1.12, 0.1, -1.8]], handR: ['fPR', [1.12, 0.1, -1.8]], weapon: ['horn', [0, 2.8, -4.7]], weaponTip: ['horn', [0, 4.25, -4.95]],
-    horn: ['horn', [0, 2.9, -4.6]], tail: ['club', [0, 1.55, 4.8]], footL: ['fPL', [-1.12, 0.05, -1.7]], footR: ['fPR', [1.12, 0.05, -1.7]],
+    head: ['head', hx([0, 2.8, -3.3])], mouth: ['head', hx([0, 1.85, -4.05])], chest: ['chest', [0, 2.2, -2.1]], back: ['body', [0, 3.4, 0]],
+    handL: ['fPL', [-1.12, 0.1, -1.8]], handR: ['fPR', [1.12, 0.1, -1.8]], weapon: ['horn', hx([0, 2.9, -4.8])], weaponTip: ['horn', add(hx([0, 2.3, -3.95]), [0, 2.75, -0.85])],
+    horn: ['horn', hx([0, 3.0, -4.7])], tail: ['club', [0, 1.55, 4.8]], footL: ['fPL', [-1.12, 0.05, -1.7]], footR: ['fPR', [1.12, 0.05, -1.7]],
   },
 };
 cinderhorn.breakable = { horn: { bone: 'horn', stump: 'stump', socket: 'horn' } };

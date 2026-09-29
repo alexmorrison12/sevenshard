@@ -46,11 +46,14 @@ export const CLASS_OUTFITS = {
     if (t === 1) return preset({ armor: 'plate', tier: 1, colors: { primary: 0x46423e, secondary: 0x8e1414, trim: 0xb08440, pants: 0x2a2624, boots: 0x3c3834, tabard: 0x8a1212, capeInner: 0x2a0a0a, belt: 0x2a1e18, emblem: 0xc8a050 },
       chest: { type: 'plate', sleeves: f ? 1.2 : 1.3, neck: 'high' }, shoulders: { type: 'plate', size: f ? 1.2 : 1.35, layers: 2, spikes: 3 },
       belt: { type: 'plate', buckle: 'skull' }, legs: { type: 'plate', kneepads: true }, feet: { type: 'plate', height: 0.75, cuff: true },
-      hands: { type: 'gauntlets', cuff: 0.45 }, tabard: { back: true }, skirt: { type: 'plate', len: 0.28, flare: 0.06 }, mainHand: { arm: 'greatsword' } });
+      hands: { type: 'gauntlets', cuff: 0.45 }, tabard: { back: true, short: true, hw: 0.09 },
+      cuirass: { style: 'plate', neck: 'round', lames: 3, rivets: true }, tassets: { rows: 3, spikes: true }, greaves: { from: 1.1, to: 1.95 }, vambraces: { from: 1.3, to: 1.92 },
+      mainHand: { arm: 'greatsword' } });
     return preset({ armor: 'plate', tier: 2, runes: true, colors: { primary: 0x26262c, secondary: C.blood, trim: 0x6a1e1a, pants: 0x1e1e22, boots: 0x26262c, tabard: 0x5a0c0c, belt: 0x1a1414, emblem: 0xb02a1a, horn: 0x3c3028 },
       chest: { type: 'plate', sleeves: f ? 1.25 : 1.35, neck: 'high' }, shoulders: { type: 'plate', size: f ? 1.3 : 1.5, layers: 3, spikes: 2, horns: true, glowTrim: true },
       belt: { type: 'plate', buckle: 'skull' }, legs: { type: 'plate', kneepads: true }, feet: { type: 'plate', height: 0.8, cuff: true },
-      hands: { type: 'gauntlets', cuff: 0.5, glowTrim: true }, tabard: { back: true, tatter: true }, skirt: { type: 'plate', len: 0.34, flare: 0.07 },
+      hands: { type: 'gauntlets', cuff: 0.5, glowTrim: true }, tabard: { back: true, tatter: true, short: true, hw: 0.095 },
+      cuirass: { style: 'plate', neck: 'high', lames: 4, rivets: true }, tassets: { rows: 3, spikes: true }, greaves: { from: 1.08, to: 1.95 }, vambraces: { from: 1.25, to: 1.92 },
       head: f ? null : { type: 'hornband' }, mainHand: { arm: 'greatsword' } });
   },
 };
@@ -60,28 +63,31 @@ const LEGION = { primary: 0x2a2624, secondary: 0x5a0e0e, trim: 0x6a1e1a, pants: 
 Object.assign(CLASS_OUTFITS, {
   oathkeeper: (t, sex) => {
     const f = sex === 'f';
-    if (t === 0) return preset({ armor: 'mail', tier: 0, colors: { primary: 0x9aa0a8, secondary: 0x2a4a8a, trim: 0xb89a60, pants: 0x4a4038, boots: 0x4a3424, tabard: 0xe8e2d0, emblem: 0x2a4a8a, belt: 0x4a3020 },
+    if (t === 0) return preset({ armor: 'mail', tier: 0, colors: { primary: 0x8a9098, secondary: 0x2a4a8a, trim: 0xa88a58, pants: 0x4a4038, boots: 0x4a3424, tabard: 0xded8c6, emblem: 0x2a4a8a, belt: 0x4a3020 },
       chest: { type: 'mail', sleeves: 1.2, neck: 'crew' }, shoulders: { type: 'leather', size: 0.95, layers: 1 }, belt: { type: 'leather', buckle: 'square' },
       legs: { type: 'mail', kneepads: true }, feet: { type: 'boots', height: 0.6, cuff: true }, hands: { type: 'gloves', cuff: 0.3 },
-      tabard: { emblem: 'cross', back: true }, extras: [{ type: 'hipchain' }] });
-    if (t === 1) return preset({ armor: 'plate', tier: 1, colors: { primary: 0xdfe2e8, secondary: 0x2a4a9a, trim: 0xe0b050, pants: 0xcfd2d8, boots: 0xdfe2e8, tabard: 0xf2eee2, cape: 0xf0ebdc, capeInner: 0x2a4a9a, emblem: 0xe8b848, gem: 0x80c8ff, belt: 0x5a4028 },
+      tabard: { emblem: 'cross', back: true, top: 'chest' }, extras: [{ type: 'hipchain' }] });
+    if (t === 1) return preset({ armor: 'plate', tier: 1, colors: { primary: 0x9aa2ae, secondary: 0x2a4a9a, trim: 0xd0a040, pants: 0x8a909a, boots: 0x9aa2ae, tabard: 0xe2dccb, cape: 0xe0dacb, capeInner: 0x24428a, emblem: 0xd8a838, gem: 0x80c8ff, belt: 0x5a4028 },
       chest: { type: 'plate', sleeves: 1.3, neck: 'high' }, shoulders: { type: 'round', size: f ? 1.12 : 1.28, layers: 2, gem: true },
       belt: { type: 'plate', buckle: 'gem' }, legs: { type: 'plate', kneepads: true }, feet: { type: 'plate', height: 0.75, cuff: true },
-      hands: { type: 'gauntlets', cuff: 0.45 }, tabard: { emblem: 'sun', back: false, hw: 0.085 }, cloak: { len: f ? 0.86 : 0.9, trim: true, emblem: 'sun' },
-      skirt: { type: 'plate', len: 0.26, flare: 0.05 }, head: f ? { type: 'circlet', gem: true } : null, extras: [{ type: 'hipchain' }] });
-    return preset({ armor: 'plate', tier: 2, runes: true, colors: { ...LEGION, primary: 0x2e2e36, tabard: 0x4a0c0c, cape: 0x1e1a1e, capeInner: 0x5a0e0e, gem: 0xff3020 },
+      hands: { type: 'gauntlets', cuff: 0.45 }, tabard: { emblem: 'sun', back: true, short: true, hw: 0.1, hem: 'v' }, cloak: { len: f ? 0.88 : 0.92, trim: true, emblem: 'sun' },
+      cuirass: { style: 'plate', neck: 'high', lames: 2, ridge: true }, tassets: { rows: 2 }, greaves: { from: 1.1, to: 1.95 }, vambraces: { from: 1.3, to: 1.92 },
+      head: f ? { type: 'circlet', gem: true } : null, extras: [{ type: 'hipchain' }] });
+    return preset({ armor: 'plate', tier: 2, runes: true, colors: { ...LEGION, primary: 0x2e2c30, tabard: 0x4a0c0c, cape: 0x1e1a1e, capeInner: 0x5a0e0e, gem: 0xff3020 },
       chest: { type: 'plate', sleeves: 1.35, neck: 'high' }, shoulders: { type: 'round', size: f ? 1.2 : 1.36, layers: 3, horns: true, gem: true, glowTrim: true },
       belt: { type: 'plate', buckle: 'skull' }, legs: { type: 'plate', kneepads: true }, feet: { type: 'plate', height: 0.8, cuff: true },
-      hands: { type: 'gauntlets', cuff: 0.5, glowTrim: true }, tabard: { back: false, hw: 0.085, tatter: true }, cloak: { len: 0.92, trim: true, emblem: 'skull', glowTrim: true, hem: 'v' },
-      skirt: { type: 'plate', len: 0.3, flare: 0.06 }, head: f ? { type: 'circlet', gem: true } : null, extras: [{ type: 'hipchain' }] });
+      hands: { type: 'gauntlets', cuff: 0.5, glowTrim: true }, tabard: { back: true, short: true, hw: 0.1, tatter: true }, cloak: { len: 0.92, trim: true, emblem: 'skull', glowTrim: true, hem: 'v' },
+      cuirass: { style: 'plate', neck: 'high', lames: 3, rivets: true }, tassets: { rows: 3, spikes: true }, greaves: { from: 1.08, to: 1.95 }, vambraces: { from: 1.25, to: 1.92 },
+      head: f ? { type: 'circlet', gem: true } : null, extras: [{ type: 'hipchain' }] });
   },
   stormfist: (t, sex) => {
     const f = sex === 'f';
     const colors = t === 0 ? { primary: 0xcab89a, secondary: 0x7a5a3a, trim: 0x8a6a44, pants: 0x5a4a3a, boots: 0x4a3424, sash: 0x7a3a24, gloves: 0x6a6258, belt: 0x5a3a24 }
-      : t === 1 ? { primary: 0xece8de, secondary: 0x2a64b0, trim: 0xe0b050, pants: 0x223250, boots: 0x2a2a30, sash: 0xc0201c, gloves: 0x8a929c, belt: 0x223250 }
+      : t === 1 ? { primary: 0xe6e2d8, secondary: 0x2a64b0, trim: 0xc89a40, pants: 0x223250, boots: 0x2a2a30, sash: 0xc0201c, gloves: 0x7c848e, belt: 0x223250, linen: 0x3a3a44 }
         : { ...LEGION, primary: 0x2a2428, secondary: 0x5a0e0e, sash: 0x8a0e0e, gloves: 0x2e2e36, pants: 0x1c1a1e };
     return preset({ armor: 'cloth', tier: t, runes: t === 2, colors,
       chest: { type: 'gi', sleeves: 0.3, neck: 'v', open: !f }, belt: { type: 'sash', buckle: t >= 1 ? 'plate' : 'none' },
+      cuirass: { style: 'gi', neck: f ? 'v' : 'deepv', low: -0.04, rimSlot: SLOT.CLOTH2, armhole: 0.1 }, pants: { full: 0.034, to: 0.55 },
       legs: { type: 'pants' }, feet: { type: 'wraps', height: 0.45 }, hands: { type: 'gauntlets', cuff: 0.62 },
       shoulders: t >= 1 ? { type: 'leather', size: 0.85, layers: 1, side: 'L', spikes: t === 2 ? 2 : 0 } : null,
       extras: [{ type: 'headband', plate: t >= 1, len: 0.6 }, { type: 'tails', list: [{ a: 2.3, len: 0.62, w: 0.085, knot: true }, { a: 2.55, len: 0.5, w: 0.07 }] }, { type: 'gauntlets', size: t === 0 ? 0.8 : 1.1, runes: t === 2 }] });
@@ -93,6 +99,7 @@ Object.assign(CLASS_OUTFITS, {
         : { ...LEGION, coat: 0x1e1c20, coat2: 0x1a1414, shirt: 0x4a1010, sash: 0x8a0e0e, feather: 0x1a1a1a, pants: 0x1e1a1a };
     return preset({ armor: 'leather', tier: t, coatLeather: true, runes: t === 2, colors,
       chest: { type: 'leather', sleeves: 1.85, neck: 'high', straps: false, coat: true }, belt: { type: 'leather', buckle: t >= 1 ? 'plate' : 'square', pouches: 2 },
+      cuirass: { style: 'leather', neck: 'v', slot: SLOT.COAT, rimSlot: t >= 1 ? SLOT.TRIM : SLOT.COAT2, rimW: 0.03, armhole: 0.1 },
       legs: { type: 'leather' }, feet: { type: 'boots', height: 0.8, cuff: true }, hands: { type: 'gloves', cuff: 0.35 },
       extras: [{ type: 'coat', len: f ? 0.62 : 0.72, open: 0.42, slit: 0.25, trim: t >= 1, slot: SLOT.COAT }, { type: 'collar', h: 0.12, flare: 0.06, open: 0.9, trim: t >= 1 },
         { type: 'hat', brim: f ? 0.14 : 0.16, feather: true }, { type: 'bandolier' }] });
@@ -104,12 +111,14 @@ Object.assign(CLASS_OUTFITS, {
         : { ...LEGION, primary: 0x221c2a, secondary: 0x4a0e18, coat: 0x221c2a, cape: 0x1a141e, capeInner: 0x4a0e18, gem: 0xff3020 };
     return preset({ armor: 'cloth', tier: t, runes: t === 2, colors,
       chest: { type: 'robe', sleeves: f ? 1.0 : 1.95, neck: 'high' }, belt: { type: 'sash', buckle: t >= 1 ? 'gem' : 'none' },
-      skirt: { len: f ? 0.98 : 1.0, flare: f ? 0.2 : 0.16, panel: true, hemTrim: t >= 1 }, legs: { type: 'pants' }, feet: { type: 'boots', height: f ? 0.95 : 0.6, cuff: t >= 1 },
+      cuirass: { style: f ? 'corset' : 'cloth', neck: f ? 'v' : 'high', slot: SLOT.CLOTH1, rimSlot: t >= 1 ? SLOT.TRIM : SLOT.CLOTH2, armhole: 0.095 },
+      skirt: f ? null : { len: 1.0, flare: 0.16, panel: true, hemTrim: t >= 1 }, legs: { type: 'pants' }, feet: { type: 'boots', height: f ? 0.95 : 0.6, cuff: t >= 1 },
       hands: f ? { type: 'gloves', cuff: 0.9 } : null,
       shoulders: t >= 1 ? { type: 'round', size: 0.8, layers: 1, gem: true, horns: t === 2 } : null,
       cloak: t >= 1 ? { len: f ? 0.5 : 0.62, trim: true, emblem: 'star' } : null,
       head: f && t >= 1 ? { type: 'circlet', gem: true } : null,
-      extras: [{ type: 'collar', h: 0.17, flare: 0.08, open: 0.62, trim: t >= 1, slot: SLOT.CLOTH2 }] });
+      accent: t < 2 ? 0x6ae0ff : null,
+      extras: [{ type: 'collar', h: 0.17, flare: 0.08, open: 0.62, trim: t >= 1, slot: SLOT.CLOTH2 }, f ? { type: 'coat', len: 0.98, open: 0.3, trim: t >= 1, slot: SLOT.CLOTH1, flare: 0.2 } : { type: 'coat', len: 0.92, open: 0.42, trim: t >= 1, slot: SLOT.CLOTH2, flare: 0.18, top: -0.12 }] });
   },
   songweaver: (t, sex) => {
     const f = sex === 'f';
@@ -117,12 +126,15 @@ Object.assign(CLASS_OUTFITS, {
       : t === 1 ? { primary: 0xf2ece0, secondary: 0xd8688c, trim: 0xe8c068, pants: 0xe8e2d4, boots: 0xe8e0d0, ribbon: 0xe0708e, cape: 0xf4eee2, capeInner: 0xd8688c, belt: 0xd8688c, gem: 0xff9ad8 }
         : { ...LEGION, primary: 0x2a2226, secondary: 0x5a0e1e, ribbon: 0x8a0e1e, cape: 0x1e181c, capeInner: 0x5a0e1e, gem: 0xff3020 };
     return preset({ armor: 'cloth', tier: t, runes: t === 2, colors,
-      chest: { type: 'robe', sleeves: f ? 0.55 : 1.9, neck: f ? 'v' : 'high' }, belt: { type: 'sash', buckle: t >= 1 ? 'gem' : 'none' },
-      skirt: { len: f ? 1.0 : 0.95, flare: f ? 0.28 : 0.16, panel: !f, hemTrim: t >= 1 }, legs: { type: 'pants' }, feet: { type: 'shoes', height: 0.3 },
+      chest: { type: f ? 'robe' : 'leather', sleeves: f ? 0.55 : 1.9, neck: f ? 'v' : 'high', coat: !f }, belt: { type: 'sash', buckle: t >= 1 ? 'gem' : 'none' },
+      cuirass: { style: f ? 'corset' : 'leather', neck: f ? 'v' : 'v', slot: f ? SLOT.CLOTH1 : SLOT.COAT, rimSlot: t >= 1 ? SLOT.TRIM : SLOT.CLOTH2, armhole: 0.095, rimW: f ? 0.022 : 0.03 },
+      skirt: f ? { len: 1.0, flare: 0.28, hemTrim: t >= 1 } : null, legs: { type: f ? 'pants' : 'leather' }, feet: { type: f ? 'shoes' : 'boots', height: f ? 0.3 : 0.7, cuff: !f },
       shoulders: t >= 1 ? { type: 'round', size: 0.7, layers: 0, gem: true, horns: t === 2 } : null,
       cloak: t >= 1 ? { len: 0.34, trim: true } : null,
       head: f && t >= 1 ? { type: 'circlet', gem: true } : null,
-      extras: [{ type: 'tails', slot: SLOT.RIBBON, list: [{ a: 3.0, len: f ? 0.9 : 0.8, w: 0.06, knot: true, out: 0.14 }, { a: 3.3, len: f ? 0.78 : 0.7, w: 0.05, out: 0.12 }, { a: -0.5, len: 0.5, w: 0.045 }] }] });
+      accent: t < 2 ? 0xff9ad8 : null,
+      extras: [{ type: 'tails', slot: SLOT.RIBBON, list: [{ a: 3.0, len: f ? 0.9 : 0.8, w: 0.06, knot: true, out: 0.14 }, { a: 3.3, len: f ? 0.78 : 0.7, w: 0.05, out: 0.12 }, { a: -0.5, len: 0.5, w: 0.045 }] },
+        ...(f ? [] : [{ type: 'coat', len: 0.8, open: 0.45, trim: t >= 1, slot: SLOT.CLOTH2, flare: 0.14, top: -0.12 }, { type: 'collar', h: 0.12, flare: 0.05, open: 0.8, trim: t >= 1, slot: SLOT.CLOTH2 }])] });
   },
   bladedancer: (t, sex) => {
     const f = sex === 'f';
@@ -131,10 +143,12 @@ Object.assign(CLASS_OUTFITS, {
         : { ...LEGION, primary: 0x1a181c, hood: 0x1a181c, sash: 0x6a0c0c, gem: 0xff3020 };
     return preset({ armor: 'leather', tier: t, runes: t === 2, colors,
       chest: { type: 'leather', sleeves: 1.9, neck: 'high', straps: true }, belt: { type: 'leather', buckle: 'plate', pouches: 2 },
+      cuirass: { style: 'leather', neck: 'high', rimSlot: t < 2 ? SLOT.RUNE : SLOT.TRIM, rimW: 0.016, armhole: 0.105 }, vambraces: { from: 1.3, to: 1.9 }, greaves: { from: 1.15, to: 1.9, front: true },
+      accent: t < 2 ? 0x30ffd8 : null,
       legs: { type: 'leather', kneepads: t >= 1 }, feet: { type: 'boots', height: 0.85, cuff: true }, hands: { type: 'gloves', cuff: 0.4 },
       shoulders: { type: 'leather', size: 0.9, layers: 2, side: 'L', spikes: t === 2 ? 2 : 1 },
       head: f ? { type: 'none', mask: true } : { type: 'hood', mask: true },
-      extras: [{ type: 'scarf', len: 0.62, tw: 0.08 }, { type: 'tails', list: [{ a: 2.0, len: 0.45, w: 0.06 }, { a: -2.0, len: 0.42, w: 0.06 }] }] });
+      extras: [{ type: 'scarf', len: 0.62, tw: 0.08 }, { type: 'tails', list: [{ a: 2.0, len: 0.45, w: 0.06 }, { a: -2.0, len: 0.42, w: 0.06 }] }, { type: 'bandolier' }] });
   },
   demonbound: (t, sex) => {
     const f = sex === 'f';
@@ -143,9 +157,10 @@ Object.assign(CLASS_OUTFITS, {
         : { ...LEGION, primary: 0x1e1a20, sash: 0x3a0c0c, chain: 0x6a6a70 };
     return preset({ armor: 'leather', tier: t, runes: t === 2, colors,
       chest: { type: 'leather', sleeves: f ? 0.6 : 0.4, neck: 'v', straps: true }, belt: { type: 'leather', buckle: 'skull', pouches: 1 },
+      cuirass: { style: 'leather', neck: f ? 'v' : 'deepv', rimSlot: SLOT.CHAIN, rimW: 0.016, armhole: 0.11 },
       legs: { type: 'leather', kneepads: true }, feet: { type: 'boots', height: 0.8, cuff: true }, hands: { type: 'bracers', cuff: 0.4 },
       shoulders: { type: 'plate', size: 1.05, layers: 2, side: 'L', spikes: 3, horns: t === 2 },
-      extras: [{ type: 'chains', chest: true, hang: true }, { type: 'tails', list: [{ a: 2.6, len: 0.6, w: 0.08, point: true }, { a: 3.4, len: 0.52, w: 0.07, point: true }, { a: -0.35, len: 0.45, w: 0.07, point: true }] }] });
+      extras: [{ type: 'chains', chest: true, hang: true }, { type: 'coat', len: 0.8, open: 0.55, tatter: true, slot: SLOT.SASH, flare: 0.1 }, { type: 'collar', h: 0.15, flare: 0.07, open: 0.9, slot: SLOT.SASH }] });
   },
 });
 
@@ -208,7 +223,7 @@ export function buildPalette(g, app) {
   pal[SLOT.TABARD] = mat(col.tabard ?? col.secondary ?? 0x2a4a8a, 0, DET.cloth);
   pal[SLOT.HOOD] = mat(col.hood ?? col.primary ?? 0x5a5a5a, 0, DET.cloth);
   pal[SLOT.STRAW] = mat(0xd8b860, 0.05, DET.wood);
-  pal[SLOT.LINEN] = mat(0xb8a484, 0, DET.cloth);
+  pal[SLOT.LINEN] = mat(col.linen ?? 0xb8a484, 0, DET.cloth);
   pal[SLOT.BLADE] = mat(0xc8d0d8, 1.0, DET.plate);
   pal[SLOT.HILT] = mat(C.darkLeather, 0.1, DET.leather);
   pal[SLOT.SKIN2] = mat(app.skin, 0.05, DET.skin);
@@ -229,7 +244,7 @@ export function buildPalette(g, app) {
     if (i === SLOT.GEM || i === SLOT.GLOW || i === SLOT.RUNE || i === SLOT.SCLERA) continue;
     if (i === SLOT.SKIN || i === SLOT.SKIN2) { const c = pal[i].c; for (let k = 0; k < 3; k++) { const v = c[k]; c[k] = v < 0.6 ? v : 0.6 + (v - 0.6) * 0.6; } continue; }
     const c = pal[i].c;
-    for (let k = 0; k < 3; k++) { const v = c[k]; c[k] = v < 0.45 ? v : 0.45 + (v - 0.45) * 0.45; }
+    for (let k = 0; k < 3; k++) { const v = c[k]; c[k] = v < 0.34 ? v : 0.34 + (v - 0.34) * 0.32; }
   }
   return pal;
 }

@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { PB, cached, tubeGeo, topLit, ringSweep, chainFrame, PROFILES, axisMatrix, M4 } from './pieces.js';
 import { marchIn } from './sdf.js';
+import { limbShellPiece } from './armor.js';
 import { B } from './rig.js';
 import { SLOT } from './palette.js';
 import { clamp, lerp, smoothstep, Simplex } from '../../core/noise.js';
@@ -63,12 +64,12 @@ export function headbandPiece(base, sp = {}) {
     const pb = new PB(base);
     const F = headFrame(base);
     const bw = [[B.head, 1]];
-    const r = Math.max(F.rx, F.rz) + 0.012;
-    const y = F.browY + 0.028 * F.s;
-    const band = new THREE.TorusGeometry(r, 0.014 * F.s, 5, 26);
-    const sc = new THREE.Matrix4().makeScale(1, (F.rz + 0.012) / r, 1.6);
-    pb.add(band, { m: new THREE.Matrix4().makeTranslation(F.cc[0], y, F.cc[2] - 0.004).multiply(new THREE.Matrix4().makeRotationX(Math.PI / 2 + 0.12)).multiply(sc), slot: SLOT.SASH, bw, mulFn: topLit(0.25, 0.9) });
-    if (sp.plate) pb.add(new THREE.BoxGeometry(0.06 * F.s, 0.03 * F.s, 0.012), { m: new THREE.Matrix4().makeTranslation(F.cc[0], y + 0.004, F.cc[2] - F.rz - 0.018), slot: SLOT.TRIM, bw, mulFn: topLit(0.3, 0.95) });
+    const r = Math.max(F.rx, F.rz) + 0.004;
+    const y = F.browY + 0.034 * F.s;
+    const band = new THREE.TorusGeometry(r, 0.0085 * F.s, 5, 30);
+    const sc = new THREE.Matrix4().makeScale(0.99 * F.rx / Math.max(F.rx, F.rz) + 0.03, (F.rz + 0.006) / r, 2.2);
+    pb.add(band, { m: new THREE.Matrix4().makeTranslation(F.cc[0], y, F.cc[2] + 0.002).multiply(new THREE.Matrix4().makeRotationX(Math.PI / 2 + 0.22)).multiply(sc), slot: SLOT.SASH, bw, mulFn: topLit(0.25, 0.9) });
+    if (sp.plate) pb.add(new THREE.BoxGeometry(0.05 * F.s, 0.022 * F.s, 0.008), { m: new THREE.Matrix4().makeTranslation(F.cc[0], y - 0.004, F.cc[2] - F.rz - 0.006).multiply(new THREE.Matrix4().makeRotationX(0.25)), slot: SLOT.METAL, bw, mulFn: topLit(0.3, 0.8) });
     const kz = F.cc[2] + F.rz + 0.012, ky = y - 0.018;
     pb.add(new THREE.SphereGeometry(0.022 * F.s, 7, 5), { m: new THREE.Matrix4().makeTranslation(F.cc[0], ky, kz), slot: SLOT.SASH, bw, mulFn: topLit(0.2, 0.85) });
     const J = base.JJ.J;
@@ -179,8 +180,13 @@ export function collarPiece(base, sp = {}) {
     const y = J.neck[1] + (sp.dy ?? 0.0);
     const f = chainFrame(base, 'torso', y);
     const w = sp.h ?? 0.14, open = sp.open ?? 0.7;
-    ringSweep(pb, { ...f, sdf: base.chainSDF.torso, n: 22, arc: [open, Math.PI * 2 - open], off: 0.014, profile: [[0, -w * 0.2], [0.012, -w * 0.2], [0.012 + (sp.flare ?? 0.07), w * 0.8], [0.004 + (sp.flare ?? 0.07), w * 0.84], [0.0, 0]], slot: sp.slot ?? SLOT.COAT, rMax: 0.3, smooth: 3,
-      slotFn: sp.trim ? (j, k) => (k >= 3 ? SLOT.TRIM : sp.slot ?? SLOT.COAT) : null, bw: (x, yy, z) => [[B.chest, 0.6], [B.neck, 0.4]] });
+    const fl = sp.flare ?? 0.07, prof = [];
+    const N = 7;
+    for (let i = 0; i <= N; i++) { const t = i / N; prof.push([0.01 + fl * Math.pow(t, 1.8), -w * 0.2 + w * t]); }                 // outer face, curving outward
+    prof.push([0.014 + fl * 1.08, w * 1.02], [0.006 + fl * 1.0, w * 1.02]);                                                               // rolled edge
+    for (let i = N; i >= 0; i--) { const t = i / N; prof.push([0.002 + fl * Math.pow(t, 1.8) * 0.92, -w * 0.2 + w * t * 0.98]); }      // inner face
+    ringSweep(pb, { ...f, sdf: base.chainSDF.torso, n: 26, arc: [open, Math.PI * 2 - open], off: 0.012, profile: prof, closedProfile: true, slot: sp.slot ?? SLOT.COAT, rMax: 0.3, smooth: 3,
+      slotFn: (j, k) => (sp.trim && (k === N + 1 || k === N + 2 || k === N) ? SLOT.TRIM : k > N + 2 ? (sp.inner ?? sp.slot ?? SLOT.COAT2) : sp.slot ?? SLOT.COAT), bw: (x, yy, z) => [[B.chest, 0.6], [B.neck, 0.4]] });
     return pb.build();
   });
 }
@@ -193,7 +199,8 @@ export function coatTailsPiece(base, sp = {}) {
     const fn = base.chainSDF.torsoLegs;
     const y0 = J.spine[1] + (sp.top ?? -0.03), legTop = J.thighL[1];
     const hem = lerp(legTop, 0.06, sp.len ?? 0.75);
-    const rows = 9, n = 24;
+    const rows = 11, n = 26;
+    const hemOff = (th) => sp.tatter ? -0.07 * Math.abs(NZ.noise2(th * 2.3, 4.1)) - ((Math.round(th * 4) % 2) ? 0.04 : 0) : 0;
     const open = sp.open ?? 0.34, slit = sp.slit ?? 0;
     const angs = [];
     for (let j = 0; j <= n; j++) angs.push(open + (Math.PI * 2 - 2 * open) * j / n);
@@ -202,6 +209,7 @@ export function coatTailsPiece(base, sp = {}) {
     for (let r = 0; r <= rows; r++) {
       const t = r / rows, y = lerp(y0, hem, t);
       const rs = angs.map(th => Math.max(0.05, marchIn((x, yy, z) => fn.eval(x, yy, z), 0, y, J.hips[2], Math.sin(th), 0, -Math.cos(th), 0.6)));
+      ring.hemY = hemOff;
       for (let it = 0; it < 3; it++) { const cp = rs.slice(); for (let j = 1; j < rs.length - 1; j++) rs[j] = Math.max(cp[j], (cp[j - 1] + cp[j + 1]) * 0.5); }
       const flare = (sp.flare ?? 0.14) * t * t;
       for (let j = 0; j < rs.length; j++) { rs[j] += (sp.off ?? 0.016) + flare; if (prev) rs[j] = Math.max(rs[j], prev[j] * (t > 0.3 ? 1 : 0.97)); }
@@ -231,7 +239,8 @@ export function coatTailsPiece(base, sp = {}) {
         const slot = (sp.trim && (edge || t > 0.9)) ? SLOT.TRIM : (sp.slot ?? SLOT.COAT);
         const f = (0.88 + 0.14 * Math.sin(th * 7 + t * 1.5) * t) * (0.95 - 0.12 * t);
         const x = dx * rs[j], z = J.hips[2] + dz * rs[j];
-        row.push(pb.v(x, y, z, dx, 0.15, dz, slot, [f, f, f], 0, wfn(x, y, t, z)));
+        const yy = y + hemOff(th) * t * t;
+        row.push(pb.v(x, yy, z, dx, 0.15, dz, slot, [f, f, f], 0, wfn(x, yy, t, z)));
       }
       ids.push(row);
     }
@@ -328,28 +337,15 @@ export function gauntletPiece(base, side, sp = {}) {
     const hs = P.hand, sz = sp.size ?? 1;
     const E = n.E, W = n.W, K = n.K;
     const fr = P.farmR[0] + 0.012;
-    // forearm guard: lathe around the forearm axis (neutral frame: forearm along −Y), flaring toward the wrist
-    const yE = E[1] - 0.05, yW = W[1] + 0.005;
-    const prof = [];
-    const N = 8;
-    for (let i = 0; i <= N; i++) { const t = i / N; prof.push(new THREE.Vector2(fr + (0.012 + 0.03 * t * t) * sz, lerp(yE, yW, t))); }
-    prof.push(new THREE.Vector2(fr + 0.05 * sz, yW - 0.012)); prof.push(new THREE.Vector2(fr + 0.02, yW - 0.016));
-    prof.reverse();
-    const guard = new THREE.LatheGeometry(prof, 14);
-    const mid = new THREE.Matrix4().makeTranslation(E[0], 0, E[2]);
-    const wF = (p) => { const t = clamp((E[1] - p[1]) / (E[1] - W[1]), 0, 1); return t > 0.85 ? [[bf, 0.7], [bh, 0.3]] : [[bf, 1]]; };
-    pb.add(guard, { m: new THREE.Matrix4().multiplyMatrices(X, mid), slot: SLOT.GLOVE, bw: (x, y, z) => { const q = new THREE.Vector3(x, y, z).applyMatrix4(new THREE.Matrix4().copy(X).invert()); return wF([q.x, q.y, q.z]); }, mulFn: (p, nn) => { const f = 0.8 + 0.3 * Math.max(0, nn.y) + 0.08 * Math.abs(nn.x); return [f, f, f]; } });
-    // rim bands
-    for (const [y, r] of [[yE + 0.004, fr + 0.016 * sz], [yW - 0.01, fr + 0.054 * sz]]) {
-      const tor = new THREE.TorusGeometry(r, 0.007, 4, 16);
-      pb.add(tor, { m: new THREE.Matrix4().multiplyMatrices(X, new THREE.Matrix4().makeTranslation(E[0], y, E[2]).multiply(new THREE.Matrix4().makeRotationX(Math.PI / 2))), slot: SLOT.TRIM, bw: y > (E[1] + W[1]) / 2 ? [[bf, 1]] : [[bf, 0.8], [bh, 0.2]], rune: sp.runes ? 1 : 0 });
-    }
+    // forearm guard: a sculpted shell over the forearm, flaring toward the wrist, with a raised rim
+    const guardSh = limbShellPiece(base, 'arm' + side, 1.18, 2.02, { t: 0.02 * sz + 0.006, target: 520, runes: sp.runes, flare: 0.016 * sz, slot: SLOT.GLOVE });
+    if (guardSh) { const o0 = pb.n; for (let i = 0; i < guardSh.n; i++) pb.v(guardSh.pos[i * 3], guardSh.pos[i * 3 + 1], guardSh.pos[i * 3 + 2], guardSh.nrm[i * 3], guardSh.nrm[i * 3 + 1], guardSh.nrm[i * 3 + 2], guardSh.slot[i], [guardSh.mul[i * 3], guardSh.mul[i * 3 + 1], guardSh.mul[i * 3 + 2]], 0, { bi: Array.from(guardSh.bi.slice(i * 4, i * 4 + 4)), bw: Array.from(guardSh.bw.slice(i * 4, i * 4 + 4)) }, guardSh.rune ? guardSh.rune[i] : 0); for (let t = 0; t < guardSh.idx.length; t += 3) pb.tri(o0 + guardSh.idx[t], o0 + guardSh.idx[t + 1], o0 + guardSh.idx[t + 2]); }
     // dorsal fin plate on the outer side of the forearm
     const fin = new THREE.Shape(); fin.moveTo(0, 0); fin.lineTo(0.035, 0.04); fin.lineTo(0.06, 0.2); fin.lineTo(0.0, 0.2); fin.closePath();
     const fg = new THREE.ExtrudeGeometry(fin, { depth: 0.01, bevelEnabled: true, bevelThickness: 0.004, bevelSize: 0.004, bevelSegments: 1 });
     fg.translate(0, 0, -0.005);
     const mfin = new THREE.Matrix4().makeTranslation(E[0] + sg * (fr + 0.022 * sz), W[1] + 0.02, E[2] + 0.01).multiply(new THREE.Matrix4().makeRotationY(sg > 0 ? 0 : Math.PI)).multiply(new THREE.Matrix4().makeRotationZ(-0.12)).multiply(new THREE.Matrix4().makeScale(sz * 0.9, sz, 1));
-    pb.add(fg, { m: new THREE.Matrix4().multiplyMatrices(X, mfin), slot: SLOT.TRIM, bw: [[bf, 1]], mulFn: topLit(0.3, 0.9) });
+    pb.add(fg, { m: new THREE.Matrix4().multiplyMatrices(X, mfin), slot: SLOT.METAL, bw: [[bf, 1]], mulFn: topLit(0.3, 0.85) });
     // armoured hand: back plate + knuckle ridge + finger plates
     const back = new THREE.BoxGeometry(0.022 * hs, 0.075 * hs, 0.085 * hs);
     pb.add(back, { m: new THREE.Matrix4().multiplyMatrices(X, new THREE.Matrix4().makeTranslation(W[0] + sg * 0.024 * hs, W[1] - 0.05 * hs, W[2] - 0.004)), slot: SLOT.GLOVE, bw: [[bh, 1]], mulFn: topLit(0.25, 0.85) });

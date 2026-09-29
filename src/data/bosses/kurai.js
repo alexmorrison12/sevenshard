@@ -8,7 +8,7 @@
 //    Illusions are fragile — cut them down and focus the real one before the inferno breaks.
 import { makeBoss } from '../../game/ai/boss.js';
 import { fwd, back, rnd, tele, wait, strike, smash, volley, act, counter, marker, pool, onNav, behind, farthest,
-  reachAlong, center, someHeroes, visual, scaleHp, clearAdds, fx, sfx, shuffle } from './kit.js';
+  reachAlong, center, someHeroes, visual, scaleHp, clearAdds, fx, sfx, shuffle, standardStart, partyK } from './kit.js';
 
 const FOX = 'foxfire';
 const cw = B => 2 * (B.u.radius + 0.6);
@@ -173,7 +173,7 @@ export default {
         // illusions carry a bar too (it never breaks): stagger spent on them is wasted
         for (const c of foxes.slice(1)) { c.model?.play?.('howl', { dur }); c.data.stagger = { v: 1e9, max: 1e9, broken: false, label: 'Foxfire Inferno', left: dur, fake: true }; }
         tg = B.tele('circle', { r: 40, dur, color: 'purple', follow: u, safe: true });
-        await B.staggerCheck(Math.round(360 * (B.mods.hard ? 1.08 : 1)), dur, { groggy: 5, label: 'Foxfire Inferno', onFail: async () => {
+        await B.staggerCheck(Math.round(360 * partyK(B) * (B.mods.hard ? 1.08 : 1)), dur, { groggy: 5, label: 'Foxfire Inferno', onFail: async () => {
           tg.alive = false;
           const n = 1 + liveClones(B).length;
           smash(B, 'all', { coef: 2.2 + 0.6 * n, knock: 'down', fx: 'fire_nova', fxR: 14, fxColor: FOX, sfx: 'explosion_big', shake: 0.9 });
@@ -191,6 +191,6 @@ export default {
       await wispHunt(B, 4, 3);
     } },
   ],
-  onStart(enc) { if (enc.o.hard) for (const b of enc.bosses) scaleHp(b, 1.2); },
+  onStart: standardStart,
   onBossDeath(enc, unit) { for (const u of enc.game.level.units.slice()) if (u.data.clone && u.data.owner === unit && !u.dead) { u.hp = 0; u.dead = true; enc.game.level.remove(u); } },
 };

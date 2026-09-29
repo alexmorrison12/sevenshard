@@ -33,7 +33,7 @@ export class Pvp extends Track {
   }
   plan() {
     const r = this.rng;
-    this.form = this.cycle === 0 ? ['standoff', 'clash', 'surge', 'breath', 'clash', 'surge'] : r.pick([['clash', 'standoff', 'surge', 'clash', 'breath'], ['standoff', 'surge', 'clash', 'clash', 'breath'], ['clash', 'surge', 'breath', 'clash']]);
+    this.form = this.cycle === 0 ? ['standoff', 'clash', 'surge', 'breath', 'clash', 'standoff', 'surge'] : r.pick([['clash', 'standoff', 'surge', 'clash', 'breath', 'clash'], ['standoff', 'surge', 'clash', 'clash', 'breath', 'surge'], ['clash', 'surge', 'breath', 'clash', 'standoff', 'clash']]);
     this.ch = r.pick(CLASH_CH); this.ost = r.pick(OST); this.si = 0; this.sb = 0; this.cycle++;
   }
   playBar(bar, t) {

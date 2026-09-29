@@ -105,13 +105,17 @@ export const SONGWEAVER = {
     for (let i = 0; i < 3; i++) glowPath(x, xx => { xx.beginPath(); xx.arc(50, 72, 20 + i * 10, PI * 1.15, PI * 1.85); }, '#ffc0e0', 1);
   },
   prelude_of_storm(x, R) {
-    backdrop(x, R, ['#4a3a8a', '#141030', '#030208'], { cy: 30, shaft: false });
-    clouds(x, R, 50, 12, 112, 18, ['#e0d8ff', '#6a5aa0', '#1c1438'], 9);
+    backdrop(x, R, ['#3a4a8a', '#10142e', '#020308'], { cy: 40, shaft: false });
+    // low storm-cloud band
+    x.fillStyle = lg(x, 0, 0, 0, 34, [[0, '#0a0c18'], [1, 'rgba(20,24,48,0)']]); x.fillRect(0, 0, 100, 34);
+    clouds(x, R, 50, 12, 124, 13, ['#8a90c0', '#2a2e58', '#0a0c1c'], 13);
+    for (let i = 0; i < 14; i++) { const px = 6 + R() * 90, py = 26 + R() * 40; x.strokeStyle = rgba('#a0c0ff', 0.35); x.lineWidth = 0.8; x.beginPath(); x.moveTo(px, py); x.lineTo(px - 3, py + 9); x.stroke(); }
     glow(x, 50, 62, 40, TEAL, 0.5);
-    bolt(x, R, 32, 28, 26, 80, { col: TEAL, w: 1.8, gens: 5 });
-    bolt(x, R, 70, 28, 78, 76, { col: '#b8a8ff', w: 1.6, gens: 5 });
-    for (let i = 0; i < 3; i++) glowPath(x, xx => { xx.beginPath(); for (let t = 0; t <= 1.001; t += 0.04) { const a = t * TAU + i * 2.1, r = 10 + t * 20; const px = 50 + Math.cos(a) * r, py = 64 + Math.sin(a) * r * 0.5 - t * 10; t ? xx.lineTo(px, py) : xx.moveTo(px, py); } }, TEAL, 1.2);
-    note(x, 44, 70, 1, TEAL, 1);
+    bolt(x, R, 30, 20, 22, 70, { col: TEAL, w: 1.8, gens: 5 });
+    bolt(x, R, 72, 20, 80, 66, { col: '#b8a8ff', w: 1.6, gens: 5 });
+    for (let i = 0; i < 3; i++) glowPath(x, xx => { xx.beginPath(); for (let t = 0; t <= 1.001; t += 0.04) { const a = t * TAU + i * 2.1, r = 10 + t * 22; const px = 50 + Math.cos(a) * r, py = 66 + Math.sin(a) * r * 0.45 - t * 12; t ? xx.lineTo(px, py) : xx.moveTo(px, py); } }, TEAL, 1.3);
+    note(x, 42, 74, 1.05, TEAL, 1);
+    note(x, 70, 52, 0.6, '#d8c8ff', 0);
   },
   rhythm_buckshot(x, R) {
     backdrop(x, R, DUSK, { angle: 0 });

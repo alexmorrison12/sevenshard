@@ -71,6 +71,7 @@ const DEFS = {
   marble: () => ({ tex: 'marbleWall', opts: { wrap: 0.4, spec: 0.35, shine: 50 } }),
   dark: () => ({ tex: 'darkstone', params: { emissive: 0xff5a20, emissiveIntensity: 2.2 }, opts: { wrap: 0.3, spec: 0.3, shine: 30 } }),
   darkrock: () => ({ tex: 'rockface', opts: { wrap: 0.25 }, tri: [1 / 7, 0.9] }),
+  icecliff: () => ({ tex: 'glacier', opts: { wrap: 0.45, spec: 0.7, shine: 36, rim: 0.35, rimColor: 0xd8f4ff }, tri: [1 / 9, 0.6] }),
   bone: () => ({ tex: 'bone', opts: { wrap: 0.45, spec: 0.3, shine: 20 } }),
   window: () => ({ tex: 'window', params: { emissive: 0xffb050, emissiveIntensity: 0 }, opts: { wrap: 0.3, spec: 0.9, shine: 70 }, noShadow: true }),
   thatch: () => ({ tex: 'thatch', opts: { wrap: 0.45 } }),

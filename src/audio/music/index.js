@@ -47,13 +47,13 @@ export const TRACKS = {
 };
 // zone / data names → canonical tracks (null = silence)
 export const MUSIC_ALIAS = { solhaven: 'city', solhaven_night: 'city_night', boss_gorrath: 'raid', gorrath: 'raid', training: 'field', none: null, silence: null };
-// overlay pieces: { make, len (nominal seconds), dip }
+// overlay pieces: { make, len (nominal seconds), dip (music level under it), hold (s: the next music() waits for this downbeat) }
 export const STINGERS = {
   level_up: { len: 3.4, dip: 0.3, make: (e, n, t, s, o) => new LevelUp(e, n, t, s, o) },
   quest_complete: { len: 3.2, dip: 0.35, make: (e, n, t, s, o) => new QuestComplete(e, n, t, s, o) },
   achievement: { len: 3.6, dip: 0.3, make: (e, n, t, s, o) => new Achievement(e, n, t, s, o) },
   legendary_drop: { len: 5, dip: 0.25, make: (e, n, t, s, o) => new LegendaryDrop(e, n, t, s, o) },
-  boss_intro: { len: 4.6, dip: 0.15, make: (e, n, t, s, o) => new BossIntro(e, n, t, s, o) },
+  boss_intro: { len: 4.6, dip: 0.15, hold: 3.95, make: (e, n, t, s, o) => new BossIntro(e, n, t, s, o) },
   raid_clear: { len: 9, dip: 0.1, make: (e, n, t, s, o) => new RaidClear(e, n, t, s, o) },
   wipe: { len: 6.5, dip: 0.15, make: (e, n, t, s, o) => new Wipe(e, n, t, s, o) },
 };
@@ -113,7 +113,10 @@ export class MusicEngine {
     else go();
   }
   _start(tr, fade) {
-    const now = this.ctx.currentTime, t0 = now + 0.08;
+    const now = this.ctx.currentTime;
+    // a holding stinger (boss_intro) is still leading in: the new track enters right on its downbeat
+    const hold = this.holdUntil && this.holdUntil > now + 0.1, t0 = hold ? this.holdUntil : now + 0.08;
+    if (hold) fade = Math.min(fade, 0.25);
     tr.restart(t0);
     if (tr.oneShot) { tr.fadeIn(t0, 0.01); if (this.cur) this.cur.fadeOut(now, Math.min(fade, 0.8)); }
     else { tr.fadeIn(t0, fade); if (this.cur) this.cur.fadeOut(now, fade); }
@@ -141,7 +144,9 @@ export class MusicEngine {
   stinger(name, o = {}) {
     const def = STINGERS[name];
     if (!def) { console.warn('[audio] unknown stinger', name); return 0; }
-    return this.overlay(def, name, { dip: def.dip ?? 0.25, ...o });
+    const len = this.overlay(def, name, { dip: def.dip ?? 0.25, ...o });
+    if (def.hold) this.holdUntil = this.ctx.currentTime + 0.05 + def.hold; // the next music() lands on its downbeat
+    return len;
   }
   // o.pos: another player performing somewhere in the world → distance + pan (no music dip unless close)
   song(id, o = {}) {

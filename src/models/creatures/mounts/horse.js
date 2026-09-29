@@ -10,7 +10,7 @@ import { col } from '../../kit/sdf.js';
 import { addEye, addHorn } from '../../kit/parts.js';
 import { addG, lock, strap, ribbon, surfAim, ring, surfPath, smoothPath, pathSkin, mixSkin, rigidSkin, skinAt, marchOut, sdfNormal, wrapGrid, shell, linspace, edgespace, Jiggle, lerp3, sstep, clamp01, mix, TAU } from './common.js';
 import { saddleSet, sunEmblem, surfFrame } from './tack.js';
-import { mRear, mJump, mGraze, mShake, mPaw, mSwish, mWhinny, mHit, mDeath, mSpawn } from './mountacts.js';
+import { mRear, mJump, mGraze, mShake, mPaw, mSwish, mWhinny, mHit, mDeath, mSpawn, mPick, mountPose, counterScaleRider } from './mountacts.js';
 
 const V3 = THREE.Vector3;
 const PAL = {
@@ -306,9 +306,6 @@ export const horse = {
   get actionList() { return ACTIONS; },
 };
 
-/** the rider socket keeps world scale 1 on any mount scale / seed (the hero stays 1.85 m) */
-export function counterScaleRider(inst) { const r = inst.sockets.rider; if (r && inst.scale) r.scale.setScalar(1 / inst.scale); }
-
 // ------------------------------------------------------------------------------------------------ armoured barding
 function armourParts(acc, S, R, cfg) {
   const T = cfg.pal.t, b = (n) => R.index(n), hs = rigidSkin(b('head'));
@@ -427,17 +424,11 @@ const legs = [
   { id: 'RL', chain: ['rTL', 'rSL', 'rML', 'rPL'], toe: [-0.19, 0, 0.585], body: 'hips', scap: 0.14, lift: 0.15, flex: 1.2, out: 0.06, metaK: 0.8, heel: 0.45 },
   { id: 'RR', chain: ['rTR', 'rSR', 'rMR', 'rPR'], toe: [0.19, 0, 0.585], body: 'hips', scap: 0.14, lift: 0.15, flex: 1.2, out: 0.06, metaK: 0.8, heel: 0.45 },
 ];
-// idle_alt: one of several fidgets, picked when played
-function pick(list, dur) {
-  return { dur, a: 0.05, d: 0.92,
-    start(ctl, a) { a.u.i = Math.floor(Math.random() * list.length); a.u.p = a.u.p || { k: 0, t: 0, seed: 0, u: {} }; },
-    fn(ctl, a, w) { const d = list[a.u.i], p = a.u.p; p.t = a.t; p.k = Math.min(1, a.t / (d.dur ?? 1)); p.seed = a.seed; d.fn(ctl, p, w); } };
-}
 const GRAZE = mGraze({ dur: 5.2 }), SHAKE = mShake({ dur: 1.7 }), PAW = mPaw({ dur: 2.2, leg: 1 });
 const ACTIONS = {
   rear: mRear({ dur: 2.4, ang: 0.95, sit: 0.3 }),
   whinny: mWhinny({ dur: 1.8 }),
-  idle_alt: pick([mGraze({ dur: 3.4 }), SHAKE, PAW], 3.4),
+  idle_alt: mPick([mGraze({ dur: 3.4 }), SHAKE, PAW], 3.4),
   graze: GRAZE, shake: SHAKE, paw: PAW, swish: mSwish(),
   jump: mJump({ dur: 1.15, h: 0.6 }),
   hit: mHit(),
@@ -474,20 +465,3 @@ const SPEC = {
   actions: ACTIONS,
 };
 const POSE = { nodWalk: 0.045, swing: 0.12, earBase: -0.25, seatK: 0.55, rollK: 0.5 };
-
-/** shared mount pose: neck carriage by gait (walk nod, canter/gallop swing), look spread over neck2, ear play, seat
- *  stabiliser (rider soaks up part of the gait pitch/roll), jiggle springs. */
-export function mountPose(ctl, dt, o) {
-  const P = ctl.pose, b = ctl.b, G = ctl.gait, gw = G.gw, act = G.act * ctl.locoW;
-  const ph = G.phase * TAU;
-  const nod = ((gw[0] || 0) * o.nodWalk * Math.cos(2 * ph + 1.2) + (gw[1] || 0) * o.nodWalk * 0.3 * Math.cos(2 * ph + 0.5)) * act;
-  const swing = ((gw[2] || 0) * o.swing + (gw[3] || 0) * o.swing * 1.1) * Math.cos(ph + 2.4) * act;
-  P.rx(b.neck, nod * 0.6 + swing * 0.55);
-  if (b.neck2 !== undefined) P.rot(b.neck2, nod * 0.4 + swing * 0.35, ctl.look.y * 0.25, 0);
-  P.rx(b.head, -swing * 0.45 - nod * 0.25);
-  const flick = Math.pow(Math.max(0, Math.sin(ctl.t * 0.9 + 1.3)), 24) + Math.pow(Math.max(0, Math.sin(ctl.t * 0.63 + 4)), 30);
-  ctl.ear = (o.earBase ?? -0.25) + (o.earRun ?? 0.35) * ctl.run + 0.3 * flick + 0.6 * ctl.combat;
-  if (b.seat !== undefined) { P.rot(b.seat, -G.pitch * o.seatK, 0, -G.roll * o.rollK); P.move(b.seat, 0, -G.bob * (o.bobK ?? 0.3), 0); }
-  ctl.jaw += (o.pant ?? 0.02) * ctl.run;
-  if (ctl.jig) { ctl.jig.on = ctl.dead ? 0.4 : 1; ctl.jig.update(dt); }
-}

@@ -9,7 +9,8 @@ const PALM = P({ sprite: S.flash, ramp: R.wFlash, life: 0.22, size: 2.6, end: 1.
 const PALM_RING = P({ sprite: S.ring, ramp: R.wFade, life: 0.3, size: 0.6, end: 6, ease: 2.2, i: 2.6, noGround: true });
 const CONE_SPARK = P({ sprite: S.spark, ramp: R.chi, life: [0.25, 0.45], size: [0.06, 0.1], orient: 'stretch', stretch: 1.4, drag: 3, i: [5, 8] });
 const CHI_WISP = P({ sprite: [S.wisp, S.swirl], ramp: R.chi, life: [0.35, 0.6], size: [0.6, 1.0], end: 1.5, spin: [-5, 5], randSpin: true, drag: 3, i: [1.8, 2.6] });
-const FIST = P({ sprite: S.star, ramp: R.wFlash, life: 0.12, size: 1.0, end: 1.6, i: 3, noGround: true });
+const FIST = P({ sprite: S.star, ramp: R.wFlash, life: 0.12, size: 1.5, end: 1.6, i: 2.4, noGround: true });
+const FIST_RING = P({ sprite: S.ring, ramp: R.wFade, life: 0.18, size: 0.4, end: 3.5, ease: 2, i: 2.2, noGround: true });
 
 /** forward blast cone of particles from (x,y,z) along f */
 function coneBlast(fx, x, y, z, f, pr, n, sp, spread, s, tint) {
@@ -174,12 +175,13 @@ K.flurry_sparks = {                  // rapid punch barrage: many small impacts 
   tick(T) {
     const fx = T.fx, c = T.v.c;
     if (T.stopping) return;
-    const n = T.rate('h', 22);
+    const n = T.rate('h', 26);
     for (let i = 0; i < n; i++) {
-      const fwd = fx.r(0.9, c.L), side = fx.r(-0.7, 0.7) * c.s;
+      const fwd = fx.r(0.9, c.L), side = fx.r(-0.8, 0.8) * c.s;
       _a.set(c.x + c.f.x * fwd + c.rt.x * side, c.y + fx.r(0.8, 1.6), c.z + c.f.z * fwd + c.rt.z * side);
-      fx.at(FIST, _a, c.s * fx.r(0.6, 1.1), T.v.col, { rot: fx.r(0, 3) });
-      fx.sphere(CONE_SPARK, 6, _a, 3, 8, c.s * 0.8, null, c.f, 0.8);
+      fx.at(FIST, _a, c.s * fx.r(0.7, 1.2), T.v.col, { rot: fx.r(0, 3) });
+      fx.at(FIST_RING, _a, c.s * fx.r(0.8, 1.2), T.v.col);
+      fx.sphere(CONE_SPARK, 8, _a, 4, 10, c.s, null, c.f, 0.8);
     }
     if (T.rate('w', 10)) fx.at(PALM_RING, vec(c.x + c.f.x * 1.2, c.y + 1.2, c.z + c.f.z * 1.2), c.s * 0.5, T.v.col);
   },

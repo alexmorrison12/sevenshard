@@ -170,3 +170,24 @@ export function command(unit, script, recover = 0.8) {
 export function scaleHp(u, k) {
   u.hpMax = u.st.hpMax = Math.round(u.hpMax * k); u.hp = u.hpMax; u.data.barHp = u.hpMax / (u.data.bars || 100);
 }
+/**
+ * Small-party scaling for content that allows 1–4 players (guardians, field and story bosses). Boss HP already scales
+ * with party size in makeBoss, damage does not — and with every attack on one hero (and a solo death being a wipe)
+ * solo play would be far deadlier than the 4-player tuning. Solo: −60% damage and 20% slower patterns; duo: −30%.
+ * Stagger checks scale with partyK(B).
+ */
+export function smallParty(enc) {
+  const n = enc.o.partySize || 4;
+  if (n >= 3) return;
+  for (const b of enc.bosses) {
+    b.st.atk *= n <= 1 ? 0.4 : 0.7; b._statDirty = true;
+    b.ctrl.flags.hasteBase = b.ctrl.flags.haste = n <= 1 ? 1.2 : 1.08;
+  }
+}
+/** the usual onStart: hard mode HP (+20%) and small-party scaling */
+export function standardStart(enc) {
+  if (enc.o.hard) for (const b of enc.bosses) scaleHp(b, 1.2);
+  smallParty(enc);
+}
+/** stagger-check scale for parties below four (4+: 1, 3: 0.8, 2: 0.55, solo: 0.3) */
+export const partyK = B => { const n = B.o.partySize ?? 4; return n >= 4 ? 1 : n === 3 ? 0.8 : n === 2 ? 0.55 : 0.3; };

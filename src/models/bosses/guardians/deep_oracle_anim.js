@@ -25,7 +25,8 @@ export function oracleSpec(J, D) {
 
   function base(ctl, dt) {
     const u = ctl.u, t = ctl.t, grog = ctl.groggy, enr = ctl.enrage;
-    for (const T of u.T) { for (const k of TK) T[k] = 0; T.writhe = 1 + 0.6 * enr - 0.6 * grog; T.bend = 0.25 * grog; }
+    const sub0 = sm(ctl.burrow);
+    for (const T of u.T) { for (const k of TK) T[k] = 0; T.writhe = 1 + 0.6 * enr - 0.6 * grog; T.bend = 0.25 * grog; T.sink = sub0; }
     const B = u.B; B.lean = 0.25 * grog; B.rise = -0.6 * grog; B.lid = 1 - 0.55 * grog; B.look = 1 - grog; B.twist = 0; B.eyeUp = 0;
     ctl.ch.eye = Math.min(ctl.ch.eye, 1 - 0.5 * grog);
     ctl.ch.throat = Math.max(ctl.ch.throat, 0.3 + 0.2 * Math.sin(t * 1.1));
@@ -55,7 +56,7 @@ export function oracleSpec(J, D) {
     // tentacles
     for (let i = 0; i < NTEN; i++) {
       const T = u.T[i], ax = bendAxis[i];
-      P.move(b[`t${i}_0`], 0, -T.sink * 9, 0);
+      P.move(b[`t${i}_0`], 0, DEPTH * sub - T.sink * DEPTH, 0);   // own submersion, independent of the body
       P.prot(b[`t${i}_0`], Y, T.sweep);
       for (let j = 0; j < TSEG; j++) {
         const f = j / (TSEG - 1);
@@ -156,7 +157,7 @@ export function oracleSpec(J, D) {
         for (let i = 0; i < NTEN; i++) {
           const ti = 0.5 + ((i * 3) % NTEN) * 0.22;
           const rise = sm((t - ti) / 0.7);
-          ten(ctl, i, { sink: (1 - rise) * (t < 4.4 ? 1 : 0) * (1 - sm(ctl.burrow)) * 0 + (1 - rise), lift: 1.4 * bump(t, ti, ti + 0.6, ti + 1.2, ti + 2) + 0.9 * bump(t, 4.4, 4.7, 5.4, 6.2), writhe: 1.5 + bump(t, 4.3, 4.6, 5.5, 6.2) * 1.5 }, w);
+          ten(ctl, i, { sink: 1 - rise, lift: 1.4 * bump(t, ti, ti + 0.6, ti + 1.2, ti + 2) + 0.9 * bump(t, 4.4, 4.7, 5.4, 6.2), writhe: 1.5 + bump(t, 4.3, 4.6, 5.5, 6.2) * 1.5 }, w);
         }
         const open = sstep(4.2, 4.6, t), glare = bump(t, 4.4, 4.6, 5.3, 6.0);
         body(ctl, { lid: open, look: 0, rise: 0.8 * glare, lean: 0.2 * glare }, w);

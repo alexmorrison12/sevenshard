@@ -1,9 +1,5 @@
-// Social windows: Party Finder (O), Mail, Guild (U), Leaderboards.
+// Social windows: Party Finder (O), Mail, Guild (U), Leaderboards. (Party Finder data: see its section below.)
 //
-// partyfinder data: { tab?: 'find'|'mine', contents?: [{ id, label }], filter?: contentId,
-//   listings: [{ id, title, content, sub?, icon?, leader: { name, cls, iLvl }, size: 4|8, members: [{ name, cls, support?, you? }],
-//                req: { iLvl, supports? }, tags?: [], note?, age?: s, joined?: bool }], mine?: listing|null }
-//   Actions: pf:join { id } · pf:leave { id } · pf:create { content, title, iLvl, size, note } · pf:cancel {} · pf:refresh {} · pf:filter { content }
 // mail data: { mails: [{ id, from, subject, body, date, read, kind?: 'system'|'player'|'guild', attachments?: [Item], claimed?, expires? }] }
 //   Actions: mail:open { id } · mail:claim { id } · mail:claimAll {} · mail:delete { id }
 // guild data: { guild: null | { name, tag, level, xp, xpMax, motto, bloodstones, rank, emblem?: { color },
@@ -23,61 +19,128 @@ import { Win } from '../core/windows.js';
 const crest = (c, s = 22) => `<i class="ss-crest" style="width:${s}px;height:${s}px;background-image:url('${iconUrl('class:' + c, s)}')"></i>`;
 
 // ================================================================================================ party finder
+// Data (lead: src/game/social/partyfinder.js, session.windowData('partyfinder')):
+//   { you: { name, cls, ilvl },
+//     listings: [{ id, title, content: { kind: 'raid'|'guardian'|'chaos', raid?, gate?, hard?, boss?, tier? }, max, req, note, age (s),
+//                  leader: Member, members: [Member], canApply }],
+//     mine: null | { title, content, max, req, note, members: [Member], applicants: [Member] },
+//     contents: [{ kind, raid?, gate?, hard?, boss?, tier?, title, max, req, locked }] }
+//   Member = { name, cls, ilvl, support?, title? }
+// Actions: pf:apply { id } · pf:create { content, note, req } · pf:accept { name } · pf:decline { name } · pf:cancel {} ·
+//          pf:start {} · pf:match { content } · pf:refresh {}
+const ABYSS = ['oratory'];
+const PF_CATS = [{ id: 'legion', label: 'Legion Raid' }, { id: 'abyss', label: 'Abyss' }, { id: 'guardian', label: 'Guardian' }, { id: 'chaos', label: 'Chaos' }, { id: 'all', label: 'All' }];
+export function pfCat(c) {
+  if (!c) return 'all';
+  if (c.kind === 'abyss' || (c.kind === 'raid' && (c.abyss || ABYSS.includes(c.raid)))) return 'abyss';
+  return c.kind === 'raid' ? 'legion' : c.kind;
+}
+function pfIcon(c) {
+  if (!c) return 'ui:party';
+  if (c.kind === 'guardian') return 'boss:' + (c.boss || 'rimewing');
+  if (c.kind === 'chaos') return 'boss:gatekeeper';
+  return 'boss:' + ({ gorrath: c.gate === 0 ? 'skarn' : 'gorrath', oratory: c.gate === 0 ? 'nerissa' : 'deep_oracle' }[c.raid] || 'gorrath');
+}
+const sameContent = (a, b) => a && b && a.kind === b.kind && a.raid === b.raid && a.gate === b.gate && !!a.hard === !!b.hard && a.boss === b.boss && a.tier === b.tier;
+const ago = s => s < 60 ? 'just now' : s < 3600 ? Math.floor(s / 60) + 'm ago' : Math.floor(s / 3600) + 'h ago';
+function seats(members, max) {
+  let out = '';
+  for (let i = 0; i < (max || 4); i++) {
+    const m = (members || [])[i];
+    out += m ? `<i class="ss-pfw-m${m.support ? ' is-sup' : ''}" style="background-image:url('${iconUrl('class:' + m.cls, 24)}')" title="${esc(m.name)} · ${esc(clsInfo(m.cls).name)} · ${fmtInt(m.ilvl || 0)}"></i>` : '<i class="ss-pfw-m is-open"></i>';
+  }
+  return out;
+}
+
 export class PartyFinderWin extends Win {
-  static id = 'partyfinder'; static title = 'Party Finder'; static glyph = 'finder'; static width = 860;
+  static id = 'partyfinder'; static title = 'Party Finder'; static glyph = 'finder'; static width = 1080;
   build() {
     const b = this.body; b.classList.add('ss-pfw');
-    this.tab = 'find';
-    this.tabs = tabs(b, [{ id: 'find', label: 'Find a Party' }, { id: 'mine', label: 'My Listing' }], this.tab, id => { this.tab = id; this.fill(); });
-    this.pane = h('div', 'ss-pfw-pane', b);
+    this.cat = 'legion';
+    const L = h('div', 'ss-pfw-main', b);
+    this.tabs = tabs(L, PF_CATS, this.cat, id => { this.cat = id; this.render(this.d); });
+    this.bar = h('div', 'ss-pfw-bar', L);
+    this.list = h('div', 'ss-pfw-list ss-scroll', L);
+    this.side = h('aside', 'ss-pfw-side', b);
   }
-  render(d) { this.d = d; if (d.tab && d.tab !== this._dt) { this._dt = d.tab; this.tab = d.tab; this.tabs.set(d.tab); } this.fill(); }
-  fill() {
-    const d = this.d || {}, P = this.pane; clear(P);
-    const contents = d.contents || [...new Map((d.listings || []).map(l => [l.content, { id: l.content, label: l.content }])).values()];
-    if (this.tab === 'find') {
-      const bar = h('div', 'ss-pfw-bar', P);
-      select(bar, [{ id: '', label: 'All content' }, ...contents], d.filter || '', v => this.ui.emit('pf:filter', { content: v }));
-      const r = btn('ss-btn ss-btn--sm', bar, null, () => this.ui.emit('pf:refresh', {}), 'Refresh'); r.innerHTML = glyph('refresh') + '<span>Refresh</span>';
-      h('span', 'ss-pfw-count', bar, `${(d.listings || []).length} listings`);
-      const list = h('div', 'ss-pfw-list ss-scroll', P);
-      const ls = (d.listings || []).filter(l => !d.filter || l.content === d.filter);
-      if (!ls.length) h('div', 'ss-empty', list, 'No parties are recruiting for this right now. Why not post your own?');
-      for (const l of ls) {
-        const row = h('div', 'ss-pfw-row' + (l.joined ? ' is-joined' : ''), list);
-        const sup = (l.members || []).filter(m => m.support).length;
-        const slots = Array.from({ length: l.size || 4 }, (_, i) => { const m = (l.members || [])[i]; return m ? `<i class="ss-pfw-m${m.support ? ' is-sup' : ''}" style="background-image:url('${iconUrl('class:' + m.cls, 24)}')" title="${esc(m.name)}"></i>` : '<i class="ss-pfw-m is-open"></i>'; }).join('');
-        row.innerHTML = `<i class="ss-pfw-ic" style="background-image:url('${iconUrl(l.icon || 'ui:party', 40)}')"></i>
-          <div class="ss-pfw-tx"><b>“${esc(l.title || l.content)}”</b><span>${esc(l.content)}${l.sub ? ' · ' + esc(l.sub) : ''}</span>${(l.tags || []).length ? `<div class="ss-pfw-tags">${l.tags.map(t => `<em>${esc(t)}</em>`).join('')}</div>` : ''}</div>
-          <div class="ss-pfw-slots">${slots}</div>
-          <div class="ss-pfw-req"><span class="${l.req?.iLvl ? '' : 'ss-dim'}">iLvl ${l.req?.iLvl ? fmtInt(l.req.iLvl) + '+' : 'any'}</span><span>${glyph('cross')} ${sup}/${l.req?.supports ?? (l.size > 4 ? 2 : 1)}</span></div>
-          <div class="ss-pfw-lead">${crest(l.leader?.cls || 'reaver', 18)}<span>${esc(l.leader?.name || '')}</span></div>`;
-        const full = (l.members || []).length >= (l.size || 4);
-        const b = btn('ss-btn ss-btn--sm' + (l.joined ? '' : ' ss-btn--primary'), row, l.joined ? 'Leave' : full ? 'Full' : 'Join', () => this.ui.emit(l.joined ? 'pf:leave' : 'pf:join', { id: l.id }));
-        b.disabled = full && !l.joined;
-        if (l.note) row._tip = { title: l.title || l.content, lines: [l.note] };
-      }
-    } else {
-      const mine = d.mine;
-      if (mine) {
-        h('div', 'ss-h', P, 'Your Listing');
-        const c = h('div', 'ss-pfw-mine', P);
-        c.innerHTML = `<b>“${esc(mine.title || mine.content)}”</b><span>${esc(mine.content)} · ${(mine.members || []).length}/${mine.size || 4} · iLvl ${fmtInt(mine.req?.iLvl || 0)}+</span>`;
-        btn('ss-btn ss-btn--danger ss-btn--sm', c, 'Take Down', () => this.ui.emit('pf:cancel', {}));
-        return;
-      }
-      h('div', 'ss-h', P, 'Post a Listing');
-      const f = h('div', 'ss-pfw-form', P);
-      const row = (l) => { const r = h('label', 'ss-pfw-f', f); h('span', 'ss-label', r, l); return r; };
-      const cSel = select(row('Content'), contents.length ? contents : [{ id: 'Chaos Dungeon', label: 'Chaos Dungeon' }], contents[0]?.id || '', () => {});
-      const t = h('input', 'ss-input', row('Title')); t.maxLength = 48; t.placeholder = 'e.g. Gorrath NM · know mechs · 1415+'; t.addEventListener('keydown', e => e.stopPropagation());
-      const il = h('input', 'ss-input', row('Min. Item Level')); il.type = 'number'; il.value = d.iLvl ? Math.floor(d.iLvl) : 1100; il.addEventListener('keydown', e => e.stopPropagation());
-      let size = 4; seg(row('Party Size'), [{ id: '4', label: '4 players' }, { id: '8', label: '8 players' }], '4', v => { size = +v; });
-      const note = h('input', 'ss-input', row('Note')); note.maxLength = 80; note.placeholder = 'Optional'; note.addEventListener('keydown', e => e.stopPropagation());
-      btn('ss-btn ss-btn--primary', h('div', 'ss-pfw-post', f), 'Post Listing', () => this.ui.emit('pf:create', { content: cSel.value, title: t.value.trim(), iLvl: +il.value || 0, size, note: note.value.trim() }));
+  render(d) {
+    this.d = d = d || {};
+    const you = d.you || {};
+    // counts per category
+    const all = d.listings || [];
+    for (const c of PF_CATS) { const b = this.tabs.map[c.id]; b.querySelector('.ss-count')?.remove(); b.insertAdjacentHTML('beforeend', `<span class="ss-count">${c.id === 'all' ? all.length : all.filter(l => pfCat(l.content) === c.id).length}</span>`); }
+    clear(this.bar);
+    const rf = btn('ss-btn ss-btn--sm', this.bar, null, () => this.ui.emit('pf:refresh', {}), 'Refresh listings'); rf.innerHTML = glyph('refresh') + '<span>Refresh</span>';
+    h('span', 'ss-pfw-you', this.bar).innerHTML = you.name ? `${glyph('character')} ${esc(you.name)} · Item Level <b>${fmtInt(you.ilvl || 0)}</b>` : '';
+    clear(this.list);
+    const ls = all.filter(l => this.cat === 'all' || pfCat(l.content) === this.cat);
+    if (!ls.length) h('div', 'ss-empty', this.list, 'No parties are recruiting here right now. Post your own or try matchmaking.');
+    for (const l of ls) {
+      const low = (you.ilvl || 0) < (l.req || 0);
+      const full = (l.members || []).length >= (l.max || 4);
+      const row = h('div', 'ss-pfw-row' + (low ? ' is-low' : ''), this.list);
+      row.innerHTML = `<i class="ss-pfw-ic" style="background-image:url('${iconUrl(pfIcon(l.content), 44)}')"></i>
+        <div class="ss-pfw-tx"><b>${esc(l.title)}${l.content?.hard ? ' <em class="ss-pfw-hm">Hard</em>' : ''}</b><span>“${esc(l.note || '')}”</span></div>
+        <div class="ss-pfw-slots">${seats(l.members, l.max)}<small>${(l.members || []).length}/${l.max || 4}</small></div>
+        <div class="ss-pfw-req${low ? ' is-low' : ''}"><span>iLvl</span><b>${fmtInt(l.req || 0)}+</b></div>
+        <div class="ss-pfw-lead"><i class="ss-crest" style="width:18px;height:18px;background-image:url('${iconUrl('class:' + (l.leader?.cls || 'reaver'), 18)}')"></i><div><b>${esc(l.leader?.name || '')}</b><span>${ago(l.age || 0)}</span></div></div>`;
+      const b = btn('ss-btn ss-btn--sm' + (l.canApply ? ' ss-btn--primary' : ''), row, full ? 'Full' : 'Apply', () => this.ui.emit('pf:apply', { id: l.id }), `Apply to ${l.title}`);
+      b.disabled = !l.canApply || full;
+      row._tip = { title: l.title, lines: [`Leader: ${l.leader?.name || ''}${l.leader?.title ? ' — ' + l.leader.title : ''}`, `“${l.note || ''}”`, low ? `Your item level (${fmtInt(you.ilvl || 0)}) is below the requirement.` : null] };
     }
+    this.renderSide(d);
+  }
+  renderSide(d) {
+    const S = this.side; clear(S);
+    const mine = d.mine;
+    if (mine) {
+      h('div', 'ss-h', S, 'My Party');
+      const card = h('div', 'ss-pfw-mine', S);
+      card.innerHTML = `<div class="ss-pfw-mh"><i class="ss-pfw-ic" style="background-image:url('${iconUrl(pfIcon(mine.content), 40)}')"></i><div><b>${esc(mine.title)}</b><span>“${esc(mine.note || '')}” · iLvl ${fmtInt(mine.req || 0)}+</span></div></div><div class="ss-pfw-slots is-big">${seats(mine.members, mine.max)}</div>`;
+      h('div', 'ss-h', S, `Applicants · ${(mine.applicants || []).length}`);
+      const ap = h('div', 'ss-pfw-apps ss-scroll', S);
+      for (const a of mine.applicants || []) {
+        const r = h('div', 'ss-pfw-app', ap);
+        r.innerHTML = `<i class="ss-crest" style="width:26px;height:26px;background-image:url('${iconUrl('class:' + a.cls, 26)}')"></i><div><b>${esc(a.name)}${a.support ? ` <em>${glyph('cross')}</em>` : ''}</b><span>${esc(clsInfo(a.cls).name)} · ${fmtInt(a.ilvl || 0)}${a.title ? ' · ' + esc(a.title) : ''}</span></div>`;
+        const ok = btn('ss-btn ss-btn--sm ss-btn--icon ss-btn--primary', r, null, () => this.ui.emit('pf:accept', { name: a.name }), `Accept ${a.name}`); ok.innerHTML = glyph('check');
+        const no = btn('ss-btn ss-btn--sm ss-btn--icon', r, null, () => this.ui.emit('pf:decline', { name: a.name }), `Decline ${a.name}`); no.innerHTML = glyph('close');
+      }
+      if (!(mine.applicants || []).length) h('div', 'ss-empty', ap, 'Waiting for adventurers to apply…');
+      const ft = h('div', 'ss-pfw-sft', S);
+      btn('ss-btn ss-btn--ghost ss-btn--sm', ft, 'Take Down', () => this.ui.emit('pf:cancel', {}));
+      btn('ss-btn ss-btn--primary', ft, 'Start', () => this.ui.emit('pf:start', {}));
+      return;
+    }
+    h('div', 'ss-h', S, 'Post a Listing');
+    const f = h('div', 'ss-pfw-form', S);
+    const contents = d.contents || [];
+    const inCat = contents.filter(c => this.cat === 'all' || pfCat(c) === this.cat);
+    const pool = inCat.length ? inCat : contents;
+    if (this.pick == null || !pool.includes(pool[this.pick])) this.pick = Math.max(0, pool.findIndex(c => !c.locked));
+    const lab = (t) => { const r = h('label', 'ss-pfw-f', f); h('span', 'ss-label', r, t); return r; };
+    const sel = h('select', 'ss-select', lab('Content'));
+    pool.forEach((c, i) => { const o = h('option', '', sel, c.title + (c.locked ? ' (locked)' : '')); o.value = i; o.disabled = !!c.locked; });
+    sel.value = this.pick;
+    const note = h('input', 'ss-input', lab('Note')); note.maxLength = 40; note.placeholder = 'e.g. know mechs, chill run'; note.value = this.note || '';
+    note.addEventListener('keydown', e => e.stopPropagation()); note.addEventListener('input', () => { this.note = note.value; });
+    const req = h('input', 'ss-input', lab('Min. Item Level')); req.inputMode = 'numeric'; req.value = pool[this.pick]?.req || 0; req.addEventListener('keydown', e => e.stopPropagation());
+    sel.addEventListener('change', () => { this.pick = +sel.value; req.value = pool[this.pick]?.req || 0; });
+    const post = btn('ss-btn ss-btn--primary', f, 'Post Listing', () => { const c = pool[+sel.value]; if (!c || c.locked) return; this.ui.emit('pf:create', { content: strip(c), note: note.value.trim(), req: parseInt(req.value) || c.req || 0 }); });
+    post.disabled = !pool.length;
+    h('div', 'ss-h', S, 'Matchmaking');
+    const mm = h('div', 'ss-pfw-mm ss-scroll', S);
+    for (const c of pool) {
+      const r = h('div', 'ss-pfw-mmr' + (c.locked ? ' is-locked' : ''), mm);
+      r.innerHTML = `<i class="ss-crest" style="width:28px;height:28px;background-image:url('${iconUrl(pfIcon(c), 28)}')"></i><div><b>${esc(c.title)}</b><span>${c.max || 4} players · iLvl ${fmtInt(c.req || 0)}</span></div>`;
+      const b = btn('ss-btn ss-btn--sm', r, null, () => this.ui.emit('pf:match', { content: strip(c) }), `Matchmake ${c.title}`);
+      b.innerHTML = glyph('users') + '<span>Match</span>'; b.disabled = !!c.locked;
+    }
+    if (!pool.length) h('div', 'ss-empty', mm, 'Nothing to match for.');
   }
 }
+/** The content key the game expects back (drops UI-only fields). */
+function strip(c) { const o = { kind: c.kind }; for (const k of ['raid', 'gate', 'hard', 'boss', 'tier']) if (c[k] != null) o[k] = c[k]; return o; }
+export { sameContent };
 
 // ================================================================================================ mail
 export class MailWin extends Win {
