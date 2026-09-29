@@ -36,7 +36,7 @@ meta.meter = new Meter(session);
 meta.panel = new MeterPanel(meta);
 meta.boardsPanel = new BoardsPanel(meta);
 meta.shareModal = new ShareModal(meta);
-window.__meta = meta; window.__heroPortrait = heroPortrait; window.__portraitDebug = portraitDebug;
+window.__meta = meta; window.__heroPortrait = heroPortrait; window.__portraitDebug = portraitDebug; window.__decode = decodeChallenge; window.__encode = encodeChallenge;
 
 // ------------------------------------------------------------------------------------------------ synthetic fight
 function fight(secs = 214) {

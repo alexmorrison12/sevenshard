@@ -50,7 +50,7 @@ async function surface(B, prey, telDur) {
 export default {
   id: 'nerissa', model: 'nerissa', name: 'Nerissa', title: 'of the Drowned Choir', kind: 'abyss',
   radius: 2, height: 5.6, hp: 48000, atk: 0.16, bars: 160, speed: 4.4, turnRate: 3.6, enrage: 600,
-  music: 'boss', arena: 'frostmere',
+  music: 'boss', arena: 'oratory_choir',
   anims: {
     sing: { dur: 2.4, hits: [1.2], loop: true }, tail_slap: { dur: 2.0, hits: [1.05] }, water_orb: { dur: 2.2, hits: [1.25] },
     dive: { dur: 3.4, hits: [2.45] }, scream: { dur: 2.6, hits: [0.95, 1.35, 1.75] },

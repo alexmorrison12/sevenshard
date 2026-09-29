@@ -19,7 +19,7 @@ import { buildFlames, LightPool, buildParticles, Flags } from '../fx.js';
 import { makeEnv } from '../env.js';
 import { paintMinimap } from '../minimap.js';
 import { buildWater } from '../water.js';
-import { FieldGround, DistGrid, FieldKit, Anchors, snapAnchors, seedSpots, spline, along, paintPath, scatter, bump, faceTo, waterEnv, S, RNG, smoothstep, lerp, clamp } from '../fields/common.js';
+import { FieldGround, DistGrid, FieldKit, Anchors, snapAnchors, aliasNumbered, seedSpots, spline, along, paintPath, scatter, bump, faceTo, waterEnv, S, RNG, smoothstep, lerp, clamp } from '../fields/common.js';
 import { FieldGrass, FieldFlora, giantFlowerGeo, mushroomGeo, bladeClumpGeo, fernGeo, thingMaterial } from '../fields/flora.js';
 import { buildDrifters, buildButterflies } from '../fields/fx.js';
 import * as F from '../fields/props.js';
@@ -115,7 +115,7 @@ export async function build(zone, { quality = 1 } = {}) {
   kit.add('paint', cyl(0.12, 0.1, 0.18, 8, 1), M(porch[0] + 1.2, H(...porch) + 0.85, porch[1] - 0.4), { tint: 0xf0f0e8, ao: false });           // teacup
   // --- the village green: thimble well, acorn houses round the ring, lanterns, bunting of petals
   K.thimbleWell(kit, GREEN[0], H(...GREEN), GREEN[1]);
-  const houses = [[-11, 12, 0.8], [-14, 22, 1.3], [-10, 31, 2.2], [11, 12, -0.8], [14, 25, -1.4], [9, 33, -2.3], [-24, 22, 1.4], [-20, 2, 0.6], [22, 6, -0.5], [-28, 30, 1.8], [-6, 42, Math.PI - 0.3], [12, 44, Math.PI + 0.4]];
+  const houses = [[-11, 12, 0.8], [-14, 22, 1.3], [-10, 31, 2.2], [11, 12, -0.8], [14, 25, -1.4], [9, 33, -2.3], [-24, 22, 1.4], [-20, 2, 0.6], [22, 6, -0.5], [-28, 30, 1.8], [-26, -14, 0.9], [24, 14, -1.9]];
   houses.forEach(([dx, dz, rot], i) => { const x = GREEN[0] + dx, z = GREEN[1] + dz - 20 + 20; K.acornHouse(kit, x, H(x, z), z, rot + Math.PI, { s: rng.range(0.9, 1.15), body: rng.pick([0xc08040, 0xb87838, 0xc89050]), cap: rng.pick([0x7a5230, 0x6a4a2a, 0x8a5a34]), seed: 10 + i }); });
   for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2 + 0.2, x = GREEN[0] + Math.cos(a) * 7.6, z = GREEN[1] + Math.sin(a) * 7.6; K.firefly(kit, x, H(x, z) + 1.6, z, 0.14); }
   for (let i = 0; i < 3; i++) P.bunting(kit, [GREEN[0] - 7 + i * 5, H(...GREEN) + 3.2, GREEN[1] - 6], [GREEN[0] - 4 + i * 5, H(...GREEN) + 2.6, GREEN[1] + 7], { sag: 0.6, size: 0.3, colors: [0xff8ab0, 0xfff080, 0x8ad0ff, 0xb0f080, 0xffffff] });
@@ -322,6 +322,7 @@ export async function build(zone, { quality = 1 } = {}) {
     { name: 'the seed vault door', at: [[VAULT[0] - 2.4, VAULT[1] + 2.4], [VAULT[0] + 3.4, VAULT[1] + 1.4]] },
   ];
   for (const s of seedSpots('pipsprout', SPOTS, 28)) A.add(`seed:${s.i}`, s.x, s.z, 0, { hint: `${s.where} ${s.name}` });
+  aliasNumbered(zone, 'vista');
   snapAnchors(zone, nav, 4, 'pipsprout');
 
   // ---------------------------------------------------------------- regions, env, minimap

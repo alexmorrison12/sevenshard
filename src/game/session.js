@@ -19,7 +19,7 @@ import { makeGear, honeChance, honeCost, hone, BOOSTER_CAP } from './systems/gea
 import { refFor } from './ai/mob.js';
 import { AllyAI } from './ai/ally.js';
 if (typeof window !== 'undefined') window.__AllyAI = AllyAI;
-import { dayId, fmt, uid } from '../core/util.js';
+import { dayId, fmt, uid, weekId } from '../core/util.js';
 import { exportCode, importCode } from './save.js';
 import { openLobby, NetBadge } from '../net/lobby.js';
 import { CITY_NPCS } from '../data/npcs.js';
@@ -30,6 +30,8 @@ import { TouchControls } from './touch.js';
 import { watchRaid } from './watch.js';
 import { Portrait } from './portrait.js';
 import { warmHeroes } from '../models/hero/index.js';
+import { legionRaceNews } from './meta/index.js';
+import { infernoMenu } from './modes/inferno.js';
 import { SocialContext } from './social/context.js';
 import { sunView, rank as sunRank, resetTree as sunReset, sunState, unlocked as sunUnlocked } from './progression/sunheart.js';
 import { SUNHEART_POINTS } from '../data/sunheart.js';
@@ -40,6 +42,23 @@ import * as SYS from './systems/index.js';
 const q = Object.fromEntries(new URLSearchParams(location.search));
 const AUDIO_PREP = { city: ['city', 'city_night', 'victory'], field: ['field', 'field_dark', 'boss', 'boss_intro'], dungeon: ['dungeon', 'boss', 'victory', 'defeat'],
   arena: ['boss', 'boss_intro', 'victory', 'defeat'], raid: ['raid', 'raid_ghost', 'boss_intro', 'victory', 'defeat'], sea: ['sea', 'boss'], island: ['sea', 'boss', 'pip'] };
+/** character-window engravings: books, accessories, stone and class engravings (same source as the Engravings window) */
+function engrSummary(c) {
+  try { return SYS.engravings.summary(c).list.filter(e => e.nodes > 0).map(e => ({ id: e.id, nodes: e.nodes, neg: e.negative, level: e.level })); }
+  catch (e) { console.warn('[engravings]', e); return Object.entries(engravingNodes(c)).map(([id, nodes]) => ({ id, nodes, neg: id.startsWith('neg_') })); }
+}
+const EMOTES = ['wave', 'bow', 'dance', 'cheer', 'clap', 'laugh', 'cry', 'salute', 'point', 'flex', 'sit', 'sleep', 'shrug', 'facepalm', 'kneel', 'think', 'heart', 'angry', 'yes', 'no'];
+const safeNews = f => { try { return f(); } catch (e) { console.warn('[news]', e); return null; } };
+/** Results rank against a par time per content (Lost Ark-style S/A/B/C), minus a step for a messy clear */
+const PAR = { chaos: 200, guardian: 300, raid: { gorrath: [420, 660], oratory: [360, 380] }, inferno: 120, cube: 300, trial: 300 };
+function clearRank(c, r) {
+  if (!r.cleared) return 'D';
+  const p = PAR[c.kind], par = typeof p === 'number' ? p : p?.[c.raid]?.[c.gate || 0] || 300;
+  const k = (r.time || par) / par;
+  let i = k < 0.75 ? 0 : k < 1 ? 1 : k < 1.35 ? 2 : 3;
+  if ((r.deaths || 0) > (c.kind === 'raid' ? 4 : 1)) i = Math.min(3, i + 1);
+  return 'SABC'[i];
+}
 const CONTENT_NAMES = { chaos: 'Chaos Dungeon', guardian: 'Guardian Hunt', raid: 'Legion Raid', inferno: 'Inferno Descent', cube: 'Rift Cube', trial: 'Trial Guardian', pvp: 'Proving Grounds', fieldboss: 'Field Boss', chaosgate: 'Chaos Gate', island: 'Adventure Island', ghostship: 'Ghost Ship' };
 const NEWS = [
   { tag: 'Event', title: 'The Horned Legion stirs', date: 'This week', body: 'Gorrath, the Horned Tyrant, waits beyond the Rift Nexus. Eight Shardbearers. Two gates. One weekly race.' },
@@ -101,7 +120,7 @@ export class Session {
     this.screen = 'title';
     this.stage.title(this.game.zone?.anchors?.spawn || { x: 0, z: 0 });
     const last = this.account.char(this.account.data.lastChar);
-    this.ui.screen('title', { server: 'Solmara-1', status: 'Busy', version: 'v1.0 · build ' + (__DEV__ ? 'dev' : 'live'), news: NEWS, continue: last ? { name: last.name, cls: last.cls, level: last.level } : null });
+    this.ui.screen('title', { server: 'Solmara-1', status: 'Busy', version: 'v1.0 · build ' + (__DEV__ ? 'dev' : 'live'), news: [safeNews(() => legionRaceNews(this.account)), ...NEWS].filter(Boolean), continue: last ? { name: last.name, cls: last.cls, level: last.level } : null });
     this.game.audio?.music?.('title');
     // pre-build the 16 creation heroes while the player reads the title (first builds of plate/long-hair kinds stall)
     if (!this._warmed) { this._warmed = true; setTimeout(() => { if (this.screen === 'title') warmHeroes(undefined, { gapMs: 120 }).catch(() => {}); else this._warmed = false; }, 3000); }
@@ -156,7 +175,7 @@ export class Session {
         if (!/^[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ0-9]{1,15}$/.test(name)) { this.ui.toast('Names are 2–16 letters or digits, starting with a letter.', 'error'); return; }
         if (A.chars.some(c => c.name.toLowerCase() === name.toLowerCase())) { this.ui.toast('You already have a character with that name.', 'error'); return; }
         const c = A.createChar({ name, cls: p.cls, sex: p.sex, look: p.look, mode: p.path === 'powerpass' ? 'powerpass' : p.path === 'raid' ? 'raid' : 'story' });
-        this.ui.toast(p.path === 'powerpass' ? 'Powerpass used: welcome to the endgame.' : 'Your story begins.', 'success');
+        this.ui.toast(p.path === 'powerpass' ? 'Powerpass used: welcome to the endgame.' : p.path === 'raid' ? 'Raid Ready: Horned Tyrant gear, item level 1,420. The Legion awaits.' : 'Your story begins.', 'success');
         return this.enterWorld(c);
       }
       // results
@@ -197,6 +216,10 @@ export class Session {
       case 'sunheart:reset': sunReset(this.char, p.tree); A.save(); this.refreshChar(); return this.refreshWindow('sunheart');
       // settings
       case 'settings:change': return this.setting(p.key, p.value);
+      case 'nexus:select': this._nexusSel = p.id; return this.refreshWindow('nexus');
+      case 'songs:play': { this.ui.close('songs'); if (!(A.roster.songs || ['homeward']).includes(p.id)) return this.ui.toast('You haven\u2019t learned that song yet. Lyra Songwind teaches songs in Solhaven.', 'warn'); return PLUGINS.find(pl => pl.id === 'companions')?.play?.(p.id); }
+      case 'emotes:play': this.ui.close('emotes'); return this.command({ cmd: p.id, args: '', raw: '/' + p.id });
+      case 'nexus:enter': return this.nexusEnter(p);
       case 'settings:rebind': {
         this.ui.toast(`Press a key for "${p.action}" (Esc to cancel)\u2026`, 'info');
         const onKey = e => {
@@ -408,6 +431,9 @@ export class Session {
   // ---------------------------------------------------------------- content launcher (Rift Nexus)
   async contentMenu(kind) {
     if (this.guestMode) { this.ui.toast('Your host leads the party through the rifts.', 'info'); return; }
+    // the Rift Nexus window (Lost Ark's content board); the dialog below is the fallback
+    const data = this.nexusData(kind);
+    if (data && this.ui.open) { try { this.ui.open('nexus', data); if (this.ui.isOpen?.('nexus')) return; } catch (e) { console.warn('[nexus]', e); } }
     const il = Math.floor(itemLevel(this.char));
     const opts = [];
     for (const t of CHAOS_TIERS) opts.push({ id: `chaos:${t.id}`, text: `Chaos Dungeon — ${t.name} (iLvl ${t.ilvl})${il < t.ilvl ? ' · locked' : ''}`, kind: il < t.ilvl ? 'leave' : 'quest', ok: il >= t.ilvl });
@@ -422,6 +448,54 @@ export class Session {
     if (k === 'chaos') return this.launch({ kind: 'chaos', tier: +a });
     if (k === 'guardian') return this.launch({ kind: 'guardian', boss: a });
     if (k === 'raid') return this.launch({ kind: 'raid', raid: a, gate: +b, trial: o.trial });
+  }
+  /** Rift Nexus board: every instanced activity with its entry level, gates, weekly state and party */
+  nexusData(kind) {
+    const ch = this.char; if (!ch) return null;
+    const il = Math.floor(itemLevel(ch)), wk = weekId();
+    const weekly = key => { const w = ch.weekly?.[key]; return w && w.week === wk ? w : {}; };
+    const rest = SYS.loot.restInfo(ch);
+    const content = [];
+    for (const t of CHAOS_TIERS) content.push({ id: `chaos:${t.id}`, cat: 'chaos', name: t.name, sub: 'Chaos Dungeon', iLvl: t.ilvl, players: 4, icon: 'ui:party', locked: il < t.ilvl,
+      desc: 'Three stages of demons, rift crystals and a Chaos Warden. Fill the bar to break through.', note: rest.chaos.rested ? `Rest bonus ready (${rest.chaos.rest})` : `${rest.chaos.resonanceLeft} resonance run${rest.chaos.resonanceLeft === 1 ? '' : 's'} left today` });
+    for (const g of GUARDIANS) { const d = BOSS_DEFS[g.id]; if (d) content.push({ id: `guardian:${g.id}`, cat: 'guardian', name: d.name, sub: d.title || 'Guardian', iLvl: g.ilvl, players: 4, icon: `boss:${g.id}`, locked: il < g.ilvl,
+      desc: d.blurb || `Hunt ${d.name} with a party of four. Counter the blue glows, break its parts and watch the stagger checks.`, note: rest.guardian.rested ? 'Rest bonus ready' : '' }); }
+    for (const r of Object.values(RAIDS)) {
+      if (!r.gates.every(gt => gt.bosses.every(b => BOSS_DEFS[b.boss]))) continue;
+      const w = weekly(r.kind === 'abyss' ? 'abyss' : 'raid');
+      const modes = [{ id: 'normal', label: 'Normal', iLvl: r.ilvl.normal }];
+      if (r.ilvl.hard) modes.push({ id: 'hard', label: 'Hard', iLvl: r.ilvl.hard });
+      if (r.kind === 'legion') modes.push({ id: 'trial', label: 'Trial (synced)', iLvl: 0 });
+      content.push({ id: `raid:${r.id}`, cat: r.kind === 'abyss' ? 'abyss' : 'legion', name: r.name, sub: r.kind === 'abyss' ? 'Abyssal Dungeon' : 'Legion Raid', iLvl: r.ilvl.normal, players: r.players,
+        icon: `boss:${r.gates[r.gates.length - 1].bosses[0].boss}`, locked: il < r.ilvl.normal && r.kind !== 'legion', modes,
+        gates: r.gates.map((gt, i) => ({ name: `Gate ${i + 1}: ${gt.name}`, boss: gt.bosses.map(b => BOSS_DEFS[b.boss].name).join(' & '), icon: `boss:${gt.bosses[0].boss}`, cleared: !!w[`${r.id}:${i}`] })),
+        desc: r.kind === 'legion' ? 'Eight Shardbearers, two gates, weekly gold and the Horned Tyrant set. Below the entry level you can still enter as a synced trial run.' : 'A four-player dungeon beneath the sea. Weekly first-clear chests.',
+        cleared: r.gates.every((gt, i) => w[`${r.id}:${i}`]) });
+    }
+    if (LAUNCHERS.inferno) content.push({ id: 'inferno', cat: 'challenge', name: 'Inferno Descent', sub: '100 floors · roguelite', iLvl: 1100, players: 4, icon: 'ui:pvp', locked: il < 1100, desc: 'Descend floor by floor, pick boons, fight Inferno guardians. Checkpoints every ten floors.' });
+    if (LAUNCHERS.cube) content.push({ id: 'cube', cat: 'challenge', name: 'Rift Cube', sub: 'Ten rooms · tickets · synced', iLvl: 1100, players: 4, icon: 'ui:collectibles', locked: il < 1100, desc: 'Ten timed rooms; the chest grows with every room you clear. Needs a Rift Cube Ticket.', note: `${this.account.count('rift_cube_ticket') || 0} ticket(s)` });
+    if (LAUNCHERS.trial) content.push({ id: 'trial', cat: 'challenge', name: 'Trial Guardian', sub: 'Weekly affixes', iLvl: 1100, players: 4, icon: 'ui:leaderboard', locked: il < 1100, desc: 'This week\u2019s guardian with twisted affixes. Races on the leaderboard.' });
+    const cats = [{ id: 'chaos', label: 'Chaos Dungeon' }, { id: 'guardian', label: 'Guardian Hunt' }, { id: 'abyss', label: 'Abyssal Dungeon' }, { id: 'legion', label: 'Legion Raid' }, { id: 'challenge', label: 'Challenge' }].filter(c => content.some(x => x.cat === c.id));
+    const sel = content.find(x => x.id === this._nexusSel) ? this._nexusSel : (content.find(x => x.cat === (kind === 'raid' ? 'legion' : kind) && !x.locked) || content.find(x => !x.locked) || content[0])?.id;
+    const members = [{ name: ch.name, cls: ch.cls }, ...(this.game.invitedSims || []).map(sm => ({ name: sm.name, cls: sm.cls }))];
+    return { iLvl: il, cats, selected: sel, content, party: { size: members.length, members }, aiFill: true };
+  }
+  nexusEnter(p) {
+    const id = p.id || this._nexusSel; if (!id) return;
+    const il = Math.floor(itemLevel(this.char));
+    this.ui.close('nexus');
+    const [k, a] = id.split(':');
+    if (k === 'chaos') { const t = CHAOS_TIERS.find(x => x.id === +a); if (il < (t?.ilvl || 0)) return this.ui.toast('Your item level is too low. Hone your gear at the blacksmith.', 'error'); return this.launch({ kind: 'chaos', tier: +a, allies: p.aiFill === false ? 0 : undefined }); }
+    if (k === 'guardian') { const g = GUARDIANS.find(x => x.id === a); if (il < (g?.ilvl || 0)) return this.ui.toast('Your item level is too low. Hone your gear at the blacksmith.', 'error'); return this.launch({ kind: 'guardian', boss: a }); }
+    if (k === 'raid') {
+      const r = RAIDS[a]; if (!r) return;
+      const mode = p.mode || 'normal', need = mode === 'hard' ? r.ilvl.hard : r.ilvl.normal;
+      const trial = mode === 'trial' || (r.kind === 'legion' && il < need);
+      if (!trial && il < need) return this.ui.toast('Your item level is too low for that mode.', 'error');
+      return this.launch({ kind: 'raid', raid: a, gate: Math.max(0, Math.min(r.gates.length - 1, +(p.gate ?? 0))), hard: mode === 'hard' && !trial, trial });
+    }
+    if (id === 'inferno') return infernoMenu(this);
+    if (id === 'cube' || id === 'trial') return this.launch({ kind: id });
   }
   async launch(c) {
     this.lastContent = c;
@@ -472,7 +546,7 @@ export class Session {
       A.roster.stats.kills += r.kills || 1;
     }
     const me = r.meter?.find(x => x.you) || r.meter?.[0];
-    const rank = !r.cleared ? 'D' : r.time < 150 ? 'S' : r.time < 240 ? 'A' : r.time < 360 ? 'B' : 'C';
+    const rank = clearRank(c, r);
     A.save();
     this.ui.screen('results', {
       kind: r.cleared ? 'clear' : 'fail', over: c.kind === 'raid' && RAIDS[c.raid]?.kind === 'abyss' ? 'Abyssal Dungeon' : CONTENT_NAMES[c.kind] || 'Adventure',
@@ -543,8 +617,12 @@ export class Session {
     if (WINDOWS[id]) { try { return WINDOWS[id](this); } catch (e) { console.error('[window]', id, e); return null; } }
     const st = this.game.hero?.u.st || heroStats(c);
     switch (id) {
+      case 'nexus': return this.nexusData();
+      case 'songs': { const comp = PLUGINS.find(pl => pl.id === 'companions'), SG = comp?.songs || {}, learned = A.roster.songs || ['homeward'], now = this.game.level?.time || 0;
+        return { items: Object.entries(SG).map(([sid, sg]) => ({ id: sid, name: sg.name, desc: sg.desc, icon: 'ui:songs', cdLeft: Math.max(0, (comp.songT[sid] || 0) - now), locked: !learned.includes(sid) })) }; }
+      case 'emotes': return { items: EMOTES.map(e => ({ id: e, name: e[0].toUpperCase() + e.slice(1), icon: 'ui:emotes' })) };
       case 'character': return { name: c.name, cls: c.cls, level: c.level, iLvl: Math.floor(itemLevel(c)), title: c.title, roster: A.roster.level, gear: c.equip,
-        stats: { atk: Math.round(st.atk), hp: Math.round(st.hpMax), ...st.combat }, engravings: Object.entries(engravingNodes(c)).map(([id, nodes]) => ({ id, nodes, neg: id.startsWith('neg_') })) };
+        stats: { atk: Math.round(st.atk), hp: Math.round(st.hpMax), ...st.combat }, engravings: engrSummary(c) };
       case 'inventory': return { items: [...c.inv, ...Object.entries(A.roster.mats).map(([id, n]) => ({ uid: 'mat:' + id, id, name: ITEMS[id]?.name || id, kind: ITEMS[id]?.kind || 'material', grade: ITEMS[id]?.grade ?? 1, icon: `item:${id}`, count: n, desc: ITEMS[id]?.desc }))], currencies: { silver: A.count('silver'), gold: A.count('gold'), crystals: A.count('crystals') } };
       case 'skills': {
         const kit = CLASSES[c.cls];
@@ -608,8 +686,7 @@ export class Session {
   chat(p) { const text = String(p.text || '').slice(0, 240); if (!text) return; this.ui.chat.add({ channel: p.channel || 'area', from: this.char?.name, text, you: true }); this.game.net?.send?.({ t: 'ch', ch: p.channel, text }); }
   command(p) {
     const cmd = p.cmd.toLowerCase();
-    const EM = ['wave', 'bow', 'dance', 'cheer', 'clap', 'laugh', 'cry', 'salute', 'point', 'flex', 'sit', 'sleep', 'shrug', 'facepalm', 'kneel', 'think', 'heart', 'angry', 'yes', 'no'];
-    if (EM.includes(cmd)) {
+    if (EMOTES.includes(cmd)) {
       const me = this.game.hero?.u; me?.model?.play?.(cmd, { dur: 2.5, loop: cmd === 'dance' || cmd === 'sit' || cmd === 'sleep' });
       const npc = me && this.L?.units.filter(u => u.kind === 'npc' && u.distTo(me) < 8).sort((a, b) => a.distTo(me) - b.distTo(me))[0];
       this.bus.emit('emote', { id: cmd, npc: npc?.data.npcDef?.id || null });

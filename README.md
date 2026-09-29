@@ -67,8 +67,8 @@ node build.mjs            # → dist/index.html (add --min for the release build
 node tools/serve.mjs dist 5299
 ```
 
-Open http://localhost:5299. URL switches for testing: `?dev=chaos`, `?dev=boss`, `?dev=raid`, `?event=…`, `?watch=1`,
-`?join=<code>`.
+Open http://localhost:5299. URL switches: `?watch=1` / `?watch=2` (spectate a raid gate), `?join=<room>` (join a
+friend), and for development `?dev=chaos`, `?dev=boss&boss=<id>`, `?dev=arena`.
 
 Test tooling (headless Chrome via puppeteer-core):
 

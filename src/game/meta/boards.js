@@ -129,7 +129,8 @@ function simEntries(B, def, period) {
   let list = simCache.get(key); if (list) return list;
   const r = new RNG(hashStr('sim|' + key));
   const start = periodStart(B, B.period === 'all' ? 0 : periodT(period)), len = B.period === 'day' ? D : W;
-  let cands = pool(period);
+  // the same realm plays the dailies: daily boards draw from that week's raider pool
+  let cands = pool(B.period === 'day' ? 'w' + weekId(periodT(period)) : period);
   if (def.cls) cands = cands.filter(p => p.cls === def.cls);
   else if (B.id === 'legion_support') cands = cands.filter(p => isSupport(p.cls));
   else if (/^legion|guardian|inferno/.test(B.id)) cands = cands.filter(p => !isSupport(p.cls) || r.next() < 0.5);
@@ -229,7 +230,7 @@ function remoteRows(board, variant) {
   if (!c.busy && Date.now() - c.t > 60e3) {
     c.busy = true; remoteCache.set(key, c);
     R.top(board, variant).then(rows => { c.rows = rows; c.t = Date.now(); remoteState.ok = true; remoteState.error = null; })
-      .catch(e => { c.t = Date.now(); remoteState.ok = false; remoteState.error = e.message; })
+      .catch(e => { c.t = Date.now(); if (!(e.status >= 400 && e.status < 500)) { remoteState.ok = false; remoteState.error = e.message; } })
       .finally(() => { c.busy = false; changed(); });
   }
   return c.rows;
@@ -287,7 +288,8 @@ export function submit(e) {
   // keep only improvements (plus the first entry): the board shows bests, the store stays small
   if (improved) { D0.entries.push(entry); prune(D0, now); saveDb(); }
   const R = getRemote();
-  if (R && improved) R.submit(entry).then(res => { entry.remoteRank = res?.rank ?? null; remoteCache.delete(`${e.board}|${def.variant}`); changed(); }).catch(err => { remoteState.ok = false; remoteState.error = err.message; });
+  if (R && improved) R.submit(entry).then(res => { entry.remoteRank = res?.rank ?? null; remoteState.ok = true; remoteCache.delete(`${e.board}|${def.variant}`); changed(); })
+    .catch(err => { if (!(err.status >= 400 && err.status < 500)) { remoteState.ok = false; remoteState.error = err.message; changed(); } });   // 4xx = entry rejected (rate limit / validation), not an outage
   const v = boardView(e.board, def.variant, { now, limit: 1e9 });
   const row = v.rows.find(r => r.you && r.name === entry.name);
   changed();

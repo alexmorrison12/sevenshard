@@ -3,13 +3,13 @@
 // gate:* anchors, triports, Pip Seeds, vistas, lore books, trade-skill nodes, ground loot with grade beams, kill XP with
 // level-up celebrations, out-of-combat regeneration, and Pip-scale shrinking in Pipsprout Hollow.
 // Also a small plugin for travel from Solhaven's west gate and for every triport statue.
-import { registerZoneMode, registerPlugin } from '../registry.js';
+import { registerZoneMode, registerPlugin, ZONE_MODES } from '../registry.js';
 import '../../world/zones/goldmeadow.js';          // field zones self-register when imported (harmless if the world
 import '../../world/zones/thornwood.js';           // index already imports them)
 import '../../world/zones/ashen_ridge.js';
 import '../../world/zones/pipsprout.js';
 import { ZONES } from '../providers.js';
-import { FIELDS, FIELD_NPCS, GENERIC_NPC, PACK_TAGS, NODES, FALLBACK_LAYOUT, GATE_FALLBACK } from '../../data/field.js';
+import { FIELDS, FIELD_NPCS, GENERIC_NPC, LOCALS, PACK_TAGS, NODES, FALLBACK_LAYOUT, GATE_FALLBACK } from '../../data/field.js';
 import { LORE } from '../../data/quests/lore.js';
 import { makeFieldMob, makeResident, makeProp, anchorOf, walkable, dist, warnOnce, templateOf } from '../quests/spawn.js';
 import { makeFieldProp } from '../quests/props.js';
@@ -67,24 +67,29 @@ export class FieldMode {
       else if (k.startsWith('lore:')) this.addObj('lore', k, a);
       else if (k.startsWith('vista:')) this.addObj('vista', k, a);
       else if (k.startsWith('triport:')) this.addObj('triport', k, a, { prop: false });
-      else if (k.startsWith('gate:')) this.addObj('gate', k, a, { prop: false, to: k.slice(5) });
+      else if (k.startsWith('gate:') && travelable(k.slice(5))) this.addObj('gate', k, a, { prop: false, to: k.slice(5) });
     }
-    // the hollow's way in from Goldmeadow when the zone has no explicit gate:pipsprout
+    // the fairy-ring ways between Goldmeadow and the Hollow when the zones have no explicit gates for them
     if (this.id === 'goldmeadow' && !A['gate:pipsprout']) {
-      const p = anchorOf(z, GATE_FALLBACK['goldmeadow>pipsprout'], [2.5, 2.5]);
-      if (p) this.addObj('gate', 'gate:pipsprout', { ...p, facing: 0 }, { prop: false, to: 'pipsprout', locked: () => !this.Q?.isActive('g8_hollow') && !this.Q?.isDone('g8_hollow'), ring: true });
+      const p = anchorOf(z, GATE_FALLBACK['goldmeadow>pipsprout']);
+      if (p) { const w = walkable(this.L, p.x, p.z, 5); A['gate:pipsprout'] = { x: w.x, z: w.z, facing: Math.PI }; this.addObj('gate', 'gate:pipsprout', { ...w, facing: Math.PI }, { prop: false, to: 'pipsprout', locked: () => !this.Q?.isActive('g8_hollow') && !this.Q?.isDone('g8_hollow') && !this.A.roster.unlocked?.pipsprout, ring: true, ringFx: true }); }
     }
+    if (this.id === 'pipsprout' && !A['gate:goldmeadow']) {
+      const p = anchorOf(z, GATE_FALLBACK['pipsprout>goldmeadow']);
+      if (p) { const w = walkable(this.L, p.x, p.z, 5); A['gate:goldmeadow'] = { x: w.x, z: w.z, facing: 0 }; this.addObj('gate', 'gate:goldmeadow', { ...w, facing: 0 }, { prop: false, to: 'goldmeadow', ring: true, ringFx: true }); }
+    }
+    for (const o of this.objs) if (o.ringFx) { try { const h = this.g.fx?.play?.('portal_flash', { pos: { x: o.x, y: this.L.heightAt(o.x, o.z), z: o.z } }); void h; o.portalFx = this.g.fx?.portal?.({ pos: { x: o.x, y: this.L.heightAt(o.x, o.z) + 0.05, z: o.z }, color: 'nature', radius: this.cfg.shrink ? 1.2 : 1.6, flat: true }); } catch { /* */ } }
     this.offs.push(this.L.on('death', ev => this.onDeath(ev)));
     this.g.audio?.music?.(this.cfg.music || 'field');
     this.g.audio?.ambience?.(this.cfg.ambience || 'meadow');
     this.g.ui?.banner?.(this.cfg.name || z.name, { kind: 'zone', sub: this.cfg.region || 'Valemont', dur: 3.2 });
-    if (this.cfg.shrink) this.shrink(true);
+    if (this.cfg.shrink || z.scale) this.shrink(true);
     if (z.fallbackLayout) warnOnce('fallback:' + this.id, `${this.id}: zone not built yet — using the story fallback layout`);
     this.attuneT = 0;
   }
   exit() {
     for (const f of this.offs) f(); this.offs = [];
-    for (const o of this.objs) { o.prop?.removeFromParent(); o.prop?.userData.dispose?.(); }
+    for (const o of this.objs) { o.prop?.removeFromParent(); o.prop?.userData.dispose?.(); o.portalFx?.stop?.(); }
     for (const d of this.drops) d.beam?.stop?.();
     this.objs = []; this.drops = []; this.channel = null;
     if (this.shrunk) this.shrink(false);
@@ -93,14 +98,14 @@ export class FieldMode {
     const z = this.zone, L = this.L, A = z.anchors;
     const list = FIELD_NPCS[this.id] || [], claimed = new Set(), place = [];
     const npcAnchors = Object.keys(A).filter(k => k.startsWith('npc:'));
-    for (const r of list) { const a = (r.at || []).find(n => A[n] && !claimed.has(n)); if (a) { claimed.add(a); place.push([r, a]); } }
-    const rest = list.filter(r => !place.some(p => p[0] === r));
-    for (const r of rest) { const a = npcAnchors.find(n => !claimed.has(n)); if (a) { claimed.add(a); place.push([r, a]); } else warnOnce('res:' + r.id, `${this.id}: no npc anchor left for ${r.id}`); }
+    // residents take the first free anchor they prefer (npc anchors are exclusive; poi anchors can be shared)
+    const pick = r => { for (const e of r.at || []) { const name = Array.isArray(e) ? e[0] : e; if (!A[name] || (name.startsWith('npc:') && claimed.has(name))) continue; if (name.startsWith('npc:')) claimed.add(name); const a = anchorOf(z, [e]); return a; } return null; };
+    for (const r of list) { const a = pick(r); if (a) place.push([r, a, 'full']); }
+    for (const r of list.filter(r => !place.some(p => p[0] === r))) { const n = npcAnchors.find(k => !claimed.has(k)); if (n) { claimed.add(n); place.push([r, A[n], 'full']); } else warnOnce('res:' + r.id, `${this.id}: no npc anchor left for ${r.id}`); }
     const gen = GENERIC_NPC[this.id] || [{ name: 'Local', npc: 'villager', lines: ['Safe travels.'] }];
-    npcAnchors.filter(n => !claimed.has(n)).forEach((n, i) => { const g = gen[i % gen.length], id = n.slice(4); place.push([{ id, ...g, name: NAMES[id] || g.name, title: TITLES[id] || g.title || '' }, n]); });
-    for (const [r, n] of place) {
-      const a = A[n];
-      const u = makeResident({ ...r, action: r.action || ACTIONS[r.id] || null }, { x: a.x, z: a.z, facing: a.facing ?? Math.PI });
+    npcAnchors.filter(n => !claimed.has(n)).forEach((n, i) => { const id = n.slice(4), g = LOCALS[id] || { ...gen[i % gen.length], name: NAMES[id] || gen[i % gen.length].name, title: TITLES[id] || gen[i % gen.length].title || '' }; place.push([{ id, ...g }, A[n], 'crowd']); });
+    for (const [r, a, lod] of place) {
+      const u = makeResident({ ...r, action: r.action || ACTIONS[r.id] || null }, { x: a.x, z: a.z, facing: a.facing ?? Math.PI }, { lod });
       L.add(u); this.npcs.push(u);
     }
   }
@@ -258,7 +263,8 @@ export class FieldMode {
   interactable() {
     const me = this.me; if (!me || this.channel) return null;
     let best = null, bd = Infinity;
-    for (const u of this.npcs) { if (!u.level || u.dead) continue; const d = me.distTo(u); if (d < 3.2 && d < bd) { bd = d; best = u; } }
+    const Q = this.Q, bonus = u => { const b = Q?.business?.(u.data.npcDef?.id); return b?.talk.length ? 1.6 : b?.offer.length ? 0.7 : 0; };
+    for (const u of this.npcs) { if (!u.level || u.dead) continue; const d = me.distTo(u); if (d > 3.2) continue; const sc = d - bonus(u); if (sc < bd) { bd = sc; best = u; } }
     for (const o of this.objs) {
       const r = o.kind === 'gate' ? 4.2 : o.kind === 'triport' ? 3.4 : o.kind === 'seed' ? 2.2 : 2.6;
       const d = dist(me.pos, o); if (d > r || d >= bd) continue;
@@ -366,7 +372,7 @@ export class FieldMode {
   }
   // ---------------------------------------------------------------- Pipsprout: shrink to Pip size
   shrink(on) {
-    const g = this.g, me = this.me, cam = g.cam, k = this.cfg.shrink || 0.35;
+    const g = this.g, me = this.me, cam = g.cam, k = this.zone?.scale || this.cfg.shrink || 0.35;
     if (on) {
       this.shrunk = k;
       this.camSave = { zoom: cam.zoom, min: cam.minDist, max: cam.maxDist, dist: cam.dist };
@@ -430,7 +436,7 @@ for (const id of FIELD_IDS) registerZoneMode(id, (session, zone, o) => new Field
 registerZoneMode('field', (session, zone, o) => new FieldMode(session, zone, o));
 registerPlugin({
   id: 'field-travel',
-  init(s) { this.s = s; },
+  init(s) { this.s = s; s.storyTravel = (to, o) => travel(s, to, o); },
   interact(t) {
     const s = this.s; if (!t?.portal || t.qobj) return false;
     const here = s.game.zone?.id;
@@ -440,6 +446,8 @@ registerPlugin({
   },
 });
 
+/** only open gates we know how to arrive through: the story fields, Solhaven, and zones another owner registered a mode for */
+const travelable = id => FIELD_IDS.includes(id) || id === 'solhaven' || !!ZONE_MODES[id];
 // ------------------------------------------------------------------------------------------------ small tables
 const weighted = mix => { const tot = mix.reduce((a, m) => a + m[1], 0); let r = Math.random() * tot; for (const [t, w] of mix) { r -= w; if (r <= 0) return t; } return mix[0][0]; };
 const FIELD_MOB_NAMED = { grizzlefang: 1, broodmother: 1, hollow_knight: 1, big_beetle: 1, ash_warlord: 1, rusk: 1, blightroot: 1 };

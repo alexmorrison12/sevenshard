@@ -75,8 +75,11 @@ class Companions {
     this.pet = { m, x: me.pos.x + 1, z: me.pos.z + 1, f: 0 };
   }
   dropPet() { if (!this.pet) return; this.g.scene.remove(this.pet.m.root); this.pet.m.dispose?.(); this.pet = null; }
+  get songs() { return SONGS; }
   async songMenu() {
     const s = this.s, learned = s.account.roster.songs || ['homeward'];
+    // the radial song wheel (UI); the dialog below is the fallback
+    if (s.windowData && s.ui.open) { const d = s.windowData('songs'); if (d) { s.ui.open('songs', d); if (s.ui.isOpen?.('songs')) return; } }
     const choices = learned.filter(id => SONGS[id]).map(id => ({ id, text: `${SONGS[id].name} — ${SONGS[id].desc}`, kind: 'talk' }));
     choices.push({ id: 'bye', text: 'Put the instrument away.', kind: 'leave' });
     const pick = await s.ui.dialog({ name: 'Songs', title: 'Your instrument' }, [{ text: 'Which song will you play?', choices }]);

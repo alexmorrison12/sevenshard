@@ -809,11 +809,11 @@ registerPlugin({
   },
   update(dt) { DUELS.active?.update(dt); },
   hud(h) {
+    const m = this.s.game.mode;
+    if (m?.kind === 'pvp' && m.questHud) { try { (h.quests ||= []).unshift(m.questHud()); } catch (e) { console.error('[pvp hud]', e); } }
     const d = DUELS.active; if (!d || d.state === 'over' || !d.u) return;
     h.target = { name: d.u.name, level: 60, hp: d.u.hp, hpMax: d.u.hpMax, kind: 'player', title: 'Duel' };
     h.timer = d.state === 'fight' ? { label: 'Duel', left: Math.max(0, DUEL.time - d.t), urgent: DUEL.time - d.t < 15 } : { label: 'Duel starts', left: Math.max(0, d.cd) };
-    const m = this.s.game.mode;
-    if (m?.kind === 'pvp' && m.questHud) { try { (h.quests ||= []).unshift(m.questHud()); } catch { /* */ } }
   },
   npcChoices(npcId) {
     if (npcId !== 'pvp') return [];

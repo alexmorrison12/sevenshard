@@ -23,15 +23,17 @@ export async function build(zone, o = {}) {
       // the Sunwheel cabinet (reels spin at runtime) and the dice table
       const sx = -28, sz = 1.5, sy = H(sx, sz);
       kit.add('marble', box(3.4, 0.4, 2.2, 1), M(sx, sy + 0.2, sz), { tint: 0xf2eadc, yGround: sy });
-      kit.add('gold', box(3.0, 3.4, 1.6, 1), M(sx, sy + 2.1, sz - 0.1), { tint: 0xd8a040 });
+      kit.add('timber', box(3.0, 3.4, 1.6, 1), M(sx, sy + 2.1, sz - 0.1), { tint: 0x6a2a2a });
+      for (const s of [-1, 1]) kit.add('gold', box(0.16, 3.5, 1.7, 1), M(sx + s * 1.5, sy + 2.1, sz - 0.1), { tint: 0xb88a3a, ao: false });
+      kit.add('gold', box(3.2, 0.18, 1.8, 1), M(sx, sy + 3.85, sz - 0.1), { tint: 0xb88a3a, ao: false });
       kit.add('paint', box(2.5, 1.3, 0.1, 1), M(sx, sy + 2.3, sz + 0.72), { tint: 0x2a1030, ao: false });
       kit.add('gold', cyl(1.45, 1.45, 0.2, 24, 1), M(sx, sy + 4.2, sz, 0, 1, 1, 1, Math.PI / 2), { tint: 0xffd060, ao: false });
-      kit.glow(new THREE.TorusGeometry(1.35, 0.06, 6, 40), M(sx, sy + 4.2, sz + 0.12), 0xffe080, 2.6);
-      kit.light(sx, sy + 3.5, sz + 1.5, 0xffc860, 5, 9, 0.1);
+      kit.glow(new THREE.TorusGeometry(1.35, 0.05, 6, 40), M(sx, sy + 4.2, sz + 0.12), 0xffe080, 1.5);
+      kit.light(sx, sy + 4.4, sz + 2.2, 0xffc860, 1.6, 8, 0.1);
       kit.block(S.rect(sx, sz, 3.4, 2.2), 0.3);
       const dx = -9, dz = 3.5, dy = H(dx, dz);
       kit.add('planks', cyl(1.6, 1.6, 0.14, 16, 1), M(dx, dy + 1.0, dz), { tint: 0x2a6a3a, ao: false });
-      kit.add('gold', new THREE.TorusGeometry(1.6, 0.08, 6, 32).rotateX(Math.PI / 2), M(dx, dy + 1.05, dz), { tint: 0xe0b050, ao: false });
+      kit.add('gold', new THREE.TorusGeometry(1.6, 0.08, 6, 32).rotateX(Math.PI / 2), M(dx, dy + 1.05, dz), { tint: 0xa8782a, ao: false });
       kit.add('timber', cyl(0.25, 0.4, 1.0, 8, 1), M(dx, dy + 0.5, dz), { tint: 0x5a3a20 });
       kit.block(S.circle(dx, dz, 1.7), 0.3);
       for (const a of [0.6, 2.5]) P.bench(kit, dx + Math.cos(a) * 2.6, dy, dz + Math.sin(a) * 2.6, Math.atan2(Math.cos(a), Math.sin(a)) + Math.PI, { w: 1.4 });
@@ -43,7 +45,7 @@ export async function build(zone, o = {}) {
       for (let i = 0; i < 3; i++) { const x = -1 + i * 4, z = 24 + i * 3; const y = H(x, z); kit.add('timber', cyl(0.06, 0.08, 1, 6, 1), M(x, y + 0.5, z), { ao: false }); kit.add('planks', cyl(0.6, 0.6, 0.06, 12, 1), M(x, y + 1.02, z), { tint: 0xe8d8b8, ao: false }); kit.add('cloth', new THREE.ConeGeometry(1.4, 0.6, 8), M(x, y + 2.4, z), { tint: i % 2 ? 0xc03a4a : 0xf6e8c8, ao: false }); kit.add('timber', cyl(0.04, 0.04, 2.3, 5, 1), M(x, y + 1.2, z), { ao: false }); }
       // crates of "donations" by the door, a golden coin fountain
       P.crateStack(kit, -30, H(-30, -1), -1, 0.4, 5);
-      { const fx = -18, fz = 6, fy = H(fx, fz); kit.add('marble', cyl(1.8, 2, 0.6, 20, 1), M(fx, fy + 0.3, fz), { tint: 0xf0e8dc }); kit.add('gold', cyl(0.3, 0.5, 1.6, 10, 1), M(fx, fy + 1.1, fz), { tint: 0xf0c050 }); kit.add('gold', cyl(0.9, 0.9, 0.12, 20, 1), M(fx, fy + 1.95, fz, 0, 1, 1, 1, 0.3), { tint: 0xffd060, ao: false }); kit.block(S.circle(fx, fz, 2), 0.3); }
+      { const fx = -18, fz = 6, fy = H(fx, fz); kit.add('marble', cyl(1.8, 2, 0.6, 20, 1), M(fx, fy + 0.3, fz), { tint: 0xf0e8dc }); kit.add('gold', cyl(0.3, 0.5, 1.6, 10, 1), M(fx, fy + 1.1, fz), { tint: 0xb08030 }); kit.add('gold', cyl(0.9, 0.9, 0.12, 20, 1), M(fx, fy + 1.95, fz, 0, 1, 1, 1, 0.3), { tint: 0xc09038, ao: false }); kit.block(S.circle(fx, fz, 2), 0.3); }
       for (let i = 0; i < 14; i++) dec.add(rng.pick(['petals', 'leaves', 'pebbles']), rng.range(-40, 40), rng.range(-30, 40), { size: rng.range(1, 2.2), alpha: 0.7 });
       // anchors
       c.anchor('npc:baroness', -18, 4.2, Math.PI);

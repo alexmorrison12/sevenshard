@@ -183,7 +183,6 @@ export async function build(zone, { quality = 1 } = {}) {
   const dec = new Decals(H);
   for (let i = 0; i < 22; i++) { const a = rng.range(0, Math.PI * 2), rr = rng.range(4, R - 2); dec.add(rng.pick(['pebbles', 'cracks', 'stain', 'rubble']), Math.cos(a) * rr, Math.sin(a) * rr, { size: rng.range(1.5, 3.2), alpha: 0.55, tint: 0xf0d8b0 }); }
   for (let i = 0; i < 10; i++) { const a = rng.range(0, Math.PI * 2), rr = rng.range(8, R - 3); dec.add('rubble', Math.cos(a) * rr, Math.sin(a) * rr, { size: rng.range(1, 2), alpha: 0.7, tint: 0xf4e6cc }); }
-  dec.add('sunmark', 0, -2, { size: 7.5, rot: 0.2, alpha: 0.55, tint: 0xf0d0a0 });
   const dm = dec.build(); if (dm) zone.root.add(dm);
   const pool = new LightPool(zone.root, kit.lights, 2);
   const sand = buildParticles('sand', { quality, count: 700 });

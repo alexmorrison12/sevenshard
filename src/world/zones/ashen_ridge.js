@@ -18,7 +18,7 @@ import { makeEnv } from '../env.js';
 import { paintMinimap } from '../minimap.js';
 import { buildLava } from '../water.js';
 import { spike } from '../cliffs.js';
-import { FieldGround, DistGrid, FieldKit, Anchors, snapAnchors, seedSpots, spline, along, paintPath, scatter, bump, faceTo, S, RNG, smoothstep, lerp, clamp } from '../fields/common.js';
+import { FieldGround, DistGrid, FieldKit, Anchors, snapAnchors, aliasNumbered, seedSpots, spline, along, paintPath, scatter, bump, faceTo, S, RNG, smoothstep, lerp, clamp } from '../fields/common.js';
 import { FieldGrass, FieldFlora, tallGrassGeo } from '../fields/flora.js';
 import { buildSmoke, buildDrifters, buildLavaFall } from '../fields/fx.js';
 import * as F from '../fields/props.js';
@@ -132,7 +132,7 @@ export async function build(zone, { quality = 1 } = {}) {
   // --- the Legion Fortress (its own kit: walls between the camera and the hero dissolve)
   const outer = kit;
   const fk = new FieldKit({ seed: 48, chunk: 60, fade: true });
-  const FY = 5.2, FH = () => FY;
+  const FY = 5.2, FH = () => FY, SH = [0, -109.2];
   { const kit = fk;
   X.fortressGate(kit, flags, GATE[0], FY, GATE[1], 0, { w: 10, h: 10 });
   X.spikeWall(kit, -40, -68, -13.6, -68, FH, { h: 6.5, seed: 1 }); X.spikeWall(kit, 13.6, -68, 40, -68, FH, { h: 6.5, seed: 2 });
@@ -151,7 +151,6 @@ export async function build(zone, { quality = 1 } = {}) {
   for (const s of [-1, 1]) spike(kit, s * 1.6, FY + 6.6, -115.2, { h: 3.2, r: 0.35, bend: 1.4, dir: s > 0 ? 0 : Math.PI, mat: 'bone', tint: 0x2a2424, block: false });
   kit.glow(box(2.4, 0.1, 0.1, 1), M(0, FY + 6.0, -114.75), 0xff3010, 2.6);
   // the Shard: a floating golden crystal over a pedestal, held by chains
-  const SH = [0, -109.2];
   kit.add('darkrock', cyl(0.8, 1.0, 1.4, 8, 1), M(SH[0], FY + 1.9, SH[1]), { tint: 0x4a4240 });
   kit.glow(new THREE.OctahedronGeometry(0.55, 0).scale(0.8, 1.6, 0.8), M(SH[0], FY + 4.0, SH[1]), 0xffd070, 4.2);
   kit.light(SH[0], FY + 4.0, SH[1], 0xffd070, 8, 14, 0.05);
@@ -362,6 +361,7 @@ export async function build(zone, { quality = 1 } = {}) {
     { name: 'the Legion banners', at: [[-7.2, -46.5], [23, -83]] },
   ];
   for (const s of seedSpots('ashen_ridge', SPOTS, 18)) A.add(`seed:${s.i}`, s.x, s.z, 0, { hint: `${s.where} ${s.name}` });
+  aliasNumbered(zone, 'vista');
   snapAnchors(zone, nav, 6, 'ashen_ridge');
 
   // ---------------------------------------------------------------- regions, env, minimap

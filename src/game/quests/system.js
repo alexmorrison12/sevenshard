@@ -52,6 +52,7 @@ export class QuestSystem {
     return q;
   }
   def(id) { return QUESTS[id] || null; }
+  get all() { return QUEST_LIST; }
   entry(id) { return this.st?.active.find(e => e.id === id) || null; }
   isActive(id) { return !!this.entry(id); }
   isDone(id) { return !!this.st?.done.includes(id); }
@@ -367,19 +368,20 @@ export class QuestSystem {
   // ---------------------------------------------------------------- interaction
   interactable() {
     const me = this.me; if (!me || this.channel || cutsceneActive()) return null;
-    let best = null, bd = Infinity;
+    // whoever the story wants you to talk to wins over whoever happens to be a step closer
+    const bonus = u => { const id = u?.data?.npcDef?.id; if (!id || u.data.npcDef.object) return 0; const b = this.business(id); return b.talk.length ? 1.6 : b.offer.length ? 0.7 : 0; };
+    let best = null, bs = Infinity;
     const o = this.world.nearestObj(me);
     if (o) {
-      bd = dist(o, me.pos);
+      bs = dist(o, me.pos);
       best = o.launch ? { name: o.s.launchName || o.q.title, label: o.s.launchLabel || 'Enter', portal: 'quest:launch', pos: { x: o.x, z: o.z }, data: { npcDef: { object: true } }, qobj: o }
         : { name: o.s.name || o.q.title, label: o.s.label || 'Use', pos: { x: o.x, z: o.z }, data: { npcDef: { object: true } }, qobj: o };
     }
     // story NPCs we spawned (the zone's own mode doesn't know about them)
-    for (const u of this.world.spawned.values()) { if (!u.level || u.dead || !u.data.npcDef) continue; const d = me.distTo(u); if (d < 3.2 && d < bd) { bd = d; best = u; } }
-    if (!best) return null;
-    // the mode's own target wins when it is clearly closer
+    for (const u of this.world.spawned.values()) { if (!u.level || u.dead || !u.data.npcDef) continue; const d = me.distTo(u); if (d > 3.2) continue; const sc = d - bonus(u); if (sc < bs) { bs = sc; best = u; } }
     const other = this.g.mode?.interactable?.();
-    if (other && other !== best && other.pos && dist(other.pos, me.pos) < bd - 0.4) return null;
+    if (!best) return null;
+    if (other && other !== best && other.pos) { const so = dist(other.pos, me.pos) - bonus(other); if (so < bs - 0.2) return null; }
     return best;
   }
   interact(t) {

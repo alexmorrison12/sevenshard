@@ -1,6 +1,6 @@
 // Chapter IV — Thornwood (Lv 25–40): the Warden, the spider hollows, the last monk of a ruined abbey, the Thorn cult,
 // a frightened defector, the Thornking and his corrupted seedling — and the Sunseed pointing east, toward fire.
-const WARDEN = ['npc:warden', 'spawn'];
+const WARDEN = ['npc:warden', 'poi:wardens_camp', 'spawn'];
 const ABBEY = ['poi:abbey', 'npc:monk', 'spawn'];
 const GROVE = ['poi:treant_grove', 'poi:hollow_oak', 'npc:thornking', 'elite:2', 'spawn'];
 
@@ -71,11 +71,11 @@ export default {
     { id: 't5_defector', kind: 'msq', title: 'A Nervous Cultist', level: 33, prereq: ['t4_veil'],
       desc: 'A young cultist ran away from the Thorn. He knows where the Sunseed is.',
       steps: [
-        { type: 'talk', npc: 'herbalist', text: 'Talk to Nan Wicket at her crooked hut', lines: [
-          'Shh! He’s in the back. Poor lamb. Joined for the robes, stayed because he was scared, ran because he was more scared.',
-          'Be gentle with him. He faints.',
+        { type: 'talk', npc: 'herbalist', text: 'Talk to Nan Wicket at the Wardens’ Camp', lines: [
+          'Shh! Not so loud. Poor lamb. Joined for the robes, stayed because he was scared, ran because he was more scared.',
+          'He’s hiding out in the Witch Lights marsh, west of here, with Old Mother Hesk. Be gentle with him. He faints.',
         ] },
-        { type: 'choice', npc: 'cult_defector', text: 'Talk to Morrow', lines: [
+        { type: 'choice', npc: 'cult_defector', text: 'Find Morrow in the Witch Lights marsh', lines: [
           'Please don’t hurt me. I only held the candles. And the knives. But mostly the candles.',
           'The Sunseed is in the Blightroot’s grove. The High Zealot feeds its light to the tree a little every night.',
           'When it blooms, the Thornking dies and the whole forest turns to thorns. Forever. That’s the plan. It’s a bad plan. I said so. Quietly.',

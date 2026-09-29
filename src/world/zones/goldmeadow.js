@@ -19,7 +19,7 @@ import { paintMinimap } from '../minimap.js';
 import { buildWater } from '../water.js';
 import { boulder } from '../cliffs.js';
 import { blob } from '../../engine/geom.js';
-import { FieldGround, DistGrid, FieldKit, Anchors, snapAnchors, seedSpots, spline, along, paintPath, pieces, scatter, bump, ramp, faceTo, waterEnv, S, RNG, clamp, smoothstep, lerp } from '../fields/common.js';
+import { FieldGround, DistGrid, FieldKit, Anchors, snapAnchors, aliasNumbered, seedSpots, spline, along, paintPath, pieces, scatter, bump, ramp, faceTo, waterEnv, S, RNG, clamp, smoothstep, lerp } from '../fields/common.js';
 import { FieldGrass, FieldFlora, sunflowerGeo, reedGeo, tallGrassGeo, mushroomGeo } from '../fields/flora.js';
 import { Mist, buildSmoke, buildDrifters, buildButterflies } from '../fields/fx.js';
 import * as F from '../fields/props.js';
@@ -472,7 +472,7 @@ export async function build(zone, { quality = 1 } = {}) {
   A.add('fieldboss', STONES[0], STONES[1] + 4, Math.PI, { r: 17 });
   A.add('chaosgate', CHAOS[0], CHAOS[1], Math.PI, { r: 10 });
   // trade-skill nodes
-  A.node('forage', 30, 44); A.node('forage', ORCHARD[0] - 10, ORCHARD[1] - 6); A.node('forage', -50, 8); A.node('forage', SUNHILL[0] + 12, SUNHILL[1] - 12);
+  A.node('forage', 30, 44); A.node('forage', ORCHARD[0] - 10, ORCHARD[1] - 6); A.node('forage', -50, 8);
   A.node('log', -86, -24); A.node('log', 70, -84); A.node('log', -74, 52);
   A.node('mine', DENS[0] + 12, DENS[1] + 2); A.node('mine', -96, 20);
   A.node('hunt', HUNTER[0] - 8, HUNTER[1] - 6);
@@ -512,6 +512,7 @@ export async function build(zone, { quality = 1 } = {}) {
     { name: 'the boar wallow', at: [at(WALLOW[0] - 5, WALLOW[1] - 9)] },
   ];
   for (const s of seedSpots('goldmeadow', SPOTS, 24)) A.add(`seed:${s.i}`, s.x, s.z, 0, { hint: `${s.where} ${s.name}` });
+  aliasNumbered(zone, 'vista');
   snapAnchors(zone, nav, 6, 'goldmeadow');
 
   // ---------------------------------------------------------------- regions, env, minimap

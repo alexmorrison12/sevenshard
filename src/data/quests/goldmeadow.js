@@ -130,22 +130,22 @@ export default {
           'Three. Warm as a hearth, all of them. (She holds one to her ear.) It’s humming the same chord as your Shard.',
           'The Pips must have a vault full of these. And the Legion wants every one — because somewhere among them is a way to find the Shards.',
           'We need to see this Hollow of theirs. Sprig? Sprig, where do you live?',
-          { s: 'sprig', t: 'PIP! (Sprig points west, toward the hermit’s hollow, and makes a very small “shrinking” gesture.)' },
+          { s: 'sprig', t: 'PIP! (Sprig points west, toward the Standing Stones and their ring of fairy mushrooms, and makes a very small “shrinking” gesture.)' },
         ] },
       ],
       rewards: { xp: 1.2, items: { card_pack_pip: 1 } } },
 
     { id: 'g8_hollow', kind: 'msq', title: 'Into the Hollow', level: 20, prereq: ['g7_seeds'],
-      desc: 'The way to Pipsprout Hollow is a ring of mushrooms behind the hermit’s hut.',
+      desc: 'The way to Pipsprout Hollow is the ring of fairy mushrooms around the Standing Stones.',
       steps: [
-        { type: 'choice', npc: 'sprig', text: 'Meet Sprig at the hermit’s hollow', lines: [
-          '(Sprig hops onto a ring of tiny mushrooms behind the hermit’s hut and beckons.)',
+        { type: 'choice', npc: 'sprig', text: 'Meet Sprig at the Standing Stones', lines: [
+          '(Sprig hops into the ring of fairy mushrooms around the Standing Stones and beckons.)',
           'Pip! (It waves you into the ring. You have a sudden, strong feeling that you are about to become much smaller.)',
         ], choices: [
           { id: 'go', text: 'Step into the mushroom ring.', reply: ['(Sprig claps. The mushrooms begin to glow.)'] },
           { id: 'how', text: 'Wait — how small?', reply: ['(Sprig holds up two fingers, very close together. Then brings them closer.)'] },
         ] },
-        { type: 'zone', zone: 'pipsprout', text: 'Enter Pipsprout Hollow (the mushroom ring behind the hermit’s hut)' },
+        { type: 'zone', zone: 'pipsprout', text: 'Step into the fairy ring at the Standing Stones' },
       ],
       rewards: { xp: 1.0, unlock: ['pipsprout'] } },
 

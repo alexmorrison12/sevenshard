@@ -101,6 +101,7 @@ export async function build(zone, { quality = 1, onProgress = () => {} } = {}) {
   // ---------------------------------------------------------------- weather: storm clouds & the Moonveil mist
   const clouds = new StormClouds(STORMS, { quality });
   zone.root.add(clouds.mesh);
+  zone.sea.clouds = clouds;                           // sailing flashes them with lightning and thins the Moonveil mist at night
 
   // ---------------------------------------------------------------- nav, anchors, regions
   zone._nav = C.nav; zone.nav = C.nav.toContract();

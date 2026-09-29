@@ -145,6 +145,6 @@ export function view(account) {
   const m = mods(account);
   return { deck: deck.slice(), deckAwaken: deck.reduce((a, id) => a + (id ? r.cards[id]?.awaken || 0 : 0), 0), collection, sets, mods: m.mods, active: m.active,
     packs: Object.keys(CARD_PACKS).map(id => ({ id, name: CARD_PACKS[id].name, count: account.count(id) })),
-    choice: r.cardChoice ? { pack: r.cardChoice.pack, options: r.cardChoice.options.map(id => ({ id, name: CARDS[id].name, grade: CARDS[id].grade })) } : null,
+    choice: r.cardChoice ? { pack: r.cardChoice.pack, options: r.cardChoice.options.map(id => ({ id, name: CARDS[id].name, grade: CARDS[id].grade, icon: cardIcon(id) })) } : null,
     owned: collection.filter(c => c.owned).length, total: collection.length };
 }

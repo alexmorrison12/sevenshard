@@ -15,11 +15,11 @@ async function rpc(fn, body) {
   try {
     const res = await fetch(`${SUPABASE_URL.replace(/\/$/, '')}/rest/v1/rpc/${fn}`, {
       method: 'POST', signal: ctl?.signal,
-      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+      headers: { apikey: SUPABASE_KEY, 'Content-Type': 'application/json' },   // like Everdawn: the publishable key goes in apikey only
       body: JSON.stringify(body),
     });
     const data = await res.json().catch(() => null);
-    if (!res.ok) throw new Error(data?.message || `leaderboard ${res.status}`);
+    if (!res.ok) { const err = new Error(data?.message || `leaderboard ${res.status}`); err.status = res.status; throw err; }
     return data;
   } finally { clearTimeout(t); }
 }

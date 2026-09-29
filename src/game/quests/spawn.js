@@ -87,12 +87,15 @@ export function makeResident(def, at, o = {}) {
     u.type = def.creature; u.data.tpl = { model: def.creature }; u.data.variant = def.variant || undefined; u.data.look = null;
     const cs = def.scale || 1; u.data.scale = cs; u.height = (def.creature === 'pip' ? 0.7 : def.creature === 'treant' ? 4.2 : 1.2) * cs; u.radius = def.creature === 'treant' ? 1.4 * cs : 0.4;
   } else {
-    u.data.npc = def.npc || 'villager'; u.data.look = {}; u.data.sex = def.sex || 'm';
+    u.data.npc = def.npc || 'villager'; u.data.look = {}; u.data.sex = def.sex || 'm'; u.data.lod = o.lod || 'full';
+    // build the model here so every local gets their own face (seeded by id) and background folk use the cheap LOD
+    u.model = heroModel({ cls: null, sex: u.data.sex, npc: u.data.npc, look: {}, lod: u.data.lod, seed: hashId(def.id || def.name) });
   }
   if (o.story) u.data.storyNpc = def.id;
   return u;
 }
 export const storyDef = id => STORY_NPCS[id] ? { id, ...STORY_NPCS[id] } : null;
+const hashId = str => { let h = 7; for (const c of String(str || '')) h = (h * 31 + c.charCodeAt(0)) % 9973; return h; };
 
 /**
  * A friendly fighter (Brannoc in the prologue, sappers, escorts): a hero-model unit on the player's team with a mob brain

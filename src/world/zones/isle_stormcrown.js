@@ -36,7 +36,7 @@ export async function build(zone, o = {}) {
     },
     paintOpts: { grassAt: 2.2, moss: true, dirt: false },
     grassDensity: 0.35,
-    storm: 0.45, swell: 1,
+    storm: 0.45, swell: 1, groundTint: [1, 1, 1],
     decorate(c) {
       const { kit, H, rng, dec } = c;
       for (let i = 0; i < 22; i++) dec.add(rng.pick(['scorch', 'cracks', 'rubble']), rng.range(-26, 26), rng.range(-30, 24), { size: rng.range(1, 2.6), alpha: 0.7 });

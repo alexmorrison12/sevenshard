@@ -211,6 +211,22 @@ export default {
       ],
       rewards: { gold: 400, items: { solar_blessing: 4, leapstone: 20 } } },
 
+    { id: 's_tumble', kind: 'side', title: 'Homesick Pip', level: 21, giver: 'rapport3', prereq: ['g8_hollow'],
+      desc: 'Pip Tumbleroot misses the dewdrops of home.',
+      offer: [
+        'Pip… pip. (Tumbleroot mimes a big round droplet, then hugs himself tightly.)',
+        '(He points at you, then west, then makes himself very small. He seems to know you have been to Pipsprout Hollow.)',
+        '(He would very much like a dewdrop from the pond by the Petal Pier. A fresh one.)',
+      ],
+      steps: [
+        { type: 'interact', zone: 'pipsprout', at: ['poi:dewdrop_pond', 'poi:petal_pier', 'spawn'], name: 'Morning Dewdrop', label: 'Collect', dur: 1.5, anim: 'pickup', doneSfx: 'pip_squeak', say: 'The dewdrop is the size of a melon at this scale. You roll it very, very carefully.', text: 'Collect a morning dewdrop in Pipsprout Hollow' },
+        { type: 'talk', npc: 'rapport3', zone: 'solhaven', text: 'Bring the dewdrop to Pip Tumbleroot in Solhaven', lines: [
+          'PIP! (Tumbleroot holds the dewdrop up to the light. It holds the whole sky.)',
+          '(He sniffles, then pats your hand. He is very small. His pats are very sincere.)',
+        ] },
+      ],
+      rewards: { xp: 0.5, items: { card_pack_pip: 1, food3: 2 } } },
+
     { id: 's_letters', kind: 'side', title: 'Letters from Brighthold', level: 7, giver: 'refugee_wenna', prereq: ['c1_harbour'],
       desc: 'A baker from Brighthold is looking for her brother.',
       offer: [

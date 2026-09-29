@@ -86,8 +86,8 @@ const ST = {
   hurt: { top: lin(0xff9a8a, 1.0), bot: lin(0xe01818, 1.0), size: 26, anim: 0 },
   stagger: { top: lin(0xe8c8ff, 1.0), bot: lin(0x9a4aff, 1.0), size: 24, anim: 0 },
 };
-// fan-out slots for simultaneous numbers on one target (x, y in em): newest takes the next slot
-const FAN = [[0, 0], [1.15, 0.55], [-1.15, 0.55], [0.35, 1.1], [2.1, 0.15], [-2.1, 0.15], [-0.6, 1.6], [1.4, 1.6]];
+// stacking slots for simultaneous numbers on one target (x drift, y offset in em): a zig-zag ladder, newest on top
+const FAN = [[0, 0], [0.45, 1.05], [-0.45, 2.1], [0.45, 3.15], [-0.45, 4.2], [0.45, 5.25], [-0.45, 6.3], [0.45, 7.35]];
 
 export class Numbers {
   constructor(fx, n = 6144) {
@@ -169,10 +169,10 @@ export class Numbers {
     }
     const rb = this.rHead * 4; R[rb] = p.x; R[rb + 1] = p.z; R[rb + 2] = now; this.rHead = (this.rHead + 1) % 48;
     const slot = near % FAN.length, fan = FAN[slot];
-    const yOff = fan[1] * size + (Math.random() - 0.5) * 4;
-    const drift = fan[0] * size + (Math.random() - 0.5) * 10;
-    const life = anim === 2 ? 1.15 : anim === 1 ? 1.05 : 0.9;
     const len = this.fmt(value, st.prefix);
+    const yOff = fan[1] * 33 + (Math.random() - 0.5) * 4;              // fixed rung height: crits and normals share the ladder
+    const drift = fan[0] * size * Math.max(1, len * 0.4) + (Math.random() - 0.5) * 10;   // side slots clear the run's width
+    const life = anim === 2 ? 1.15 : anim === 1 ? 1.05 : 0.9;
     this.writeRun(len, p.x, p.y, p.z, now, size, top, bot, anim, yOff, drift, life);
     const tag = o.tag ?? st.tag;
     if (tag) {

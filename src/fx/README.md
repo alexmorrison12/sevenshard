@@ -113,8 +113,8 @@ fx.telegraph({ shape: 'circle'|'cone'|'rect'|'line'|'donut'|'wedges', pos, dir, 
 ### Damage numbers
 `fx.number(pos, value, { style, crit, scale, tag })` — WebGL instanced glyph quads (one draw call), sized in a
 900-px virtual view so they read the same at any resolution. `value`: number (thousands separators) or string.
-Pop (overshoot) → float up with a slight drift → fade. Several numbers on one target fan out (8 slots) instead of
-overlapping.
+Pop (overshoot) → float up with a slight drift → fade. Numbers landing on one target within 0.45 s stack into a
+zig-zag ladder (8 rungs, newest on top) instead of overlapping.
 
 | style | look | size |
 |---|---|---|
@@ -246,9 +246,12 @@ One `THREE.Group` (`fx.group`). Draw calls (only while something of that kind is
 telegraphs 1, decals 1, rings 2, ribbons (trails + beams + lightning + chains + tracers) 1, rocks 1, crystals 1,
 bubbles 1, pillars 1, portals 1, props ≤ 7, numbers 1 — ≤ 21 total. Particles are written once at spawn and animated
 on the GPU; telegraphs/decals/slashes/rings/numbers/debris are analytic instanced buffers (written once).
-- Measured (1600×900, headless Chrome/Metal, lab `high`): stress (4 players × 60 mobs + rain) max 14–15 FX draw calls,
-  ~2.6–3.3 k live particles, 70–100 tasks, `fx.update` 0.1–0.2 ms avg (p95 0.2–0.5 ms); 60 fps on an idle machine.
-  Init ~0.2 s (textures).
+- Measured (1600×900, headless Chrome/Metal, lab `high`): stress (4 players × 60 mobs + rain, party dimmed 0.35) max
+  14–15 FX draw calls, ~2.6–3.3 k live particles, 70–160 tasks, `fx.update` 0.15–0.25 ms avg (p95 0.3–0.5 ms);
+  60 fps (vsync) on an unloaded machine. Init ~0.2 s (textures).
+- Time-limited instanced pools (slashes, rings, walls, pillars, rocks, crystals) reuse the lowest expired slot and draw
+  only up to the highest live one, so the FX vertex load follows what is on screen (stress: ~160–220 k FX triangles,
+  mostly the two particle pools, instead of ~430 k).
 - Steady state is allocation-free apart from engine number boxing: an idle `fx.update` allocates ~0.1 KB/frame,
   ribbons/beams write through typed-array scratch, upload ranges are pooled.
 - Several `fx.update()` calls per rendered frame are safe (pending GPU upload ranges are merged, never dropped).

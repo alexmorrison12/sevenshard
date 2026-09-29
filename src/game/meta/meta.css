@@ -77,13 +77,18 @@
 
 /* ---------------------------------------------------------------------------------------------------- ribbons */
 .ss-mx-layer .ss-mx-ribbons { position: absolute; right: 14px; top: 96px; display: flex; flex-direction: column; align-items: stretch; gap: 8px; width: 276px; pointer-events: none; }
-.ss-mx-layer .ss-mx-ribbons .ss-mx-rib { min-height: 0; padding: 8px 6px 9px 10px; gap: 9px; align-items: flex-start; }
+.ss-mx-layer .ss-mx-ribbons .ss-mx-rib { min-height: 0; padding: 8px 6px 9px 10px; gap: 6px 9px; align-items: flex-start; flex-wrap: wrap; }
+.ss-mx-layer .ss-mx-ribbons .ss-mx-rib-t { flex: 1 1 160px; min-width: 160px; }
+.ss-mx-layer .ss-mx-ribbons .ss-mx-rib > .ss-close { order: 3; }
+.ss-mx-layer .ss-mx-ribbons .ss-mx-rib > .ss-btn { order: 4; margin-left: 41px; }
 .ss-mx-layer .ss-mx-ribbons .ss-mx-rib-ic, .ss-mx-layer .ss-mx-ribbons .ss-mx-rib-gl { width: 32px; height: 32px; font-size: 17px; margin-top: 2px; }
 .ss-mx-layer .ss-mx-ribbons .ss-mx-rib-t b { font-size: 13.5px; white-space: normal; }
 .ss-mx-layer .ss-mx-ribbons .ss-mx-rib-t span { white-space: normal; font-size: 11.5px; line-height: 1.3; }
-.ss-mx-layer .ss-mx-ribbons .ss-mx-rib .ss-btn { align-self: center; }
+
 .ss-in-game .ss-mx-layer .ss-mx-ribbons { right: auto; left: 50%; top: 74px; transform: translateX(-50%); width: 520px; align-items: center; }
-.ss-in-game .ss-mx-layer .ss-mx-ribbons .ss-mx-rib { min-height: 58px; padding: 9px 8px 9px 12px; gap: 12px; align-items: center; }
+.ss-in-game .ss-mx-layer .ss-mx-ribbons .ss-mx-rib { min-height: 58px; padding: 9px 8px 9px 12px; gap: 12px; align-items: center; flex-wrap: nowrap; }
+.ss-in-game .ss-mx-layer .ss-mx-ribbons .ss-mx-rib > .ss-btn { order: 2; margin-left: 0; }
+.ss-in-game .ss-mx-layer .ss-mx-ribbons .ss-mx-rib > .ss-close { order: 3; }
 .ss-in-game .ss-mx-layer .ss-mx-ribbons .ss-mx-rib-ic, .ss-in-game .ss-mx-layer .ss-mx-ribbons .ss-mx-rib-gl { width: 40px; height: 40px; font-size: 22px; margin-top: 0; }
 .ss-in-game .ss-mx-layer .ss-mx-ribbons .ss-mx-rib-t b { font-size: 15px; white-space: nowrap; }
 .ss-in-game .ss-mx-layer .ss-mx-ribbons .ss-mx-rib-t span { white-space: nowrap; font-size: 12px; }
@@ -218,7 +223,12 @@
 /* touch / narrow virtual space (960×540): panels shrink */
 .ss-touch .ss-mx-layer .ss-mx-lb { width: 920px; height: 500px; }
 .ss-touch .ss-mx-layer .ss-mx-lb-b { grid-template-columns: 180px 1fr; }
-.ss-touch .ss-mx-layer .ss-mx-share { width: 720px; }
+.ss-touch .ss-mx-layer .ss-mx-share { width: 700px; max-height: calc(100% - 16px); overflow: auto; }
+.ss-touch .ss-mx-layer .ss-mx-share-pv { margin: 10px 14px 0; }
+.ss-touch .ss-mx-layer .ss-mx-share-row { gap: 6px; padding: 10px 10px 2px; flex-wrap: nowrap; }
+.ss-touch .ss-mx-layer .ss-mx-share-row .ss-btn { min-width: 0; padding: 0 10px; font-size: 11.5px; }
+.ss-touch .ss-mx-layer .ss-mx-share-note { margin: 4px 14px 10px; }
 .ss-touch .ss-mx-layer .ss-mx-meter { width: 440px; max-height: 330px; }
 .ss-touch .ss-mx-layer .ss-mx-chal { left: 16px; bottom: 16px; width: 340px; }
 .ss-touch .ss-mx-layer .ss-mx-pill { bottom: 300px; }
+.ss-touch .ss-mx-layer .ss-mx-foot { display: none; }

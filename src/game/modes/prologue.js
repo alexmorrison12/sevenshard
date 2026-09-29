@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { registerContent, registerZoneMode } from '../registry.js';
 import '../../world/zones/brighthold.js';
 import { ZONES } from '../providers.js';
-import { FALLBACK_LAYOUT } from '../../data/field.js';
+import { FALLBACK_LAYOUT, LOCALS } from '../../data/field.js';
 import { CLASSES } from '../../data/classes/index.js';
 import { GEAR_SLOTS } from '../../data/items.js';
 import { BOSS_DEFS } from '../../data/bosses/index.js';
@@ -26,13 +26,20 @@ import { Cutscene, screenFade } from '../quests/cutscene.js';
 import { createShip } from '../../models/creatures/index.js';
 
 const BEAT_ANCHORS = {
-  street: ['poi:lower_town', 'poi:street', 'poi:square', 'poi:start', 'spawn'],
-  gate: ['poi:gate', 'poi:gatehouse', 'duel'],
+  street: ['poi:barricade', 'poi:town_square', 'poi:lower_town', 'poi:street', 'spawn'],
+  gate: ['poi:outer_gate', 'poi:gate_ramp', 'poi:gate', 'poi:gatehouse', 'duel'],
   ramparts: ['poi:ramparts', 'cannon:2', 'cannon:1'],
   breach: ['breach', 'poi:breach'],
+  ashmaw: ['boss:ashmaw'],
+  bailey: ['poi:bailey', 'poi:inner_gate', 'duel'],
+  courtyard: ['poi:courtyard', 'duel'],
   duel: ['duel', 'poi:courtyard', 'breach'],
-  harbor: ['poi:harbor', 'poi:sallyport', 'poi:dock', 'spawn'],
+  varkhul: ['boss:varkhul'],
+  harbor: ['poi:harbor', 'gate:solhaven', 'poi:sallyport', 'poi:dock', 'spawn'],
 };
+/** a point `d` metres inside the wall from an anchor that faces outward (breach, gates); side shifts along the wall */
+const inward = (a, d, side = 0) => { const fx = -Math.sin(a.facing || 0), fz = -Math.cos(a.facing || 0); return { x: a.x - fx * d - fz * side, z: a.z - fz * d + fx * side }; };
+const outward = (a, d) => inward(a, -d);
 const NIGHT = { hemiSky: 0x2a3050, hemiGround: 0x6a2a10, hemiIntensity: 0.9, sunColor: 0xff8a4a, sunIntensity: 1.6, sunDir: [-0.3, 0.55, 0.6], fogColor: 0x2a1410, fogDensity: 0.012, fogHeight: 0.03, background: 0x0a0608, grade: { exposure: 1.02, saturation: 1.08, contrast: 1.1, vignette: 0.5, warm: 0.14 } };
 
 export class PrologueMode {
@@ -58,6 +65,7 @@ export class PrologueMode {
     this.brannoc.data.npcDef.portrait = 'brannoc';
     this.L.add(this.brannoc); this.units.push(this.brannoc);
     this.talkers = [this.brannoc];
+    this.spawnLocals();
     g.audio?.music?.('boss'); g.audio?.ambience?.('lava');
     this.weather = g.fx?.weather?.('embers', { intensity: 1.2 });
     this.me && (this.me.data.hpFloor = 1);        // nobody dies in the prologue
@@ -71,6 +79,17 @@ export class PrologueMode {
     for (const p of this.props) p.removeFromParent(); this.props = [];
     this.ship?.root.removeFromParent();
     if (this.me) this.me.data.hpFloor = 0;
+  }
+  /** the zone's townsfolk (dockmaster, medic, refugees…) — the story characters are placed by the director */
+  spawnLocals() {
+    const A = this.g.zone.anchors || {};
+    for (const [k, a] of Object.entries(A)) {
+      if (!k.startsWith('npc:')) continue;
+      const id = k.slice(4); if (id === 'brannoc' || id === 'seraphine' || id === 'sergeant') continue;
+      const d = LOCALS[id]; if (!d) continue;
+      const u = makeResident({ id, ...d }, { x: a.x, z: a.z, facing: a.facing ?? Math.PI }, { lod: 'crowd' });
+      this.L.add(u); this.units.push(u); this.talkers.push(u);
+    }
   }
   /** fires, smoke and (in the stand-in arena) cannons */
   dressSet() {
@@ -97,7 +116,7 @@ export class PrologueMode {
     else if (Q.isActive('p2_blades')) beat = st('p2_blades') === 0 ? 'gate' : 'ren';
     else if (Q.isActive('p3_guns')) beat = st('p3_guns') === 2 ? 'cannons' : 'ramparts';
     else if (Q.isActive('p4_shardfire')) beat = st('p4_shardfire') === 1 ? 'horde' : st('p4_shardfire') >= 2 ? 'finish' : 'awaken';
-    else if (Q.isActive('p5_ravager')) beat = st('p5_ravager') === 1 ? 'duel' : 'varkhul';
+    else if (Q.isActive('p5_ravager')) beat = st('p5_ravager') === 0 ? 'toCourtyard' : st('p5_ravager') === 2 ? 'duel' : 'varkhul';
     else if (Q.isActive('p6_sails')) beat = 'escape';
     if (beat !== this.beat) this.enterBeat(beat, this.beat);
     this.beat = beat;
@@ -106,10 +125,11 @@ export class PrologueMode {
     // waves for the fighting beats
     if (beat === 'street' && this.spawnT <= 0 && alive < 5) { this.spawnT = 2.5; this.wave(this.A('street'), [['imp', 3]], 1, 9); }
     if (beat === 'gate' && this.spawnT <= 0 && alive < 8) { this.spawnT = 3.2; this.wave(this.A('gate'), [['imp', 3], ['hellhound', 1]], 2, 10, -1); if (Math.random() < 0.3) this.wave(this.A('gate'), [['legionnaire', 1]], 2, 10, -1); }
-    if (beat === 'horde' && this.spawnT <= 0 && alive < 26) { this.spawnT = 1.6; this.wave(this.A('breach'), [['imp', 4], ['hellhound', 2], ['legionnaire', 1], ['abyss_caster', Math.random() < 0.5 ? 1 : 0]], 4, 5); }
-    if (beat === 'escape' && this.spawnT <= 0) { this.spawnT = 2.4; this.debris(); if (alive < 6) this.wave(this.A('duel'), [['imp', 2]], 2, 6); }
+    if (beat === 'toCourtyard' && this.spawnT <= 0 && alive < 5) { this.spawnT = 3; this.wave(this.A('bailey'), [['imp', 3], ['legionnaire', 1]], 4, 8, -1); }
+    if (beat === 'horde' && this.spawnT <= 0 && alive < 26) { this.spawnT = 1.6; this.wave(inward(this.A('breach'), 2), [['imp', 4], ['hellhound', 2], ['legionnaire', 1], ['abyss_caster', Math.random() < 0.5 ? 1 : 0]], 4, 5); }
+    if (beat === 'escape' && this.spawnT <= 0) { this.spawnT = 2.2; this.debris(); if (alive < 6 && me) this.wave({ x: me.pos.x, z: me.pos.z - 14 }, [['imp', 2]], 2, 5); }
     if (beat === 'escape') this.leadEscape(dt);
-    if (beat === 'cannons' && this.spawnT <= 0 && alive < 3) { this.spawnT = 11; const c = this.manning?.cannon || this.cannons[0]; this.wave({ x: c.x, z: c.z + 6 }, [['imp', 2]], 3, 3); }
+    if (beat === 'cannons' && this.spawnT <= 0 && alive < 3) { this.spawnT = 11; const c = this.manning?.cannon || this.cannons[0]; this.wave(inward(c, 6), [['imp', 2]], 3, 3); }
   }
   enterBeat(b, prev) {
     const g = this.g, bran = this.brannoc;
@@ -118,8 +138,8 @@ export class PrologueMode {
     if (b === 'gate') { bran.ctrl.leader = this.me; }
     if (b === 'ren') {
       this.clearMobs();
-      const at = this.A('gate');
-      const ren = makeResident({ ...storyDef('guard_ren') }, walkable(this.L, at.x - 2.5, at.z - 1.5, 4), { story: true });
+      const at = anchorOf(this.g.zone, ['npc:sergeant']) || (() => { const g0 = this.A('gate'); return { x: g0.x - 2.5, z: g0.z + 3, facing: Math.PI }; })();
+      const ren = makeResident({ ...storyDef('guard_ren') }, { ...walkable(this.L, at.x, at.z, 4), facing: at.facing ?? Math.PI }, { story: true });
       this.L.add(ren); this.units.push(ren); this.talkers.push(ren); this.ren = ren;
     }
     if (b === 'ramparts') { bran.ctrl.leader = this.me; }
@@ -128,7 +148,7 @@ export class PrologueMode {
       this.endManning(); for (const p of this.props) p.userData.setActive?.(false); this.clearMobs();
       // the wall came down on Brannoc: he's pinned until the Ravager arrives
       const bb = this.A('breach'); bran.ctrl.hold = true; bran.untargetable = true; bran.ctrl.leader = null;
-      const pin = walkable(this.L, bb.x - 5, bb.z + 7, 4); bran.pos.x = pin.x; bran.pos.z = pin.z; bran.model?.play?.('knockdown', { dur: 0.8 });
+      const pp = inward(bb, 7, 5), pin = walkable(this.L, pp.x, pp.z, 4); bran.pos.x = pin.x; bran.pos.z = pin.z; bran.model?.play?.('knockdown', { dur: 0.8 });
     }
     if (b === 'horde') { g.audio?.music?.('boss'); this.hint('The Shard burns in you. Everything is stronger — for now.'); }
     if (b === 'finish') {
@@ -136,6 +156,7 @@ export class PrologueMode {
       const kit = this.g.hero; if (kit) { kit.awakenUses = Math.max(1, kit.awakenUses); kit.u.cd.delete(kit.awaken?.id); }
       this.ashmawLunge();
     }
+    if (b === 'toCourtyard') { bran.ctrl.hold = false; bran.untargetable = false; bran.ctrl.leader = this.me; bran.model?.play?.('getup', { dur: 0.8 }); this.hint('Brannoc: “The Ravager is in the courtyard. With me!”'); }
     if (b === 'duel') this.startDuel();
     if (b === 'escape') {
       this.clearMobs(); g.audio?.music?.('dungeon'); this.hint('Run! Follow Seraphine to the harbour.', 'warn');
@@ -249,10 +270,10 @@ export class PrologueMode {
   spawnAshmaw() {
     if (this.ashmaw?.level) return;
     const def = BOSS_DEFS.ashmaw || STORY_BOSSES.ashmaw;
-    const b = this.A('breach');
-    const u = makeBoss(def, { ref: refFor(4), partySize: 1, x: b.x, z: b.z - 16, facing: 0 });
+    const b = this.A('breach'), at = anchorOf(this.g.zone, BEAT_ANCHORS.ashmaw) || { ...outward(b, 16), facing: (b.facing || 0) + Math.PI };
+    const u = makeBoss(def, { ref: refFor(4), partySize: 1, x: at.x, z: at.z, facing: at.facing ?? 0 });
     u.ctrl = null; u.data.immovable = true; u.data.hpFloor = Math.round(u.hpMax * 0.35); u.untargetable = false; u.data.noLoot = true;
-    u.facing = Math.PI;                    // faces south, toward the castle
+    u.facing = Math.atan2(-(b.x - at.x), -(b.z - at.z));   // glaring at the breach
     this.L.add(u); this.units.push(u); this.ashmaw = u;
     this.ashT = 5;
   }
@@ -279,8 +300,8 @@ export class PrologueMode {
   }
   ashmawLunge() {
     const a = this.ashmaw; if (!a?.level) return;
-    const b = this.A('breach');
-    a.pos.x = b.x; a.pos.z = b.z - 9; a.data.hpFloor = 0;
+    const b = this.A('breach'), p = outward(b, 8);
+    a.pos.x = p.x; a.pos.z = p.z; a.data.hpFloor = 0;
     a.model?.play?.('roar', { dur: 3 }); this.g.audio?.sfx?.('boss_roar_big', { pos: a.pos }); this.g.cam.shake(0.6);
     this.offAwaken?.(); this.offAwaken = this.L.on('awaken', ({ unit }) => {
       if (unit !== this.me) return;
@@ -361,11 +382,12 @@ export class PrologueMode {
       await cs.say(null, 'Solmara. The night the sky burned.', 3);
       cs.shot([sp.x + 6, y + 10, sp.z + 13], [sp.x, y + 1, sp.z - 6], 5, 44);
       await cs.say(null, 'Brighthold had stood for four hundred years. The Abyssal Legion came for it in a single night.', 3.8);
-      cs.sfx('explosion_big', { x: sp.x - 10, y, z: sp.z - 20 }); cs.shake(0.4);
-      await cs.say(null, 'And in the smoke, one soul carried a light the demons could smell from across the sea.', 3.6);
+      await cs.say(null, 'The last supply ship from Solhaven made port just as the demons came over the walls — carrying one passenger with a light the Legion could smell from across the sea.', 5);
+      cs.sfx('explosion_big', { x: sp.x - 6, y, z: sp.z - 8 }); cs.shake(0.6); cs.flash(0.4);
+      cs.fx('explosion_big', { x: sp.x - 6, z: sp.z - 8, r: 4 });
       cs.shot([sp.x + 2.2, y + 2.6, sp.z + 4.2], [sp.x, y + 0.6, sp.z], 2, 34);
       const b = this.brannoc; if (b) { cs.face(b, me); cs.walk(b, me.pos.x + 1.6, me.pos.z - 1.2, 5); }
-      await cs.say('brannoc', 'Shardbearer! On your feet! The Legion is inside the walls!', 2.8);
+      await cs.say('brannoc', 'You — off the docks! On your feet! The Legion is in the lower town!', 2.8);
       me.model?.play?.('getup', { dur: 0.9 });
       await cs.wait(0.9);
       await cs.title('The Siege of Brighthold', 'Prologue', 2.8);
@@ -417,9 +439,11 @@ Object.assign(CUTSCENES, {
     M.spawnAshmaw();
     const a = M.ashmaw, me = cs.hero; if (!a) return;
     const y = cs.L.heightAt(me.pos.x, me.pos.z);
-    cs.shot([me.pos.x + 3, y + 3, me.pos.z + 6], [me.pos.x, y + 2, me.pos.z - 10], 0.01, 40);
-    await cs.say('gunner_bess', 'The guns! Somebody man the guns — it’s coming through the south wall!', 2.6);
-    cs.shot([me.pos.x + 8, y + 6, me.pos.z + 4], [a.pos.x, y + 10, a.pos.z], 2.2, 46);
+    const dx = a.pos.x - me.pos.x, dz = a.pos.z - me.pos.z, d = Math.hypot(dx, dz) || 1, ux = dx / d, uz = dz / d;
+    cs.face(me, a.pos);
+    cs.shot([me.pos.x - ux * 6 - uz * 2, y + 3.2, me.pos.z - uz * 6 + ux * 2], [me.pos.x + ux * 10, y + 3, me.pos.z + uz * 10], 0.01, 42);
+    await cs.say('gunner_bess', 'The guns! Somebody man the guns — it’s coming through the east wall!', 2.6);
+    cs.shot([me.pos.x - ux * 5 + uz * 7, y + 5, me.pos.z - uz * 5 - ux * 7], [a.pos.x, y + 9, a.pos.z], 2.2, 50);
     a.model?.play?.('roar', { dur: 4 }); cs.sfx('boss_roar_big', a.pos); cs.shake(0.7);
     await cs.title('Ashmaw', 'the Siege Behemoth', 2.8);
     a.model?.play?.('slam_wall', { dur: 4.2 });
@@ -429,14 +453,14 @@ Object.assign(CUTSCENES, {
   pro_awaken: { music: 'cutscene_heroic', after: 'boss', run: async (cs, Q) => {
     const M = cs.g.mode, me = cs.hero; if (!M || !me) return;
     const a = M.ashmaw, b = M.A('breach'), y = cs.L.heightAt(b.x, b.z);
-    cs.shot([b.x + 10, y + 8, b.z + 16], [b.x, y + 5, b.z - 8], 0.01, 46);
+    { const cam = inward(b, 16, -8), far = outward(b, 10); cs.shot([cam.x, y + 9, cam.z], [far.x, y + 5, far.z], 0.01, 46); }
     if (a) { a.model?.play?.('slam_wall', { dur: 3.6 }); }
     await cs.say(null, 'Wounded and furious, Ashmaw throws itself at the wall one last time.', 2.4);
     cs.shake(1); cs.flash(0.7); cs.sfx('explosion_big', b);
-    for (let i = 0; i < 4; i++) cs.fx('explosion_big', { x: b.x + (i - 1.5) * 4, z: b.z, r: 4 });
+    for (let i = 0; i < 4; i++) { const p = inward(b, 0, (i - 1.5) * 4); cs.fx('explosion_big', { x: p.x, z: p.z, r: 4 }); }
     cs.fx('crater', { x: b.x, z: b.z, r: 6 });
     await cs.wait(0.8);
-    cs.place(me, b.x + 1, b.z + 9);
+    { const p = inward(b, 9, -1.5); cs.place(me, p.x, p.z); }
     me.model?.play?.('knockdown', { dur: 0.8 });
     cs.shot([me.pos.x + 3, y + 2.4, me.pos.z + 4.5], [me.pos.x, y + 0.5, me.pos.z], 1.2, 34);
     await cs.say('brannoc', 'The breach! They’re pouring through the breach!', 2.4);
@@ -454,9 +478,11 @@ Object.assign(CUTSCENES, {
     const M = cs.g.mode, me = cs.hero; if (!M || !me) return;
     M.clearMobs();
     const d = M.A('duel'), y = cs.L.heightAt(d.x, d.z);
-    const v = M.spawnVarkhul({ x: d.x, z: d.z - 8 });
-    cs.shot([d.x + 9, y + 6, d.z + 10], [d.x, y + 2, d.z - 6], 0.01, 42);
-    cs.walk(me, d.x, d.z + 3);
+    const vk = anchorOf(cs.g.zone, BEAT_ANCHORS.varkhul) || { x: d.x, z: d.z - 8 };
+    const v = M.spawnVarkhul({ x: vk.x, z: vk.z });
+    v.faceTo(me.pos.x, me.pos.z);
+    cs.shot([d.x + 9, y + 6, d.z + 12], [vk.x, y + 2, vk.z + 2], 0.01, 42);
+    cs.walk(me, d.x, d.z + 4);
     v.model?.play?.('intro', { dur: 5 }); cs.sfx('boss_roar', v.pos); cs.shake(0.4);
     cs.fx('fire_burst', { x: v.pos.x, z: v.pos.z, r: 4 });
     await cs.say('Varkhul', 'So. The little Shardbearer. You have been busy, breaking my toys.', 3.2);

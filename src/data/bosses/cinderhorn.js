@@ -26,7 +26,7 @@ async function moltenCharge(B, tgt, teleDur, withCounter) {
 export default {
   id: 'cinderhorn', model: 'cinderhorn', name: 'Cinderhorn', title: 'the Molten Juggernaut', kind: 'guardian',
   radius: 3, height: 4.6, hp: 44000, atk: 0.16, bars: 190, speed: 4.6, turnRate: 3, enrage: 600,
-  music: 'boss', arena: 'frostmere',
+  music: 'boss', arena: 'cinderforge',
   anims: {
     gore: { dur: 1.6, hits: [0.78] }, charge: { dur: 3.6, hits: [1.5, 2.1, 2.7] }, stomp: { dur: 2.0, hits: [1.05] },
     lava_spit: { dur: 2.2, hits: [0.85, 1.15, 1.45] }, burrow: { dur: 2.4, hits: [1.2] }, erupt: { dur: 2.0, hits: [0.45] },

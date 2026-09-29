@@ -58,27 +58,41 @@ function palmGeo(seed) {
   const top = pts[pts.length - 1];
   // coconuts
   for (let i = 0; i < 4; i++) { const a = rng.range(0, TAU); trunk.add(new THREE.SphereGeometry(0.17, 7, 5), M(top.x + Math.cos(a) * 0.25, top.y - 0.35, top.z + Math.sin(a) * 0.25), lc(0x5a3a1c), { extra: { sway: 0.5 } }); }
-  // fronds: arched rachis with leaflets on both sides
-  const n = rng.int(9, 12);
-  const g0 = lc(0x1f5a1a), g1 = lc(0x6aa83a), dead = lc(0x9a8448);
+  // fronds: an arched rachis carrying two rows of narrow, drooping leaflets (pinnate, like a real coconut palm)
+  const n = rng.int(10, 13);
+  const g0 = lc(0x1d4e18), g1 = lc(0x5f9e34), g2 = lc(0x8cc450), dead = lc(0x9a8448), deadT = lc(0xc0a868);
+  const tan = V(0, 0, 0), out = V(0, 0, 0);
   for (let f = 0; f < n; f++) {
-    const a = f / n * TAU + rng.range(-0.2, 0.2), len = rng.range(3.4, 4.6), droop = rng.range(0.9, 1.6), rise = rng.range(0.4, 1.0);
-    const isDead = rng.chance(0.12);
-    const S = 9, dir = V(Math.cos(a), 0, Math.sin(a)), side = V(-dir.z, 0, dir.x);
+    const a = f / n * TAU + rng.range(-0.2, 0.2), len = rng.range(3.6, 4.9), droop = rng.range(0.8, 1.5), rise = rng.range(0.5, 1.1);
+    const isDead = rng.chance(0.1);
+    const S = 15, dir = V(Math.cos(a), 0, Math.sin(a)), side = V(-dir.z, 0, dir.x);
     const spine = [];
-    for (let i = 0; i <= S; i++) { const t = i / S; spine.push(V(top.x + dir.x * len * t, top.y + rise * Math.sin(t * Math.PI * 0.6) - droop * t * t * 1.6 - (isDead ? t * 1.6 : 0), top.z + dir.z * len * t)); }
+    for (let i = 0; i <= S; i++) { const t = i / S; spine.push(V(top.x + dir.x * len * t, top.y + rise * Math.sin(t * Math.PI * 0.6) - droop * t * t * 1.6 - (isDead ? t * 1.8 : 0), top.z + dir.z * len * t)); }
     const pos = [], idx = [], col = [], sw = [];
+    const vtx = (p, c, s) => { pos.push(p.x, p.y, p.z); col.push(c[0], c[1], c[2]); sw.push(s); return pos.length / 3 - 1; };
+    // the rachis: a thin ribbon so the leaflets read as one leaf
     for (let i = 0; i < S; i++) {
-      const p0 = spine[i], p1 = spine[i + 1], t = i / S;
-      const w = Math.sin(Math.PI * Math.min(1, t * 1.1 + 0.08)) * 0.95;
+      const p0 = spine[i], p1 = spine[i + 1], t = i / S, wr = 0.07 * (1 - t * 0.7);
+      const c = isDead ? dead : g0, b0 = vtx(p0.clone().addScaledVector(side, -wr), c, 0.5 + t * 0.5), b1 = vtx(p0.clone().addScaledVector(side, wr), c, 0.5 + t * 0.5);
+      const b2 = vtx(p1.clone().addScaledVector(side, wr * 0.8), c, 0.55 + t * 0.5), b3 = vtx(p1.clone().addScaledVector(side, -wr * 0.8), c, 0.55 + t * 0.5);
+      idx.push(b0, b1, b2, b0, b2, b3);
+    }
+    // leaflets
+    for (let i = 1; i < S; i++) {
+      const t = i / S, p = spine[i];
+      tan.subVectors(spine[i + 1], spine[i - 1]).normalize();
+      const L = (Math.sin(Math.PI * Math.min(1, t * 1.02 + 0.06)) * 1.05 + 0.2) * (isDead ? 0.8 : 1);
+      const w = 0.075 * (1 - t * 0.35);
       for (const sgn of [-1, 1]) {
-        const tip = p0.clone().addScaledVector(side, sgn * w).add(V(0, -0.35 * w, 0)).addScaledVector(dir, 0.35);
-        const b = pos.length / 3;
-        pos.push(p0.x, p0.y, p0.z, p1.x, p1.y, p1.z, tip.x, tip.y, tip.z);
-        idx.push(b, b + 1, b + 2);
-        const c0 = isDead ? dead : g0, c1 = isDead ? dead : g1, k = 0.85 + nz.noise2(f, i) * 0.15;
-        col.push(c0[0], c0[1], c0[2], c0[0], c0[1], c0[2], c1[0] * k, c1[1] * k, c1[2] * k);
-        sw.push(0.5 + t * 0.5, 0.5 + t * 0.5, 0.6 + t * 0.6);
+        const jit = nz.noise2(f * 3.1 + sgn, i * 0.7) * 0.25;
+        out.copy(side).multiplyScalar(sgn * (0.86 + jit * 0.2)).addScaledVector(tan, 0.42).add(V(0, -(0.3 + t * 0.55 + (isDead ? 0.5 : 0)), 0)).normalize().multiplyScalar(L);
+        const mid = p.clone().addScaledVector(out, 0.45), tip = p.clone().add(out).add(V(0, -0.12 * L, 0));
+        const k = 0.85 + nz.noise2(f, i + sgn * 13) * 0.15, cb = isDead ? dead : g0, cm = isDead ? dead : g1, ct = isDead ? deadT : g2;
+        const s0 = 0.5 + t * 0.5, s1 = 0.6 + t * 0.6;
+        const a0 = vtx(p.clone().addScaledVector(tan, -w), cb, s0), a1 = vtx(p.clone().addScaledVector(tan, w), cb, s0);
+        const m0 = vtx(mid.clone().addScaledVector(tan, -w * 0.9), [cm[0] * k, cm[1] * k, cm[2] * k], s1), m1 = vtx(mid.clone().addScaledVector(tan, w * 0.9), [cm[0] * k, cm[1] * k, cm[2] * k], s1);
+        const tp = vtx(tip, [ct[0] * k, ct[1] * k, ct[2] * k], s1 + 0.15);
+        idx.push(a0, a1, m1, a0, m1, m0, m0, m1, tp);
       }
     }
     const g = new THREE.BufferGeometry();
@@ -317,6 +331,24 @@ export function buildLandmarks(id, ctx) {
   return spots;
 }
 
+/** a gull's wing (span along +x for s = 1, −x for s = −1; chord along z, leading edge −z), feathered tips */
+function gullWing(s = 1) {
+  const sh = new THREE.Shape();
+  sh.moveTo(0, -0.55); sh.quadraticCurveTo(1.2, -0.75, 2.2, -0.38);
+  for (const [x, y] of [[2.45, -0.62], [2.7, -0.36], [2.95, -0.55], [3.2, -0.26], [3.45, -0.38], [3.75, -0.08]]) sh.lineTo(x, y);
+  sh.quadraticCurveTo(2.7, 0.42, 1.6, 0.46); sh.quadraticCurveTo(0.7, 0.52, 0, 0.55); sh.lineTo(0, -0.55);
+  let g = new THREE.ExtrudeGeometry(sh, { depth: 0.1, bevelEnabled: false, curveSegments: 6 });
+  g.translate(0, 0, -0.05); g.rotateX(-Math.PI / 2);                  // shape y (leading edge) → −z, extrusion → thickness
+  if (s < 0) {                                           // mirror, then restore the triangle winding
+    g = g.index ? g.toNonIndexed() : g;
+    g.scale(-1, 1, 1);
+    const p = g.attributes.position;
+    for (let i = 0; i < p.count; i += 3) { const x = p.getX(i + 1), y = p.getY(i + 1), z = p.getZ(i + 1); p.setXYZ(i + 1, p.getX(i + 2), p.getY(i + 2), p.getZ(i + 2)); p.setXYZ(i + 2, x, y, z); }
+    if (g.attributes.uv) { const u = g.attributes.uv; for (let i = 0; i < u.count; i += 3) { const a = u.getX(i + 1), b = u.getY(i + 1); u.setXY(i + 1, u.getX(i + 2), u.getY(i + 2)); u.setXY(i + 2, a, b); } }
+    g.computeVertexNormals();
+  }
+  return g;
+}
 // ---------------------------------------------------------------- Coinflip Cay: the Gilded Gull casino
 BUILD.coinflip = ({ kit, flags, palms, flora, ox, oz, H, W, lod, spots, rng }) => {
   const cx = -18, cz = -11, cy = H(cx, cz), full = lod === 'full';
@@ -328,18 +360,18 @@ BUILD.coinflip = ({ kit, flags, palms, flora, ox, oz, H, W, lod, spots, rng }) =
   for (let i = 0; i < 16; i++) { const a = i / 16 * TAU; kit.add('marble', cyl(0.32, 0.36, 6.4, 8, 1), F.at(Math.cos(a) * 8.3, 4.2, Math.sin(a) * 8.3), { tint: 0xffffff }); }
   kit.add('stone', cyl(8.9, 8.9, 0.5, 28, 1), F.at(0, 7.6, 0), { tint: 0xe8d8b0, ao: false });
   const dome = new THREE.SphereGeometry(7.8, 28, 12, 0, TAU, 0, Math.PI / 2);
-  kit.add('gold', dome, F.at(0, 7.8, 0, 0, 1, 0.8, 1), { tint: 0xf0c050, ao: false });
-  for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; const rib = tube(Array.from({ length: 9 }, (_, k) => { const t = k / 8 * Math.PI / 2; return V(Math.cos(a) * 7.85 * Math.cos(t), 7.8 + 6.25 * Math.sin(t), Math.sin(a) * 7.85 * Math.cos(t)); }), Array(9).fill(0.12), 5, false); kit.add('gold', rib, F.m, { tint: 0xfff0b0, ao: false }); }
+  kit.add('gold', dome, F.at(0, 7.8, 0, 0, 1, 0.8, 1), { tint: 0xb8862e, ao: false });
+  for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; const rib = tube(Array.from({ length: 9 }, (_, k) => { const t = k / 8 * Math.PI / 2; return V(Math.cos(a) * 7.85 * Math.cos(t), 7.8 + 6.25 * Math.sin(t), Math.sin(a) * 7.85 * Math.cos(t)); }), Array(9).fill(0.12), 5, false); kit.add('gold', rib, F.m, { tint: 0xe8cc80, ao: false }); }
   kit.add('marble', cyl(1.5, 1.7, 2.2, 12, 1), F.at(0, 14.8, 0), { tint: 0xffffff, ao: false });
   kit.glow(cyl(1.2, 1.2, 1.6, 12, 1), F.at(0, 14.8, 0), 0xffd070, 3);
-  kit.add('gold', cone(1.8, 2.6, 12), F.at(0, 17.2, 0), { tint: 0xf8d060, ao: false });
+  kit.add('gold', cone(1.8, 2.6, 12), F.at(0, 17.2, 0), { tint: 0xc8983a, ao: false });
   kit.add('gold', sphere(0.5, 10, 8), F.at(0, 18.8, 0), { ao: false });
   kit.light(X, cy + 15, Z, 0xffd080, 10, 22, 0.05);
   // four lantern towers
   for (let i = 0; i < 4; i++) {
     const a = i / 4 * TAU + Math.PI / 4, tx = Math.cos(a) * 11.5, tz = Math.sin(a) * 11.5;
     kit.add('marble', cyl(0.9, 1.1, 9, 10, 1), F.at(tx, 4.5, tz), { tint: 0xf4efe4 });
-    kit.add('gold', cone(1.3, 2.4, 10), F.at(tx, 10.2, tz), { tint: 0xe8b040, ao: false });
+    kit.add('gold', cone(1.3, 2.4, 10), F.at(tx, 10.2, tz), { tint: 0xb8862e, ao: false });
     kit.glow(sphere(0.55, 10, 8), F.at(tx, 9.2, tz), i % 2 ? 0xff5a8a : 0x5ae0ff, 3.2);
   }
   // striped awnings over the entrance (south)
@@ -353,7 +385,8 @@ BUILD.coinflip = ({ kit, flags, palms, flora, ox, oz, H, W, lod, spots, rng }) =
     kit.add('gold', blob(1, 1, null, [0.9, 0.75, 1.6]), G2.at(0, 3.2, 0), { tint: 0xffd060, ao: false });
     kit.add('gold', blob(0.6, 1), G2.at(0, 3.9, -1.3), { tint: 0xffd060, ao: false });
     kit.add('gold', cone(0.22, 0.7, 6), G2.at(0, 3.8, -2.1, 0, 1, 1, 1, -Math.PI / 2), { tint: 0xffb030, ao: false });
-    for (const s of [-1, 1]) kit.add('gold', box(3.4, 0.12, 1.1, 1), G2.at(s * 1.9, 3.8, 0.2, 0, 1, 1, 1, 0, s * 0.45), { tint: 0xffe070, ao: false });
+    for (const s of [-1, 1]) kit.add('gold', gullWing(s), G2.at(s * 0.55, 3.55, 0.1, -s * 0.22, 1, 1, 1, 0, s * 0.55), { tint: 0xf0cc60, ao: false });
+    kit.add('gold', cone(0.55, 1.3, 6), G2.at(0, 3.25, 1.75, 0, 1.3, 1, 0.35, Math.PI / 2 + 0.25), { tint: 0xe8c050, ao: false });
     kit.block(circle(a, b, 1.9), 0.3); spots.gull = [a, gy, b]; }
   // boardwalk: pier (south) → casino
   const pier = BUILD.pier(kit, W, H, 4, 60, 60, 4.2);
@@ -361,7 +394,7 @@ BUILD.coinflip = ({ kit, flags, palms, flora, ox, oz, H, W, lod, spots, rng }) =
   // beach umbrellas & deck chairs
   for (let i = 0; i < 6; i++) { const x = -34 + i * 6 + rng.range(-1, 1), z = 34 + rng.range(-2, 2); const [a, b] = W(x, z); const y = H(x, z); kit.add('timber', cyl(0.05, 0.05, 2.4, 6, 1), M(a, y + 1.2, b), { ao: false }); kit.add('cloth', cone(1.3, 0.55, 8), M(a, y + 2.5, b), { tint: i % 2 ? 0xe04a5a : 0x3ab0d8, ao: false }); }
   palmRing(palms, H, ox, oz, [[-38, 20], [-44, 4], [-40, -18], [-30, -34], [-12, -40], [6, -44], [30, -22], [32, 18], [14, 30], [-24, 28], [-8, 34], [26, 34], [36, -8]], rng, 1.05);
-  scatterPalms(palms, H, ox, oz, full ? 18 : 10, 44, rng, { a: 0.6, b: 5, avoid: [[cx, cz, 16], [4, 46, 6], [16, -38, 5]] });
+  scatterPalms(palms, H, ox, oz, full ? 18 : 10, 44, rng, { a: 0.6, b: 5, avoid: [[cx, cz, 16], [4, 46, 6], [16, -38, 5], [-28, 4, 9], [-9, 6, 8], [-18, 8, 12], [0, 30, 5], [-6, 20, 5], [12, -34, 5], [30, 17, 4], [20, -43, 4]] });
   if (flags) P.flagPole(kit, flags, ...[W(-6, 4)[0], H(-6, 4), W(-6, 4)[1]], { h: 9, color: 0xe8b830 });
 };
 
@@ -389,12 +422,18 @@ export const CANTORS = [
 BUILD.songstone = ({ kit, flags, palms, flora, ox, oz, H, W, lod, spots, rng }) => {
   const cz = -6, full = lod === 'full';
   // amphitheatre: stone tiers (rings) descending to the floor
+  // tiers open to the south (the path from the pier). Angles use the cylinder convention (ψ from +Z toward +X);
+  // RingGeometry / TorusGeometry measure from +X, hence the −π/2 shifts.
+  const gap = Math.PI * 0.18, L0 = TAU - gap * 2;
   for (let i = 0; i < 4; i++) {
-    const r = 13.2 + i * 1.6, [a, b] = W(0, cz), y = H(0, cz) + 0.25 + i * 0.75;
-    const ring = new THREE.RingGeometry(r - 0.8, r + 0.6, 40, 1, Math.PI * 0.18, Math.PI * 1.64); ring.rotateX(-Math.PI / 2);
-    kit.add('stone', ring, M(a, y, b, Math.PI / 2 + 0.2), { tint: 0xd6ceb8, ao: false });
-    const wall = new THREE.CylinderGeometry(r - 0.8, r - 0.8, 0.75, 40, 1, true, Math.PI * 0.18, Math.PI * 1.64);
-    kit.add('stone', wall, M(a, y - 0.37, b, Math.PI / 2 + 0.2), { tint: 0xc8bfa8 });
+    // each tier is a seat ring whose riser runs down into the hillside (no gaps between tiers, nothing floats)
+    const r = 13.2 + i * 1.6, [a, b] = W(0, cz), y = H(0, cz) + 0.25 + i * 0.75, rise = 0.75 + 2.6;
+    const ring = new THREE.RingGeometry(r - 0.8, r + 0.82, 48, 1, gap - Math.PI / 2, L0); ring.rotateX(-Math.PI / 2);
+    kit.add('stone', ring, M(a, y, b, 0), { tint: i % 2 ? 0xd2c9b2 : 0xdcd4bf, ao: false });
+    const wall = new THREE.CylinderGeometry(r - 0.8, r - 0.8, rise, 48, 1, true, gap, L0);
+    kit.add('stone', wall, M(a, y - rise / 2, b, 0), { tint: 0xb8ae96 });
+    const lip = new THREE.TorusGeometry(r - 0.78, 0.07, 4, 48, L0); lip.rotateX(-Math.PI / 2);
+    kit.add('stone', lip, M(a, y + 0.02, b, gap - Math.PI / 2), { tint: 0xeee6d2, ao: false });
   }
   { const [a, b] = W(0, cz); const y = H(0, cz);
     kit.add('marble', cyl(3.2, 3.6, 0.6, 24, 1), M(a, y + 0.3, b), { tint: 0xe8e2d4 });                  // the Songstone dais
@@ -531,7 +570,7 @@ BUILD.hushwater = ({ kit, flags, palms, flora, ox, oz, H, W, lod, spots, rng, ni
   const beds = [[-11, 7], [-5, 11.5], [7, 10], [12, 5], [-14, 2]];
   beds.forEach(([x, z], i) => { const [c, d] = W(x, z); for (let k = 0; k < 5; k++) kit.add('stone', sphere(rng.range(0.25, 0.45), 8, 6), M(c + rng.range(-0.8, 0.8), H(x, z) + 0.05, d + rng.range(-0.8, 0.8), 0, 1, 0.5, 1), { tint: 0xe8e0e8, ao: false }); spots['bed' + i] = [c, H(x, z), d]; });
   // cliff waterfall on the north rim
-  { const [c, d] = W(-4, -30); kit.glow(box(3, 9, 0.4, 1), M(c, 3.8, d), 0xbfefff, 0.9); spots.falls = [c, 0, d]; }
+  { const [c, d] = W(-4, -30); if (lod !== 'full') kit.glow(box(3, 9, 0.4, 1), M(c, 3.8, d), 0xbfefff, 0.9); spots.falls = [c, 0, d]; }   // (the island zone builds the animated falls)
   spots.pier = BUILD.pier(kit, W, H, -4, 58, 60, 4.2, 0.7);
   palmRing(palms, H, ox, oz, [[-8, 26], [8, 26], [-20, 20], [20, 20], [-30, 10], [30, 10]], rng, 0.95);
   if (flora) for (let i = 0; i < (lod === 'full' ? 30 : 16); i++) { const ang = rng.range(0, TAU), r = rng.range(30, 40), x = Math.cos(ang) * r, z = -4 + Math.sin(ang) * r, h = H(x, z); if (h < 2.5 || z > 18) continue; flora.tree(rng.chance(0.4) ? 'bush' : 'broadleaf', ox + x, h - 0.1, oz + z, { s: rng.range(0.7, 1.0), variant: i % 3, block: lod === 'full' }); }
@@ -591,9 +630,32 @@ BUILD.drownbell = ({ kit, flags, palms, flora, ox, oz, H, W, lod, spots, rng }) 
     if (z > 10) continue;
     const [c, d] = W(x, z), y = H(x, z);
     if (i % 3 === 0) { ruinColumn(kit, c, y - 0.2, d, rng.range(3, 6), rng, 0xa8b0a0); continue; }
-    const F = new Frame(c, y - 0.3, d, a + Math.PI / 2);
-    kit.add('stone', box(5, rng.range(2.2, 4.5), 0.9, 2), F.at(0, 1.5, 0), { tint: 0x9aa494, yGround: y - 0.3 });
+    const F = new Frame(c, y - 0.3, d, a + Math.PI / 2), wh = rng.range(2.6, 4.8);
+    kit.add('stone', box(5, wh, 0.9, 2), F.at(0, wh / 2 - 0.2, 0), { tint: 0x9aa494, yGround: y - 0.3 });
     kit.add('stone', box(1.2, 0.5, 1.2, 1), F.at(rng.range(-2, 2), 0.25, 1.6), { tint: 0x8a9484 });
+    if (lod === 'full') {
+      // a lancet window through the wall (dark recess + pointed arch), buttress stubs, weed and barnacles at the foot
+      kit.add('stone', box(1.2, 1.9, 0.95, 1), F.at(rng.range(-1, 1) * 0.8, Math.min(wh - 1.3, 1.9), 0), { tint: 0x2a3230, ao: false });
+      const arch = new THREE.TorusGeometry(0.72, 0.14, 5, 12, Math.PI);
+      kit.add('stone', arch, F.at(0, Math.min(wh - 1.3, 1.9) + 0.9, 0.48), { tint: 0xb8c0b0, ao: false });
+      for (const sx of [-2.6, 2.6]) kit.add('stone', box(0.7, wh * 0.7, 1.4, 1), F.at(sx, wh * 0.35 - 0.2, 0.3, 0, 1, 1, 1, 0.06), { tint: 0x8e988a });
+      for (let k = 0; k < 5; k++) kit.add('paint', cone(0.1, rng.range(0.5, 1.0), 5), F.at(rng.range(-2.4, 2.4), 0.3, rng.range(0.55, 0.8), 0, 1, 1, 1, rng.range(-0.3, 0.3)), { tint: 0x3a5a2a, ao: false });
+    }
+  }
+  if (lod === 'full') {
+    // the drowned chapel's graveyard: leaning headstones in the wet sand west of the arena
+    for (let i = 0; i < 11; i++) {
+      const x = -30 + (i % 4) * 2.6 + rng.range(-0.4, 0.4), z = -14 + Math.floor(i / 4) * 3.2 + rng.range(-0.4, 0.4), y = H(x, z);
+      if (y < -0.35) continue;
+      const [c, d] = W(x, z), F = new Frame(c, y, d, rng.range(-0.25, 0.25));
+      kit.add('stone', box(0.8, 1.1, 0.2, 1), F.at(0, 0.45, 0, 0, 1, 1, 1, rng.range(-0.25, 0.2), rng.range(-0.2, 0.2)), { tint: 0x9aa498, yGround: y });
+      kit.add('stone', cyl(0.4, 0.4, 0.2, 10, 1), F.at(0, 1.0, 0, 0, 1, 1, 1, Math.PI / 2), { tint: 0x9aa498, ao: false });
+    }
+    // fallen masonry and a toppled saint in the shallows
+    for (let i = 0; i < 8; i++) { const a = rng.range(0, TAU), r = rng.range(17, 27), x = Math.cos(a) * r, z = -6 + Math.sin(a) * r; if (z > 12) continue; const [c, d] = W(x, z), y = H(x, z); kit.add('stone', box(rng.range(0.8, 1.6), rng.range(0.5, 0.9), rng.range(0.8, 1.4), 1), M(c, y + 0.2, d, rng.range(0, TAU), 1, 1, 1, rng.range(-0.3, 0.3), rng.range(-0.3, 0.3)), { tint: 0x949e90 }); }
+    { const [c, d] = W(19, -18), y = H(19, -18); P.statue(kit, c, y - 0.9, d, 1.2, { s: 1.3, pose: 'sword' }); }
+    // the fallen rose window, half sunk in the sand
+    { const [c, d] = W(-14, 8), y = H(-14, 8); kit.add('stone', new THREE.TorusGeometry(2.2, 0.22, 6, 28), M(c, y + 0.15, d, 0.4, 1, 1, 1, -Math.PI / 2 + 0.12), { tint: 0xb0b8a8, ao: false }); for (let k = 0; k < 8; k++) { const a = k / 8 * TAU; kit.add('stone', box(0.14, 0.12, 2.1, 1), M(c + Math.cos(a) * 1.05, y + 0.18, d + Math.sin(a) * 1.05, -a + Math.PI / 2), { tint: 0xb0b8a8, ao: false }); } }
   }
   { const [c, d] = W(0, -36), y = -0.6;
     const F = new Frame(c, y, d, 0.2);

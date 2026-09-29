@@ -23,6 +23,14 @@ export const DEFAULT_KEYBINDS = [
   { action: 'Engravings', keys: ['N'] }, { action: 'World Map', keys: ['M'] }, { action: 'Guild', keys: ['U'] }, { action: 'Party Finder', keys: ['O'] },
   { action: 'Chat', keys: ['Enter'] }, { action: 'Hide HUD (photo mode)', keys: ['Ctrl', 'Z'] }, { action: 'Game Menu / Close', keys: ['Esc'] },
 ];
+// engine bind ids (src/engine/input.js DEFAULT_BINDS) and KeyboardEvent codes → readable labels
+const ACTION_NAMES = { dash: 'Dash / Stand Up', idZ: 'Identity (Z)', idX: 'Identity (X)', awaken: 'Awakening', basic: 'Basic Attack',
+  interact: 'Interact', mount: 'Mount', songs: 'Songs', emotes: 'Emotes', compass: 'Event Compass', meter: 'Damage Meter', chat: 'Chat',
+  menu: 'Game Menu / Close', photo: 'Photo Mode' };
+export const actionLabel = a => ACTION_NAMES[a] || (/^skill\d$/.test(a) ? `Skill ${+a.slice(5) + 1}` : /^item\d$/.test(a) ? `Battle Item ${+a.slice(4) + 1}` : a);
+const KEY_NAMES = { Space: 'Space', Enter: 'Enter', Escape: 'Esc', Backquote: '`', Comma: ',', Period: '.', Semicolon: ';', Quote: "'", Slash: '/', Backslash: '\\',
+  BracketLeft: '[', BracketRight: ']', Minus: '-', Equal: '=', Tab: 'Tab', ShiftLeft: 'Shift', ControlLeft: 'Ctrl', AltLeft: 'Alt', ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→' };
+export const keyLabel = k => KEY_NAMES[k] || String(k).replace(/^Key([A-Z])$/, '$1').replace(/^Digit(\d)$/, '$1').replace(/^Numpad(\d)$/, 'Num $1');
 const OTHERS_FX = [{ id: 'off', label: 'Off', v: 0 }, { id: 'low', label: 'Low', v: 0.35 }, { id: 'full', label: 'Full', v: 1 }];
 const TABS = [{ id: 'graphics', label: 'Graphics' }, { id: 'audio', label: 'Audio' }, { id: 'gameplay', label: 'Gameplay' }, { id: 'interface', label: 'Interface' }, { id: 'keys', label: 'Keybinds' }];
 
@@ -94,9 +102,9 @@ export class SettingsWin extends Win {
       const list = h('div', 'ss-set-keys', p);
       for (const k of this.keybinds) {
         const r = h('div', 'ss-set-key', list);
-        h('span', '', r, k.action);
+        h('span', '', r, actionLabel(k.action));
         const ks = h('div', '', r);
-        ks.innerHTML = (k.keys || []).map(x => `<span class="ss-kbd">${esc(x)}</span>`).join('');
+        ks.innerHTML = (k.keys || []).map(x => `<span class="ss-kbd">${esc(keyLabel(x))}</span>`).join('');
         r.addEventListener('dblclick', () => this.ui.emit('settings:rebind', { action: k.action }));
       }
       h('div', 'ss-set-note', p, 'Double-click a binding to change it.');

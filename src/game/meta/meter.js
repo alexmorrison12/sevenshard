@@ -21,7 +21,7 @@ const DOT = { fire: 'Burn', bleed: 'Bleed', poison: 'Poison', lightning: 'Shock'
 
 export class Meter {
   constructor(session) {
-    this.s = session; this.L = null; this.offs = []; this.segs = []; this.cur = null; this.ver = 0; this.pending = [];
+    this.s = session; this.L = null; this.offs = []; this.segs = []; this.cur = null; this.ver = 0; this.pending = []; this.prePull = [];
   }
   get g() { return this.s.game; }
   me() { return this.g?.hero?.u || null; }
@@ -29,11 +29,14 @@ export class Meter {
     for (const f of this.offs) { try { f(); } catch { /* old level */ } }
     this.offs = [];
     if (this.cur) this.close('zone');
+    this.prePull = []; this.pending = [];
     this.L = L; if (!L?.on) return;
     const on = (t, fn) => { const off = L.on(t, ev => { try { fn(ev || {}); } catch (e) { console.warn('[meter]', t, e); } }); if (typeof off === 'function') this.offs.push(off); };
     on('damage', ev => this.onDamage(ev));
-    on('heal', ev => { const S = this.cur; if (S && this.ally(ev.src) && ev.real > 0) this.row(S, ev.src).heal += ev.real; });
-    on('shield', ev => { const S = this.cur; if (S && this.ally(ev.src) && ev.amount > 0) this.row(S, ev.src).shield += ev.amount; });
+    // shields / heals before the first blow (pre-pull) are buffered and credited when the fight starts
+    const support = (k, ev, v) => { if (!this.ally(ev.src) || !(v > 0)) return; if (this.cur) this.row(this.cur, ev.src)[k] += v; else { this.prePull.push({ k, u: ev.src, v, t: this.L.time }); if (this.prePull.length > 48) this.prePull.shift(); } };
+    on('heal', ev => support('heal', ev, ev.real));
+    on('shield', ev => support('shield', ev, ev.amount));
     on('death', ev => this.onDeath(ev));
     on('revive', ev => { if (this.cur && this.ally(ev.unit)) this.log('buff', `${ev.unit.name} is back on their feet`); });
     on('counter', ev => { if (!this.cur) return; this.log('mech', `★ COUNTER — ${ev.src?.name || '?'} stuns ${ev.tgt?.name || 'the boss'}`, ev.src); });
@@ -57,7 +60,8 @@ export class Meter {
       zone: g?.zone?.name || '', bosses: new Map(), rows: new Map(), skills: new Map(), log: [], sg: new Map(), up: new Map(), brandT: 0, result: null, big: 0 };
     for (const u of this.members()) this.row(S, u);
     for (const p of this.pending) if (L.time - p.t < 2.5) this.skill(S, p.id, p.name).casts++;
-    this.pending = [];
+    for (const p of this.prePull) if (L.time - p.t < 10 && p.u.level === L) this.row(S, p.u)[p.k] += p.v;
+    this.pending = []; this.prePull = [];
     this.cur = S; this.segs.unshift(S); if (this.segs.length > MAX_SEGS) this.segs.length = MAX_SEGS;
     this.ver++;
     return S;
@@ -67,6 +71,9 @@ export class Meter {
     S.end = reason; S.closedAt = Date.now();
     S.dur = dur ?? Math.max(1, S.last - S.t0);
     S.title = this.titleOf(S);
+    // history must not pin the level's units (and their models) in memory
+    for (const r of S.rows.values()) { r.dead = !!r.u?.dead; r.u = null; }
+    S.sg.clear();
     this.cur = null; this.ver++;
     return S;
   }
@@ -217,7 +224,7 @@ export class Meter {
     const total = rows.reduce((a, r) => a + r.dmg, 0), sgTotal = rows.reduce((a, r) => a + r.stagger, 0);
     const out = rows.map(r => {
       const up = S.up.get(r.id);
-      return { id: r.id, name: r.name, cls: r.cls, you: r.you, support: r.support, dead: !!r.u?.dead, dmg: r.dmg, dps: r.dmg / dur, share: total ? r.dmg / total : 0,
+      return { id: r.id, name: r.name, cls: r.cls, you: r.you, support: r.support, dead: r.u ? !!r.u.dead : !!r.dead, dmg: r.dmg, dps: r.dmg / dur, share: total ? r.dmg / total : 0,
         crit: r.hits ? r.crits / r.hits : 0, back: r.hits ? r.back / r.hits : 0, head: r.hits ? r.head / r.hits : 0, counters: r.counters, stagger: r.stagger,
         staggerShare: sgTotal ? r.stagger / sgTotal : 0, heal: r.heal, shield: r.shield, taken: r.taken, deaths: r.deaths, max: r.max, hits: r.hits,
         uptime: up && up.tot > 0 ? up.cov / up.tot : null, brand: up && S.brandT > 0 ? up.brand / S.brandT : null };
@@ -297,7 +304,10 @@ export class MeterPanel {
     if (!this.el && !this.build()) return;
     this.el.style.display = ''; this.isOpen = true; this.sel = 0; this.sig = '';
     const p = db().ui.meter?.pos;
-    if (p) this.place(p.x, p.y); else { const { w } = this.meta.ui.size(); this.place(w - 474 - 16, 452); }   // right side, under the quest tracker
+    const { w, h } = this.meta.ui.size(), touch = !!this.meta.ui.ui?.touch;
+    if (p && !touch) this.place(p.x, p.y);
+    else if (touch) { this.place(12, 52); this.el.style.maxHeight = Math.max(160, h - 52 - 200) + 'px'; }   // clear of the stick and skill cluster
+    else this.place(w - 474 - 16, 452);   // right side, under the quest tracker
     this.render();
   }
   close() { if (this.el) this.el.style.display = 'none'; this.isOpen = false; }

@@ -554,6 +554,7 @@ registerAction('cards:', (s, type, p) => {
   else if (type === 'cards:awaken') res(s, S.cards.awaken(A, p.id), r => `Awakened to ★${r.awaken}.`);
   else if (type === 'cards:open') { openCardPack(s, p.pack || 'card_pack'); return true; }
   else if (type === 'cards:auto') res(s, S.cards.autoDeck(A));
+  else if (type === 'cards:choose') res(s, S.cards.choose(A, p.index | 0), r => `${r.card.name} joins your collection.`);
   else return false;
   s.refreshWindow('cards'); s.refreshChar?.();
   return true;

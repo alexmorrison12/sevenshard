@@ -23,7 +23,7 @@ async function tentacles(B, prey, dur, coef = 1.0) {
 export default {
   id: 'deep_oracle', model: 'deep_oracle', name: 'The Deep Oracle', title: 'Eye Beneath the Oratory', kind: 'abyss',
   radius: 3.5, height: 8, hp: 54000, atk: 0.16, bars: 190, speed: 0.001, turnRate: 2.4, enrage: 660,
-  music: 'boss', arena: 'frostmere',
+  music: 'boss', arena: 'oratory_abyss',
   anims: {
     tentacle_slam: { dur: 1.8, hits: [1.0] }, tentacle_sweep: { dur: 2.2, hits: [1.1] }, gaze: { dur: 3.6, hits: [1.4] },
     grasp: { dur: 2.0, hits: [1.2] }, submerge: { dur: 2.4, hits: [1.4] }, emerge: { dur: 2.2, hits: [0.6] }, roar: { dur: 2.4, hits: [1.0] },

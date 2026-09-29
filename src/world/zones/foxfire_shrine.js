@@ -131,7 +131,7 @@ export async function build(zone, { quality = 1 } = {}) {
   for (let i = 0; i < 46; i++) { const a = rng.range(0, Math.PI * 2), rr = rng.range(2, R); dec.add('leaves', Math.cos(a) * rr, Math.sin(a) * rr - 1, { size: rng.range(1.2, 2.8), alpha: 0.85, tint: 0xff9a70 }); }
   for (const [x, z] of treeSpots) dec.add('leaves', x + rng.range(-1, 1), z + rng.range(-1, 1), { size: rng.range(3, 4.5), alpha: 0.95, tint: 0xffa070 });
   for (let i = 0; i < 12; i++) { const a = rng.range(0, Math.PI * 2), rr = rng.range(3, 15); dec.add(rng.pick(['cracks', 'stain', 'moss']), Math.cos(a) * rr, Math.sin(a) * rr - 1, { size: rng.range(1.2, 2.5), alpha: 0.6 }); }
-  dec.add('runes', 0, -1, { size: 9, rot: 0.3, tint: 0x9ad0ff, emit: 0x4a9aff, emitI: 0.9, alpha: 0.55 });
+  dec.add('runes', 0, -1, { size: 9, rot: 0.3, tint: 0x8a96a8, emit: 0x4a9aff, emitI: 0.22, alpha: 0.32 });   // faint inlay: never reads as a telegraph
   const dm = dec.build(); if (dm) zone.root.add(dm);
 
   // ---------------------------------------------------------------- foxfire, leaves, light pool

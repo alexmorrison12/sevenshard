@@ -256,6 +256,12 @@ export class Anchors {
   npc(id, x, z, f = 0) { return this.add('npc:' + id, x, z, f); }
   poi(name, x, z, f = 0, extra = null) { return this.add('poi:' + name, x, z, f, extra); }
 }
+/** numeric aliases for named anchors (FIELDS.md uses vista:<n>; the collectibles catalog uses vista:<name>) */
+export function aliasNumbered(zone, prefix) {
+  const named = Object.keys(zone.anchors).filter(k => k.startsWith(prefix + ':') && !/^\d+$/.test(k.slice(prefix.length + 1)));
+  let n = Object.keys(zone.anchors).filter(k => k.startsWith(prefix + ':') && /^\d+$/.test(k.slice(prefix.length + 1))).length;
+  for (const k of named) { const a = zone.anchors[k]; zone.anchors[`${prefix}:${++n}`] = { ...a, alias: k }; }
+}
 /** move every anchor that sits on a blocked cell to the nearest walkable cell (warn if none within r) */
 export function snapAnchors(zone, nav, r = 5, tag = 'fields') {
   for (const [name, a] of Object.entries(zone.anchors)) {

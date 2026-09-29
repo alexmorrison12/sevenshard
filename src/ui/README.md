@@ -38,7 +38,7 @@ resolution: crisp from 1280×720 to 2560×1440. `ui.scale`, `ui.vw`, `ui.vh` exp
 | `ui.hud.loot(item)` | right-side pickup feed (`{ name, grade, count, icon, kind, uid? }`) |
 | `ui.hud.badge(id, n)` | notification badge on a menu button (`'mail'`, `'guild'`, …; `0` hides) |
 | `ui.setHudVisible(on)` / `ui.hudVisible` | photo mode (also Ctrl+Z / F12) |
-| `ui.banner(text, opts)` / `ui.toast(text, kind, dur?)` | section 4 |
+| `ui.banner(text, opts)` / `ui.toast(text, kind, dur?)` | section 4 (while a full screen is up, toasts use a top-layer stack so they stay visible) |
 | `ui.chat.add(msg)` / `ui.chat.focus(prefill?)` / `ui.chat.clear()` | section 3.9 |
 | `ui.dialog(npc, script)` → `Promise<choiceId\|null>` | NPC dialogue, section 7 |
 | `ui.confirm(o)` → `Promise<bool>` · `ui.prompt(o)` → `Promise<string\|null>` | section 7 |
@@ -51,12 +51,14 @@ resolution: crisp from 1280×720 to 2560×1440. `ui.scale`, `ui.vw`, `ui.vh` exp
 | `ui.dispose()` | remove DOM and listeners |
 
 ### Keyboard (what the UI handles)
-Enter focuses chat (`/` pre-fills a command), Esc closes the top window → else emits `hud:escape` and (if the game
-didn't handle it) toggles the game menu, Ctrl+Z / F12 toggles the HUD. Window hotkeys (`HOTKEYS`, matching
-`src/engine/input.js`): P character · I inventory · K skills · N engravings · M map · U guild · O party finder ·
-L tome · J quests · H compass · Y meter · B songs · `.` emotes. Combat keys (QWER ASDF Z X V C G T Space 1–4) belong
-to the game. Note: the game's input layer `preventDefault()`s its bound keys; the UI therefore does not treat
-`defaultPrevented` as "handled". Keys are ignored while a text field, modal, NPC dialogue or full screen owns input.
+Enter focuses chat (`/` pre-fills a command), Esc closes the top window (windows with `escClose = false`, i.e. the raid
+auction, are skipped) → else emits `hud:escape` and (if the game didn't handle it) toggles the game menu, Ctrl+Z / F12
+toggles the HUD. Window hotkeys (`HOTKEYS`, a code or an array of codes): P character · I inventory · K skills ·
+N engravings · M map · U guild · O party finder · L tome · J quests · H or `;` compass · Y or `` ` `` meter · B songs ·
+`.` emotes (`;` and `` ` `` are the `src/engine/input.js` binds; Comma stays with the game's own song picker). Combat keys
+(QWER ASDF Z X V C G T Space 1–4) belong to the game. Note: the game's input layer `preventDefault()`s its bound keys;
+the UI therefore does not treat `defaultPrevented` as "handled". Keys are ignored while a text field, NPC dialogue or
+full screen owns input; while a modal-layer window is open over a screen only Esc is handled (it closes that window).
 
 **Window hotkeys and menu buttons**: the UI first emits `hud:menu { id }`. If the game's handler opens/closes/updates
 that window (e.g. `ui.toggle(id, data)`), the UI does nothing more; otherwise it toggles the window itself with the
@@ -67,11 +69,11 @@ last data it was given. Same for Esc → `hud:escape` → game menu.
 
 | name | data | actions |
 |---|---|---|
-| `title` | `{ server, status: 'Good'\|'Busy'\|'Full'\|'Maintenance', version, news: [{ tag, title, date, body, art? (0–2) }], continue?: { name, cls, level } }` | `title:enter` `title:together` `title:leaderboards` `title:settings` `title:server` `title:news {index}` |
+| `title` | `{ server, status: 'Good'\|'Busy'\|'Full'\|'Maintenance', version, news: [{ tag, title, date, body, art? (0–2) }], continue?: { name, cls, level } }` — menu: Enter World · Play Together · Leaderboards · Watch the Raid · Settings | `title:enter` `title:together` `title:leaderboards` `title:watch` (spectate the AI raid) `title:settings` `title:server` `title:news {index}` |
 | `charselect` | `{ server, roster: { level, xp: 0..1 }, chars: [{ id, name, cls, level, iLvl, title?, location?, rested? }], selected, max: 6 }` | `select:pick {id}` `select:enter {id}` `select:create` `select:delete {id}` (after type-the-name confirm) `select:back` |
-| `create` | `{ cls, sex: 'm'\|'f', look: { face, hair, hairColor, skin, eyes, height, build, marks, markColor }, name, step: 'class'\|'look', classes?: [ids], taken?: [names] }` | `create:change {cls, sex, look}` (every edit) `create:step {step}` `create:camera {view: 'body'\|'face'}` `create:confirm {cls, sex, look, name, path: 'story'\|'powerpass'}` `create:back` |
+| `create` | `{ cls, sex: 'm'\|'f', look: { face, hair, hairColor, skin, eyes, height, build, marks, markColor }, name, step: 'class'\|'look', classes?: [ids], taken?: [names] }` | `create:change {cls, sex, look}` (every edit) `create:step {step}` `create:camera {view: 'body'\|'face'}` `create:confirm {cls, sex, look, name, path: 'story'\|'powerpass'\|'raid'}` (Play the Story · Powerpass: Lv 60, Vanguard +10, iLvl 1,200 · Raid Ready: Horned Tyrant +8, iLvl 1,420) `create:back` |
 | `loading` | `{ zone, region?, kind?: 'field'\|'city'\|'dungeon'\|'raid'\|'sea'\|'island'\|'arena'\|'stronghold', tip?, pct: 0..100, image?: canvas\|dataURL }` — call again with `{ pct }` only to advance | — |
-| `results` | `{ kind: 'clear'\|'fail', over?, title, sub?, rank?: 'S'…'D', time, best?, stats?: [{ label, value }], loot: [Item], currencies?: { silver, gold, xp }, dps: [{ name, cls, dmg, dps, crit, back, counters, deaths, you, support }], retry?, continueLabel? }` | `results:continue` `results:retry` `results:share` `results:item {uid}` |
+| `results` | `{ kind: 'clear'\|'fail', over?, title, sub?, rank?: 'S'…'D', time, best?, stats?: [{ label, value }], loot: [Item \| Row { id, name, count, grade, icon, kind: 'material'\|'card'\|'gem'\|'accessory'…, item? }], currencies?: { xp?, rosterXp?, skillPts?, silver?, gold?, …any wallet key }, dps: [{ name, cls, dmg, dps, crit, back, counters, deaths, you, support }], retry?, continueLabel? }` — unknown currency keys render generically (`CURRENCIES` names, icon `currency:<id>`); a row's `item` (full Item) feeds the tooltip | `results:continue` `results:retry` `results:share` `results:item {uid, id}` |
 | `death` (overlay) | `{ reason?, by?, revives: [{ id, label, sub?, wait?: s, count?, disabled?, key? }], auto?: { label, left } }` — `wait` counts down locally | `death:revive {id}` |
 | `game` | — (the HUD) | — |
 
@@ -138,7 +140,7 @@ sticky channel. Tab cycles channels, ↑/↓ history, Esc blurs. Emits `chat:sen
 |---|---|
 | `zone` | letter-spaced serif zone title, `sub` = region above, gold rule |
 | `boss` | cinematic title card: `title` (e.g. "the Horned Tyrant") above the huge name on a dark band |
-| `warn` | red mechanic warning band — replaces the current warning instantly |
+| `warn` | boss mechanic callout: ⚠ + text on a thin translucent ember band, placed in the HUD top stack just under the boss HP bar (≈15–19% of the height) with toasts flowing below it — replaces the current callout instantly |
 | `counter` / `stagger` | "COUNTER!" (blue) / "STAGGER BREAK" (purple) pop — instant |
 | `levelup` | rotating rays + big `level` number, text below |
 | `quest` `clear` `defeat` `gate` `success` `fail` `info` | band + over-line + title |
@@ -163,28 +165,31 @@ Draggable by the title bar, closable (× / Esc, topmost first), stackable (click
 in localStorage (`ss.ui.win.v1`; Settings → Interface → Reset window positions). `window:open {id}` /
 `window:close {id}` are emitted so the game can push fresh data. `ui.update(id, data)` re-renders an open window
 (and stores the data for the next open). Menu strip ids: `character inventory skills engravings sunheart cards map
-guild market mail stronghold tome partyfinder settings`.
+guild market mail stronghold tome partyfinder settings`. Windows never exceed the screen: a body that doesn't fit
+scrolls. **Modal layer**: `settings`, `leaderboards` and `bid` live above full screens (title, results), so they can be
+opened from there; `bid` ignores Esc. **Aliases**: `collectibles` opens `tome` on its Collectibles tab
+(`ui.open/update/toggle/close/isOpen('collectibles', …)` all work).
 
 | id | data | actions |
 |---|---|---|
 | `character` | `{ name, cls, level, iLvl, title?, guild?, roster?, gear: { weapon, head, shoulder, chest, pants, gloves, necklace, earring1, earring2, ring1, ring2, stone, bracelet }, stats: { atk, hp, crit, spec, swift, dom, endur, expert }, engravings: [{ id, nodes, neg? }], cards?: { set, count, awaken, bonuses: [{ text, active }] } }` — mount a 3D portrait canvas into `ui.get('character').portrait` (250×390 virtual px) | `char:slot {slot, uid}` · `char:unequip {slot, uid}` (right-click) · `inv:equip {uid, slot}` (drop) |
 | `inventory` | `{ items: [Item + pos?], slots?: 60, currencies: { silver, gold, crystals }, tab? }` — tabs All/Gear/Battle/Materials/Misc, search, sort | `inv:use {uid}` · `inv:equip {uid, slot?}` · `inv:sell {uid}` (right-click while vendor is open, or drop on vendor) · `inv:move {uid, to}` (drag) · `inv:sort {tab}` · `inv:link {uid}` (Shift+click) · `inv:select {uid}` |
 | `skills` | `{ cls, points, pointsTotal?, skills: [Skill + { learned, lvlReq }], bar: [skillId\|null ×8], selected? }` | `skills:level {id, delta}` · `skills:tripod {id, tier, index}` · `skills:assign {id, key, slot}` (drag / click-then-slot; id null clears) · `skills:reset {id}` · `skills:select {id}` |
-| `engravings` | `{ active: [{ id, nodes, neg?, sources?: [{ name, v }] }], equipped: [{ id, nodes }\|null ×2], books: [{ id, nodes }], maxBook?: 12 }` | `engr:equip {slot, id}` · `engr:unequip {slot}` |
+| `engravings` | `{ active: [{ id, nodes, neg?, sources?: [{ name, v }] }], equipped: [{ id, nodes }\|null ×2], books: [{ id, nodes }] (learned; nodes = equippable, ≤ maxBook), maxBook?: 12, learned?: [{ id, points, max: 80, equipMax }], unread?: [{ uid, engr, name, grade, points }], summary?: { label: '3 3 2 1' } }` — library shows learned points (every 20 → +3 equippable nodes); unread recipes get a Read button | `engr:equip {slot, id}` · `engr:unequip {slot}` · `inv:use {uid}` (Read) |
 | `sunheart` | `sunView()`: `{ unlocked, unlockAt, points, available, iLvl?, trees: [{ id, name, color, blurb, spent, tiers: [{ tier, gate, open, nodes: [{ id, name, desc, rank, max, cost, can }] }] }] }` | `sunheart:rank {id, delta: 1\|-1}` (left / right click) · `sunheart:reset {tree}` |
-| `settings` | `{ values: { quality, renderScale, shadows, bloom, fps, master, music, sfx, ambience, mute, moveButton, damageNumbers, cameraShake, telegraphs, quickCast, autoLoot, uiScale, chatOpacity, buffTimers, touch }, keybinds: [{ action, keys: [] }] }` | `settings:change {key, value, values}` · `settings:rebind {action}` (double-click) · `settings:reset {values}` — `uiScale`, `touch`, `chatOpacity` are also applied by the UI |
-| `vendor` | `{ name, title?, greeting?, tabs?: [{ id, label }], items: [{ id, item: Item, price: { cur, amount }, stock?, limit?, tab? }], buyback?: [Item + { price }], currencies }` | `vendor:buy {id, qty}` (Shift+click asks a quantity) · `vendor:buyback {uid}` · `inv:sell {uid}` |
+| `settings` | `{ values: { quality, renderScale, shadows, bloom, fps, master, music, sfx, ambience, mute, moveButton, damageNumbers, cameraShake, othersFx (Other Players' Effects: Off/Low/Full = 0/0.35/1, default 0.35), telegraphs, quickCast, autoLoot, uiScale, chatOpacity, buffTimers, touch }, keybinds: [{ action, keys: [] }] }` (modal layer) — `action` may be an engine bind id (`skill0`…, `idZ`, `item0`…, `meter`) and `keys` KeyboardEvent codes; both display as readable labels ("Skill 1", "Q") | `settings:change {key, value, values}` · `settings:rebind {action}` (double-click) · `settings:reset {values}` — `uiScale`, `touch`, `chatOpacity` are also applied by the UI |
+| `vendor` | `{ name, title?, greeting?, tabs?: [{ id, label }], items: [{ id, item: Item, price: { cur, amount }, stock?, limit?, tab? }], buyback?: [Item + { price }], currencies }` — `cur` / `currencies` may use any wallet key (silver, gold, crystals, royal, shards, pirate, bloodstone, pvp, tokens) | `vendor:buy {id, qty}` (Shift+click asks a quantity) · `vendor:buyback {uid}` · `inv:sell {uid}` |
 | `gamemenu` | `{ items?: [{ id, label, glyph }] }` (default: resume, settings, keys, party finder, photo, help, character select, title) | `gamemenu {id}` |
 | `map` | `{ view?: 'zone'\|'world', zone, canvas, x0, z0, size, you, markers, world?: { regions: [{ id, name, x, y (0..1), kind, level?, unlocked?, current?, pct?, triport? }], ship?: { x, y } } }` — zone view defaults to the HUD minimap; world view paints Solmara | `map:click {x, z}` · `map:travel {id}` |
-| `honing` | `{ items?: [Item], item, iLvlFrom?, iLvlTo?, gains?: [{ label, from, to }], chance: { base, bonus, boosters?, total? }, maxBonus?, energy: 0..1, mats: [{ id, name, icon, grade, need, have }], cost: { silver, gold }, currencies, boosters: [{ id, name, icon, grade, have, max, add }], result?: 'success'\|'fail', resultKey?, maxed? }` — or call `ui.get('honing').play('success'\|'fail', { hone, energy })` | `hone:select {uid}` · `hone:booster {id, n}` · `hone:tap {uid, boosters}` |
-| `stone` | `{ stones?: [Item], stone: Item (engr ×2, neg, facets: [[1\|0\|null ×10] ×3]), chance: 0..1, cost?: { silver }, last?: { line, ok }, lastKey? }` | `stone:select {uid}` · `stone:facet {uid, line}` · `stone:share {uid}` |
-| `cards` | `{ deck: [cardId\|null ×6], cards: [{ id, name, grade, awaken, count, icon, desc?, set? }], sets: [{ id, name, cards: [ids], bonuses: [{ need, awaken?, text }] }] }` — awakening n→n+1 costs n+1 copies | `cards:equip {id, slot}` (click / drag) · `cards:unequip {slot}` (right-click) · `cards:awaken {id}` |
+| `honing` | `{ items?: [Item], item, iLvlFrom?, iLvlTo?, gains?: [{ label, from, to }], chance: { base, bonus, boosters?, total? }, maxBonus?, energy: 0..1, mats: [{ id, name, icon, grade, need, have }], cost: { silver, gold }, currencies, boosters: [{ id, name, icon, grade, have, max, add }], result?: 'success'\|'fail', resultKey?, maxed?, support?: { name, desc, ends (ms) }, expected?: { taps, p90? }, transfer?: { ok, msg?, to: { set, hone, iLvl } }, stats?: { taps, wins }, emptyMsg? }` — no `item` → empty state ("Nothing to hone yet" / "Select a piece"); weekly Honing Support + your record pinned under the list; reforge path under the gains; short on materials → Hone disabled + "Not enough materials" — or call `ui.get('honing').play('success'\|'fail', { hone, energy })` | `hone:select {uid}` · `hone:booster {id, n}` · `hone:tap {uid, boosters}` |
+| `stone` | `{ stones?: [Item], stone: Item (engr ×2, neg, facets: [[1\|0\|null ×10] ×3]), chance: 0..1, cost?: { silver }, last?: { line, ok }, lastKey?, best?: { label: '9/7', lines: [names], grade, is97 } }` — no stone → empty state | `stone:select {uid}` · `stone:facet {uid, line}` · `stone:share {uid}` |
+| `cards` | `{ deck: [cardId\|null ×6], cards: [{ id, name, grade, awaken, count, icon, desc?, set? }], sets: [{ id, name, cards: [ids], bonuses: [{ need, awaken?, text }] }], packs?: [{ id, name, count }], owned?, total?, choice?: { pack, options: [{ id, name, grade, icon? }] } }` — awakening n→n+1 costs n+1 copies; toolbar with collection count, Auto-Deck and one Open button per pack; a pending selector shows its 3 cards inline | `cards:equip {id, slot}` (click / drag) · `cards:unequip {slot}` (right-click) · `cards:awaken {id}` · `cards:auto` · `cards:open {pack}` · `cards:choose {index}` |
 | `gems` | `{ sockets: [{ gem: Gem\|null, skill?: { id, name, icon } } ×11], gems: [Gem], skills: [{ id, name, icon }], fuseCost? }` · `Gem = { uid, gem: 'ruin'\|'swift', level, name, grade, icon, desc? }` | `gems:socket {uid, slot}` (drag) · `gems:unsocket {slot}` · `gems:target {slot, skill}` · `gems:fuse {uids: [3]}` |
 | `market` | `{ tab?, cats: [{ id, label, subs? }], cat?, sub?, q?, results: [{ id, name, icon, grade, kind, bundle?, lowest, avg?, recent?, stock?, history?: [prices], trend? }], selected?, sellable?: [Item + { suggested }], listings?: [{ id, item, price, qty, left?, sold? }], fee?, exchange?: { rate, history? }, currencies }` | `market:search {q, cat, sub}` · `market:select {id}` · `market:buy {id, qty, price}` · `market:list {uid, price, qty}` · `market:cancel {id}` · `market:exchange {dir: 'crystalsToGold'\|'goldToCrystals', amount}` |
-| `stronghold` | `{ level, xp, xpMax, energy: { now, max, perHour }, buildings: [{ id, name, level, max, desc, effect, next?: { cost: [rows], time, req?, can }, upgrading?: { left, total } }], research: [{ id, name, desc, tier, time, cost?, state: 'locked'\|'available'\|'active'\|'done', left?, total?, req? }], craft: { slots, queue: [{ id, name, icon, grade, qty, left, total }], recipes: [{ id, name, icon, grade, time, out?, cost, can }] }, dispatch: { slots, crew: [{ id, name, role, power, busy }], missions: [{ id, name, time, chance, power, rewards, can }], active: [{ id, name, left, total }] } }` — cost rows `{ name, icon, grade, need, have }`; timers tick locally | `sh:upgrade {id}` · `sh:research {id}` · `sh:craft {id, qty}` · `sh:cancel {id}` · `sh:collect` · `sh:dispatch {id}` · `sh:claim {id}` |
-| `tome` | `{ tab?: 'tome'\|'collectibles', selected?, regions: [{ id, name, pct, cats: [{ id, label, have, total }], rewards: [{ pct, name, icon, grade, count?, claimed }] }], collectibles: [{ id, name, icon, have, total, tiers: [{ n, name, icon, grade, count?, claimed }] }] }` | `tome:region {id}` · `tome:claim {region, pct}` · `collect:claim {id, n}` |
-| `rapport` | `{ npcs: [{ id, name, title, icon?, stage: 0–5, points, max, daily?: { songs, songsMax, emotes, emotesMax }, songs: [{ id, name, locked? }], emotes: [{ id, name }], gifts: [Item], rewards: [{ stage, name, icon, grade, claimed }] }], selected? }` — stages Neutral → Devoted | `rapport:select {id}` · `rapport:song {npc, id}` · `rapport:emote {npc, id}` · `rapport:gift {npc, uid}` · `rapport:claim {npc, stage}` |
-| `guild` | `{ guild: null \| { name, tag, level, xp, xpMax, motto, bloodstones, rank, emblem?: { color }, members: [{ name, cls, level, iLvl, rank, online, weekly }], research: [{ id, name, level, max, desc }], missions: [{ id, name, n, need, reward }] }, browse?: [{ id, name, tag, level, members, max, motto, req }] }` | `guild:donate {kind}` · `guild:join {id}` · `guild:create {name, tag}` · `guild:leave` · `guild:research {id}` · `guild:mission {id}` |
+| `stronghold` | `{ level, xp, xpMax, energy: { now, max, perHour }, buildings: [{ id, name, level, max, desc, effect, next?: { cost: [rows], time, req?, can }, upgrading?: { left, total } }], research: [{ id, name, desc, tier, time, cost?, state: 'locked'\|'available'\|'active'\|'done', left?, total?, req? }], craft: { slots, queue: [{ id, name, icon, grade, qty, left, total }], recipes: [{ id, name, icon, grade, time, out?, cost, can }] }, dispatch: { slots, crew: [{ id, name, role, power, busy }], missions: [{ id, name, time, chance, power, rewards, can }], active: [{ id, name, left, total }] }, garden?: { level, ready: [Row] }, ranch?: { level, pets: [id], slots } }` — cost rows `{ name, icon, grade, need, have }`; timers tick locally; running research / crafts / dispatches get a "finish now" button (1 crystal per started 10 min) | `sh:upgrade {id}` · `sh:research {id}` · `sh:craft {id, qty}` · `sh:cancel {id}` · `sh:collect` · `sh:dispatch {id}` · `sh:claim {id}` · `sh:garden` · `sh:ranch` · `sh:recruit {pay: 'contract'\|'silver'}` · `sh:rush {kind: 'research'\|'craft'\|'dispatch', id}` |
+| `tome` (alias `collectibles`) | `{ tab?: 'tome'\|'collectibles', selected?, regions: [{ id, name, pct, cats: [{ id, label, have, total }], rewards: [{ pct, name, icon, grade, count?, claimed }] }], collectibles: [{ id, name, icon, have, total, tiers: [{ n, name, icon, grade, count?, claimed }], items?: [{ id, name, zone, hint, source, found }] }], seedsByZone?: { zone: { name } } }` — clicking a collectible opens its checklist (reward track + entries by zone, hints for missing ones) | `tome:region {id}` · `tome:claim {region, pct}` · `collect:claim {id, n}` |
+| `rapport` | `{ npcs: [{ id, name, title, icon?, stage: 0–5, points, max, daily?: { songs, songsMax, emotes, emotesMax }, songs: [{ id, name, locked? }], emotes: [{ id, name }], gifts: [Item], rewards: [{ stage, name, icon, grade, claimed }], line?, likes?: { songs: [id], emotes: [id], gifts: { [giftId]: 'love'\|'like'\|'neutral'\|'dislike' } } }], selected? }` — stages Neutral → Devoted; liked songs/emotes get a heart, gifts a ♥♥ / ♥ / ✕ badge | `rapport:select {id}` · `rapport:song {npc, id}` · `rapport:emote {npc, id}` · `rapport:gift {npc, uid}` · `rapport:claim {npc, stage}` |
+| `guild` | `{ guild: null \| { name, tag, level, xp, xpMax, motto, bloodstones, rank, emblem?: { color }, members: [{ name, cls, level, iLvl, rank, online, weekly }], research: [{ id, name, level, max, desc }], missions: [{ id, name, n, need, reward }] }, browse?: [{ id, name, tag, level, members, max, motto, req?, leader?, focus? }] }` — `req: 'Full'` (or members ≥ max) disables Apply | `guild:donate {kind}` · `guild:join {id}` · `guild:create {name, tag}` · `guild:leave` · `guild:research {id}` · `guild:mission {id}` |
 | `partyfinder` | `{ you: { name, cls, ilvl }, listings: [{ id, title, content: { kind: 'raid'\|'guardian'\|'chaos', raid?, gate?, hard?, boss?, tier? }, max, req, note, age, leader: Member, members: [Member], canApply }], mine: null \| { title, content, max, req, note, members, applicants }, contents: [{ kind, raid?, gate?, hard?, boss?, tier?, title, max, req, locked }] }` · `Member = { name, cls, ilvl, support?, title? }` — tabs Legion Raid / Abyss (raid `oratory`) / Guardian / Chaos / All | `pf:apply {id}` · `pf:create {content, note, req}` · `pf:accept {name}` · `pf:decline {name}` · `pf:cancel` · `pf:start` · `pf:match {content}` · `pf:refresh` |
 | `mail` | `{ mails: [{ id, from, subject, body, date (ms or text), read, kind?: 'system'\|'player'\|'guild', attachments?: [Item], claimed?, expires? }] }` | `mail:open {id}` · `mail:claim {id}` · `mail:claimAll` · `mail:delete {id}` |
 | `leaderboards` | `{ board, sub?, boards?: [{ id, label, group?, subs? }], rows: [{ rank, name, cls, value, sub?, you?, party?: [cls] }], you?: { rank, value }, note? }` — default boards: legion_first, legion_nm, legion_hm, legion_dps (per class), legion_support, legion_deathless, guardian, inferno, pvp, stone, honing, seeds | `lb:board {board, sub}` |
@@ -199,7 +204,7 @@ guild market mail stronghold tome partyfinder settings`.
 ## 7. NPC dialogue, confirm, prompt
 
 `ui.dialog(npc, script)` → `Promise<choiceId | null>` — `npc: { id?, name, title?, portrait?: canvas|dataURL, cls? }`
-(portrait falls back to `npc:<id>` then the class crest); `script: string | [string | { text, speaker?, choices?:
+(portrait falls back to `npc:<id>`, then `npc:<slug(name)>`, then the class crest); `script: string | [string | { text, speaker?, choices?:
 [{ id, text, kind?: 'quest'|'shop'|'leave'|'talk' }] }]`. Text types out; click / Space / Enter advance (finishing the
 line first); 1–9 pick a choice; Esc closes (→ null). The lower HUD fades while it is open. Also emits
 `dialog:choice {id, npc}` and `dialog:close`.
@@ -237,7 +242,8 @@ restrained gold `--ss-gold`, `--ss-gold-hi`, `--ss-gold-a`; text `--ss-text`, `-
 status `--ss-good`, `--ss-bad`, `--ss-warn`, `--ss-info`; combat `--ss-hp*`, `--ss-mp*`, `--ss-shield`, `--ss-stagger`,
 `--ss-destr`, `--ss-counter`; type `--ss-font` (Segoe UI/Roboto/system), `--ss-cond`, `--ss-serif` (Georgia small caps
 for display); outlines `--ss-ol`, `--ss-ol2`; `--ss-shadow`, `--ss-ease`, `--ss-spring`. Grade classes `.ss-g0`…`.ss-g7`
-set `--gc` (colour) and `--ga/--gb/--gd` (slot gradient) — Common … Primal per DESIGN.md §6.
+set `--gc` (colour) and `--ga/--gb/--gd` (slot gradient) — Common … Primal per DESIGN.md §6. Put the class on the slot
+itself or on a row around it (the neutral defaults live on `.ss-ui`, so components must not redeclare them).
 
 **CSS primitives** (`b-kit.css`): `.ss-panel` (+ `--flat`, `--glass`, `.ss-orn` gold corner brackets), `.ss-well`,
 `.ss-h` (gold-ruled section header, `--c` centred), `.ss-title`, `.ss-label`, `.ss-sep`, `.ss-btn` (+ `--primary` gold,
@@ -249,14 +255,18 @@ set `--gc` (colour) and `--ga/--gb/--gd` (slot gradient) — Common … Primal p
 
 **JS kit** (`core/kit.js`): `slot(item, { size, onClick, onContext, tip, hint, empty: { icon, label, tip }, dim, sel,
 hone, quality })`, `tabs(parent, items, value, onChange)` / `vtabs` → `{ el, set, map }`, `toggle`, `range`, `select`,
-`seg`, `bar`, `money`, `price`, `section`, `kv`, `empty`. `core/util.js`: `h()`, `btn()`, diffed setters (`setText`,
+`seg`, `bar`, `money` (any wallet keys, in `CURRENCY_ORDER`), `price`, `section`, `kv`, `empty`. `core/data.js`:
+`CURRENCIES` / `currency(id)` / `currencyList(obj)` (names + icon ids for every wallet key), `GRADES`, `CLASSES`,
+`ENGRAVINGS`, `STATS`… `core/util.js`: `h()`, `btn()`, diffed setters (`setText`,
 `setCls`, `setStyle`, `setSrc`, `show`…), `Trail` (damage trail), formatters (`fmtInt`, `fmtShort`, `fmtClock`,
 `fmtCD`, `fmtLeft`), `store`. `core/drag.js`: `draggable(el, () => payload)` + `el._drop = payload => fn|null`.
 `core/glyphs.js`: `glyph(name)` crisp SVG line icons for chrome.
 
-**A new window**: subclass `Win` (`core/windows.js`) with `static id/title/glyph/width/pos/layer`, build DOM once in
-`build()` into `this.body`, fill it in `render(data)`, and add the class to `windows/index.js`. Put its CSS in a
-`src/ui/*.css` file with `ss-` prefixed classes.
+**A new window**: subclass `Win` (`core/windows.js`) with `static id/title/glyph/width/pos`, optionally
+`static layer = 'modal'` (stays above full screens), `static escClose = false` (Esc leaves it open) and
+`static aliases = { otherId: 'tabId' }` (+ implement `setTab(tab)`); build DOM once in `build()` into `this.body`, fill
+it in `render(data)`, and add the class to `windows/index.js`. Put its CSS in a `src/ui/*.css` file with `ss-` prefixed
+classes.
 
 ---------------------------------------------------------------------------------------------------------------------
 ## 11. Icons
@@ -264,7 +274,8 @@ hone, quality })`, `tabs(parent, items, value, onChange)` / `vtabs` → `{ el, s
 `core/icon.js` wraps `icon(id, size, opts)` from `src/ui/icons/` (the icon owner's module; a local placeholder painter
 is the fallback). `iconUrl(id, cssPx, opts)` picks the pixel bucket from UI scale × devicePixelRatio and memoizes;
 `itemIcon(id, cssPx)` requests `{ bare: true }` art to sit inside `.ss-slot` grade frames. Ids used by the UI:
-`skill:<cls>:<slug>` (`skillIconId(cls, name)`), `skill:<cls>:awakening`, `skill:any:dash`, `item:*`, `currency:silver|gold|crystal`,
+`skill:<cls>:<slug>` (`skillIconId(cls, name)`), `skill:<cls>:awakening`, `skill:any:dash`, `item:*`,
+`currency:silver|gold|crystal|royal|shards|pirate|bloodstone|pvp|token` (via `currency(id).icon`),
 `engr:<id>` (`engrIcon(id)` maps `*_reduction` → `neg_*`), `status:*`, `class:<cls>`, `tripod:<id>`, `boss:<id>`, `npc:<id>`.
 
 ---------------------------------------------------------------------------------------------------------------------
@@ -293,4 +304,6 @@ loading|results|death` · `&win=<id>[,<id>]` · `&cls=<class>` · `&raid=1` · `
 `&tip=item|skill|buff|gear|stone|awaken` · `&dialog=1` · `&modal=confirm|delete|prompt` · `&hone=success|fail` ·
 `&cast=charge|cast|channel` · `&interact=1` · `&freeze=1` · `&hide=1` · `&bg=field|dungeon|city|dark|scene` · `&perf=1`
 · `&step=look` (create) · `&kind=<zone kind>` (loading) · `&view=zone|world` (map) · `&locked=1` (sunheart) ·
-`&mine=1` (party finder) · `&tab=collectibles` (tome). Mock data: `src/lab/ui-mock.js` (a reference for every shape).
+`&mine=1` (party finder) · `&tab=collectibles` (tome) · `&hone=empty` (honing empty state) · `&choice=1` (cards
+selector). `window.__ui` / `__mockWindows` / `__mockScreens` are exposed for scripted checks. Mock data:
+`src/lab/ui-mock.js` (a reference for every shape).

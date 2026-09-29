@@ -12,8 +12,8 @@ const PIP = (name, title, variant, o = {}) => ({ name, title, creature: 'pip', v
 
 export const STORY_NPCS = {
   // ---------------------------------------------------------------- the leads
-  brannoc: P('Commander Brannoc Hale', 'Knight of Brighthold', 'knight', { short: 'Brannoc', portrait: 'brannoc', lines: ['Brighthold burned, but it will not stay burned.', 'Keep your guard up and your boots dry. In that order.'] }),
-  seraphine: P('Seraphine', 'Oracle of the Shards', 'oracle', { short: 'Seraphine', sex: 'f', portrait: 'seraphine', lines: ['The Shards sing, Shardbearer. Can you hear them too?', 'Seven lights, scattered. One of them is closer than you think.'] }),
+  brannoc: P('Commander Brannoc Hale', 'Knight of Brighthold', 'brannoc', { short: 'Brannoc', portrait: 'brannoc', lines: ['Brighthold burned, but it will not stay burned.', 'Keep your guard up and your boots dry. In that order.'] }),
+  seraphine: P('Seraphine', 'Oracle of the Shards', 'seraphine', { short: 'Seraphine', sex: 'f', portrait: 'seraphine', lines: ['The Shards sing, Shardbearer. Can you hear them too?', 'Seven lights, scattered. One of them is closer than you think.'] }),
   // ---------------------------------------------------------------- prologue
   guard_ren: P('Sergeant Ren Callow', 'Brighthold Watch', 'guard', { short: 'Sergeant Ren', lines: ['Hold the line! Hold the — oh, gods, hold SOMETHING!'] }),
   gunner_bess: P('Master Gunner Bess', 'Rampart Artillery', 'guard', { short: 'Gunner Bess', sex: 'f', lines: ['Aim for the eyes. It has a lot of them.'] }),
@@ -76,7 +76,7 @@ export const PLACEMENTS = [
   // Goldmeadow: Sprig and Seraphine follow the story around the farm
   { id: 'sprig', zone: 'goldmeadow', at: ['poi:windmill', 'npc:miller', 'spawn'], off: [2.2, 2.6], face: Math.PI, when: Q => Q.isActive('g6_pip') && Q.stepOf('g6_pip') >= 1 },
   { id: 'sprig', zone: 'goldmeadow', at: ['npc:farmer_hale', 'poi:hale_farm', 'spawn'], off: [1.4, 3.2], face: Math.PI, when: Q => Q.isActive('g7_seeds') },
-  { id: 'sprig', zone: 'goldmeadow', at: ['gate:pipsprout', 'poi:mushroom_ring', 'poi:hermit_hut', 'npc:hermit', 'spawn'], off: [2.4, 2.4], face: Math.PI, when: Q => Q.isActive('g8_hollow') },
+  { id: 'sprig', zone: 'goldmeadow', at: ['gate:pipsprout', 'poi:mushroom_ring', 'poi:standing_stones', 'poi:hermit_hut', 'spawn'], off: [2.4, 2.4], face: Math.PI, when: Q => Q.isActive('g8_hollow') },
   { id: 'seraphine', zone: 'goldmeadow', at: ['npc:farmer_hale', 'poi:hale_farm', 'spawn'], off: [3.2, 2.2], face: Math.PI, when: Q => has(Q, 'g7_seeds') && !Q.isDone('g8_hollow') },
   { id: 'rusk', zone: 'goldmeadow', at: ['poi:bandit_camp', 'elite:3', 'spawn'], off: [0, -1.5], face: 0, when: Q => Q.isActive('g4_gentleman') && Q.stepOf('g4_gentleman') >= 3 },
   // Pipsprout: Sprig came home with you
@@ -86,8 +86,8 @@ export const PLACEMENTS = [
   { id: 'brannoc', zone: 'thornwood', at: ['gate:ashen_ridge', 'poi:gate', 'spawn'], off: [3, 3], face: Math.PI, when: Q => Q.isActive('t7_road') },
   // Ashen Ridge: Brannoc and Seraphine lead the assault from the Vanguard camp, then move up to the gate
   { id: 'brannoc', zone: 'ashen_ridge', at: ['poi:fortress_gate', 'poi:gate', 'duel', 'spawn'], off: [-3, 6], face: 0, when: Q => Q.isDone('a4_gate') && !Q.isDone('a6_shard') },
-  { id: 'brannoc', zone: 'ashen_ridge', at: ['npc:captain', 'poi:camp', 'spawn'], off: [3.4, 1.5], face: Math.PI, when: Q => has(Q, 'a1_camp') || Q.isActive('t7_road') },
+  { id: 'brannoc', zone: 'ashen_ridge', at: ['npc:commander', 'poi:emberwatch', 'spawn'], off: [3.4, 1.5], face: Math.PI, when: Q => has(Q, 'a1_camp') || Q.isActive('t7_road') },
   { id: 'seraphine', zone: 'ashen_ridge', at: ['poi:fortress_gate', 'poi:gate', 'duel', 'spawn'], off: [3, 6], face: 0, when: Q => Q.isDone('a4_gate') && !Q.isDone('a6_shard') },
-  { id: 'seraphine', zone: 'ashen_ridge', at: ['npc:captain', 'poi:camp', 'spawn'], off: [-3.2, 1.8], face: Math.PI, when: Q => has(Q, 'a1_camp') && !Q.isDone('a6_shard') },
-  { id: 'tam', zone: 'ashen_ridge', at: ['npc:refugee', 'npc:captain', 'poi:camp', 'spawn'], off: [-5, -2], face: Math.PI, when: Q => has(Q, 'a1_camp') },
+  { id: 'seraphine', zone: 'ashen_ridge', at: ['npc:commander', 'poi:emberwatch', 'spawn'], off: [-3.2, 1.8], face: Math.PI, when: Q => has(Q, 'a1_camp') && !Q.isDone('a6_shard') },
+  { id: 'tam', zone: 'ashen_ridge', at: ['poi:emberwatch', 'npc:commander', 'spawn'], off: [-6, 3], face: Math.PI, when: Q => has(Q, 'a1_camp') },
 ];

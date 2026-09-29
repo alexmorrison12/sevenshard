@@ -265,10 +265,12 @@ export async function build(zone, { quality = 1 } = {}) {
   A.add('breach', 47.5, -14, -Math.PI / 2, { r: 6 });
   A.add('boss:ashmaw', 64, -14, Math.PI / 2);
   A.add('duel', 0, -60, Math.PI, { r: 14 });
+  A.add('chaosgate', -20, -8, Math.PI, { r: 10 });                   // the bailey (open ground inside the walls)
   A.add('boss:varkhul', 0, -70, 0);
   cannons.forEach((c, i) => { A.add(`cannon:${i + 1}`, c.x - 1.6, c.z, -Math.PI / 2, { muzzle: [+c.m.x.toFixed(2), +c.m.y.toFixed(2), +c.m.z.toFixed(2)] }); });
   A.node('forage', -26, 56); A.node('dig', 30, 54); A.node('dig', -34, -30); A.node('log', -44, 16); A.node('mine', -46, -34); A.node('fish', 28, 88, Math.PI);
-  A.add('vista:1', 40.5, -30, -Math.PI / 2);
+  A.add('vista:1', 40.5, -30, -Math.PI / 2);                        // the north rampart, over Ashmaw's field
+  A.add('vista:2', 0, 27.5, Math.PI);                                 // the gate ramp, looking back over the burning town
   A.add('lore:1', -5, 58.5, Math.PI); A.add('lore:2', -20, -70, 0);
   const beats = { harbor: [0, 83], barricade: [0, 72], town_square: [0, 52], gate_ramp: [0, 32], outer_gate: [0, 24], bailey: [0, 4], ramparts: [31, 8], breach: [44, -14], inner_gate: [0, -36], courtyard: [0, -50], keep: [0, -74] };
   for (const [k, [x, z]] of Object.entries(beats)) A.poi(k, x, z, 0);

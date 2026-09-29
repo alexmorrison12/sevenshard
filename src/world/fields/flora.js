@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import { RNG, Simplex, clamp } from '../../core/noise.js';
 import { MeshBuilder, tube, blob, linColor } from '../../engine/geom.js';
 import { lambert, G } from '../../engine/materials.js';
-import { groundLayers, LAYER_TILE } from '../textures.js';
+import { groundLayers, LAYER_TILE, foliageAtlas, kitTex } from '../textures.js';
 import { foliageMaterials, SPECIES } from '../foliage.js';
 import { cutV, cutF } from '../kit.js';
 import { circle } from '../shapes.js';
@@ -289,9 +289,29 @@ function windV(amp) {
   #ifdef USE_INSTANCING
     ip = instanceMatrix[3].xyz;
   #endif
+  #ifdef USE_BATCHING
+    ip = batchingMatrix[3].xyz;
+  #endif
   float ph = ip.x * 0.13 + ip.z * 0.17;
   float w = sin(uTime * 1.3 + ph) * 0.6 + sin(uTime * 2.7 + ph * 2.3 + position.y * 0.4) * 0.4;
-  transformed.xz += uWind * w * sway * ${amp.toFixed(3)}; }`);
+  transformed.xz += uWind * w * sway * ${amp.toFixed(3)};
+  transformed.y += sin(uTime * 3.1 + ph + position.x) * sway * ${(amp * 0.25).toFixed(3)}; }`);
+}
+let FFM = null;
+/** copies of the kit's foliage materials whose wind also works under BatchedMesh (USE_BATCHING) */
+export function fieldFoliageMaterials() {
+  if (FFM) return FFM;
+  const atlas = foliageAtlas().map, bark = kitTex('bark');
+  const U = { uPlayerPos: G.uPlayerPos };
+  const leafFade = fs => cutF(fs, 0.9, 0.17, 0.3), trunkFade = fs => cutF(fs, 0.85, 0.12, 0.2);
+  FFM = {
+    leaves: lambert({ map: atlas, vertexColors: true, alphaTest: 0.5, side: THREE.DoubleSide }, { wrap: 0.6, trans: 0.5, rim: 0.15, rimColor: 0xf0ffb0, key: 'ffol-leaves', uniforms: U, vertex: vs => cutV(windV(0.1)(vs)), fragment: leafFade }),
+    core: lambert({ vertexColors: true }, { wrap: 0.65, trans: 0.3, key: 'ffol-core', uniforms: U, vertex: vs => cutV(windV(0.08)(vs)), fragment: leafFade }),
+    bark: lambert({ map: bark.map, normalMap: bark.normalMap, vertexColors: true }, { wrap: 0.3, key: 'ffol-bark', uniforms: U, vertex: vs => cutV(windV(0.015)(vs)), fragment: trunkFade }),
+    flower: lambert({ vertexColors: true, side: THREE.DoubleSide }, { wrap: 0.5, trans: 0.3, key: 'ffol-flower', uniforms: U, vertex: windV(0.12) }),
+  };
+  for (const m of Object.values(FFM)) m.userData.shared = true;
+  return FFM;
 }
 const THINGM = {};
 /** foliage-like material (vertex colours, wind via the sway attribute) that dissolves near the camera and over the hero */
@@ -319,8 +339,9 @@ const CELL = 48;
  *   flora.flower(x, y, z, colour)
  */
 export class FieldFlora {
-  constructor({ cell = CELL } = {}) {
-    this.mats = foliageMaterials();
+  constructor({ cell = CELL, batched = true } = {}) {
+    this.mats = batched ? fieldFoliageMaterials() : foliageMaterials();
+    this.batched = batched;
     this.cell = cell;
     this.proto = new Map(); this.items = []; this.flowers = new Map(); this.things = new Map(); this.colliders = [];
   }
@@ -344,6 +365,7 @@ export class FieldFlora {
     this.things.get(key).list.push({ x, y, z, rot, s, sx, sy, sz });
   }
   build(parent) {
+    if (this.batched) return this.buildBatched(parent);
     const m = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(), p = new THREE.Vector3(), up = V(0, 1, 0);
     const bucket = (list) => { const b = new Map(); for (const it of list) { const k = `${Math.floor(it.x / this.cell)},${Math.floor(it.z / this.cell)}`; if (!b.has(k)) b.set(k, []); b.get(k).push(it); } return b; };
     const place = (geo, mat, list, cast, name = 'flora') => {
@@ -366,6 +388,38 @@ export class FieldFlora {
     for (const [key, t] of this.things) for (const [, sub] of bucket(t.list)) place(t.geo, t.material, sub, t.cast, 'thing:' + key);
   }
 }
+/**
+ * One BatchedMesh per (material, shadow) holding every tree part / flower / thing of the zone: a single multi-draw
+ * with per-instance frustum culling (camera and shadow passes). Geometries must share attributes (MeshBuilder + sway).
+ */
+FieldFlora.prototype.buildBatched = function (parent) {
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(), p = new THREE.Vector3(), up = V(0, 1, 0);
+  const groups = new Map(); // key → { material, cast, geos: Map(geo → [items]) }
+  const put = (material, cast, geo, it) => {
+    const k = material.uuid + (cast ? ':s' : '');
+    if (!groups.has(k)) groups.set(k, { material, cast, geos: new Map() });
+    const gm = groups.get(k).geos; if (!gm.has(geo)) gm.set(geo, []); gm.get(geo).push(it);
+  };
+  for (const it of this.items) { const pr = this.proto.get(it.key); if (pr.trunk) put(this.mats.bark, true, pr.trunk, it); if (pr.core) put(this.mats.core, true, pr.core, it); if (pr.leaves) put(this.mats.leaves, true, pr.leaves, it); }
+  for (const [, f] of this.flowers) for (const it of f.list) put(this.mats.flower, false, f.geo, it);
+  for (const [, t] of this.things) for (const it of t.list) put(t.material, t.cast, t.geo, it);
+  for (const [, grp] of groups) {
+    let nInst = 0, nV = 0, nI = 0;
+    for (const [geo, list] of grp.geos) { nInst += list.length; nV += geo.attributes.position.count; nI += geo.index ? geo.index.count : geo.attributes.position.count; }
+    const bm = new THREE.BatchedMesh(nInst, nV, nI, grp.material);
+    for (const [geo, list] of grp.geos) {
+      const gid = bm.addGeometry(geo);
+      for (const it of list) {
+        const iid = bm.addInstance(gid);
+        q.setFromAxisAngle(up, it.rot); sc.set(it.s * (it.sx ?? 1), it.s * (it.sy ?? 1), it.s * (it.sz ?? 1)); p.set(it.x, it.y, it.z);
+        bm.setMatrixAt(iid, m.compose(p, q, sc));
+      }
+    }
+    bm.castShadow = grp.cast; bm.receiveShadow = true; bm.name = 'flora-batch'; bm.sortObjects = false;
+    bm.computeBoundingBox(); bm.computeBoundingSphere();
+    parent.add(bm);
+  }
+};
 function flowerGeo(color, seed) {
   const rng = new RNG(seed), b = MB();
   const petal = linColor(color), center = linColor(0xf6d040), stem = linColor(0x3e7a28);

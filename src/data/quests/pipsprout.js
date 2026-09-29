@@ -1,8 +1,9 @@
 // Chapter III — Pipsprout Hollow (any level; ~20–24): shrunk to Pip size, Elder Bramblebeard, the stolen seeds, a
 // siege at the Acorn Gate, and the tale of the Sunseed — the Pips' sacred seed that always points to the Shards.
-const ELDER = ['npc:bramblebeard', 'spawn'];
-const GATE = ['poi:acorn_gate', 'poi:gate', 'npc:captain_acorn', 'spawn'];
-const VAULT = ['poi:seed_vault', 'poi:vault', ['npc:bramblebeard', -4, -10], 'spawn'];
+const ELDER = ['npc:bramblebeard', 'poi:bramblebeard_porch', 'spawn'];
+const GATE = ['poi:acorn_gate', 'poi:acorn_tower', 'npc:pip_guard', 'spawn'];
+const VAULT = ['poi:seed_vault', 'poi:root_tunnels', ['npc:bramblebeard', -4, -10], 'spawn'];
+const TUNNELS = ['poi:root_tunnels', 'poi:seed_vault', ['npc:bramblebeard', 0, -30], 'spawn'];
 
 export default {
   id: 'ch3', name: 'Chapter III · Pipsprout Hollow', zone: 'pipsprout', levels: [20, 26],
@@ -31,9 +32,9 @@ export default {
         ] },
         { type: 'talk', npc: 'captain_acorn', text: 'Report to Captain Acorn', lines: [
           'PIP! PIP PIP! (Captain Acorn salutes so hard he falls over. He points at the imp camps with his twig spear.)',
-          '(He mimes: pouches. Seeds. Imps stole them. Get them back. Then he salutes again, more carefully.)',
+          '(He mimes: pouches. Seeds. Imps stole them — down in the root tunnels. Get them back. Then he salutes again, more carefully.)',
         ] },
-        { type: 'collect', item: 'Stolen Seed Pouch', from: { mob: 'imp' }, need: 8, chance: 0.7, text: 'Take back the stolen seed pouches from the Sootlings' },
+        { type: 'kill', spawn: { type: 'imp', name: 'Sootling Thief', n: 4, at: TUNNELS, elite: false, banner: false, trigger: 45 }, need: 8, text: 'Take back the stolen seed pouches from the Sootling thieves in the root tunnels' },
         { type: 'talk', npc: 'captain_acorn', text: 'Return the pouches to Captain Acorn', lines: [
           'Pip… (He counts the pouches. Twice. His lip trembles.)',
           'PIP! (He hugs your knee, which is the highest part of you he can reach at the moment.)',
@@ -41,18 +42,18 @@ export default {
       ],
       rewards: { xp: 1.1, items: { card_pack_pip: 1 } } },
 
-    { id: 'h3_gate', kind: 'msq', title: 'The Acorn Gate', level: 22, prereq: ['h2_seeds'],
-      desc: 'The Sootlings want their seeds back. They are coming for the Acorn Gate tonight.',
+    { id: 'h3_gate', kind: 'msq', title: 'The Acorn Tower', level: 22, prereq: ['h2_seeds'],
+      desc: 'The Sootlings want their seeds back. They are coming for the Acorn Tower tonight.',
       steps: [
         { type: 'talk', npc: 'captain_acorn', text: 'Talk to Captain Acorn', lines: [
-          '(Captain Acorn draws in the dirt with his spear: the gate, a great many imps, and one big imp wearing a crown.)',
+          '(Captain Acorn draws in the dirt with his spear: the Acorn Tower, a great many imps, and one big imp wearing a crown.)',
           'Pip. (He taps the drawing. Tonight.) Pip pip. (He taps you. You’re on the wall.)',
         ] },
-        { type: 'defend', at: GATE, r: 9, dur: 50, every: 6.5, cap: 10, waves: [[['imp', 4]], [['imp', 5]], [['imp', 3], ['hellhound', 1]], [['imp', 6]]], text: 'The Sootlings attack — hold the Acorn Gate!', label: 'Hold the Acorn Gate' },
+        { type: 'defend', at: GATE, r: 9, dur: 50, every: 6.5, cap: 10, waves: [[['imp', 4]], [['imp', 5]], [['imp', 3], ['hellhound', 1]], [['imp', 6]]], text: 'The Sootlings attack — hold the Acorn Tower!', label: 'Hold the Acorn Tower' },
         { type: 'kill', spawn: { type: 'imp', name: 'Sootling Boss Grubnik', title: 'Wearer of a Stolen Thimble', at: GATE, hpMul: 3, scale: 1.4, trigger: 40 }, need: 1, text: 'Defeat Sootling Boss Grubnik' },
         { type: 'talk', npc: 'captain_acorn', text: 'Celebrate with Captain Acorn', lines: [
           '(The Captain plants his twig spear in the ground and does a small, stern victory dance.)',
-          '(All around the gate, Pips pop out of hiding and cheer. Somebody starts a song. It is mostly the word “pip”.)',
+          '(All around the tower, Pips pop out of hiding and cheer. Somebody starts a song. It is mostly the word “pip”.)',
         ] },
       ],
       rewards: { xp: 1.2, silver: 4000, gear: [{ slot: 'shoulder', grade: 2 }] } },
@@ -87,7 +88,7 @@ export default {
           '(At the end the Mayor presents you with a tiny golden whistle. When you blow it, a Pip somewhere nearby says “pip.”)',
           '(A small green someone climbs into your pack. The whistle, it seems, came with a friend.)',
         ] },
-        { type: 'zone', zone: 'goldmeadow', text: 'Return to Goldmeadow through the mushroom ring' },
+        { type: 'zone', zone: 'goldmeadow', text: 'Return to Goldmeadow through the fairy ring by the Petal Pier' },
         { type: 'zone', zone: 'thornwood', text: 'Take the northern road into Thornwood' },
       ],
       rewards: { xp: 1.0, pets: ['pip_pet'] } },
@@ -97,9 +98,9 @@ export default {
       desc: 'Tadpole wants to play hide-and-seek. He is already hiding. Badly.',
       offer: ['PIP! (Tadpole covers his eyes, counts on his fingers — he has three — and runs off giggling.)', '(He wants to play hide-and-seek. You can still see his leaf.)'],
       steps: [
-        { type: 'interact', at: ['poi:hide1', ['npc:bramblebeard', 14, 10], 'spawn'], model: 'pip', variant: 'child', name: 'Tadpole', label: 'Found you!', dur: 0.6, anim: 'point', doneSfx: 'pip_cheer', say: 'PIP! (Tadpole shrieks with delight and runs off to hide again.)', text: 'Find Tadpole (somewhere near the pond)' },
-        { type: 'interact', at: ['poi:hide2', ['npc:bramblebeard', -16, -6], 'spawn'], model: 'pip', variant: 'child', name: 'Tadpole', label: 'Found you!', dur: 0.6, anim: 'point', doneSfx: 'pip_cheer', say: 'PIP PIP! (He is outraged. You cheated. You did not cheat.)', text: 'Find Tadpole again' },
-        { type: 'interact', at: ['poi:hide3', ['npc:bramblebeard', 12, -16], 'spawn'], model: 'pip', variant: 'child', name: 'Tadpole', label: 'Found you!', dur: 0.6, anim: 'point', doneSfx: 'pip_cheer', say: 'Pip… (Tadpole has fallen asleep in his hiding spot.)', text: 'Find Tadpole one last time' },
+        { type: 'interact', at: ['poi:hide1', 'poi:sleepy_caterpillar', ['npc:bramblebeard', 14, 10], 'spawn'], model: 'pip', variant: 'child', name: 'Tadpole', label: 'Found you!', dur: 0.6, anim: 'point', doneSfx: 'pip_cheer', say: 'PIP! (Tadpole shrieks with delight and runs off to hide again.)', text: 'Find Tadpole (try the sleepy caterpillar)' },
+        { type: 'interact', at: ['poi:hide2', 'poi:snail_stables', ['npc:bramblebeard', -16, -6], 'spawn'], model: 'pip', variant: 'child', name: 'Tadpole', label: 'Found you!', dur: 0.6, anim: 'point', doneSfx: 'pip_cheer', say: 'PIP PIP! (He is outraged. You cheated. You did not cheat.)', text: 'Find Tadpole again' },
+        { type: 'interact', at: ['poi:hide3', 'poi:giant_red_mushroom', ['npc:bramblebeard', 12, -16], 'spawn'], model: 'pip', variant: 'child', name: 'Tadpole', label: 'Found you!', dur: 0.6, anim: 'point', doneSfx: 'pip_cheer', say: 'Pip… (Tadpole has fallen asleep in his hiding spot.)', text: 'Find Tadpole one last time' },
         { type: 'talk', npc: 'tadpole', text: 'Bring Tadpole home', lines: ['PIP PIP PIP! (Tadpole is thrilled to have been found three times. He wants to go again. Mossy Gran intervenes.)'] },
       ],
       rewards: { xp: 0.5, items: { food3: 2 } } },
@@ -117,7 +118,7 @@ export default {
       desc: 'The imps trampled Mossy Gran’s dew-channels. Her sprouts are thirsty.',
       offer: ['Pip… (Mossy Gran shows you her garden. The sprouts are drooping. The imps trampled the dew-channels.)', '(She hands you a thimble. It is a watering can, at this size.)'],
       steps: [
-        { type: 'interact', at: ['poi:garden', ['npc:mossy_gran', 3, 3], 'spawn'], need: 5, spread: 5, name: 'Thirsty Sprout', label: 'Water', dur: 1.4, anim: 'interact', text: 'Water the thirsty sprouts' },
+        { type: 'interact', at: ['poi:garden', 'poi:dandelion_clock', ['npc:mossy_gran', 3, 3], 'spawn'], need: 5, spread: 5, name: 'Thirsty Sprout', label: 'Water', dur: 1.4, anim: 'interact', text: 'Water the thirsty sprouts' },
         { type: 'talk', npc: 'mossy_gran', text: 'Tell Mossy Gran', lines: ['(The sprouts perk up one by one. Mossy Gran pats your cheek. It takes her three jumps to reach.)'] },
       ],
       rewards: { xp: 0.55, items: { food3: 3 } } },

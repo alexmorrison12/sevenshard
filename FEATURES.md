@@ -9,13 +9,14 @@ encounters, systems, story, modes, meta.
 |---|---|---|
 | Roster of characters, character select lineup | 6 slots, 3D lineup on the Solhaven plaza, roster level | ✅ |
 | Advanced classes chosen at creation | 8 advanced classes, both sexes | ✅ |
-| Detailed customization | face/hair/colours/skin/eyes/height/build/war paint, live 3D preview, face camera | 🟡 heroes |
+| Detailed customization | face/hair/beard/colours/skin/eyes/height/build/war paint, live 3D preview, face camera | ✅ |
 | Class skill preview videos | live 3D skill demos on the creation stage: the preview hero loops its skills with full FX; hover a skill to watch it | ✅ |
 | Powerpass / Knowledge Transfer | "Powerpass" path at creation (Lv 60, Vanguard +10) | ✅ |
 | Roster-wide storage, roster-bound materials | roster wallet + materials + bank | 🟡 systems/ui |
 | Titles, achievements | titles + achievements | 🟡 systems |
 | Wardrobe, avatars, dyes | tailor: 9 dye palettes, wear any armour look you've earned | ✅ |
 | Photo mode | hide HUD (Ctrl+Z), free zoom | ✅ |
+| Character profile with your hero | live 3D portrait in the paper doll, drag to turn | ✅ |
 
 ## Combat
 | Lost Ark | SEVENSHARD | Status |
@@ -30,10 +31,11 @@ encounters, systems, story, modes, meta.
 | Counters, stagger checks, destruction/weak point, back/head attacks, super armor | all, with boss blue-glow counter windows and purple stagger bars | ✅ |
 | Statuses, knockdowns, knock-ups, CC | burn, bleed, poison, shock, freeze, stun, fear, sleep, silence, slow, brand… | ✅ |
 | Layered boss HP (×145), enrage timers, mechanic callouts | layered bars in cycling colours, enrage, banners | ✅ |
-| Damage numbers (crit, back/head, counter) | WebGL numbers with Lost Ark styles | ✅ fx |
+| Damage numbers (crit, back/head, counter) | WebGL numbers with Lost Ark styles, zig-zag stacking | ✅ |
+| "Other players' effects" setting | other heroes' skill FX dimmed (Off / Low / Full), no screen flashes from others, awakening overlap cap | ✅ |
 | DPS meter (community logs) | party meter + results table; in-fight meter panel | 🟡 meta/ui |
 | Death: revive at entrance / feathers | both, with death overlay; legion raids: feathers only (1 per gate) or spectate | ✅ |
-| Mounts, pets (auto-loot) | mount up with T (+70% speed, thrown off in combat), pets follow you | ✅ lead · 🟡 creatures models |
+| Mounts, pets (auto-loot) | mount up with T (+70% speed, thrown off in combat): horse, direwolf, sunstag; pets (foxling, owlet, slimelet, Pip) follow you | ✅ |
 | Touch controls (Lost Ark Mobile) | floating virtual stick, touch skill cluster, auto-aim, tap to attack, pinch zoom | ✅ |
 
 ## Progression
@@ -62,9 +64,9 @@ encounters, systems, story, modes, meta.
 | Field zones | Goldmeadow, Thornwood, Ashen Ridge (+ field bosses, elites) | ⬜ world-fields/story |
 | Tortoyk (tiny mokoko land) | Pipsprout Hollow — you shrink to Pip size | ⬜ world-fields/story |
 | Chaos Dungeons (3 stages, % bar, rest bonus) | Demon Rift I–IV | ✅ |
-| Guardian Raids | Rimewing, Cinderhorn, Sandmaw, Kurai the Pyrefox | 🟡 encounters/guardians |
-| Abyssal Dungeon | The Sunken Oratory: Nerissa, the Deep Oracle | 🟡 encounters/guardians |
-| Legion Raid with gates, normal/hard, weekly gold | Gorrath, the Horned Tyrant: Skarn & Vesk, Gorrath (counters, rift carve, stagger check, ghost phase) | 🟡 encounters/legion |
+| Guardian Raids | Rimewing, Cinderhorn, Sandmaw, Kurai the Pyrefox — scripted mechanics, counters, stagger checks, part breaks, own arenas | ✅ |
+| Abyssal Dungeon | The Sunken Oratory: Nerissa (song channels, bubble prison) and the Deep Oracle (tentacles, submerge adds) | ✅ |
+| Legion Raid with gates, normal/hard, weekly gold | Gorrath, the Horned Tyrant: Skarn & Vesk (twin howl, pack grief), Gorrath (horned fury, rift carve, soulfire orbs, stagger check, ghost phase) | ✅ |
 | Trial Guardian / challenge modes | weekly Trial Guardian with affixes | ⬜ modes |
 | Hell mode / Cube / Boss rush | Inferno Descent (100 floors, boons) + Rift Cube | ⬜ modes |
 | Field bosses, Chaos Gates, Adventure Islands, Procyon's Compass | hourly schedule (UTC) + event compass | 🟡 systems · ⬜ modes |
@@ -97,8 +99,9 @@ encounters, systems, story, modes, meta.
 |---|---|---|
 | Title / key scene | animated Solhaven dusk + CSS logo | ✅ |
 | Lost Ark-style HUD & windows | ✅ HUD, 🟡 system windows | 🟡 ui |
-| Procedural music, SFX, ambience | orchestral-ish score per place, 70+ SFX, songs | 🟡 audio |
-| Boss intro title cards | cinematic camera + letterbox + name card | ✅ |
+| Procedural music, SFX, ambience | synthesized score per place (18 tracks), 125 SFX, stingers, 13 ambiences, 5 songs | ✅ |
+| Boss intro title cards | cinematic camera framed by boss size + letterbox + name card | ✅ |
+| Spectator | Watch the Raid: 8 AI raiders vs Gorrath with a director camera | ✅ |
 | One HTML file, everything procedural | ✅ | ✅ |
 
 ## Social (Lost Ark UX)

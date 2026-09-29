@@ -1,15 +1,15 @@
 // Instanced boss content: guardian hunts, the abyssal dungeon and the legion raid (gates), with entry item levels.
 export const GUARDIANS = [
   { id: 'rimewing', ilvl: 1100, arena: 'frostmere' },
-  { id: 'cinderhorn', ilvl: 1250, arena: 'frostmere' },
-  { id: 'sandmaw', ilvl: 1370, arena: 'frostmere' },
-  { id: 'kurai', ilvl: 1460, arena: 'frostmere' },
+  { id: 'cinderhorn', ilvl: 1250, arena: 'cinderforge' },
+  { id: 'sandmaw', ilvl: 1370, arena: 'sunscar' },
+  { id: 'kurai', ilvl: 1460, arena: 'foxfire_shrine' },
 ];
 export const RAIDS = {
   oratory: { id: 'oratory', name: 'The Sunken Oratory', kind: 'abyss', players: 4, ilvl: { normal: 1325 },
     gates: [
-      { name: 'The Drowned Choir', zone: 'frostmere', bosses: [{ boss: 'nerissa', anchor: 'boss' }] },
-      { name: 'Oracle of the Deep', zone: 'frostmere', bosses: [{ boss: 'deep_oracle', anchor: 'boss' }] },
+      { name: 'The Drowned Choir', zone: 'oratory_choir', bosses: [{ boss: 'nerissa', anchor: 'boss' }] },
+      { name: 'Oracle of the Deep', zone: 'oratory_abyss', bosses: [{ boss: 'deep_oracle', anchor: 'boss' }] },
     ] },
   gorrath: { id: 'gorrath', name: 'Gorrath, the Horned Tyrant', kind: 'legion', players: 8, ilvl: { normal: 1415, hard: 1445 },
     gates: [

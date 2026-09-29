@@ -6,7 +6,7 @@ export const WARN_MIN = 5;                 // notify this many minutes before an
 
 /** Field Boss (hourly at :00): the boss each field hosts, how many AI adventurers join, HP scaling. */
 export const FIELD_BOSS = {
-  byZone: { goldmeadow: 'thunderhoof', thornwood: 'thunderhoof', ashen_ridge: 'cinderhorn' },
+  byZone: { goldmeadow: 'thunderhoof', thornwood: 'thunderhoof', ashen_ridge: 'thunderhoof' },   // the calendar announces Old Thunderhoof
   fallback: 'thunderhoof',
   helpers: 6, hpScale: 1.15, minIlvl: 1300, maxIlvl: 1520,
   lines: ['FIELD BOSS UP, everyone to the stones!', 'field boss again lol, who needs the card', 'no one stand in front of it pls', 'break the parts first, destruction bombs ready', 'ty for the carry', 'gg, see you next hour'],

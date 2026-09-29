@@ -2,7 +2,7 @@
 // shores, and the old bastion on the northern headland — a low gun parapet over the open sea, seven cannons you can
 // man, the powder magazine the Blackgull pirates want to blow up. Anchors: spawn, dock:ship, npc:gunner,
 // npc:smuggler, gun:0…6 (stand here to man a gun), magazine, land:0/1 (pirate landing beaches), sea:0…3 (where
-// longboats and brigs appear), seed:1, seed:2, vista.
+// longboats appear), brig (the brigs' lane), seed:1, seed:2, vista.
 import { registerZone } from '../index.js';
 import { buildIsle } from '../sea/islezone.js';
 import { GUNS } from '../sea/landmarks.js';
@@ -30,7 +30,8 @@ export async function build(zone, o = {}) {
       GUNS.forEach(([x, z, r], i) => c.anchor('gun:' + i, x - Math.sin(r) * -2.1, z + Math.cos(r) * 2.1, r));
       c.anchor('magazine', 0, -27.2, 0);
       c.anchor('land:0', -33, -33, Math.PI * 0.5); c.anchor('land:1', 33, -33, -Math.PI * 0.5);
-      for (const [i, x, z] of [[0, -40, -95], [1, 40, -95], [2, -8, -110], [3, 12, -105]]) { c.anchor('sea:' + i, x, z, Math.PI); c.anchors['sea:' + i].extra = { free: true }; }
+      for (const [i, x, z] of [[0, -36, -80], [1, 36, -80], [2, -12, -88], [3, 12, -86]]) { c.anchor('sea:' + i, x, z, Math.PI); c.anchors['sea:' + i].extra = { free: true }; }
+      c.anchor('brig', 0, -72, 0); c.anchors.brig.extra = { free: true };
       c.anchor('seed:1', -15.5, 22, 0); c.anchor('seed:2', 41, 8, 0);
       c.anchor('vista', 0, -38, 0);
     },

@@ -241,10 +241,11 @@ export function buildShafts(list) {
     uniforms: { uTime: G.uTime, uNoise: { value: noiseTex() } },
     vertexShader: `attribute vec3 scol; varying vec2 vUv; varying vec3 vCol; varying vec3 vW; void main(){ vUv = uv; vCol = scol; vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
     fragmentShader: `uniform float uTime; uniform sampler2D uNoise; varying vec2 vUv; varying vec3 vCol; varying vec3 vW;
-      void main(){ float n = texture2D(uNoise, vec2(vUv.x * 0.8 + uTime * 0.01, vUv.y * 0.15)).r;
-        float n2 = texture2D(uNoise, vec2(vUv.x * 2.3 - uTime * 0.02, 0.3)).g;
-        float a = smoothstep(0.0, 0.25, vUv.x) * smoothstep(1.0, 0.75, vUv.x) * smoothstep(0.0, 0.35, vUv.y) * smoothstep(1.0, 0.6, vUv.y);
-        a *= smoothstep(0.25, 0.75, n * 0.7 + n2 * 0.6);
+      void main(){ // streaks run along the ray (v), drifting slowly sideways
+        float n = texture2D(uNoise, vec2(vUv.x * 1.6 + uTime * 0.012, vUv.y * 0.04)).r;
+        float n2 = texture2D(uNoise, vec2(vUv.x * 3.7 - uTime * 0.02, vUv.y * 0.07 + 0.3)).g;
+        float a = smoothstep(0.0, 0.3, vUv.x) * smoothstep(1.0, 0.7, vUv.x) * smoothstep(0.0, 0.45, vUv.y) * smoothstep(1.0, 0.55, vUv.y);
+        a *= smoothstep(0.3, 0.7, n * 0.65 + n2 * 0.55);
         gl_FragColor = vec4(vCol * a, 1.0); }`,
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
   });

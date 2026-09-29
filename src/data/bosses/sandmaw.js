@@ -23,7 +23,7 @@ async function emergeUnder(B, prey, track = 1.1, lock = 0.95) {
 export default {
   id: 'sandmaw', model: 'sandmaw', name: 'Sandmaw', title: 'the Dune Devourer', kind: 'guardian',
   radius: 3.2, height: 9.8, hp: 48000, atk: 0.155, bars: 200, speed: 3.2, turnRate: 2.6, enrage: 600,
-  music: 'boss', arena: 'frostmere',
+  music: 'boss', arena: 'sunscar',
   anims: {
     burrow: { dur: 2.6, hits: [1.3] }, emerge: { dur: 2.4, hits: [0.5] }, bite: { dur: 1.9, hits: [1.02] },
     tail_sweep: { dur: 2.6, hits: [1.35] }, sand_spit: { dur: 2.3, hits: [0.95, 1.3, 1.65] }, sandstorm: { dur: 4.2, hits: [1.4, 2, 2.6, 3.2] },

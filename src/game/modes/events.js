@@ -60,7 +60,7 @@ const buildIsle = focus => async (zone, { quality = 1 } = {}) => {
     if (r > sr + 0.5) h = lerp(0.05, -3.2, smoothstep(sr + 0.5, sr + 14, r));
     return h;
   });
-  g.paint(volcanic ? 'rock' : 'grass', SH.circle(0, 0, R - 9), { soft: 4, noise: 3, nscale: 5 });
+  g.paint(volcanic ? 'rock' : cfg.ground === 'sand' ? 'dirt' : 'grass', SH.circle(0, 0, R - 9), { soft: 4, noise: 3, nscale: 5, amount: cfg.ground === 'sand' ? 0.35 : 1 });
   g.paint('dirt', SH.line([[0, R - 4], [0, 8], [-6, -2], [0, -10]], 2.6), { soft: 1.2, noise: 1, nscale: 2, amount: 0.8 });
   for (let i = 0; i < 7; i++) g.paint(rng.pick(['seastone', 'moss', 'rock']), SH.circle(rng.range(-R + 6, R - 6), rng.range(-R + 6, R - 6), rng.range(2, 4)), { soft: 2, noise: 1.6, nscale: 2, amount: 0.7 });
   const kit = new Kit({ seed });
@@ -76,13 +76,13 @@ const buildIsle = focus => async (zone, { quality = 1 } = {}) => {
   await g.build(zone.root);
   kit.build(zone.root);
   const flora = new Flora();
-  for (let i = 0; i < 34; i++) {
-    const a = rng.range(0, Math.PI * 2), r = rng.range(9, shoreR(a) - 5), x = Math.cos(a) * r, z = Math.sin(a) * r;
-    if (Math.abs(x) < 5 && z > 4) continue;
+  const nTrees = cfg.ground === 'sand' ? 12 : 22;
+  for (let i = 0; i < nTrees; i++) {
+    const a = rng.range(Math.PI * 1.05, Math.PI * 1.95), r = rng.range(15, shoreR(a) - 4), x = Math.cos(a) * r, z = Math.sin(a) * r;
     if (Math.hypot(x, z + 8) < 9) continue;
-    flora.tree(volcanic ? 'dead' : rng.chance(0.3) ? 'blossom' : rng.chance(0.3) ? 'cypress' : 'broadleaf', x, H(x, z) - 0.1, z, { s: rng.range(0.8, 1.15), variant: i % 3 });
+    flora.tree(volcanic ? 'dead' : rng.chance(0.3) ? 'blossom' : rng.chance(0.35) ? 'cypress' : 'broadleaf', x, H(x, z) - 0.1, z, { s: rng.range(0.7, 1.0), variant: i % 3 });
   }
-  if (!volcanic) for (let i = 0; i < 18; i++) { const x = rng.range(-R + 6, R - 6), z = rng.range(-R + 6, R - 6); if (Math.hypot(x, z) < 8 || Math.hypot(x, z) > R - 6) continue; flora.tree('bush', x, H(x, z), z, { s: rng.range(0.6, 1), variant: i % 3 }); }
+  if (!volcanic) for (let i = 0; i < 16; i++) { const x = rng.range(-R + 6, R - 6), z = rng.range(-R + 6, R - 6); if (Math.hypot(x, z) < 9 || Math.hypot(x, z) > R - 5) continue; flora.tree('bush', x, H(x, z), z, { s: rng.range(0.5, 0.85), variant: i % 3 }); }
   if (!volcanic) for (let i = 0; i < 160; i++) { const x = rng.range(-R, R), z = rng.range(-R, R); if (g.weight('grass', x, z) > 0.75) flora.flower(x, H(x, z), z, rng.pick([0xffffff, 0xf4d040, 0xe04060, 0xa070e0, 0xff8ab0])); }
   flora.build(zone.root);
   kit.colliders.push(...flora.colliders);
@@ -351,7 +351,7 @@ class IslandEventMode {
   pick(n, minSep = 5) { const out = [], pool = this.spots.slice().sort(() => Math.random() - 0.5); for (const p of pool) { if (out.length >= n) break; if (Math.hypot(p.x - this.sp.x, p.z - this.sp.z) < 7 || out.some(q => Math.hypot(q.x - p.x, q.z - p.z) < minSep)) continue; out.push(p); } while (out.length < n) out.push(nearPoint(this.L, { x: 0, z: 0 }, 16)); return out; }
   makeCoins() {
     const L = this.L;
-    const geo = new THREE.CylinderGeometry(0.28, 0.28, 0.06, 20); geo.rotateX(Math.PI / 2);
+    const geo = new THREE.CylinderGeometry(0.42, 0.42, 0.08, 20); geo.rotateX(Math.PI / 2);
     const mat = new THREE.MeshBasicMaterial({ color: new THREE.Color(3.2, 2.3, 0.7) });
     const mesh = this.coinMesh = new THREE.InstancedMesh(geo, mat, 14); mesh.frustumCulled = false;
     this.g.zone.root.add(mesh);
@@ -436,7 +436,8 @@ class IslandEventMode {
         if (this.n >= this.cfg.need) { this.objectiveDone(); return; }
         if (this.n + this.coins.filter(x => x.on).length < this.cfg.need) setTimeout(() => { if (this.state === 'objective') this.coins[i] = this.newCoin(); }, 1500);
       }
-      d.position.set(c.x, L.heightAt(c.x, c.z) + 0.75 + Math.sin(tt * 3 + c.ph) * 0.12, c.z);
+      if (c.on && Math.random() < dt * 0.6) this.g.fx?.burst?.({ pos: { x: c.x, y: L.heightAt(c.x, c.z) + 0.8, z: c.z }, color: 'gold', count: 6, speed: 1.5, size: 0.14, life: 0.6, kind: 'star' });
+      d.position.set(c.x, L.heightAt(c.x, c.z) + 0.85 + Math.sin(tt * 3 + c.ph) * 0.14, c.z);
       d.rotation.set(0, tt * 2.4 + c.ph, 0);
       d.scale.setScalar(c.on ? 1 : 0.001);
       d.updateMatrix(); mesh.setMatrixAt(i, d.matrix);
@@ -478,7 +479,7 @@ class IslandEventMode {
   }
   progressHud() {
     if (this.state === 'over' || this.state === 'intro') return null;
-    if (this.state === 'boss' && this.boss) return { label: this.boss.name, pct: (1 - this.boss.hp / this.boss.hpMax) * 100 };
+    if (this.state === 'boss') return null;
     return { label: `${this.cfg.title} · ${Math.min(this.n, this.cfg.need)} / ${this.cfg.need}${this.cfg.type === 'survive' ? ' s' : ''}`, pct: Math.min(100, this.n / this.cfg.need * 100) };
   }
   timerHud() { return this.state === 'over' ? null : { label: 'Time left', left: Math.max(0, this.cfg.time + (this.state === 'boss' ? 90 : 0) - this.t) }; }
@@ -488,11 +489,13 @@ class IslandEventMode {
 }
 async function launchIsland(session, c) {
   const w = S.tasks.eventWindow('island');
-  const focus = c.focus || w?.island?.focus || 'gold', island = c.island || w?.island?.id || null;
-  await loadInstance(session, `event_isle_${ISLAND_EVENTS[focus] ? focus : 'gold'}`, { kind: 'arena', region: 'Adventure Island', name: w?.island?.name || ISLAND_NAMES[focus] });
+  const focus = ISLAND_EVENTS[c.focus] ? c.focus : w?.island?.focus || 'gold';
+  const sched = w?.island?.focus === focus ? w.island : null;
+  const island = c.island || sched?.id || null, name = sched?.name || ISLAND_NAMES[focus];
+  await loadInstance(session, `event_isle_${ISLAND_EVENTS[focus] ? focus : 'gold'}`, { kind: 'arena', region: 'Adventure Island', name });
   const g = session.game;
   spawnLocal(session, g.zone.anchors.spawn);
-  g.mode = new IslandEventMode(session, { ...c, focus, island, name: w?.island?.name });
+  g.mode = new IslandEventMode(session, { ...c, focus, island, name });
   g.mode.enter();
   session.inWorld();
 }

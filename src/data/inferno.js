@@ -166,7 +166,7 @@ export const CUBE = {
 /** Weekly rotation: the guardian and two affixes are seeded by weekId (src/core/util.js). */
 export const TRIAL = {
   guardians: ['rimewing', 'cinderhorn', 'sandmaw', 'kurai', 'thunderhoof'],
-  ilvl: 1415, partySize: 4, hpMul: 1.15,
+  ilvl: 1415, partySize: 4, hpMul: 1.0,
   firstClear: { gold: 150, leapstone: 24, solar_blessing: 2, card_pack: 1, gem_pouch: 1 },
   repeat: { silver: 20000, shards: 1500 },
 };

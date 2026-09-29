@@ -18,7 +18,7 @@ import { makeEnv } from '../env.js';
 import { paintMinimap } from '../minimap.js';
 import { buildWater } from '../water.js';
 import { blob } from '../../engine/geom.js';
-import { FieldGround, DistGrid, FieldKit, Anchors, snapAnchors, seedSpots, spline, along, paintPath, scatter, bump, faceTo, waterEnv, S, RNG, smoothstep, lerp } from '../fields/common.js';
+import { FieldGround, DistGrid, FieldKit, Anchors, snapAnchors, aliasNumbered, seedSpots, spline, along, paintPath, scatter, bump, faceTo, waterEnv, S, RNG, smoothstep, lerp } from '../fields/common.js';
 import { FieldGrass, FieldFlora, fernGeo, mushroomGeo, tallGrassGeo, reedGeo } from '../fields/flora.js';
 import { Mist, buildSmoke, buildDrifters } from '../fields/fx.js';
 import * as F from '../fields/props.js';
@@ -383,6 +383,7 @@ export async function build(zone, { quality = 1 } = {}) {
     { name: 'the misty creek', at: [[ford.x + 3, ford.z + 3], [ford.x - 3.5, ford.z - 4]] },
   ];
   for (const s of seedSpots('thornwood', SPOTS, 22)) A.add(`seed:${s.i}`, s.x, s.z, 0, { hint: `${s.where} ${s.name}` });
+  aliasNumbered(zone, 'vista');
   snapAnchors(zone, nav, 6, 'thornwood');
 
   // ---------------------------------------------------------------- regions, env, minimap

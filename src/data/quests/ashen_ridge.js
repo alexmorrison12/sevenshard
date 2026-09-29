@@ -1,8 +1,8 @@
 // Chapter V — Ashen Ridge (Lv 40–50): the Vanguard camp, rift totems in the ash dunes, signal fires on the broken
 // watchtowers, the assault on the Legion fortress gate, the Varkhul rematch (EncounterMode) and the Shard of Dawn.
-const CAMP = ['poi:camp', 'npc:captain', 'spawn'];
+const CAMP = ['poi:emberwatch', 'npc:commander', 'poi:camp', 'spawn'];
 const GATE = ['poi:fortress_gate', 'poi:gate', 'duel', 'spawn'];
-const ARENA = ['duel', 'poi:courtyard', 'poi:arena', 'boss', 'poi:fortress_gate'];
+const ARENA = ['duel', 'arena:varkhul', 'poi:courtyard', 'poi:arena', 'boss', 'poi:fortress_gate'];
 
 export default {
   id: 'ch5', name: 'Chapter V · Ashen Ridge', zone: 'ashen_ridge', levels: [40, 50],
@@ -34,7 +34,7 @@ export default {
           'Break the totems and the flood stops. Break a few demons on the way. They won’t mind. They’re demons.',
         ] },
         { type: 'kill', family: 'demon', need: 15, text: 'Thin the demons in the ash dunes' },
-        { type: 'interact', at: ['poi:totems', 'poi:rift', 'pack:2', 'pack:1', 'spawn'], need: 3, spread: 10, name: 'Legion Spawning Totem', label: 'Shatter', dur: 1.8, anim: 'slash_v', sfx: 'impact_heavy', doneSfx: 'explosion', text: 'Shatter the Legion spawning totems', onUse: (Q, o) => Q.spawnNear('imp', 3, o, { spread: 4 }) },
+        { type: 'interact', at: ['poi:totems', 'poi:ash_dunes', 'poi:rift', 'pack:2', 'spawn'], need: 3, spread: 10, name: 'Legion Spawning Totem', label: 'Shatter', dur: 1.8, anim: 'slash_v', sfx: 'impact_heavy', doneSfx: 'explosion', text: 'Shatter the Legion spawning totems', onUse: (Q, o) => Q.spawnNear('imp', 3, o, { spread: 4 }) },
         { type: 'talk', npc: 'captain', text: 'Report to Captain Flint', lines: [
           'The ash is settling. First quiet morning this camp’s had in a month.',
           'Don’t tell the soldiers. They’ll want a nap.',
@@ -49,7 +49,7 @@ export default {
           'I’ve counted the demons on the wall. Twice. Stopped counting after that.',
           'When we attack, the fortress will call reinforcements from the ridge. Light the three old watchtower fires and our catapult crews will know exactly where to aim.',
         ] },
-        { type: 'interact', points: [[['poi:tower1', 'poi:watchtower1', 'poi:watchtower', 'pack:3'], 0, 3], [['poi:tower2', 'poi:watchtower2', 'pack:4'], 0, 3], [['poi:tower3', 'poi:watchtower3', 'pack:6'], 0, 3]], need: 3, name: 'Signal Brazier', label: 'Light the fire', dur: 2.2, anim: 'cast', sfx: 'fire', doneSfx: 'fire_big', text: 'Light the three watchtower signal fires' },
+        { type: 'interact', points: [[['poi:tower1', 'poi:watchtower', 'pack:3'], 0, 1], [['poi:tower2', [30, 77], 'pack:4'], 0, 0], [['poi:tower3', [-84, 87], 'pack:6'], 0, 0]], need: 3, name: 'Signal Brazier', label: 'Light the fire', dur: 2.2, anim: 'cast', sfx: 'fire', doneSfx: 'fire_big', text: 'Light the three watchtower signal fires' },
         { type: 'talk', npc: 'scout_ivy', text: 'Report to Scout Ivy', lines: [
           'Three fires. I can see them from here, and so can every catapult crew in the Vanguard.',
           'Varkhul will know we’re coming. Good. Let him sweat. Do demons sweat? Let him try.',
@@ -80,7 +80,7 @@ export default {
           { id: 'end', text: 'Let’s end this.', reply: ['(She squeezes your hand once, hard.) Go.'] },
           { id: 'lose', text: 'What if I lose again?', reply: ['Then you get up. Like last time.', 'But you won’t lose. I can hear your Shard, and it isn’t afraid of him any more.'] },
         ] },
-        { type: 'encounter', boss: 'varkhul', at: ARENA, bossAt: ['boss', 'poi:courtyard', 'duel'], r: 11, text: 'Defeat Varkhul the Ravager in the fortress courtyard', retry: 'Varkhul laughs as you stagger back. Catch your breath — then step into the courtyard again.' },
+        { type: 'encounter', boss: 'varkhul', at: ARENA, bossAt: ['boss:varkhul', 'boss', 'poi:courtyard'], r: 11, text: 'Defeat Varkhul the Ravager in the fortress courtyard', retry: 'Varkhul laughs as you stagger back. Catch your breath — then step into the courtyard again.' },
       ],
       rewards: { xp: 1.5, silver: 20000 } },
 
@@ -102,7 +102,7 @@ export default {
       desc: 'Quartermaster Pell has lost five crates of supplies in the ash dunes. Again.',
       offer: ['Five crates. FIVE. Blown off a wagon in an ash storm. Bandages, rations, and my good pen.', 'The pen is the important one. Please.'],
       steps: [
-        { type: 'interact', at: ['poi:dunes', 'pack:1', 'pack:2', 'spawn'], need: 5, spread: 14, name: 'Lost Supply Crate', label: 'Recover', dur: 1.4, anim: 'pickup', text: 'Recover Pell’s crates from the dunes' },
+        { type: 'interact', at: ['poi:ash_dunes', 'poi:cinderfall', 'pack:1', 'spawn'], need: 5, spread: 14, name: 'Lost Supply Crate', label: 'Recover', dur: 1.4, anim: 'pickup', text: 'Recover Pell’s crates from the dunes' },
         { type: 'talk', npc: 'quartermaster', text: 'Return the crates to Quartermaster Pell', lines: ['My PEN. (Pell cradles it.) Oh, and the bandages. Yes. Those too. Very important.', 'Sign here to confirm delivery. And here. Lovely.'] },
       ],
       rewards: { xp: 0.55, items: { elixir: 5, hp_potion: 10 } } },
@@ -152,7 +152,9 @@ export default {
     } },
     shard_of_dawn: { music: 'cutscene_heroic', run: async (cs, Q) => {
       const me = cs.hero; if (!me) return;
-      const p = { x: me.pos.x, z: me.pos.z - 5 }, y = cs.L.heightAt(p.x, p.z);
+      const sh = Q.g.zone?.anchors['poi:shard'];
+      const p = sh ? { x: sh.x, z: sh.z } : { x: me.pos.x, z: me.pos.z - 5 }, y = cs.L.heightAt(p.x, p.z);
+      cs.place(me, p.x, p.z + 6); cs.face(me, p);
       cs.shot([p.x + 5, y + 3.5, p.z + 9], [p.x, y + 1.5, p.z], 0.01, 38);
       await cs.say('Varkhul', 'The Emperor… will unmake you… Shardbearer…', 3);
       cs.shake(0.5); cs.sfx('boss_roar_big', p);

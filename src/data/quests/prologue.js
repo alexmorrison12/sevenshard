@@ -9,14 +9,14 @@ export default {
       desc: 'Brighthold is burning. Find Commander Brannoc.',
       steps: [
         { type: 'talk', npc: 'brannoc', text: 'Talk to Commander Brannoc', lines: [
-          'Shardbearer! On your feet — the Legion is inside the lower town!',
-          'I don’t know what that stone in your chest is, but Seraphine says it’s the only reason we’re not all ash already.',
-          'Stay behind me, hit anything with horns, and don’t stop moving. Right-click where you want to go.',
+          'You came in on the last supply ship? Then you picked the worst night in four hundred years to visit Brighthold.',
+          'Wait — Seraphine said a Shardbearer was coming. That stone in your chest… that’s you, isn’t it?',
+          'Then stay behind me, hit anything with horns, and don’t stop moving. Right-click where you want to go.',
           { s: 'hero', t: 'Where’s Seraphine?' },
-          'At the castle, with the King’s gunners. Which is where we’re going. Through them.',
+          'Up at the castle, with the gunners. Which is where we’re going. Up the main street. Through them.',
         ] },
-        { type: 'kill', mob: ['imp', 'hellhound'], need: 5, text: 'Drive the imps out of the square (skills: Q W E R A S D F)' },
-        { type: 'reach', at: ['poi:gate', 'poi:gatehouse', 'duel'], r: 5, text: 'Fight your way to the castle gate' },
+        { type: 'kill', mob: ['imp', 'hellhound'], need: 5, text: 'Drive the imps off the docks' },
+        { type: 'reach', at: ['poi:outer_gate', 'poi:gate_ramp', 'poi:gate', 'poi:gatehouse', 'duel'], r: 6, text: 'Fight up the main street to the castle gate' },
       ],
       rewards: { xp: 1.2 } },
 
@@ -54,6 +54,7 @@ export default {
     { id: 'p5_ravager', kind: 'msq', title: 'The Ravager', level: 5, prereq: ['p4_shardfire'],
       desc: 'The Legion’s general has come for the Shard himself.',
       steps: [
+        { type: 'reach', at: ['poi:courtyard', 'duel'], r: 8, text: 'Push through the inner gate into the courtyard' },
         { type: 'cutscene', id: 'pro_varkhul' },
         { type: 'signal', id: 'duel', need: 1, text: 'Face Varkhul the Ravager' },
         { type: 'cutscene', id: 'pro_loss' },
@@ -63,7 +64,7 @@ export default {
     { id: 'p6_sails', kind: 'msq', title: 'Sails at Dawn', level: 5, prereq: ['p5_ravager'],
       desc: 'Brighthold is lost. Seraphine has a ship. Run.',
       steps: [
-        { type: 'reach', at: ['poi:harbor', 'poi:sallyport', 'poi:dock', 'spawn'], r: 5, text: 'Escape to the harbour!' },
+        { type: 'reach', at: ['poi:harbor', 'gate:solhaven', 'poi:sallyport', 'poi:dock', 'spawn'], r: 6, text: 'Run for the harbour — the last ship is leaving!' },
         { type: 'cutscene', id: 'pro_escape' },
       ],
       onComplete: Q => Q.g.mode?.finishPrologue?.(),

@@ -225,7 +225,7 @@ export function buildFlood(ground, { x, z, w, d, level, tint = 0x2a8a90, deep = 
         vec3 col = mix(uTint, uDeep, smoothstep(0.1, 1.6, depth));
         col = mix(col, uSky, fres);
         vec3 h = normalize(uSunDir + v);
-        col += uSunCol * (pow(max(dot(nrm, h), 0.0), 160.0) * 2.4 + pow(max(dot(nrm, h), 0.0), 24.0) * 0.08);
+        col += uSunCol * (pow(max(dot(nrm, h), 0.0), 420.0) * 1.1 + pow(max(dot(nrm, h), 0.0), 60.0) * 0.03);
         col += uTint * caus * 0.9 * smoothstep(1.5, 0.2, depth);
         col += vec3(0.8, 0.95, 1.0) * smoothstep(0.75, 1.0, ring) * 0.25 * exp(-dp * 0.3);
         float alpha = clamp(0.2 + depth * 0.45 + fres * 0.55 + caus * 0.1, 0.0, 0.88);

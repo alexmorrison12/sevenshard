@@ -73,7 +73,7 @@ async function wispHunt(B, n, hops = 3) {
 export default {
   id: 'kurai', model: 'kurai', name: 'Kurai', title: 'the Pyrefox', kind: 'guardian',
   radius: 2.4, height: 5.2, hp: 50000, atk: 0.16, bars: 210, speed: 6.4, turnRate: 4.5, enrage: 600,
-  music: 'boss', arena: 'frostmere',
+  music: 'boss', arena: 'foxfire_shrine',
   anims: {
     claw: { dur: 1.2, hits: [0.55] }, tail_whip: { dur: 1.9, hits: [0.9] }, fire_orbs: { dur: 2.3, hits: [0.95, 1.3, 1.65] },
     pounce: { dur: 1.8, hits: [1.12] }, clone: { dur: 1.9, hits: [0.95] }, foxfire_breath: { dur: 3.3, hits: [1.05, 1.45, 1.85, 2.25, 2.65] },

@@ -47,6 +47,15 @@ export const FIELD_MOBS = {
   ash_warlord: { name: 'Skorn Ashbrand', npc: 'cultist', family: 'demon', radius: 0.6, height: 2.1, hp: 240, atk: 0.04, speed: 4.6, aggro: 16, mass: 5, xp: 90, poise: 90, superArmor: 1, scale: 1.2,
     attacks: [{ id: 'brand', range: 2.4, cd: 2.2, windup: 0.5, dur: 1.0, anim: 'slash_v', hit: { ...cone(2.8, 110), coef: 1.3, status: [{ id: 'burn', dur: 4, power: 0.25 }] } },
       { id: 'eruption', range: 12, cd: 7, windup: 1.1, dur: 1.5, anim: 'cast_ground', atTarget: true, hit: { ...circle(3), coef: 2, knock: 'up' }, tele: true }] },
+  giant_rabbit: { name: 'Grumpy Meadow Hare', model: 'rabbit', family: 'beast', radius: 0.7, height: 1.0, hp: 18, atk: 0.02, speed: 5.6, aggro: 9, mass: 2, xp: 5, scale: 2.8,
+    attacks: [{ id: 'headbutt', range: 1.8, cd: 1.8, windup: 0.45, dur: 0.9, anim: 'attack', lunge: 1.5, hit: { shape: 'cone', r: 2.2, angle: 1.8, coef: 1.1, knock: 'push', kb: 1.5 } }] },
+  giant_slime: { name: 'Dewdrop Slime', model: 'slimelet', family: 'spirit', radius: 0.7, height: 1.0, hp: 16, atk: 0.02, speed: 3.6, aggro: 9, mass: 1.5, xp: 5, scale: 2.6,
+    attacks: [{ id: 'splat', range: 2.2, cd: 2.2, windup: 0.6, dur: 1.0, anim: 'attack', hit: { shape: 'circle', r: 2.4, coef: 1.2, status: [{ id: 'slow', dur: 2 }] }, tele: true }] },
+  shell_beetle: { name: 'Shellback Beetle', model: 'crab', family: 'beast', radius: 0.7, height: 0.9, hp: 22, atk: 0.022, speed: 4.2, aggro: 10, mass: 2, xp: 6, scale: 1.4,
+    attacks: [{ id: 'pinch', range: 1.8, cd: 1.7, windup: 0.4, dur: 0.9, anim: 'attack', hit: { shape: 'cone', r: 2, angle: 1.6, coef: 1 } }] },
+  thornling: { name: 'Thornling', model: 'treant', family: 'plant', radius: 0.8, height: 2.3, hp: 34, atk: 0.026, speed: 3.4, aggro: 12, mass: 3, xp: 9, scale: 0.55, poise: 30,
+    attacks: [{ id: 'lash', range: 2.4, cd: 2.2, windup: 0.6, dur: 1.1, anim: 'attack', hit: { shape: 'cone', r: 2.8, angle: 2.0, coef: 1.2, knock: 'push', kb: 1.5 } },
+      { id: 'roots', range: 9, cd: 8, windup: 1.0, dur: 1.4, anim: 'cast', atTarget: true, hit: { shape: 'circle', r: 2.2, coef: 1.4, status: [{ id: 'slow', dur: 2.5 }] }, tele: true }] },
   demon_totem: { name: 'Legion Spawning Totem', model: 'gargoyle', family: 'construct', radius: 0.8, height: 2.4, hp: 40, atk: 0, speed: 0, aggro: 0, mass: 1e3, xp: 10, attacks: [], immobile: true },
 };
 
@@ -57,11 +66,11 @@ export const PACK_TAGS = {
   bandits: [['bandit', 5], ['bandit_slinger', 3], ['bandit_brute', 1]], bandit: [['bandit', 5], ['bandit_slinger', 3], ['bandit_brute', 1]],
   spiders: [['spider', 1]], spider: [['spider', 1]],
   cultists: [['cultist', 4], ['cultist_zealot', 3]], cultist: [['cultist', 4], ['cultist_zealot', 3]],
-  treant: [['wisp', 3], ['spider', 1]], treants: [['wisp', 3], ['spider', 1]], wisps: [['wisp', 1]],
+  treant: [['thornling', 3], ['wisp', 2]], treants: [['thornling', 3], ['wisp', 2]], wisps: [['wisp', 1]], brutes: [['brute', 1], ['legionnaire', 2]],
   skeletons: [['skeleton', 1]], undead: [['skeleton', 3], ['wisp', 1]],
   demons: [['imp', 5], ['hellhound', 3], ['legionnaire', 2], ['abyss_caster', 1]], imps: [['imp', 1]], hounds: [['hellhound', 1]], hellhounds: [['hellhound', 1]],
   legion: [['legionnaire', 3], ['abyss_caster', 1]], gargoyles: [['gargoyle', 1]], casters: [['abyss_caster', 1]],
-  crabs: [['crab', 1]], beetles: [['crab', 1]], critters: [['crab', 2], ['spider', 1]],
+  crabs: [['shell_beetle', 1]], beetles: [['shell_beetle', 1]], critters: [['shell_beetle', 2], ['spider', 1]], rabbits: [['giant_rabbit', 1]], slimes: [['giant_slime', 1]],
 };
 // family of built-in mob types (for kill steps that ask for "beasts" or "demons")
 export const FAMILY = { imp: 'demon', hellhound: 'demon', legionnaire: 'demon', brute: 'demon', abyss_caster: 'demon', gargoyle: 'demon', skeleton: 'undead', wolf: 'beast', boar: 'beast', spider: 'beast', crab: 'beast', treant: 'plant', crystal_golem: 'construct', wisp: 'spirit' };
@@ -73,20 +82,20 @@ export const FIELDS = {
     elites: [{ tag: 'wolves', type: 'grizzlefang', name: 'Old Grizzlefang' }, { tag: 'bandits', type: 'bandit_brute', name: 'Big Maggie Redscarf', hpMul: 0.6 }, { tag: 'boars', type: 'boar', name: 'Sir Snortington', hpMul: 1.5, scale: 1.6 }, { tag: 'wolves', type: 'wolf', name: 'Ashfur the Pack-Mother', hpMul: 2, scale: 1.4 }],
     lore: ['lore:harvest', 'lore:windmill'], vistas: ['vista:windmill', 'vista:sunflower'] },
   thornwood: { name: 'Thornwood', region: 'Valemont', levels: [25, 40], music: 'field_dark', ambience: 'forest', defaultPack: 'spiders', tome: 'thornwood',
-    elites: [{ tag: 'spiders', type: 'broodmother', name: 'The Broodmother' }, { tag: 'undead', type: 'hollow_knight', name: 'Sir Aldric, the Hollow Knight' }, { tag: 'cultists', type: 'cultist_zealot', name: 'High Zealot Morga', hpMul: 1.5, scale: 1.2 }],
+    elites: [{ tag: 'spiders', type: 'spider', name: 'Silkfang', hpMul: 1.5, scale: 1.5 }, { tag: 'cultists', type: 'cultist_zealot', name: 'High Zealot Morga', hpMul: 1.5, scale: 1.2 }, { tag: 'treant', type: 'thornling', name: 'Old Knotbark', hpMul: 1.4, scale: 1.3 }, { tag: 'cultists', type: 'cultist', name: 'Thornspeaker Vell', hpMul: 1.5, scale: 1.15 }],
     lore: ['lore:thorn_cult', 'lore:treants', 'lore:spiders'], vistas: ['vista:moonpool', 'vista:giant_tree'] },
   ashen_ridge: { name: 'Ashen Ridge', region: 'Valemont', levels: [40, 50], music: 'field_dark', ambience: 'lava', defaultPack: 'demons', tome: 'ashen_ridge',
-    elites: [{ tag: 'demons', type: 'ash_warlord', name: 'Skorn Ashbrand' }, { tag: 'legion', type: 'brute', name: 'Gorehide the Breaker', hpMul: 0.6 }, { tag: 'gargoyles', type: 'gargoyle', name: 'Old Stoneclaw', hpMul: 1, scale: 1.5 }],
+    elites: [{ tag: 'demons', type: 'ash_warlord', name: 'Skorn Ashbrand' }, { tag: 'imps', type: 'imp', name: 'Cinderspit', hpMul: 2.5, scale: 1.4 }, { tag: 'hounds', type: 'hellhound', name: 'Gorehide the Hound', hpMul: 1.5, scale: 1.4 }, { tag: 'gargoyles', type: 'gargoyle', name: 'Old Stoneclaw', hpMul: 1, scale: 1.5 }],
     lore: ['lore:sundering', 'lore:legion', 'lore:brighthold'], vistas: ['vista:lava_falls', 'vista:fortress'] },
   pipsprout: { name: 'Pipsprout Hollow', region: 'Glass Sea', levels: [15, 50], music: 'pip', ambience: 'meadow', defaultPack: 'imps', tome: 'pipsprout', shrink: 0.35,
-    elites: [{ tag: 'critters', type: 'big_beetle', name: 'The Very Large Beetle' }, { tag: 'imps', type: 'imp', name: 'Sootling Boss Grubnik', hpMul: 2.5, scale: 1.3 }],
+    elites: [{ tag: 'rabbits', type: 'giant_rabbit', name: 'Sir Thumpington', hpMul: 1.5, scale: 1.4 }, { tag: 'slimes', type: 'giant_slime', name: 'The Great Blob', hpMul: 1.5, scale: 1.5 }, { tag: 'spiders', type: 'big_beetle', name: 'The Very Large Beetle' }],
     lore: ['lore:pip_seeds', 'lore:shrinking'], vistas: ['vista:mushroom', 'vista:petal'] },
   solhaven: { name: 'Solhaven', lore: ['lore:founding', 'lore:seven_lights', 'lore:harbor'], vistas: ['vista:lighthouse', 'vista:cathedral'], tome: 'solhaven' },
 };
 /** neighbouring zones: which gate:* leads where (used to route objectives across zones) */
 export const ROUTES = { solhaven: ['goldmeadow'], goldmeadow: ['solhaven', 'thornwood', 'pipsprout'], thornwood: ['goldmeadow', 'ashen_ridge'], ashen_ridge: ['thornwood'], pipsprout: ['goldmeadow'] };
 /** anchors that stand in for a missing gate:<to> anchor */
-export const GATE_FALLBACK = { 'goldmeadow>pipsprout': ['poi:mushroom_ring', 'poi:pip_ring', 'poi:hermit_hut', 'npc:hermit'], 'pipsprout>goldmeadow': ['gate:solhaven', 'spawn'] };
+export const GATE_FALLBACK = { 'goldmeadow>pipsprout': ['poi:mushroom_ring', 'poi:fairy_ring', ['poi:standing_stones', 0, 1.5], 'poi:hermit_hut'], 'pipsprout>goldmeadow': ['gate:goldmeadow', ['poi:petal_pier', 6, -4], ['spawn', 6, -4]] };
 
 // ------------------------------------------------------------------------------------------------ residents
 // Field residents stand at npc:* anchors. `at` lists the anchors they prefer (first match); residents without a match
@@ -108,28 +117,52 @@ export const FIELD_NPCS = {
   ],
   thornwood: [
     R('warden', 'Warden Sylva Thornwick', 'Keeper of the Thornwood', { npc: 'guard', sex: 'f', at: ['npc:warden', 'npc:ranger', 'npc:captain'], lines: ['Stay on the path. The path is the only thing here that doesn’t want to eat you.', 'The forest is sick. You can smell it.'] }),
-    R('monk', 'Brother Aldous', 'Last Monk of the Abbey', { npc: 'priest', at: ['npc:monk', 'npc:brother', 'npc:priest', 'npc:abbey'], lines: ['Seven lights, seven candles. I keep them lit. Someone must.', 'The abbey was a place of song. Now only crows sing, and badly.'] }),
+    R('monk', 'Brother Aldous', 'Last Monk of the Abbey', { npc: 'priest', at: ['npc:monk', 'npc:scholar', 'npc:brother', 'npc:abbey'], lines: ['Seven lights, seven candles. I keep them lit. Someone must.', 'The abbey was a place of song. Now only crows sing, and badly.'] }),
     R('herbalist', 'Nan Wicket', 'Herbalist of the Crooked Hut', { npc: 'villager', sex: 'f', at: ['npc:herbalist', 'npc:witch', 'npc:healer'], lines: ['Mushroom tea cures everything. Except mushroom poisoning.', 'I’m not a witch, dear. Witches have better hats.'] }),
-    R('cult_defector', 'Morrow', 'A Nervous Cultist', { npc: 'cultist', at: ['npc:cult_defector', 'npc:defector', 'npc:cultist'], lines: ['I joined for the robes. The robes were a lie.', 'Please don’t tell them I’m here. Or anyone. Or me.'] }),
+    R('cult_defector', 'Morrow', 'A Nervous Cultist', { npc: 'cultist', at: ['npc:cult_defector', 'npc:defector', 'npc:witch', 'npc:cultist'], lines: ['I joined for the robes. The robes were a lie.', 'Please don’t tell them I’m here. Or anyone. Or me.'] }),
     R('woodcutter', 'Old Woodcutter Bex', 'Woodcutter', { npc: 'farmer', sex: 'f', at: ['npc:woodcutter', 'npc:logger'], lines: ['The trees here chop back.', 'Forty years of logging and I still say sorry to every oak.'] }),
-    R('owl_sage', 'Hoot the Owl Sage', 'Scholar (Allegedly)', { npc: 'bard', at: ['npc:owl_sage', 'npc:owl', 'npc:sage'], lines: ['Whooo? Me. I’m the sage. It’s on the sign.', 'Wisdom is mostly knowing when to be quiet. Which I rarely am.'] }),
+    R('owl_sage', 'Hoot the Owl Sage', 'Scholar (Allegedly)', { npc: 'bard', at: ['npc:owl_sage', 'npc:owl', 'npc:sage', 'npc:trapper', 'poi:owl_roost'], lines: ['Whooo? Me. I’m the sage. It’s on the sign.', 'Wisdom is mostly knowing when to be quiet. Which I rarely am.'] }),
   ],
   ashen_ridge: [
-    R('captain', 'Captain Darra Flint', 'Valemont Vanguard', { npc: 'knight', sex: 'f', at: ['npc:captain', 'npc:commander'], lines: ['We hold this ridge or we hold nothing.', 'The ash gets in everything. My boots. My tea. My soul.'] }),
+    R('captain', 'Captain Darra Flint', 'Valemont Vanguard', { npc: 'knight', sex: 'f', at: ['npc:commander', 'npc:captain'], lines: ['We hold this ridge or we hold nothing.', 'The ash gets in everything. My boots. My tea. My soul.'] }),
     R('quartermaster', 'Quartermaster Pell', 'Vanguard Supplies', { npc: 'merchant', at: ['npc:quartermaster', 'npc:merchant', 'npc:supply'], lines: ['I have eleven crates of bandages and zero crates of patience.', 'Sign here. And here. And here. War is mostly paperwork.'] }),
     R('scout_ivy', 'Scout Ivy', 'Vanguard Pathfinder', { npc: 'villager', sex: 'f', at: ['npc:scout_ivy', 'npc:scout'], lines: ['I’ve counted the demons on the wall. Twice. Stopped counting after that.'] }),
-    R('refugee', 'Brighthold Refugee', 'Survivor', { npc: 'villager', at: ['npc:refugee'], lines: ['I saw Brighthold burn from the hills. I keep seeing it.'] }),
-    R('smith_ghost', 'The Ghost Smith', 'Echo of the Forge', { npc: 'blacksmith', at: ['npc:smith_ghost', 'npc:ghost', 'npc:smith'], lines: ['…clang… …clang… (the hammer passes straight through the anvil.)'] }),
+    R('refugee', 'Brighthold Refugee', 'Survivor of Cinderfall', { npc: 'villager', at: ['npc:survivor', 'npc:refugee'], lines: ['I saw Brighthold burn from the hills. I keep seeing it.'] }),
+    R('smith_ghost', 'The Ghost Smith', 'Echo of the Forge', { npc: 'blacksmith', at: ['npc:smith_ghost', 'npc:ghost', ['poi:old_mine', 2, 2], 'npc:smith'], lines: ['…clang… …clang… (the hammer passes straight through the anvil.)'] }),
     R('medic', 'Sister Maribel', 'Field Medic', { npc: 'priest', sex: 'f', at: ['npc:medic', 'npc:healer', 'npc:priest'], lines: ['Hold still. This will hurt. That’s how you know it’s working.'] }),
   ],
   pipsprout: [
     R('bramblebeard', 'Elder Bramblebeard', 'Elder of Pipsprout Hollow', { creature: 'pip', variant: 'elder', portrait: 'bramblebeard', at: ['npc:bramblebeard', 'npc:elder'], lines: ['Mind the dewdrops, small-one.', 'Long ago, the sky broke. We Pips caught what fell. Some of it, anyway.'] }),
-    R('captain_acorn', 'Captain Acorn', 'Guard of the Acorn Gate', { creature: 'pip', variant: 'guard', at: ['npc:captain_acorn', 'npc:guard', 'npc:pip1'], lines: ['Pip! PIP! (He salutes with his whole body.)', 'Pip-pip. (He is very serious about the gate.)'] }),
-    R('puddlebutton', 'Mayor Puddlebutton', 'Mayor of the Hollow', { creature: 'pip', variant: 'merchant', at: ['npc:puddlebutton', 'npc:mayor', 'npc:merchant', 'npc:pip2'], lines: ['Pip pip pip! (A speech. A long one. There is a lot of bowing.)'] }),
-    R('mossy_gran', 'Mossy Gran', 'Keeper of the Roots', { creature: 'pip', variant: 'farmer', at: ['npc:mossy_gran', 'npc:gran', 'npc:farmer', 'npc:pip3'], lines: ['Pip… pip. (She pats your hand. Her hands are very small.)'] }),
-    R('tadpole', 'Tadpole', 'Pip Child', { creature: 'pip', variant: 'child', at: ['npc:tadpole', 'npc:child', 'npc:pip4'], lines: ['PIP! (Tadpole runs a circle around you. Then another.)'] }),
-    R('nib', 'Nib', 'Pip Trader', { creature: 'pip', variant: 'merchant', at: ['npc:nib', 'npc:trader', 'npc:pip5'], lines: ['Pip? (Nib offers you a button in exchange for… everything you own.)'] }),
+    R('captain_acorn', 'Captain Acorn', 'Guard of the Acorn Tower', { creature: 'pip', variant: 'guard', at: ['npc:captain_acorn', 'npc:pip_guard', 'npc:guard'], lines: ['Pip! PIP! (He salutes with his whole body.)', 'Pip-pip. (He is very serious about the gate.)'] }),
+    R('puddlebutton', 'Mayor Puddlebutton', 'Mayor of the Hollow', { creature: 'pip', variant: 'merchant', at: ['npc:puddlebutton', 'npc:mayor', ['poi:town_hall', 2.5, 1]], lines: ['Pip pip pip! (A speech. A long one. There is a lot of bowing.)'] }),
+    R('mossy_gran', 'Mossy Gran', 'Keeper of the Roots', { creature: 'pip', variant: 'farmer', at: ['npc:mossy_gran', 'npc:pip_farmer', 'npc:farmer'], lines: ['Pip… pip. (She pats your hand. Her hands are very small.)'] }),
+    R('tadpole', 'Tadpole', 'Pip Child', { creature: 'pip', variant: 'child', at: ['npc:tadpole', 'npc:pip_child', 'npc:child'], lines: ['PIP! (Tadpole runs a circle around you. Then another.)'] }),
+    R('nib', 'Nib', 'Pip Trader', { creature: 'pip', variant: 'merchant', action: 'shop:general', at: ['npc:nib', 'npc:pip_merchant', 'npc:trader'], lines: ['Pip? (Nib offers you a button in exchange for… everything you own.)'] }),
   ],
+};
+// named locals for the remaining npc:* anchors of the real zones (id = anchor name without 'npc:')
+export const LOCALS = {
+  trapper: { name: 'Trapper Hob', title: 'Snares & Skins', npc: 'villager', lines: ['Spiders make terrible pelts. Believe me, I’ve tried.'] },
+  pilgrim: { name: 'Weary Pilgrim', title: 'On the Old Road', npc: 'villager', sex: 'f', lines: ['Seven shrines on the Pilgrim Road. I have found three. My feet have found all of them.'] },
+  scholar: { name: 'Abbey Scholar', title: 'Keeper of Scrolls', npc: 'priest', lines: ['Mind the ink. Mind the candles. Mind the skeletons.'] },
+  witch: { name: 'Old Mother Hesk', title: 'Of the Witch Lights', npc: 'villager', sex: 'f', lines: ['The lights in the marsh are not fairies, dear. Fairies bite less.'] },
+  commander: { name: 'Vanguard Commander', title: 'Emberwatch', npc: 'knight', lines: ['Hold the ridge.'] },
+  healer: { name: 'Sister Maribel', title: 'Field Medic', npc: 'priest', sex: 'f', lines: ['Hold still. This will hurt. That’s how you know it’s working.'] },
+  scout: { name: 'Scout Ivy', title: 'Vanguard Pathfinder', npc: 'villager', sex: 'f', lines: ['I’ve counted the demons on the wall. Twice.'] },
+  smith: { name: 'Forgewright Ada', title: 'Vanguard Armourer', npc: 'blacksmith', sex: 'f', action: 'shop:general', lines: ['Ash in the bellows, ash in the steel. It holds an edge, though.'] },
+  survivor: { name: 'Survivor of Cinderfall', title: 'Refugee', npc: 'villager', lines: ['The chapel bell rang all night. Then it stopped.'] },
+  priest: { name: 'Chaplain Rhoswen', title: 'Burned Chapel', npc: 'priest', sex: 'f', lines: ['Six Lights, one hidden, and not one of them bright enough for this place.'] },
+  miner: { name: 'Grit the Miner', title: 'Old Mine', npc: 'villager', lines: ['Ore’s still good. The ghosts are just a bonus.'] },
+  pip_librarian: { name: 'Pagewhistle', title: 'Moss Librarian', creature: 'pip', variant: 'elder', lines: ['Pip. (Shh.)'] },
+  pip_stablekeeper: { name: 'Slowpoke', title: 'Snail Stablekeeper', creature: 'pip', variant: 'farmer', lines: ['Pip… pip. (The snails are very fast. For snails.)'] },
+  pip_bard: { name: 'Trill', title: 'Petal Theatre Bard', creature: 'pip', variant: 'sprout', lines: ['PIP pip PIP! (An aria. Mostly one note.)'] },
+  pip_guard: { name: 'Acorn Guard', title: 'Hollow Watch', creature: 'pip', variant: 'guard', lines: ['Pip! (A very serious salute.)'] },
+  sergeant: { name: 'Brighthold Sergeant', title: 'Brighthold Watch', npc: 'guard', lines: ['Hold the line!'] },
+  gunner: { name: 'Master Gunner Bess', title: 'Rampart Artillery', npc: 'guard', sex: 'f', lines: ['Aim for the eyes. It has a lot of them.'] },
+  medic: { name: 'Brighthold Medic', title: 'Healer', npc: 'priest', sex: 'f', lines: ['Keep pressure on it! Not on ME!'] },
+  refugee: { name: 'Frightened Refugee', title: 'Brighthold', npc: 'villager', lines: ['The ships — are there more ships?'] },
+  dockmaster: { name: 'Dockmaster Quill', title: 'Brighthold Harbour', npc: 'sailor', lines: ['Last ship out is the one that’s still floating.'] },
+  child: { name: 'Lost Child', title: 'Brighthold', npc: 'child', lines: ['Have you seen my mum? She has a red scarf.'] },
 };
 /** generic locals for unclaimed npc:* anchors */
 export const GENERIC_NPC = {

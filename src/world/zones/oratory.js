@@ -108,7 +108,7 @@ export async function buildChoir(zone, { quality = 1 } = {}) {
   g.paint('seastone', S.rect(0, -1, 2 * XW, ZS - ZN), { soft: 0.3 });
   g.paint('marble', S.rect(0, -27.5, 22, 8), { soft: 0.3 });
   g.plaza(0, -2, 9.6, { layer: 'seastone', tile: 2.2, rings: [3.2, 9.4], spokes: 12, border: 0.4, keep: true });
-  for (let i = 0; i < 26; i++) g.paint('moss', S.circle(rng.range(-XW, XW), rng.range(-24, 28), rng.range(1.2, 3.2)), { soft: 2, noise: 1.5, nscale: 2, amount: 0.75 });
+  for (let i = 0; i < 18; i++) g.paint('mud', S.circle(rng.range(-XW, XW), rng.range(-24, 28), rng.range(1.2, 3.0)), { soft: 2, noise: 1.5, nscale: 2, amount: 0.55 });
   for (let i = 0; i < 10; i++) g.paint('mud', S.circle(rng.range(-XW, XW), rng.range(-22, 28), rng.range(1, 2.5)), { soft: 1.5, noise: 1, nscale: 1.5, amount: 0.6 });
   g.info('ao', S.subtract(S.rect(0, -1, 2 * XW + 2, ZS - ZN + 2), S.rect(0, -1, 2 * XW - 3, ZS - ZN - 3)), { soft: 2, amount: 0.35 });
 
@@ -176,9 +176,9 @@ export async function buildChoir(zone, { quality = 1 } = {}) {
   for (const sx of [-1, 1]) for (let i = 0; i < 7; i++) reefColumn(kit, sx * 12.5, 0, -20 + i * 7, 13, 0.75, { seed: i * 2 + (sx > 0 ? 1 : 0) });
   const pew = (x, z, rot, broken = false) => {
     const tilt = broken ? rng.range(0.15, 0.5) : 0;
-    kit.add('planks', box(3.2, 0.12, 0.55, 1), M(x, 0.5, z, rot, 1, 1, 1, 0, tilt), { tint: 0x9a7a60, ao: false });
-    kit.add('planks', box(3.2, 0.7, 0.1, 1), M(x - Math.sin(rot) * 0.3, 0.85, z - Math.cos(rot) * 0.3, rot, 1, 1, 1, -0.1, tilt), { tint: 0x9a7a60, ao: false });
-    for (const s of [-1, 1]) kit.add('planks', box(0.12, 0.9, 0.6, 1), M(x + Math.cos(rot) * s * 1.55, 0.45, z - Math.sin(rot) * s * 1.55, rot, 1, 1, 1, 0, tilt), { tint: 0x7a5a44 });
+    kit.add('planks', box(3.2, 0.12, 0.55, 1), M(x, 0.5, z, rot, 1, 1, 1, 0, tilt), { tint: 0xd8b898, ao: false });
+    kit.add('planks', box(3.2, 0.7, 0.1, 1), M(x - Math.sin(rot) * 0.3, 0.85, z - Math.cos(rot) * 0.3, rot, 1, 1, 1, -0.1, tilt), { tint: 0xd8b898, ao: false });
+    for (const s of [-1, 1]) kit.add('planks', box(0.12, 0.9, 0.6, 1), M(x + Math.cos(rot) * s * 1.55, 0.45, z - Math.sin(rot) * s * 1.55, rot, 1, 1, 1, 0, tilt), { tint: 0xc8a888, ao: false });
     kit.block(S.rect(x, z, 3.3, 0.7, rot), 0.25);
   };
   for (const sx of [-1, 1]) for (let i = 0; i < 6; i++) { const z = -16 + i * 7 + rng.range(-1, 1); if (rng.chance(0.2)) continue; pew(sx * 15.6, z, rng.range(-0.15, 0.15) + (sx > 0 ? 0 : 0), rng.chance(0.35)); }
@@ -209,7 +209,7 @@ export async function buildChoir(zone, { quality = 1 } = {}) {
   zone.root.add(flood);
   const km = buildKelp(kelp, { base: 0x0a2a20, mid: 0x2a6a4a, glow: 0x40ffd0, glowI: 1.8 }); if (km) zone.root.add(km);
   const shafts = [];
-  for (let i = 0; i < 7; i++) shafts.push({ x: rng.range(-11, 11), y: 0.3, z: rng.range(-20, 22), w: rng.range(2.5, 4.5), h: 22, rot: 0.35, tilt: -0.3, alpha: rng.range(0.16, 0.26), color: 0xb8f0ff });
+  for (let i = 0; i < 6; i++) shafts.push({ x: rng.range(-10, 10), y: 0.3, z: -20 + i * 8 + rng.range(-2, 2), w: rng.range(1.3, 2.2), h: 24, rot: 0.35, tilt: -0.28, alpha: rng.range(0.2, 0.3), color: 0xb8f0ff });
   zone.root.add(buildShafts(shafts));
   for (const s2 of shafts) g.info('glow', S.circle(s2.x, s2.z - 3, s2.w * 0.6), { soft: 2, amount: 0.14 });
   g.uniforms.uGlowCol.value.setRGB(0.25, 0.7, 0.75);
@@ -260,7 +260,7 @@ export async function buildAbyss(zone, { quality = 1 } = {}) {
   g.paint('seastone', plat, { soft: 0.5 });
   g.paint('marble', S.circle(0, 0, 19.5), { soft: 0.4 });
   g.plaza(0, 0, 19.2, { layer: 'marble', tile: 2.8, rings: [5.8, 12.5, 19.0], spokes: 8, border: 0.5 });
-  for (let i = 0; i < 18; i++) { const a = rng.range(0, TAU), rr = rng.range(15, R); g.paint('moss', S.circle(Math.cos(a) * rr, Math.sin(a) * rr, rng.range(1.5, 3.5)), { soft: 2, noise: 1.5, nscale: 2, amount: 0.85 }); }
+  for (let i = 0; i < 16; i++) { const a = rng.range(0, TAU), rr = rng.range(15, R); g.paint(rng.chance(0.5) ? 'mud' : 'seastone', S.circle(Math.cos(a) * rr, Math.sin(a) * rr, rng.range(1.5, 3.5)), { soft: 2, noise: 1.5, nscale: 2, amount: 0.8 }); }
   for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + TAU / 16; g.paint('void', S.line([[Math.cos(a) * 20, Math.sin(a) * 20], [Math.cos(a) * 24.5, Math.sin(a) * 24.5]], 1.6), { soft: 0.8, noise: 0.8, nscale: 1.2, amount: 0.9 }); }
   g.info('ao', S.ring(0, 0, R - 0.4, 2), { soft: 1.5, amount: 0.3 });
 
@@ -310,7 +310,7 @@ export async function buildAbyss(zone, { quality = 1 } = {}) {
   // glowing pedestals where the raid gathers (south) and a camp of the expedition
   { const cx = -9, cz = 16.5;
     kit.add('wetstone', cyl(0.9, 1.1, 1.0, 8, 1), M(cx + 1.8, 0.5, cz - 1.2), { tint: 0x8a98a4 });
-    kit.glow(new THREE.OctahedronGeometry(0.4, 0), M(cx + 1.8, 1.4, cz - 1.2, 0, 1, 1.6, 1), 0x60e0ff, 2.6);
+    kit.glow(new THREE.OctahedronGeometry(0.28, 0), M(cx + 1.8, 1.35, cz - 1.2, 0, 1, 1.6, 1), 0x60e0ff, 1.8);
     kit.light(cx + 1.8, 1.6, cz - 1.2, 0x60e0ff, 4, 9, 0.08);
     P.crateStack(kit, cx - 1.2, 0, cz + 0.8, 0.3, 11);
     kit.block(S.circle(cx + 1.8, cz - 1.2, 1.1), 0.3);
@@ -328,8 +328,8 @@ export async function buildAbyss(zone, { quality = 1 } = {}) {
   for (let i = 0; i < 70; i++) { const a = rng.range(0, TAU), rr = R + rng.range(0.8, 7); kelp.push({ x: Math.cos(a) * rr, y: WL - 6, z: Math.sin(a) * rr, h: rng.range(7, 11.5), s: rng.range(1.2, 2.0) }); }
   const km = buildKelp(kelp, { base: 0x0a0a24, mid: 0x3a2a7a, glow: 0x6a8aff, glowI: 2.4 }); if (km) zone.root.add(km);
   const dec = new Decals(H);
-  for (let i = 0; i < 22; i++) { const a = rng.range(0, TAU), rr = rng.range(2, R - 2); dec.add(rng.pick(['cracks', 'stain', 'moss', 'rubble']), Math.cos(a) * rr, Math.sin(a) * rr, { size: rng.range(1.4, 3), alpha: 0.75 }); }
-  for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + 0.3; dec.add('fissure', Math.cos(a) * 5.5, -6 + Math.sin(a) * 5.5, { size: 6, sz: 0.35, rot: -a, tint: 0xc0a0ff, emit: 0x8a50ff, emitI: 1.1, alpha: 0.85 }); }
+  for (let i = 0; i < 22; i++) { const a = rng.range(0, TAU), rr = rng.range(2, R - 2); dec.add(rng.pick(['cracks', 'stain', 'rubble', 'pebbles']), Math.cos(a) * rr, Math.sin(a) * rr, { size: rng.range(1.4, 3), alpha: 0.75 }); }
+  for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + 0.3; dec.add('fissure', Math.cos(a) * 5.5, -6 + Math.sin(a) * 5.5, { size: 6, sz: 0.3, rot: -a, tint: 0xa090c8, emit: 0x8a50ff, emitI: 0.6, alpha: 0.7 }); }
   for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + TAU / 16; dec.add('fissure', Math.cos(a) * 22, Math.sin(a) * 22, { size: 5, sz: 0.4, rot: -a, tint: 0xc0a0ff, emit: 0x8a50ff, emitI: 1.3, alpha: 0.9 }); }
   const dm = dec.build(); if (dm) zone.root.add(dm);
   const flames = buildFlames(kit.flames); if (flames) zone.root.add(flames);

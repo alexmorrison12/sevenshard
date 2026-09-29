@@ -1,0 +1,20 @@
+// JS heap by stage: node tools/heap.mjs
+import puppeteer from 'puppeteer-core';
+const b = await puppeteer.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: 'new', args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist', '--window-size=1600,900', '--js-flags=--expose-gc', '--enable-precise-memory-info'], defaultViewport: { width: 1600, height: 900 } });
+const p = await b.newPage();
+const cdp = await p.target().createCDPSession();
+const heap = async label => { await p.evaluate(() => window.gc?.()); const m = await cdp.send('Runtime.getHeapUsage'); const pm = await p.evaluate(() => Math.round(performance.memory.usedJSHeapSize / 1048576)); console.log(label.padEnd(22), 'used', Math.round(m.usedSize / 1048576), 'MB · total', Math.round(m.totalSize / 1048576), 'MB · perf.memory', pm, 'MB'); };
+await p.goto('http://localhost:5299/index.html', { waitUntil: 'load' });
+await p.evaluate(() => localStorage.clear());
+await p.goto('http://localhost:5299/index.html', { waitUntil: 'load' });
+await p.waitForFunction(() => window.__session?.screen === 'title', { timeout: 60000 });
+await heap('title');
+await new Promise(r => setTimeout(r, 9000));
+await heap('title +9s (warmed)');
+await p.evaluate(async () => { await __session.route('title:enter'); await __session.route('create:confirm', { cls: 'oathkeeper', sex: 'm', look: {}, name: 'Heap', path: 'powerpass' }); await new Promise(r => setTimeout(r, 4000)); });
+await heap('city');
+await p.evaluate(async () => { await __session.launch({ kind: 'chaos', tier: 2 }); await new Promise(r => setTimeout(r, 4000)); });
+await heap('chaos');
+await p.evaluate(async () => { await __session.route('results:continue').catch(() => {}); await __session.returnToHub(); await new Promise(r => setTimeout(r, 3000)); });
+await heap('city again');
+await b.close();

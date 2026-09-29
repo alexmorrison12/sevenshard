@@ -7,6 +7,7 @@ import { createHero } from '../../models/hero/index.js';
 import { G } from '../../engine/materials.js';
 import { cls as clsInfo } from '../../ui/core/data.js';
 
+/** framing of the last portrait (lab / debugging) */
 export const portraitDebug = {};
 const gearTier = c => { const s = c?.equip?.chest?.set || c?.equip?.weapon?.set; return s === 'horned' ? 2 : s === 'vanguard' ? 1 : 0; };
 
@@ -56,8 +57,6 @@ export async function heroPortrait(char, { w = 520, h = 760, pose = null, turn =
     camera.lookAt(cx, cy, 0);
     G.uFogDensity.value = 0; G.uCamPos.value.copy(camera.position); if (G.uDesat) G.uDesat.value = 0;
     r.render(scene, camera);
-    portraitDebug.cam = camera.position.toArray(); portraitDebug.tris = r.info.render.triangles; portraitDebug.calls = r.info.render.calls;
-    let nm = 0; hero.root.traverse(o => { if (o.isMesh) nm++; }); portraitDebug.meshes = nm;
     const out = document.createElement('canvas'); out.width = w; out.height = h;
     out.getContext('2d').drawImage(canvas, 0, 0);
     return out;

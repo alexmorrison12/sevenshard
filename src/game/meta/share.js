@@ -5,16 +5,16 @@
 import { renderCard, CARD_W, CARD_H } from './cards.js';
 import { heroPortrait } from './portrait.js';
 import { challengeLink, challengeText } from './challenge.js';
-import { RAIDS, GUARDIANS } from '../../data/raids.js';
+import { RAIDS } from '../../data/raids.js';
 import { BOSS_DEFS } from '../../data/bosses/index.js';
-import { CLASSES } from '../../data/classes/index.js';
 import { engravingLevels } from '../../data/engravings.js';
+import { TITLES as TITLE_DEFS } from '../../data/titles.js';
 import { itemLevel } from '../systems/stats.js';
 import { engr as engrInfo } from '../../ui/core/data.js';
 import { glyph } from '../../ui/core/glyphs.js';
 import { bossName, todaysGuardian, fmtValue } from './boards.js';
 import { pbStore } from './records.js';
-import { clock, esc, pretty } from './fmt.js';
+import { esc, pretty } from './fmt.js';
 
 const CHAOS_NAMES = ['Demon Rift I', 'Demon Rift II', 'Demon Rift III', 'Demon Rift IV'];
 export const rankOf = (cleared, time) => (!cleared ? 'D' : time < 150 ? 'S' : time < 240 ? 'A' : time < 360 ? 'B' : 'C');
@@ -72,7 +72,7 @@ export async function profileData(meta) {
   const weight = k => (/^raid:.*full/.test(k) ? 5 : /^raid:/.test(k) ? 4 : /^inferno/.test(k) ? 3 : /^guardian:/.test(k) ? 2 : /^dps:/.test(k) ? 2 : 1);
   const recs = Object.entries(pb).sort((a, b) => weight(b[0]) - weight(a[0]) || (b[1].t || 0) - (a[1].t || 0)).slice(0, 2).map(([, r]) => `${r.label} ${fmtValue(r.unit || 'time', r.v)}`);
   const w = ch.equip?.weapon;
-  const titleName = typeof ch.title === 'string' ? pretty(ch.title) : null;
+  const titleName = TITLE_DEFS?.[s.account?.roster?.activeTitle]?.name || (typeof ch.title === 'string' ? ch.title : null);
   const portrait = await heroPortrait(ch);
   return { name: ch.name, cls: ch.cls, level: ch.level, iLvl: itemLevel(ch), title: titleName, guild: s.account?.roster?.guild?.name || null, roster: s.account?.roster?.level,
     engravings, weapon: w ? { name: w.name, hone: w.hone, grade: w.grade } : null, records: recs, portrait, date: Date.now() };
@@ -155,4 +155,3 @@ export function copyText(text, say = () => {}) {
   };
   if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(() => say('Copied — send it to a friend.'), fallback); else fallback();
 }
-export { GUARDIANS, CLASSES };
