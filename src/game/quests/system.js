@@ -19,6 +19,8 @@ import { QuestWorld } from './world.js';
 import { anchorOf, dist, warnOnce, familyOf, makeFieldMob, walkable } from './spawn.js';
 import * as COLL from '../systems/collectibles.js';
 
+/** under-levelled players catch up, over-levelled ones earn less, and story XP tapers off at 50 (the story ends there) */
+export const xpScale = (content, mine) => (content >= mine ? 1 + 0.25 * (content - mine) : Math.max(0.3, 1 - 0.25 * (mine - content))) * (mine >= 50 ? 0.25 : 1);
 const FIELD_NPC_BY_ID = {}; for (const [zone, list] of Object.entries(FIELD_NPCS)) for (const n of list) FIELD_NPC_BY_ID[n.id] = { ...n, zone };
 const ZONE_NAME = id => FIELDS[id]?.name || ZONES[id]?.name || ({ solhaven: 'Solhaven', brighthold: 'Brighthold' })[id] || id;
 const OPEN_KINDS = new Set(['city', 'field', 'pipsprout', 'prologue', 'island']);
@@ -91,7 +93,7 @@ export class QuestSystem {
   /** quests only start (and chapter cards only show) in the open world, never over content, cutscenes or boss intros */
   openWorld() {
     const g = this.g; if (!g.level || !g.hero || this.s.screen !== 'game') return false;
-    if (g.inputBlocked || g.cam?.cine || cutsceneActive() || screenDark() || this.s.storyTransition || this.s._traveling || this.s.ui?.npc?.active) return false;
+    if (g.inputBlocked || g.cam?.cine || cutsceneActive() || screenDark() || this.s.storyTransition || this.s._traveling || this.s.ui?.npc?.active || g.hero.u?.dead) return false;
     const k = g.mode?.kind, zk = ZONES[g.zone?.id]?.kind || g.zone?.kind;
     return OPEN_KINDS.has(k) || ['city', 'field', 'island'].includes(zk);
   }
@@ -191,8 +193,7 @@ export class QuestSystem {
     const k = R.xp ?? (q.kind === 'msq' ? 1.1 : q.kind === 'side' ? 0.55 : q.kind === 'guide' ? 0 : 0.4);
     if (!k) return 0;
     const lvl = q.level || this.char.level || 1, mine = this.char.level || 1;
-    const catchUp = 1 + 0.25 * Math.max(0, lvl - mine);
-    return Math.round(k * xpForLevel(Math.max(1, lvl)) * catchUp);
+    return Math.round(k * xpForLevel(Math.max(1, Math.min(lvl, mine + 2))) * xpScale(lvl, mine));
   }
   /** rows describing what a quest gives (for dialogue text and the journal) */
   rewardRows(q, choice = 0) {
@@ -369,7 +370,7 @@ export class QuestSystem {
   }
   // ---------------------------------------------------------------- interaction
   interactable() {
-    const me = this.me; if (!me || this.channel || cutsceneActive()) return null;
+    const me = this.me; if (!me || me.dead || this.channel || cutsceneActive()) return null;
     // whoever the story wants you to talk to wins over whoever happens to be a step closer
     const bonus = u => { if (u?.fobj?.kind === 'gate') return this.wantsZone(u.fobj.to) ? 2.4 : 0; const id = u?.data?.npcDef?.id; if (!id || u.data.npcDef.object) return 0; const b = this.business(id); return b.talk.length ? 1.6 : b.offer.length ? 0.7 : 0; };
     let best = null, bs = Infinity;

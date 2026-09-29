@@ -16,7 +16,7 @@ export const PVP = {
 
 export const PVP_MODES = {
   deathmatch: { id: 'deathmatch', name: 'Team Deathmatch', short: 'Deathmatch', desc: 'First team to 10 kills (or the most kills after 5 minutes). Respawn after 5 seconds.', kills: 10, time: 300, overtime: 60 },
-  elimination: { id: 'elimination', name: 'Elimination', short: 'Elimination', desc: 'Best of five rounds: the last team standing wins the round. No respawns.', wins: 3, rounds: 5, roundTime: 100, between: 4.5 },
+  elimination: { id: 'elimination', name: 'Elimination', short: 'Elimination', desc: 'Best of five rounds: the last team standing wins the round. No respawns.', wins: 3, rounds: 5, roundTime: 100, between: 4.5, hpMul: 1.35 },
 };
 
 /** Rank tiers by rating (divisions III → I every `div` points inside a tier; Grandmaster has none). */

@@ -79,7 +79,7 @@ uniform sampler2D uDepth; uniform vec4 uDepthXf; uniform float uHasDepth; unifor
 uniform vec3 uDeep; uniform vec3 uMid; uniform vec3 uShallow; uniform vec3 uSand; uniform vec3 uSky; uniform vec3 uHorizon;
 uniform vec3 uCrest; uniform vec3 uFoamCol; uniform vec3 uStormTint; uniform vec3 uSunCol;
 uniform float uDesat; uniform float uGlint; uniform float uCloud; uniform float uShoreAlpha; uniform float uFoamMul; uniform vec2 uWind;
-uniform float uGlow; uniform vec3 uGlowCol; uniform float uShoreFoam;
+uniform float uGlow; uniform vec3 uGlowCol; uniform float uShoreFoam; uniform vec3 uGlowArea;
 varying vec3 vW; varying vec3 vN; varying float vH; varying float vJ; varying float vStorm;
 ${FOG_GLSL_PARS}
 float seabed(vec2 p) { return uHasDepth > 0.5 ? texture2D(uDepth, (p - uDepthXf.xy) / uDepthXf.zw).r : uLevel - 40.0; }
@@ -141,7 +141,8 @@ void main() {
   float shore = smoothstep(ts, ts + 0.14, fv + 0.08) * smoothstep(0.0, 0.15, shoreAmt);
   float foam = clamp((caps + shore) * uFoamMul, 0.0, 1.0);
   col = mix(col, uFoamCol * (0.78 + 0.14 * ndv), foam * 0.93);
-  col += uGlowCol * uGlow * smoothstep(3.5, 0.3, depth) * (0.5 + 0.5 * f2.b);
+  float glowIn = uGlowArea.z > 0.0 ? smoothstep(uGlowArea.z, uGlowArea.z * 0.8, length(p - uGlowArea.xy)) : 1.0;   // optional lagoon mask
+  col += uGlowCol * uGlow * glowIn * smoothstep(3.5, 0.3, depth) * (0.5 + 0.5 * f2.b);
   col = applyFog(col, vW);
   col = mix(col, vec3(dot(col, vec3(0.3, 0.5, 0.2))) * vec3(0.85, 0.95, 1.1), uDesat);
   float alpha = clamp(smoothstep(0.0, uShoreAlpha, depth) * 0.82 + 0.18 + foam * 0.8 + fres * 0.35, 0.0, 1.0);
@@ -151,7 +152,8 @@ void main() {
 export class Ocean {
   /**
    * o: { waves (Waves), size (m), step (grid spacing m), level, depth: { tex, xf } | { ground }, follow (true),
-   *      palette ('day'), glint, cloud, shoreAlpha (m of fade), foam (multiplier), swell (multiplier) }
+   *      palette ('day'), glint, cloud, shoreAlpha (m of fade), foam (multiplier), swell (multiplier),
+   *      glowArea: [x, z, r] (the night glow only inside this circle; default everywhere shallow) }
    */
   constructor(o = {}) {
     const T = seaTextures();
@@ -169,7 +171,7 @@ export class Ocean {
       uSky: { value: new THREE.Color(P.sky) }, uHorizon: { value: new THREE.Color(P.horizon) }, uCrest: { value: new THREE.Color(P.crest) }, uFoamCol: { value: new THREE.Color(P.foam).multiplyScalar(0.78) },
       uStormTint: { value: new THREE.Color(P.storm) }, uSunCol: { value: new THREE.Color(0xfff0d0) },
       uDesat: G.uDesat, uGlint: { value: o.glint ?? 1 }, uCloud: { value: o.cloud ?? 1 }, uShoreAlpha: { value: o.shoreAlpha ?? 2.2 }, uFoamMul: { value: o.foam ?? 1 }, uSwellMul: { value: o.swell ?? 1 },
-      uGlow: { value: 0 }, uGlowCol: { value: new THREE.Color(0x40ffe0) }, uShoreFoam: { value: o.shoreFoam ?? 1 },
+      uGlow: { value: 0 }, uGlowCol: { value: new THREE.Color(0x40ffe0) }, uGlowArea: { value: new THREE.Vector3(...(o.glowArea || [0, 0, 0])) }, uShoreFoam: { value: o.shoreFoam ?? 1 },
       uFogColor: G.uFogColor, uFogSunColor: G.uFogSunColor, uFogDensity: G.uFogDensity, uFogHeight: G.uFogHeight, uFogBase: G.uFogBase, uSunDir: G.uSunDir, uCamPos: G.uCamPos,
     };
     this.material = new THREE.ShaderMaterial({ vertexShader: VS, fragmentShader: FS, uniforms: u, transparent: true, depthWrite: true });

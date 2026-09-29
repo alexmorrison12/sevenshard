@@ -102,6 +102,7 @@ export const BOONS = [
   { id: 'titan', name: 'Titan Blood', desc: '+18% max HP.', rarity: 1, max: 4, icon: 'status:regen', hpMul: 0.18 },
   { id: 'iron', name: 'Obsidian Skin', desc: 'Take 10% less damage.', rarity: 1, max: 3, icon: 'status:def_up', mods: { dmgTaken: -0.1 } },
   { id: 'fleet', name: 'Fleetfoot', desc: '+12% movement speed; dash cooldown −30%.', rarity: 1, max: 2, icon: 'status:speed_up', mods: { moveSpd: 0.12 }, fx: 'fleet', v: 0.3 },
+  { id: 'twinstep', name: 'Twin Step', desc: 'An extra dash: dash again right after the first (the charge returns with your dash cooldown).', rarity: 2, max: 1, icon: 'status:haste', fx: 'twinstep' },
   { id: 'spirit', name: 'Surging Spirit', desc: 'Identity gauge fills 35% faster.', rarity: 1, max: 2, icon: 'status:identity_mode', mods: { identityGain: 0.35 } },
   { id: 'phoenix', name: 'Phoenix Feathers', desc: 'Heal 4% max HP on every kill.', rarity: 1, max: 3, icon: 'status:regen', fx: 'healOnKill', v: 0.04 },
   { id: 'greed', name: 'Cinder Greed', desc: 'More keys and chests; +30% silver from floors.', rarity: 1, max: 2, icon: 'status:buff_gold', fx: 'greed', v: 0.3 },

@@ -46,6 +46,9 @@ export class HeroKit {
       this.skills[k.id] = buildSkill(k, s.lv, s.tri);
     }
     this.awaken = buildSkill(this.cls.awakening, 1, []);
+    // per-class damage tuning (tools/balance.mjs keeps DPS classes within ~10% of each other)
+    const tune = this.cls.tune || 1;
+    if (tune !== 1) { for (const d of Object.values(this.skills)) d.mult *= tune; this.awaken.mult *= tune; }
     const st = this.u?.st || {};
     if (st.awakenCdr) this.awaken.cd *= 1 - st.awakenCdr;
     // gems: Ruinstones raise a skill's damage, Swiftstones cut its cooldown (sockets: char.gems, see systems/gems.js)

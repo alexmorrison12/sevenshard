@@ -1062,7 +1062,7 @@ export class SailingMode {
     const kn = Math.round(sh.v * KN), heading = compassPoint(sh.h), wind = compassPoint(Math.atan2(this.waves.wind.x, this.waves.wind.y));
     const c = this.course;
     if (c && !c.steer && c.total > 40) { const left = pathLen(sh, c.path || [c]); h.progress = { label: `Course · ${Math.round(left)} m · ${kn} kn ${heading}`, pct: clamp(1 - left / c.total, 0, 1) * 100 }; }
-    else h.progress = { label: `${kn} knots · heading ${heading} · wind from ${wind}`, pct: clamp(sh.v / (this.stats.speed * 1.5), 0, 1) * 100 };
+    else h.progress = null;                                   // speed, heading and wind live in the ship cluster
     const gw = ghostWindow();
     h.timer = !this.ghost && !this.ghostDone && gw?.live ? { label: 'Ghost Ship sighted', left: Math.max(0, (gw.end - Date.now()) / 1000), urgent: true } : null;
     // the dedicated sailing cluster (UI ShipHud: hull, speed dial, sails, Q–R ship skills, compass & wind) — it

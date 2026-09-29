@@ -422,7 +422,7 @@ class PvpMatch {
     // HUD party frames = your team; the death screen's revive goes through the match
     const party = this.party = g.party = new RunParty(g, { canRevive: () => false, noRevive: this.mode === 'deathmatch' ? 'You respawn in a moment.' : 'Wait for the next round.' });
     for (const e of this.entries.filter(x => x.team === 0)) party.members.push({ kit: e.kit, local: e.local, ai: e.ai, sim: e.sim });
-    for (const e of this.entries) pvpRules(e.u);
+    for (const e of this.entries) { pvpRules(e.u); if (this.def.hpMul) { const u = e.u; u.st = { ...u.st, hpMax: Math.round(u.st.hpMax * this.def.hpMul) }; u.hpMax = u.st.hpMax; u.hp = u.hpMax; u._statDirty = true; } }
     this.offs = [
       L.on('damage', ev => this.onDamage(ev)),
       L.on('heal', ev => { const e = this.entry(ev.src); if (e && ev.tgt?.team === e.team) e.heal += ev.real || 0; }),

@@ -538,11 +538,19 @@ BUILD.stormcrown = ({ kit, flags, palms, flora, ox, oz, H, W, lod, spots, rng })
     const len = Math.hypot(p1.x - p0.x, p1.z - p0.z), rot = Math.atan2(p1.x - p0.x, p1.z - p0.z) + Math.PI / 2;
     const [a, b] = W(mx, mz);
     kit.add('planks', box(S.width, 0.3, len + 0.3, 1.5), M(a, my - 0.15, b, rot + Math.PI / 2, 1, 1, 1, 0, Math.atan2(p1.y - p0.y, len)), { tint: 0xb89068, ao: false, chunkAt: [cx, cz] });
-    if (i % 3 === 0) { const ox2 = Math.cos(p0.a) * (S.width / 2 + 0.1), oz2 = Math.sin(p0.a) * (S.width / 2 + 0.1); const [c, d] = W(p0.x + ox2, p0.z + oz2); kit.add('timber', cyl(0.1, 0.12, 1.4, 6, 1), M(c, p0.y + 0.5, d), { ao: false, chunkAt: [cx, cz] }); }
+    if (i % 3 === 0) {
+      const ox2 = Math.cos(p0.a) * (S.width / 2 + 0.1), oz2 = Math.sin(p0.a) * (S.width / 2 + 0.1); const [c, d] = W(p0.x + ox2, p0.z + oz2);
+      kit.add('timber', cyl(0.1, 0.12, 1.4, 6, 1), M(c, p0.y + 0.5, d), { ao: false, chunkAt: [cx, cz] });
+      if (i % 9 === 0) {                                   // storm lanterns: warm pools of light up the ledge
+        kit.add('metal', box(0.26, 0.34, 0.26, 1), M(c, p0.y + 1.35, d), { tint: 0x3a3a40, ao: false, chunkAt: [cx, cz] });
+        kit.glow(box(0.18, 0.24, 0.18, 1), M(c, p0.y + 1.35, d), 0xffc070, 2.4);
+        if (lod === 'full') kit.light(c, p0.y + 1.6, d, 0xffb060, 5, 9, 0.15);
+      }
+    }
   }
   // lightning rods and the Crown Bell at the top
   const [ta, tb] = W(0, -6);
-  kit.add('stone', cyl(4.4, 4.8, 1, 16, 1), M(ta, S.h1 - 0.2, tb), { tint: 0x3a3640 });
+  kit.add('stone', cyl(4.4, 4.8, 1, 16, 1), M(ta, S.h1 - 0.2, tb), { tint: 0x6a6674 });
   kit.add('stone', new THREE.TorusGeometry(4.4, 0.18, 5, 32).rotateX(Math.PI / 2), M(ta, S.h1 + 0.35, tb), { tint: 0x8a8494, ao: false });
   for (let i = 0; i < 4; i++) { const a = i / 4 * TAU + 0.4; kit.add('metal', cyl(0.12, 0.16, 8, 6, 1), M(ta + Math.cos(a) * 3.6, S.h1 + 4.3, tb + Math.sin(a) * 3.6), { tint: 0x7a7a88, ao: false }); kit.add('metal', tube([V(ta + Math.cos(a) * 3.6, S.h1 + 8.2, tb + Math.sin(a) * 3.6), V(ta + Math.cos(a) * 1.2, S.h1 + 9.4, tb + Math.sin(a) * 1.2)], [0.08, 0.08], 5, false), null, { tint: 0x7a7a88, ao: false, chunkAt: [ta, tb] }); }
   const crown = new THREE.TorusGeometry(2.4, 0.18, 6, 24); crown.rotateX(Math.PI / 2);
@@ -561,9 +569,9 @@ BUILD.stormcrown = ({ kit, flags, palms, flora, ox, oz, H, W, lod, spots, rng })
 // ---------------------------------------------------------------- Hushwater Lagoon
 BUILD.hushwater = ({ kit, flags, palms, flora, ox, oz, H, W, lod, spots, rng, night }) => {
   // mermaid rock in the lagoon, the jetty from the south beach, pearl-bed markers, a waterfall cleft
-  const [a, b] = W(0, -8), y = H(0, -8);
-  boulder(kit, a, y - 0.4, b, { s: 2.6, seed: 5, tint: 0x6a7a80, moss: 0x3a7a5a, flat: 0.55, block: lod === 'full' });
-  crystal(kit, a + 1.5, y + 0.6, b - 1.2, { s: 0.9, color: 0x60f0e0, intensity: 2.2, n: 4, seed: 3, light: true, block: false });
+  const [a, b] = W(0, -9.2), y = H(0, -9.2);
+  boulder(kit, a, y - 0.4, b, { s: 1.75, seed: 5, tint: 0x7a8a90, moss: 0x3a7a5a, flat: 0.55, block: lod === 'full' });
+  crystal(kit, a + 1.1, y + 0.4, b - 0.8, { s: 0.7, color: 0x60f0e0, intensity: 2.2, n: 4, seed: 3, light: true, block: false });
   spots.mermaid = [a, y + 1.4, b];
   for (let i = 0; i < 8; i++) { const [c, d] = W(0, 14 - i * 2.6); kit.add('planks', box(2.6, 0.22, 2.8, 1.5), M(c, 0.45, d), { tint: 0xb0906a, ao: false }); if (i % 2 === 0) for (const s of [-1, 1]) kit.add('timber', cyl(0.12, 0.12, 2.2, 6, 1), M(c + s * 1.3, -0.4, d), { ao: false }); }
   spots.jetty = W(0, -3.5); spots.jettyDeck = [W(0, 5)[0], 0.56, W(0, 5)[1], 20.8, 2.6];

@@ -42,7 +42,7 @@ export async function build(zone, o = {}) {
       g.plaza(0, -4, 8.2, { layer: 'marble', tile: 2, rings: [2.4, 5.6, 7.8], spokes: 8, border: 0.4 });
       g.paint('gravel', S.rect(0, 16, 3.2, 20), { soft: 0.6, noise: 0.4, nscale: 1.5 });
     },
-    paintOpts: { grassAt: 1.1, moss: true, dirt: false },
+    paintOpts: { grassAt: 1.9, moss: false, dirt: false },
     decorate(c) {
       const { kit, flora, H, rng, dec } = c;
       for (let i = 0; i < 70; i++) { const a = rng.range(0, Math.PI * 2), r = rng.range(30, 44), x = Math.cos(a) * r, z = -2 + Math.sin(a) * r, y = H(x, z); if (y < 0.9) continue; flora.flower(x, y, z, rng.pick([0xe8f0ff, 0xb8c8ff, 0x9ad0ff])); }

@@ -28,7 +28,7 @@ void main() {
   float a = edge * lip * (0.35 + 0.65 * smoothstep(0.25, 0.75, streak));
   vec3 deep = mix(vec3(0.30, 0.62, 0.68), vec3(0.25, 0.85, 0.80), uGlow), foam = vec3(0.92, 0.98, 1.0);
   vec3 col = mix(deep, foam, smoothstep(0.45, 0.8, streak) * 0.85 + (1.0 - y) * 0.25);
-  col *= 0.85 + uGlow * 0.6;
+  col *= 0.8 + uGlow * 0.35;
   if (a < 0.02) discard;
   gl_FragColor = vec4(col, a * 0.92);
 }`;
@@ -85,7 +85,7 @@ export async function build(zone, o = {}) {
       for (let i = 0; i < 90; i++) { const a = rng.range(0, Math.PI * 2), r = rng.range(28, 40), x = Math.cos(a) * r, z = -4 + Math.sin(a) * r, y = H(x, z); if (y < 2 || z > 20) continue; flora.flower(x, y, z, rng.pick([0xff8ab0, 0xffffff, 0x7ad8ff, 0xf4d040])); }
       for (let i = 0; i < 12; i++) dec.add(rng.pick(['pebbles', 'moss', 'petals']), rng.range(-16, 16), rng.range(14, 28), { size: rng.range(1, 2), alpha: 0.7 });
       P.net(kit, -9, H(-9, 19) + 0.02, 19, 0.3); P.fishBasket(kit, -6.5, H(-6.5, 18), 18, 0.4); P.ropeCoil(kit, 5, H(5, 20), 20, 1);
-      c.anchor('npc:mermaid', 2.6, -5.4, Math.PI); c.anchors['npc:mermaid'].extra = { free: true };
+      c.anchor('npc:mermaid', 2.3, -4.1, Math.PI * 0.85); c.anchors['npc:mermaid'].extra = { free: true };
       c.anchor('npc:diver', -7.5, 17.5, Math.PI * 0.9);
       [[-11, 7], [-5, 11.5], [7, 10], [12, 5], [-14, 2]].forEach(([x, z], i) => c.anchor('bed:' + i, x, z + 1.2, 0));
       c.anchor('jetty', 0, -3, 0);
@@ -93,10 +93,10 @@ export async function build(zone, o = {}) {
       c.anchor('vista', 24, -22, 0);
     },
     nav(nav, c) { const J = c.spots.jettyDeck; nav.walk(S.rect(J[0], J[2], J[4] - 0.6, J[3])); },
-    water: { glint: 1.1 },
+    water: { glint: 1.1, glowArea: [0, -4, 27] },
     particles: 'fireflies',
   }, o);
-  zone.onEnv(env => { zone.sea.ocean.uniforms.uGlow.value = (env.night || 0) * 0.7 + 0.08; });
+  zone.onEnv(env => { zone.sea.ocean.uniforms.uGlow.value = (env.night || 0) * 0.42 + 0.05; });
   const f = zone.spots?.falls; if (f) zone.falls = buildFalls(zone, f[0], f[2]);
 }
 registerZone('isle_hushwater', { name: 'Hushwater Lagoon', kind: 'island', size: 200 }, build);

@@ -59,7 +59,8 @@ export async function build(zone, o = {}) {
     },
     heightFn: (x, z, zone) => { const L = ledgeAt(x, z); return L ? L.y : zone.ground.heightAt(x, z) + 0; },
     envOver: {
-      day: { sunColor: 0xb8c4d4, sunIntensity: 1.7, hemiSky: 0x7a8aa0, hemiGround: 0x2a3036, hemiIntensity: 1.0, fogColor: 0x56626e, fogDensity: 0.006, background: 0x3a4450, grade: { exposure: 1.0, saturation: 0.85, contrast: 1.12, vignette: 0.42, cool: 0.08, bloom: 0.6, bloomThreshold: 0.86 } },
+      day: { sunColor: 0xc8d4e4, sunIntensity: 2.4, hemiSky: 0x8a9cb4, hemiGround: 0x3a4250, hemiIntensity: 1.45, fogColor: 0x687684, fogDensity: 0.0052, background: 0x4a5664, grade: { exposure: 1.15, saturation: 0.88, contrast: 1.08, vignette: 0.36, cool: 0.08, bloom: 0.6, bloomThreshold: 0.86 } },
+      night: { sunColor: 0x9ab0d8, sunIntensity: 1.6, hemiSky: 0x5a6a90, hemiIntensity: 1.2, fogColor: 0x243044, grade: { exposure: 1.3, saturation: 0.9, vignette: 0.4, bloom: 0.9, bloomThreshold: 0.78 } },
     },
     water: { cloud: 1.4 },
   }, o);

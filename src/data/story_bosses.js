@@ -7,7 +7,7 @@ import { fwd, rnd, tele, wait, strike, smash, volley, act, counter, onNav, behin
 export const STORY_BOSSES = {
   varkhul: {
     id: 'varkhul', model: 'varkhul', name: 'Varkhul', title: 'the Ravager', kind: 'field',
-    radius: 1.3, height: 3.5, hp: 36000, storyHp: 2600, atk: 0.1, bars: 40, speed: 4.2, turnRate: 4.5, enrage: 300, music: 'boss',
+    radius: 1.3, height: 3.5, hp: 36000, storyHp: 700, atk: 0.1, bars: 40, speed: 4.2, turnRate: 4.5, enrage: 300, music: 'boss',
     anims: {
       slash_combo: { dur: 2.6, hits: [0.55, 1.15, 1.9] }, overhead: { dur: 2.2, hits: [1.2] }, fire_wave: { dur: 2.6, hits: [1.35] },
       leap: { dur: 2.6, hits: [1.6] }, summon: { dur: 3.0, hits: [1.8] }, roar: { dur: 2.4, hits: [0.9] },
@@ -97,7 +97,7 @@ export const STORY_BOSSES = {
   // only gives it stats and a name for the boss bar when no encounters-owner def exists.
   ashmaw: {
     id: 'ashmaw', model: 'ashmaw', name: 'Ashmaw', title: 'the Siege Behemoth', kind: 'field',
-    radius: 6, height: 15, hp: 9000, storyHp: 900, atk: 0.08, bars: 30, speed: 0, turnRate: 1.2, music: 'boss',
+    radius: 6, height: 15, hp: 9000, storyHp: 350, atk: 0.08, bars: 30, speed: 0, turnRate: 1.2, music: 'boss',
     anims: { slam_wall: { dur: 4.2, hits: [2.3] }, roar: { dur: 4.0, hits: [1.4] }, breath: { dur: 5.0, hits: [1.8, 2.6, 3.4] } },
     moves: {},
   },

@@ -22,11 +22,13 @@ import * as COLL from '../systems/collectibles.js';
 import * as LOOT from '../systems/loot.js';
 import { grantBundle } from '../systems/common.js';
 import { Cutscene } from '../quests/cutscene.js';
+import { xpScale } from '../quests/system.js';
 
 const FIELD_IDS = ['goldmeadow', 'thornwood', 'ashen_ridge', 'pipsprout'];
 const ZONE_NAME = id => FIELDS[id]?.name || ZONES[id]?.name || ({ solhaven: 'Solhaven', brighthold: 'Brighthold' })[id] || id;
 const SEED_VARIANTS = ['gold', 'jade', 'rose'];
 const ACTIVE_R = 58, SLEEP_R = 82;        // packs stream in / out around the hero
+const SAFE_R = 16;                        // packs keep this far from anyone you might stop to talk to
 
 /** zones whose real builder hasn't landed load as a plain arena: give them the story layout so the content works */
 export function ensureAnchors(id, zone) {
@@ -44,7 +46,7 @@ export class FieldMode {
     this.s = session; this.g = session.game; this.zone = zone; this.id = zone?.id; this.o = o;
     this.cfg = FIELDS[this.id] || { name: zone?.name, levels: [1, 60], music: 'field', ambience: 'meadow' };
     this.kind = this.cfg.shrink ? 'pipsprout' : 'field';        // not 'field' in Pipsprout: no full-size mounts/pets there
-    this.npcs = []; this.packs = []; this.objs = []; this.drops = []; this.offs = []; this.t = 0; this.channel = null;
+    this.npcs = []; this.packs = []; this.objs = []; this.drops = []; this.offs = []; this.t = 0; this.channel = null; this.safe = null; this.safeT = 0;
   }
   get L() { return this.g.level; }
   get me() { return this.g.hero?.u; }
@@ -72,11 +74,11 @@ export class FieldMode {
     // the fairy-ring ways between Goldmeadow and the Hollow when the zones have no explicit gates for them
     if (this.id === 'goldmeadow' && !A['gate:pipsprout']) {
       const p = anchorOf(z, GATE_FALLBACK['goldmeadow>pipsprout']);
-      if (p) { const w = walkable(this.L, p.x, p.z, 5); A['gate:pipsprout'] = { x: w.x, z: w.z, facing: Math.PI }; this.addObj('gate', 'gate:pipsprout', { ...w, facing: Math.PI }, { prop: false, to: 'pipsprout', locked: () => !this.Q?.isActive('g8_hollow') && !this.Q?.isDone('g8_hollow') && !this.A.roster.unlocked?.pipsprout, ring: true, ringFx: true }); }
+      if (p) { const w = walkable(this.L, p.x, p.z, 7, 1.8); A['gate:pipsprout'] = { x: w.x, z: w.z, facing: Math.PI }; this.addObj('gate', 'gate:pipsprout', { ...w, facing: Math.PI }, { prop: false, to: 'pipsprout', locked: () => !this.Q?.isActive('g8_hollow') && !this.Q?.isDone('g8_hollow') && !this.A.roster.unlocked?.pipsprout, ring: true, ringFx: true }); }
     }
     if (this.id === 'pipsprout' && !A['gate:goldmeadow']) {
       const p = anchorOf(z, GATE_FALLBACK['pipsprout>goldmeadow']);
-      if (p) { const w = walkable(this.L, p.x, p.z, 5); A['gate:goldmeadow'] = { x: w.x, z: w.z, facing: 0 }; this.addObj('gate', 'gate:goldmeadow', { ...w, facing: 0 }, { prop: false, to: 'goldmeadow', ring: true, ringFx: true }); }
+      if (p) { const w = walkable(this.L, p.x, p.z, 7, 1.8); A['gate:goldmeadow'] = { x: w.x, z: w.z, facing: 0 }; this.addObj('gate', 'gate:goldmeadow', { ...w, facing: 0 }, { prop: false, to: 'goldmeadow', ring: true, ringFx: true }); }
     }
     for (const o of this.objs) if (o.ringFx) { try { const h = this.g.fx?.play?.('portal_flash', { pos: { x: o.x, y: this.L.heightAt(o.x, o.z), z: o.z } }); void h; o.portalFx = this.g.fx?.portal?.({ pos: { x: o.x, y: this.L.heightAt(o.x, o.z) + 0.05, z: o.z }, color: 'nature', radius: this.cfg.shrink ? 1.2 : 1.6, flat: true }); } catch { /* */ } }
     this.offs.push(this.L.on('death', ev => this.onDeath(ev)));
@@ -143,10 +145,15 @@ export class FieldMode {
     const me = this.me; if (!me || !this.L) return;
     this.t += dt;
     // packs stream in/out and respawn
+    this.safeT -= dt;
+    const recheck = this.safeT <= 0; if (recheck) { this.safeT = 2; this.safe = null; }
     for (const p of this.packs) {
       const d = dist(me.pos, p.a), alive = p.units.filter(u => u.level && !u.dead);
       if (p.state === 'sleep') { if (d < ACTIVE_R) this.spawnPack(p); continue; }
-      if (d > SLEEP_R && alive.every(u => u.combatT <= 0)) { for (const u of alive) this.L.remove(u); p.units = []; p.state = 'sleep'; continue; }
+      const calm = alive.every(u => u.combatT <= 0);
+      if (d > SLEEP_R && calm) { for (const u of alive) this.L.remove(u); p.units = []; p.state = 'sleep'; continue; }
+      // a story NPC turned up next to an idle pack: send the pack elsewhere (it re-forms clear of the NPC)
+      if (recheck && calm && alive.length && d > 20 && alive.some(u => this.safeSpots().some(s => dist(s, u.pos) < SAFE_R - 4))) { for (const u of alive) this.L.remove(u); p.units = []; p.state = 'sleep'; continue; }
       if (!alive.length) {
         if (p.t <= 0) p.t = p.elite ? 110 + Math.random() * 40 : 26 + Math.random() * 16;
         p.t -= dt;
@@ -177,9 +184,26 @@ export class FieldMode {
     this.attuneT -= dt;
     if (this.attuneT <= 0) { this.attuneT = 0.5; for (const o of this.objs) if (o.kind === 'triport' && dist(me.pos, o) < 5) attune(this.s, o.key); }
   }
+  /** everyone the hero might stop and talk to (residents and story NPCs); packs keep clear of them */
+  safeSpots() {
+    return this.safe ||= this.L.units.filter(u => u.kind === 'npc' && u.data.npcDef && !u.data.npcDef.object && !u.data.storyHidden && !u.dead).map(u => ({ x: u.pos.x, z: u.pos.z }));
+  }
+  /** a pack anchor nudged out of every NPC's safe circle (null: no room here) */
+  packCentre(a0) {
+    const spots = this.safeSpots(), R = SAFE_R + (a0.r || 6) * 0.65;
+    let c = { x: a0.x, z: a0.z, r: a0.r, tag: a0.tag };
+    for (let k = 0; k < 3; k++) {
+      const sp = spots.find(q => dist(q, c) < R); if (!sp) return c;
+      const d = dist(sp, c), nx = d > 0.01 ? (c.x - sp.x) / d : 1, nz = d > 0.01 ? (c.z - sp.z) / d : 0;
+      c = { ...walkable(this.L, sp.x + nx * (R + 1.5), sp.z + nz * (R + 1.5), 8), r: a0.r, tag: a0.tag };
+    }
+    return spots.some(q => dist(q, c) < R - 4) ? null : c;
+  }
   spawnPack(p) {
-    const L = this.L, a = p.a, me = this.me;
+    const L = this.L, me = this.me;
     p.units = []; p.state = 'awake'; p.t = 0;
+    const a = this.packCentre(p.a);
+    if (!a) { p.t = 60; return; }                 // no room away from the locals: stay quiet for a while
     if (p.elite) {
       const E = this.cfg.elites || [];
       const idx = Math.max(0, (+p.key.split(':')[1] || 1) - 1), match = E.filter(x => x.tag === a.tag);
@@ -210,7 +234,7 @@ export class FieldMode {
     const me = this.me; if (!me) return;
     const ours = killer === me || killer?.team === 0 || dist(u.pos, me.pos) < 26;
     if (!ours) return;
-    if (u.data.xp && !u.data.noXp) this.Q?.grantXp(u.data.xp);
+    if (u.data.xp && !u.data.noXp) this.Q?.grantXp(Math.round(u.data.xp * Math.min(1, xpScale(u.lv || 1, this.char?.level || 1))));
     this.dropLoot(u);
   }
   dropLoot(u) {
@@ -262,7 +286,7 @@ export class FieldMode {
   fxPickup(p, kind) { try { this.g.fx?.pickup?.({ pos: { x: p.x, y: (p.y ?? this.L.heightAt(p.x, p.z)) + 0.3, z: p.z }, kind, to: this.me?.model?.root }); } catch { /* */ } this.g.audio?.sfx?.('coin', { pos: p }); }
   // ---------------------------------------------------------------- interaction
   interactable() {
-    const me = this.me; if (!me || this.channel) return null;
+    const me = this.me; if (!me || me.dead || this.channel) return null;
     let best = null, bd = Infinity;
     const Q = this.Q, bonus = u => { const b = Q?.business?.(u.data.npcDef?.id); return b?.talk.length ? 1.6 : b?.offer.length ? 0.7 : 0; };
     for (const u of this.npcs) { if (!u.level || u.dead) continue; const d = me.distTo(u); if (d > 3.2) continue; const sc = d - bonus(u); if (sc < bd) { bd = sc; best = u; } }

@@ -33,7 +33,7 @@ export function anchorOf(zone, names, off = null) {
   return null;
 }
 /** nearest walkable point to (x, z) (falls back to the point itself) */
-export function walkable(L, x, z, r = 8) { const p = L?.nav?.nearest?.(x, z, r, 0.2); return p ? { x: p.x, z: p.z } : { x, z }; }
+export function walkable(L, x, z, r = 8, clr = 0.2) { const p = (clr > 0.2 && L?.nav?.nearest?.(x, z, r, clr)) || L?.nav?.nearest?.(x, z, r, 0.2); return p ? { x: p.x, z: p.z } : { x, z }; }
 export const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 export const facingTo = (from, to) => Math.atan2(-(to.x - from.x), -(to.z - from.z));
 

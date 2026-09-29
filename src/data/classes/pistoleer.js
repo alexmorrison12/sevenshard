@@ -132,6 +132,7 @@ for (const s of skills) {
 
 export default finalize({
   id: 'pistoleer', name: 'Pistoleer', archetype: 'Gunner', role: 'dps', weapon: 'pistols', difficulty: 3,
+  tune: 1.14,   // class damage multiplier from tools/balance.mjs (single-target, real cooldowns): was 85% of the DPS average
   blurb: 'A duelist who juggles twin pistols, a shotgun and a long rifle mid-fight. Every skill swaps the weapon in hand; master the rhythm and the Pistoleer never stops firing.',
   palette: { main: 0xe0913a, glow: [3, 1.8, 0.6], fx: G },
   dash: { cd: 8, dist: 5.6, dur: 0.26 },

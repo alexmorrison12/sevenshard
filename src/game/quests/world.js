@@ -300,8 +300,8 @@ class EncounterRunner extends Runner {
     this.Q.markers.setBeacon('run:' + this.key, null);
     this.state = 'fight';
     const lvl = this.level(), ref = refFor(lvl);
-    // tune a def written for a 4-player raid down to a solo story fight (≈ 70–100 s at even level)
-    const hpScale = s.hpScale ?? Math.min(1, (def.storyHp || 2600) / Math.max(1, def.hp));
+    // tune a def written for a 4-player raid down to a solo story fight (≈ 2 minutes for a level-appropriate hero)
+    const hpScale = s.hpScale ?? Math.min(1, (s.storyHp || def.storyHp || 700) / Math.max(1, def.hp));
     const z = this.W.zone, A = z.anchors || (z.anchors = {});
     const bossAt = anchorOf(z, s.bossAt || ['boss', 'poi:courtyard'], null) || { x: at.x, z: at.z - 8, facing: 0 };
     A['__qenc_spawn'] = { x: this.me.pos.x, z: this.me.pos.z, facing: 0 }; A['__qenc_boss'] = { x: bossAt.x, z: bossAt.z, facing: bossAt.facing ?? Math.PI };
@@ -309,7 +309,11 @@ class EncounterRunner extends Runner {
       onEnd: r => this.end(r) });
     enc.party = null;
     try { enc.enter(); } catch (e) { console.error('[quest encounter]', e); this.state = 'idle'; return; }
-    for (const b of enc.bosses) { b.data.questRun = this.key; this.units.push(b); }
+    for (const b of enc.bosses) {
+      b.data.questRun = this.key; this.units.push(b);
+      b.st.atk *= s.atkScale ?? def.storyAtk ?? 0.6;                       // hits hard, but a story boss shouldn't one-shot
+      b.data.bars = Math.min(b.data.bars || 30, s.bars || 30); b.data.barHp = b.hpMax / b.data.bars;
+    }
     this.g.audio?.music?.(def.music || 'boss');
     this.fieldMusic = this.W.zone.env?.music;
     void ref;

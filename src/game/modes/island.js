@@ -912,7 +912,7 @@ GIMMICKS.lanterns = class Lanterns extends Gimmick {
   choose(id, c) { if (c === 'begin') { if (!this.round) this.round = 1; this.seq = []; this.show(); } }
   show() {
     const n = [3, 4, 5][this.round - 1];
-    if (this.seq.length !== n) { this.seq = []; for (let i = 0; i < n; i++) { let k; do k = Math.floor(Math.random() * 5); while (k === this.seq[i - 1]); this.seq.push(k); } }
+    if (this.seq.length !== n) this.seq = [0, 1, 2, 3, 4].sort(() => Math.random() - 0.5).slice(0, n);   // each lantern once per round
     this.input = []; this.state = 'show'; this.showT = -0.8; this.showI = -1;
     for (const l of this.lamps) l.lit = 0;
     this.banner(`The ritual · round ${this.round}/3`, `Follow the wisp: ${n} lanterns.`, 'info');
@@ -1034,7 +1034,8 @@ GIMMICKS.climb = class Climb extends Gimmick {
     this.amb -= dt;
     if (this.amb <= 0) { this.amb = rnd(3, 7); const a = rnd(0, TAU), r = rnd(55, 85), x = Math.cos(a) * r, z = Math.sin(a) * r - 6; this.g.fx?.lightning?.({ from: { x: x + rnd(-6, 6), y: 70, z: z - 20 }, to: { x, y: 0, z }, color: 'lightning', impact: false }); this.sfx('thunder', { x, y: 0, z }, 0.55); this.flash = 0.25; }
     if (this.state !== 'climb') {
-      if (L && L.t > 0.015 && !me.dead) this.start();
+      if (this.state === 'done' && (!L || L.t < 0.05)) this.state = 'idle';           // back at the foot: ready for another run
+      if (this.state === 'idle' && L && L.t > 0.015 && L.t < 0.12 && !me.dead) this.start();
       return;
     }
     this.t += dt;

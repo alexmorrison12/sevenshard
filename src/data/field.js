@@ -95,7 +95,7 @@ export const FIELDS = {
 /** neighbouring zones: which gate:* leads where (used to route objectives across zones) */
 export const ROUTES = { solhaven: ['goldmeadow'], goldmeadow: ['solhaven', 'thornwood', 'pipsprout'], thornwood: ['goldmeadow', 'ashen_ridge'], ashen_ridge: ['thornwood'], pipsprout: ['goldmeadow'] };
 /** anchors that stand in for a missing gate:<to> anchor */
-export const GATE_FALLBACK = { 'goldmeadow>pipsprout': ['poi:mushroom_ring', 'poi:fairy_ring', ['poi:standing_stones', 0, 1.5], 'poi:hermit_hut'], 'pipsprout>goldmeadow': ['gate:goldmeadow', ['poi:petal_pier', 6, -4], ['spawn', 6, -4]] };
+export const GATE_FALLBACK = { 'goldmeadow>pipsprout': ['poi:mushroom_ring', 'poi:fairy_ring', ['poi:standing_stones', 0, 1.5], 'poi:hermit_hut'], 'pipsprout>goldmeadow': ['gate:goldmeadow', ['poi:petal_pier', 9, 8], ['spawn', 9, 8.5]] };
 
 // ------------------------------------------------------------------------------------------------ residents
 // Field residents stand at npc:* anchors. `at` lists the anchors they prefer (first match); residents without a match

@@ -448,9 +448,9 @@ class InfernoRun {
       this.need = this.crystals.length; this.wave(5);
       this.every(6.5, () => { for (const c of this.crystals) if (!c.dead) this.spawnAround(c.pos, 2, 3); });
     } else if (kind === 'survive') {
-      this.need = FLOOR_KINDS.survive.secs; this.wave(7);
-      this.every(4.5, () => this.wave(3 + Math.floor(this.rng.next() * 3) + Math.floor(f / 25)));
-      this.every(5.5, () => this.eruptions(2));
+      this.need = FLOOR_KINDS.survive.secs; this.wave(6);
+      this.every(5, () => { if (this.L.units.filter(u => u.kind === 'mob' && !u.dead).length < 14) this.wave(3 + Math.floor(this.rng.next() * 2) + Math.floor(f / 30)); });
+      this.every(6.5, () => this.eruptions(Math.min(2, this.party.members.length)));
     } else if (kind === 'hunter') {
       const opts = HUNTERS.filter(h => f >= h.from && mobTemplate(h.type));
       const h = this.rng.pick(opts.length ? opts : [{ type: 'pit_lord' }]);
@@ -638,6 +638,11 @@ class InfernoRun {
     if (unit !== this.me) return;
     const kit = this.g.hero;
     if (this.boons.fleet) kit.dashCd *= 1 - BOON_BY_ID.fleet.v;
+    // Twin Step: a banked second dash (recharges with the dash cooldown)
+    if (this.boons.twinstep) {
+      if (this.twin == null) this.twin = 1;
+      if (this.twin > 0) { this.twin--; this.twinCd = kit.dashCd; kit.dashCd = 0.3; }
+    }
     if (this.boons.meteor && (this._meteorT || 0) <= this.L.time) {
       this._meteorT = this.L.time + 4;
       const u = this.me, L = this.L;
@@ -882,6 +887,7 @@ class InfernoRun {
       }
       if (this.fkind === 'purge' && this.spawned >= this.need && !L.units.some(u => u.kind === 'mob' && !u.dead && !u.data.crystal)) { this.killedF = this.need; this.clearFloor(); return; }
     }
+    if (this.boons.twinstep && this.twin === 0) { this.twinCd -= dt; if (this.twinCd <= 0) this.twin = 1; }
     // Bloodthirst heals in pulses (no number spam)
     if (this._leech > 0 && ((this._leechT = (this._leechT || 0) - dt) <= 0)) { this._leechT = 0.6; if (!me.dead) heal(L, me, me, this._leech); this._leech = 0; }
     // chest & gate
