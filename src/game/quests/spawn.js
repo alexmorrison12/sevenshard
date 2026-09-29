@@ -1,6 +1,7 @@
 // Unit factories shared by the quest system, the field mode and the prologue: level-scaled field enemies (creatures or
 // hero-model humanoids like bandits and cultists), NPC residents, story allies, quest props, plus anchor helpers.
 // Leaf module: imports only engine/game building blocks and data (no quest/mode modules), so everyone can use it.
+import { storyPortrait } from './portraits.js';
 import { Unit } from '../unit.js';
 import { MobAI, refFor } from '../ai/mob.js';
 import { MOBS } from '../../data/mobs.js';
@@ -81,7 +82,9 @@ export function makeFieldMob(type, o = {}) {
  */
 export function makeResident(def, at, o = {}) {
   const u = new Unit({ kind: 'npc', team: 2, name: def.name, x: at.x, z: at.z, facing: at.facing ?? o.facing ?? Math.PI, radius: 0.5, height: 1.85, stats: { hpMax: 1, speed: 2 } });
-  u.data.npcDef = { id: def.id, name: def.name, title: def.title, lines: def.lines || [], action: def.action || null, portrait: def.portrait || null, rapport: def.rapport || null };
+  u.data.npcDef = { id: def.id, name: def.name, title: def.title, lines: def.lines || [], action: def.action || null, rapport: def.rapport || null };
+  // the dialog portrait: a painted bust (data URL) for the story's own cast, painted on first use; undefined → the UI's npc:<id> art
+  Object.defineProperty(u.data.npcDef, 'portrait', { get: () => storyPortrait(def.id) || undefined, enumerable: true, configurable: true });
   u.data.title = def.title; u.data.immovable = true; u.untargetable = true;
   if (def.creature) {
     u.type = def.creature; u.data.tpl = { model: def.creature }; u.data.variant = def.variant || undefined; u.data.look = null;

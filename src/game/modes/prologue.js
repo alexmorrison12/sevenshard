@@ -63,7 +63,6 @@ export class PrologueMode {
     // Brannoc fights at your side (and can be talked to for the quest steps)
     const sp = this.A('spawn');
     this.brannoc = makeAlly({ ...storyDef('brannoc'), id: 'brannoc' }, walkable(this.L, sp.x + 2, sp.z - 2.5, 4), { level: 5, leader: this.me, atkMul: 1.1, talkable: true, follow: 3.5 });
-    this.brannoc.data.npcDef.portrait = 'brannoc';
     this.L.add(this.brannoc); this.units.push(this.brannoc);
     this.talkers = [this.brannoc];
     this.spawnLocals();

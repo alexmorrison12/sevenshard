@@ -120,7 +120,7 @@ export class Session {
     this.screen = 'title';
     this.stage.title(this.game.zone?.anchors?.spawn || { x: 0, z: 0 });
     const last = this.account.char(this.account.data.lastChar);
-    this.ui.screen('title', { server: 'Solmara-1', status: 'Busy', version: 'v1.0 · build ' + (__DEV__ ? 'dev' : 'live'), news: [safeNews(() => legionRaceNews(this.account)), ...NEWS].filter(Boolean), continue: last ? { name: last.name, cls: last.cls, level: last.level } : null });
+    this.ui.screen('title', { server: 'Solmara-1', status: 'Busy', version: 'v1.0' + (__DEV__ ? ' · dev' : '') + ' · fan project, not affiliated with Smilegate or Amazon Games', news: [safeNews(() => legionRaceNews(this.account)), ...NEWS].filter(Boolean), continue: last ? { name: last.name, cls: last.cls, level: last.level } : null });
     this.game.audio?.music?.('title');
     // pre-build the 16 creation heroes while the player reads the title (first builds of plate/long-hair kinds stall)
     if (!this._warmed) { this._warmed = true; setTimeout(() => { if (this.screen === 'title') warmHeroes(undefined, { gapMs: 120 }).catch(() => {}); else this._warmed = false; }, 3000); }

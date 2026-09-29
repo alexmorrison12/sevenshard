@@ -15,6 +15,7 @@ import { storyGear, makeGear } from '../systems/gear.js';
 import { itemLevel } from '../systems/stats.js';
 import { Cutscene, cutsceneActive, screenDark, fill } from './cutscene.js';
 import { QuestMarkers } from './markers.js';
+import { storyPortrait } from './portraits.js';
 import { QuestWorld } from './world.js';
 import { anchorOf, dist, warnOnce, familyOf, makeFieldMob, walkable } from './spawn.js';
 import * as COLL from '../systems/collectibles.js';
@@ -507,10 +508,11 @@ export class QuestSystem {
   speaker(id, fallback) {
     if (id === 'hero') { const c = this.char; return { name: c?.name || 'You', title: CLASS_NAME[c?.cls] || '', cls: c?.cls }; }
     if (id === 'narrator') return { name: '', title: '' };
-    const sd = STORY_NPCS[id]; if (sd) return { id: sd.portrait || id, name: sd.name, title: sd.title };
-    const fd = FIELD_NPC_BY_ID[id]; if (fd) return { id: fd.portrait || id, name: fd.name, title: fd.title };
+    const img = pid => storyPortrait(pid) || undefined;         // painted bust for the story's own cast
+    const sd = STORY_NPCS[id]; if (sd) return { id: sd.portrait || id, name: sd.name, title: sd.title, portrait: img(id) };
+    const fd = FIELD_NPC_BY_ID[id]; if (fd) return { id: fd.portrait || id, name: fd.name, title: fd.title, portrait: img(id) };
     const cd = cityNpc(id); if (cd) return { id: cd.id, name: cd.name, title: cd.title };
-    if (fallback && (!id || id === fallback.id)) return { id: fallback.portrait || fallback.id, name: fallback.name, title: fallback.title };
+    if (fallback && (!id || id === fallback.id)) return { id: fallback.id, name: fallback.name, title: fallback.title, portrait: img(fallback.id) };
     return { name: id || fallback?.name || '', title: '' };
   }
   // ---------------------------------------------------------------- quest objects
