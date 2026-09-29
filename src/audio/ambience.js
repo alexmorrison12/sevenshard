@@ -190,7 +190,9 @@ class Bed {
     if (lp < 18000) { const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = lp; f.Q.value = 0.5; out.connect(f); node = f; }
     const p = ctx.createStereoPanner(); p.pan.value = clamp(pan, -1, 1); node.connect(p); p.connect(this.g);
     const k = new Kit(this.a, ctx, out, t, { seed: this.rng.next() * 1e9 | 0 });
-    return fn(k) || 0.5;
+    const dur = fn(k) || 0.5;
+    this.a.retire(p, Math.max(k.st.end, t + dur) + 0.5); // leave the bed's graph once finished
+    return dur;
   }
   tick(now) {
     if (!this.running) return;

@@ -968,20 +968,21 @@ export { LOOT_BEAM as LOOT };
 
 // ------------------------------------------------------------------ weather
 const WX = {
-  snow: P({ pool: 'alpha', sprite: [S.snow, S.dot, S.dot], ramp: R.wConst, life: [3, 5], size: [0.07, 0.13], spin: [-2, 2], turb: 0.6, color: [1.15, 1.18, 1.25], alpha: 0.9, wrap: true }),
-  rain: P({ sprite: S.spark, ramp: R.wConst, life: [1, 2], size: [0.03, 0.045], orient: 'stretch', stretch: 0.045, color: [0.55, 0.62, 0.75], i: 0.6, alpha: 0.7, wrap: true }),
-  ash: P({ pool: 'alpha', sprite: S.ash, ramp: R.wConst, life: [3, 5], size: [0.05, 0.1], spin: [-3, 3], turb: 0.8, color: [0.18, 0.16, 0.15], alpha: 0.85, wrap: true }),
+  snow: P({ pool: 'alpha', sprite: [S.snow, S.dot, S.dot], ramp: R.wConst, life: [3, 5], size: [0.09, 0.16], spin: [-2, 2], turb: 0.6, color: [1.15, 1.18, 1.25], alpha: 0.9, wrap: true }),
+  rain: P({ sprite: S.spark, ramp: R.wConst, life: [1, 2], size: [0.045, 0.065], orient: 'stretch', stretch: 0.1, color: [0.6, 0.68, 0.82], i: 1.4, alpha: 0.8, wrap: true }),
+  ash: P({ pool: 'alpha', sprite: S.ash, ramp: R.wConst, life: [3, 5], size: [0.07, 0.13], spin: [-3, 3], turb: 0.8, color: [0.18, 0.16, 0.15], alpha: 0.85, wrap: true }),
   ember: P({ sprite: S.ember, ramp: R.wBlink, life: [2, 3.5], size: [0.05, 0.09], turb: 1.0, color: [1, 0.45, 0.1], i: [4, 6], wrap: true }),
   firefly: P({ sprite: S.glow, ramp: R.wBlink, life: [2.5, 4.5], size: [0.16, 0.24], turb: 1.4, color: [0.75, 1, 0.3], i: [3, 5], wrap: true }),
-  mote: P({ sprite: S.dot, ramp: R.wPulse, life: [3, 6], size: [0.025, 0.045], turb: 0.7, color: [1, 0.95, 0.8], i: [1.5, 2.5], alpha: 0.8, wrap: true }),
+  mote: P({ sprite: S.dot, ramp: R.wPulse, life: [3, 6], size: [0.035, 0.06], turb: 0.7, color: [1, 0.95, 0.8], i: [1.5, 2.5], alpha: 0.8, wrap: true }),
   leaf: P({ pool: 'alpha', sprite: S.leaf, ramp: R.wConst, life: [4, 6], size: [0.14, 0.22], spin: [-2, 2], randSpin: true, turb: 1.2, color: [0.85, 0.5, 0.12], color2: [0.55, 0.62, 0.12], wrap: true }),
   petal: P({ pool: 'alpha', sprite: S.petal, ramp: R.wConst, life: [4, 6], size: [0.1, 0.16], spin: [-2, 2], randSpin: true, turb: 1.0, color: [1.2, 0.62, 0.85], color2: [1.25, 1.1, 1.05], wrap: true }),
   splash: P({ pool: 'alpha', sprite: S.ring, ramp: R.water, life: 0.35, size: 0.05, end: 5, ease: 2, orient: 'flat', color: [0.8, 0.85, 0.95], alpha: 0.6 }),
 };
 const WX_DEF = {
-  snow: { pr: 'snow', n: 900, v: [0.3, -1.4, 0.15], h: 0 }, rain: { pr: 'rain', n: 1400, v: [1.2, -16, 0.4], h: 0 }, ash: { pr: 'ash', n: 700, v: [0.4, -0.7, 0.2], h: 0 },
-  embers: { pr: 'ember', n: 300, v: [0.2, 0.9, 0.1], h: 8 }, fireflies: { pr: 'firefly', n: 140, v: [0, 0, 0], h: 3.2 }, dust: { pr: 'mote', n: 400, v: [0.15, 0.05, 0.05], h: 6 },
-  leaves: { pr: 'leaf', n: 180, v: [0.8, -1.1, 0.3], h: 0 }, petals: { pr: 'petal', n: 220, v: [0.7, -0.9, 0.25], h: 0 },
+  // h: height of the wrap box above the focus (the iso camera sees ~11 m of air; taller boxes waste particles off-screen)
+  snow: { pr: 'snow', n: 1300, v: [0.3, -1.4, 0.15], h: 11 }, rain: { pr: 'rain', n: 1700, v: [1.2, -16, 0.4], h: 11 }, ash: { pr: 'ash', n: 1000, v: [0.4, -0.7, 0.2], h: 11 },
+  embers: { pr: 'ember', n: 380, v: [0.2, 0.9, 0.1], h: 8 }, fireflies: { pr: 'firefly', n: 170, v: [0, 0, 0], h: 3.2 }, dust: { pr: 'mote', n: 600, v: [0.15, 0.05, 0.05], h: 6 },
+  leaves: { pr: 'leaf', n: 220, v: [0.8, -1.1, 0.3], h: 10 }, petals: { pr: 'petal', n: 260, v: [0.7, -0.9, 0.25], h: 10 },
 };
 export const WEATHER = {
   name: 'weather', fade: 1.2,

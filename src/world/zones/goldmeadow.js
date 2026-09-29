@@ -20,7 +20,7 @@ import { buildWater } from '../water.js';
 import { boulder } from '../cliffs.js';
 import { blob } from '../../engine/geom.js';
 import { FieldGround, DistGrid, FieldKit, Anchors, snapAnchors, seedSpots, spline, along, paintPath, pieces, scatter, bump, ramp, faceTo, S, RNG, clamp, smoothstep, lerp } from '../fields/common.js';
-import { FieldGrass, FieldFlora, sunflowerGeo, reedGeo, tallGrassGeo } from '../fields/flora.js';
+import { FieldGrass, FieldFlora, sunflowerGeo, reedGeo, tallGrassGeo, mushroomGeo } from '../fields/flora.js';
 import { Mist, buildSmoke, buildDrifters, buildButterflies } from '../fields/fx.js';
 import * as F from '../fields/props.js';
 
@@ -160,7 +160,8 @@ export async function build(zone, { quality = 1 } = {}) {
   for (let i = 0; i < 7; i++) { const x = WALLOW[0] + rng.range(-14, 14), z = WALLOW[1] + rng.range(-12, 12); g.paint('mud', S.circle(x, z, rng.range(1.8, 3.6)), { soft: 1.5, noise: 1.2, nscale: 1.5 }); g.info('wet', S.circle(x, z, rng.range(1.2, 2.6)), { soft: 1.2, amount: 0.9, noise: 1, nscale: 1.2 }); }
   g.paint('dirt', S.circle(WALLOW[0], WALLOW[1], 16), { soft: 5, noise: 4, nscale: 4, amount: 0.45 });
   g.paint('dirt', S.ring(STONES[0], STONES[1], 16.5, 3), { soft: 2, noise: 1.5, nscale: 2, amount: 0.55 });
-  g.paint('flagstone', S.circle(STONES[0], STONES[1], 3.2), { soft: 0.8, noise: 0.5, nscale: 1 });
+  g.paint('gravel', S.circle(STONES[0], STONES[1], 3.6), { soft: 1.5, noise: 1, nscale: 1.2, amount: 0.8 });
+  for (let i = 0; i < 9; i++) { const a = i / 9 * Math.PI * 2, x = STONES[0] + Math.cos(a) * 9, z = STONES[1] + Math.sin(a) * 9; g.paint('moss', S.circle(x, z, 2.2), { soft: 1.5, noise: 1.2, nscale: 1.5, amount: 0.6 }); }
   g.paint('gravel', S.circle(CHAOS[0], CHAOS[1], 9), { soft: 3, noise: 2.5, nscale: 2.5, amount: 0.8 });
   g.paint('dirt', S.circle(DENS[0], DENS[1], 15), { soft: 4, noise: 4, nscale: 3, amount: 0.7 });
   g.paint('gravel', S.circle(DENS[0] + 2, DENS[1] - 4, 10), { soft: 3, noise: 3, nscale: 2, amount: 0.8 });
@@ -282,7 +283,7 @@ export async function build(zone, { quality = 1 } = {}) {
   // --- Standing Stones (field boss arena)
   const [sx0, sz0] = STONES;
   for (let i = 0; i < 11; i++) { const a = i / 11 * Math.PI * 2 + 0.2, x = sx0 + Math.cos(a) * 19.5, z = sz0 + Math.sin(a) * 19.5; if (i === 3) { F.rockCluster(kit, x, z, H, { n: 2, s: 0.7, seed: 30 + i }); continue; } F.standingStone(kit, x, H(x, z), z, { h: rng.range(2.8, 4.2), w: rng.range(1.1, 1.5), rot: -a + Math.PI / 2, lean: i === 7 ? 0.25 : 0 }); }
-  F.dolmen(kit, sx0, H(sx0, sz0), sz0, 0.2, { s: 1.15, glyph: 0xffd070 });
+  F.dolmen(kit, sx0, H(sx0, sz0), sz0, 0.0, { s: 1.1, glyph: 0xffd070 });
   for (let i = 0; i < 5; i++) { const a = i * 1.3 + 0.4, d = rng.range(7, 13), x = sx0 + Math.cos(a) * d, z = sz0 + Math.sin(a) * d; F.rock(kit, x, H(x, z), z, { s: rng.range(0.35, 0.55), seed: 60 + i, tint: 0xa8a092, block: false }); }
   // --- Wolf Dens: rock outcrops with cave mouths under the western cliffs, bones
   const [dx0, dz0] = DENS;
@@ -383,6 +384,9 @@ export async function build(zone, { quality = 1 } = {}) {
   for (const [x, z] of scatter(rng, [-100, -100, 104, 104], 2.2, 8000, (x, z) => free(x, z, 0.4, 2.6) && (N.noise2(x / 14 + 5, z / 14) > -0.05 || rng.chance(0.25)))) flora.thing('tallgrass' + (Math.round(x * 7 + z) & 3), () => tallGrassGeo(Math.round(x * 7 + z) & 3, { h: 0.75 + (Math.round(x * 7 + z) & 3) * 0.08 }), tgM, x, H(x, z) - 0.03, z, { s: rng.range(0.8, 1.25), rot: rng.range(0, 6.28), cast: false });
   // a dark wall of firs where the Thornwood road leaves
   for (let i = 0; i < 26; i++) { const x = -42 + rng.range(-22, 22), z = -108 - rng.range(0, 16); if (Math.abs(x + 42) > 3.4 + (z + 108) * -0.1) T(rng.chance(0.7) ? 'fir' : 'pine', x, z, { s: rng.range(1.0, 1.4), variant: rng.int(0, 1), block: false }); }
+  // the Standing Stones: a fairy ring of toadstools and a drift of white flowers inside the circle
+  { const mg = () => mushroomGeo({ h: 0.26, r: 0.16, cap: 0xd8c8a0, spots: 0xfff8e8, seed: 3, spotN: 0, sway: 0.02 }); for (let i = 0; i < 26; i++) { const a = i / 26 * Math.PI * 2 + rng.range(-0.05, 0.05), d = 13 + rng.range(-0.4, 0.4), x = STONES[0] + Math.cos(a) * d, z = STONES[1] + Math.sin(a) * d; flora.thing('fairy', mg, flora.mats.flower, x, H(x, z) - 0.02, z, { s: rng.range(0.7, 1.3), rot: rng.range(0, 6), cast: false }); } }
+  for (let i = 0; i < 70; i++) { const a = rng.range(0, 6.28), d = Math.sqrt(rng.next()) * 11 + 3, x = STONES[0] + Math.cos(a) * d, z = STONES[1] + Math.sin(a) * d; flora.flower(x, H(x, z), z, rng.chance(0.7) ? 0xffffff : 0xf8f0a0, { s: rng.range(0.9, 1.4) }); }
   // Sunflower Hill: every head faces the camera (south)
   const sunMat = flora.mats.flower;
   for (const [x, z] of scatter(rng, [SUNHILL[0] - 20, SUNHILL[1] - 18, SUNHILL[0] + 20, SUNHILL[1] + 16], 1.3, 2400, (x, z) => Math.hypot(x - SUNHILL[0], (z - SUNHILL[1]) * 1.1) < 17 && bound.sd(x, z) < -2 && roadD.at(x, z) > 1.8 && Math.hypot(x - SUNHILL[0], z - SUNHILL[1]) > 2.6)) flora.thing('sunflower' + (Math.round(x * 3) & 1), () => sunflowerGeo(Math.round(x * 3) & 1), sunMat, x, H(x, z) - 0.05, z, { s: rng.range(0.85, 1.12), rot: rng.range(-0.25, 0.25), cast: true });

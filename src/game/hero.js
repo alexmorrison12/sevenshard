@@ -8,7 +8,7 @@ import { eff, applyStatus, removeStatus, heal, resolveHit } from './combat.js';
 import { CLASSES } from '../data/classes/index.js';
 import { makeIdentity } from './identity.js';
 import { facingOf } from '../core/util.js';
-import { gemValue } from './systems/gear.js';
+import { mods as gemMods } from './systems/gems.js';
 
 export const SLOT_KEYS = ['Q', 'W', 'E', 'R', 'A', 'S', 'D', 'F'];
 
@@ -48,11 +48,11 @@ export class HeroKit {
     this.awaken = buildSkill(this.cls.awakening, 1, []);
     const st = this.u?.st || {};
     if (st.awakenCdr) this.awaken.cd *= 1 - st.awakenCdr;
-    // gems: Ruinstones raise a skill's damage, Swiftstones cut its cooldown
-    for (const g of c.gems || []) {
-      const d = g && this.skills[g.skill]; const gem = g?.gem || g; if (!d || !gem?.gem) continue;
-      const v = gemValue(gem.gem, gem.level || 1) / 100;
-      if (gem.gem === 'ruin') d.mult *= 1 + v; else d.cd *= 1 - v;
+    // gems: Ruinstones raise a skill's damage, Swiftstones cut its cooldown (sockets: char.gems, see systems/gems.js)
+    if (c.gems?.length) for (const [id, m] of Object.entries(gemMods(c))) {
+      const d = this.skills[id]; if (!d) continue;
+      if (m.dmg) d.mult *= 1 + m.dmg;
+      if (m.cdr) d.cd *= 1 - m.cdr;
     }
     // Mana Flow and friends: flat mana cost reduction
     if (st.mpCostMul) for (const d of Object.values(this.skills)) d.mp = Math.round(d.mp * st.mpCostMul);

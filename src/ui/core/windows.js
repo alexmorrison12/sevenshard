@@ -20,6 +20,8 @@ export class Win {
   static escClose = true;
   /** default position: 'center' | 'left' | 'right' | { x|right, y|bottom } (virtual px) */
   static pos = 'center';
+  /** other ids that open this window on a tab: { collectibles: 'collectibles' } → ui.open('collectibles', d) */
+  static aliases = null;
   constructor(ui, mgr) {
     this.ui = ui; this.mgr = mgr;
     const C = this.constructor;
@@ -52,6 +54,8 @@ export class Win {
   shown() {}
   /** Called when closed. */
   hidden() {}
+  /** Tabbed windows: switch to a tab before the next render (used by aliases). */
+  setTab() {}
   _drag(handle) {
     let sx = 0, sy = 0, ox = 0, oy = 0, id = null;
     handle.addEventListener('pointerdown', e => {
@@ -91,18 +95,24 @@ export class WindowManager {
     this.z = 10; this.pos = store.get(KEY, {});
     this.data = new Map(); // last data per window (so menu clicks open instantly with what we had)
     this.ops = new Map();  // per-window change counter: lets the UI tell whether the game already handled a hotkey
+    this.alias = new Map(); // other ids for a window + the tab they open on (collectibles → tome)
   }
-  register(...classes) { for (const C of classes) this.defs.set(C.id, C); }
-  has(id) { return this.defs.has(id); }
+  register(...classes) { for (const C of classes) { this.defs.set(C.id, C); for (const [a, tab] of Object.entries(C.aliases || {})) this.alias.set(a, { to: C.id, tab }); } }
+  /** Real window id for an id or alias. */
+  resolve(id) { return this.alias.get(id)?.to || id; }
+  has(id) { return this.defs.has(this.resolve(id)); }
   get(id) {
+    id = this.resolve(id);
     let w = this.inst.get(id);
     if (!w) { const C = this.defs.get(id); if (!C) return null; w = new C(this.ui, this); this.inst.set(id, w); }
     return w;
   }
-  isOpen(id) { const w = this.inst.get(id); return !!(w && w.isOpen); }
-  stamp(id) { return this.ops.get(id) || 0; }
+  isOpen(id) { const w = this.inst.get(this.resolve(id)); return !!(w && w.isOpen); }
+  stamp(id) { return this.ops.get(this.resolve(id)) || 0; }
   _op(id) { this.ops.set(id, (this.ops.get(id) || 0) + 1); }
   open(id, data) {
+    const a = this.alias.get(id);
+    if (a) { const w = this.get(a.to); if (w && a.tab) w.setTab(a.tab); id = a.to; }
     const w = this.get(id);
     if (!w) { console.warn('[ui] unknown window', id); return null; }
     this._op(id);
@@ -118,12 +128,14 @@ export class WindowManager {
     return w;
   }
   update(id, data) {
+    id = this.resolve(id);
     this._op(id);
     this.data.set(id, data);
     const w = this.inst.get(id);
     if (w && w.isOpen) { w.data = data; try { w.render(data || {}); } catch (e) { console.error('[ui] render', id, e); } }
   }
   close(id) {
+    id = this.resolve(id);
     const w = this.inst.get(id);
     if (!w || !w.isOpen) return false;
     this._op(id);
@@ -133,7 +145,11 @@ export class WindowManager {
     this.ui._winChanged(id, false);
     return true;
   }
-  toggle(id, data) { return this.isOpen(id) ? (this.close(id), null) : this.open(id, data); }
+  toggle(id, data) {
+    const a = this.alias.get(id), w = this.inst.get(this.resolve(id));
+    const on = !!(w && w.isOpen && (!a?.tab || w.tab === a.tab)); // an alias toggles only its own tab
+    return on ? (this.close(id), null) : this.open(id, data);
+  }
   front(w) {
     if (w._z === this.z) return;
     w._z = ++this.z; w.el.style.zIndex = this.z;

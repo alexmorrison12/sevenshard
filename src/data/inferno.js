@@ -23,7 +23,7 @@ export const INFERNO = {
 
 /** enemy HP / damage multipliers by floor (× the normalised reference at iLvl 1415) */
 export const floorHp = f => 2 + (f - 1) * 0.05 + Math.pow(f / 100, 2) * 2;
-export const floorAtk = f => 1 + (f - 1) * 0.016;
+export const floorAtk = f => 0.75 + (f - 1) * 0.014;
 /** boss HP budget in "attack-power seconds" (a solo hero with 0 boons deals ≈ 18–22 ap/s over a fight) */
 export const bossHpAp = f => 1250 + f * 42;
 /** party scaling for enemy HP */
@@ -173,7 +173,7 @@ export const TRIAL = {
 export const AFFIXES = {
   volcanic: { name: 'Volcanic', desc: 'The ground erupts under the party every few seconds, leaving lava behind.' },
   frenzied: { name: 'Frenzied', desc: 'The guardian attacks faster and grows stronger as it bleeds.' },
-  mirror: { name: 'Mirror Guard', desc: 'The guardian raises a mirror stance — counter it, or it reflects damage for 6 s.' },
+  mirror: { name: 'Mirror Guard', desc: 'The guardian raises a mirror stance — counter it, or it reflects damage for 4 s.' },
   storm: { name: 'Storm-Warded', desc: 'Lightning hunts whoever deals the most damage.' },
   haunted: { name: 'Haunted', desc: 'Cinder Wraiths rise at 75%, 50% and 25% health.' },
   glass: { name: 'Glass Guardian', desc: 'The guardian takes 40% more damage — and deals 60% more.' },

@@ -29,7 +29,7 @@ export const brute = {
   config(variant, opts) {
     const v = PAL[variant] ? variant : (opts.elite ? 'warlord' : 'crimson');
     const elite = v === 'warlord' || !!opts.elite;
-    return { variant: v, pal: PAL[v === 'crimson' && elite ? 'warlord' : v], elite, shapeKey: elite ? 'elite' : 'base', scale: elite ? 1.15 : 1, h: 0.1, hg: { 1: 0.05, 2: 0.06 }, mat: { dfreq: 1.6, furAxis: 1, rim: 0.3, rimColor: 0xffb080, spec: 0.12, shine: 14 }, aoScale: 2.2, grad: { top: 0.18, bottom: 0.32, y0: 0, y1: 1.2, low: 0.25 } };
+    return { variant: v, pal: PAL[v === 'crimson' && elite ? 'warlord' : v], elite, shapeKey: elite ? 'elite' : 'base', scale: elite ? 1.15 : 1, h: 0.11, hg: { 1: 0.055, 2: 0.066 }, mat: { dfreq: 1.6, furAxis: 1, rim: 0.3, rimColor: 0xffb080, spec: 0.12, shine: 14 }, aoScale: 2.2, grad: { top: 0.18, bottom: 0.32, y0: 0, y1: 1.2, low: 0.25 } };
   },
   rig(R) {
     R.add('hips', null, [0, 1.2, 0.1]);

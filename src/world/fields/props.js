@@ -26,7 +26,7 @@ function rockGeo(seed, detail = 1) {
   return ROCKG.get(k);
 }
 /** boulder with controllable moss and a sun-bleached top (lighter than cliffs.boulder) */
-export function rock(kit, x, y, z, { s = 1, seed = 1, tint = 0x9a9284, moss = 0x7a8a4a, mossAmt = 0.35, flat = 0.7, block = true, mat = 'rock', rot = null, bury = 0.2 } = {}) {
+export function rock(kit, x, y, z, { s = 1, seed = 1, tint = 0xb0aaa0, moss = 0x7a8a4a, mossAmt = 0.35, flat = 0.7, block = true, mat = 'rock', rot = null, bury = 0.2 } = {}) {
   const base = linColor(tint), mc = moss != null ? linColor(moss) : null, top = base.map(v => Math.min(1, v * 1.22));
   kit.add(mat, rockGeo(seed), M(x, y + (flat - bury) * s * 0.9, z, rot ?? seed * 1.7, s, s * flat, s), { tint: (p, n) => {
     const t = clamp((p.y - y) / (1.6 * s * flat), 0, 1);
@@ -37,7 +37,7 @@ export function rock(kit, x, y, z, { s = 1, seed = 1, tint = 0x9a9284, moss = 0x
   if (block && s > 0.55) kit.block(S.circle(x, z, s * 1.1), 0.3);
 }
 /** a cluster of 2–5 boulders around (x, z); H = heightAt */
-export function rockCluster(kit, x, z, H, { n = 3, s = 1, seed = 1, tint = 0x9e9688, moss = 0x7a8a4a, spread = 1.4, flat = 0.7, block = true, mat = 'rock' } = {}) {
+export function rockCluster(kit, x, z, H, { n = 3, s = 1, seed = 1, tint = 0xb0aaa0, moss = 0x7a8a4a, spread = 1.4, flat = 0.7, block = true, mat = 'rock' } = {}) {
   const r = new RNG(seed);
   for (let i = 0; i < n; i++) {
     const a = r.range(0, TAU), d = i === 0 ? 0 : r.range(0.6, 1.2) * spread * s, sc = (i === 0 ? 1 : r.range(0.35, 0.7)) * s;
@@ -72,17 +72,15 @@ export function standingStone(kit, x, y, z, { h = 3, w = 1, rot = 0, tint = 0x8a
   if (block) kit.block(S.circle(x, z, w * 0.55), 0.3);
 }
 
-/** dolmen: a heavy capstone resting on three uprights (old altar) */
-export function dolmen(kit, x, y, z, rot = 0, { s = 1, tint = 0xb0a898, glyph = null } = {}) {
+/** dolmen: a heavy slab capstone resting on three upright stones (the old altar); glyph glows on the front upright */
+export function dolmen(kit, x, y, z, rot = 0, { s = 1, tint = 0xb8b2a6, glyph = null } = {}) {
   const F = new Frame(x, y, z, rot);
-  for (const [lx, lz, hh] of [[-1.1, -0.5, 1.35], [1.1, -0.45, 1.3], [0.05, 0.75, 1.25]]) {
-    const g = blob(1, 1, d => 1 + Math.sin(d.x * 5 + d.y * 3 + lx) * 0.06, [0.42 * s, hh * 0.5 * s, 0.34 * s]).toNonIndexed(); g.computeVertexNormals();
-    kit.add('rock', g, F.at(lx * s, hh * 0.45 * s, lz * s, lx), { tint, yGround: y, aoH: 1.5 });
-  }
-  const cap = blob(1, 1, d => 1 + Math.sin(d.x * 4 + d.z * 3) * 0.08, [1.9 * s, 0.36 * s, 1.35 * s]).toNonIndexed(); cap.computeVertexNormals();
-  kit.add('rock', cap, F.at(0, 1.45 * s, 0.05, 0.2), { tint: new THREE.Color(tint).multiplyScalar(1.08).getHex() });
-  if (glyph != null) kit.glow(cyl(0.3 * s, 0.3 * s, 0.03, 12, 1), F.at(0, 1.83 * s, 0.1), glyph, 1.6);
-  kit.block(S.circle(x, z, 1.7 * s), 0.3);
+  const slab = (w, h, d, seed) => { const nz = new Simplex(seed); const g = new THREE.BoxGeometry(w, h, d, 3, 2, 3).toNonIndexed(); const p = g.attributes.position; for (let i = 0; i < p.count; i++) { const k = 1 + nz.noise3(p.getX(i) * 1.3, p.getY(i) * 1.3, p.getZ(i) * 1.3) * 0.12; p.setXYZ(i, p.getX(i) * k, p.getY(i) * (1 + (k - 1) * 0.5), p.getZ(i) * k); } g.computeVertexNormals(); return g; };
+  const ups = [[-1.15, -0.45, 1.5, 0.3], [1.15, -0.4, 1.45, -0.2], [0.0, 0.85, 1.4, 0.05]];
+  ups.forEach(([lx, lz, hh, ry], i) => kit.add('rock', slab(0.75 * s, hh * s, 0.5 * s, 7 + i), F.at(lx * s, hh * 0.5 * s - 0.1, lz * s, ry), { tint, yGround: y, aoH: 1.4 }));
+  kit.add('rock', slab(3.6 * s, 0.5 * s, 2.6 * s, 3), F.at(0.05, 1.62 * s, 0.1, 0.18, 1, 1, 1, 0.06, -0.05), { tint: new THREE.Color(tint).multiplyScalar(1.06).getHex() });
+  if (glyph != null) { kit.glow(cyl(0.2 * s, 0.2 * s, 0.03, 14, 1), F.at(0, 0.85 * s, 0.85 * s + 0.26 * s, 0, 1, 1, 1, Math.PI / 2), glyph, 1.8); for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; kit.glow(box(0.03, 0.12, 0.02, 1), F.at(Math.cos(a) * 0.3 * s, 0.85 * s + Math.sin(a) * 0.3 * s, 0.85 * s + 0.26 * s, 0, 1, 1, 1, 0, a - Math.PI / 2), glyph, 1.6); } }
+  kit.block(S.circle(x, z, 1.9 * s), 0.3);
 }
 
 // ------------------------------------------------------------------------------------------------ rural buildings
@@ -175,8 +173,9 @@ export function cottage(kit, x, y, z, rot, o = {}) {
   if (o.porch && !fH) {
     const pw = Math.min(2.6, w * 0.5);
     for (const s of [-1, 1]) kit.add('timber', box(0.14, 2.3, 0.14, 1), F.at(s * pw / 2, 1.15, d / 2 + 1.2), { tint: beam });
-    const pr = gableRoof(pw + 0.4, 1.4, 0.55, 0.15, 0.12, 1.5);
-    kit.add(roofMat === 'tiles' ? 'roof' : roofMat, pr.roof, F.at(0, 2.3, d / 2 + 0.75, Math.PI / 2, 1, 1, 1), { tint: roofTint, ao: false });
+    // lean-to porch roof sloping away from the wall
+    kit.add(roofMat === 'tiles' ? 'roof' : roofMat, box(pw + 0.6, 0.12, 1.7, 1.2), F.at(0, 2.45, d / 2 + 0.8, 0, 1, 1, 1, 0.32), { tint: roofTint, ao: false });
+    kit.add('timber', box(pw + 0.3, 0.14, 0.14, 1), F.at(0, 2.3, d / 2 + 1.2), { tint: beam, ao: false });
     kit.block(S.circle(...F.world(-pw / 2, d / 2 + 1.2), 0.15), 0.25); kit.block(S.circle(...F.world(pw / 2, d / 2 + 1.2), 0.15), 0.25);
   }
   if (o.sign != null && !fH) {

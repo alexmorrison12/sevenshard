@@ -42,6 +42,9 @@ world forward (−Z) of a socket. `b.onEvent = (type, info) => {}` receives `('h
 - Moving attacks carry `move: { dist, t0, t1 }` in the metadata: the model animates in place; the game translates the
   root forward by `dist` between `t0` and `t1` (canonical seconds — scale like hits) and should pass the root's real
   ground speed as `state.speed` meanwhile so the feet stay planted.
+- Up to three meshes share one skeleton: `body` (opaque), `membrane` (double-sided wings / fins) and `flame`
+  (additive flames, sandfall, lightning arcs). `flame` never casts or receives shadows and carries
+  `userData.noShadow = true` so hosts that force `castShadow` on every mesh can skip it.
 - `play('death', { dur })` never runs faster than 80 % of the canonical death (a generic 1.2 s unit death would rush a
   giant's collapse). `play('spawn' | 'knockdown' | 'getup' …)` of unknown names is a harmless no-op.
 
@@ -111,7 +114,7 @@ translucent additive flame copy (same actions) for the clone mechanic.
   clone 1.9 [0.95] (flame burst: spawn clones at the hit) · foxfire_breath 3.3 [1.05 1.45 1.85 2.25 2.65] ·
   dash 1.0 [0.42] move 14 m 0.18–0.56 · howl 2.7 [1.2] · roar = howl · channel 2.0 loop · death 3.3
 
-### `cinderhorn` — Cinderhorn, the Molten Juggernaut (lava rhino-beetle · 7 m long · 4.6 m to the horn · radius 3.0)
+### `cinderhorn` — Cinderhorn, the Molten Juggernaut (lava rhino-beetle · 7 m long · 5.2 m to the horn · radius 3.0)
 Obsidian plates with molten seams (per-pixel voronoi), beetle carapace, shard spines, pronotum horn over the head and
 one huge nasal horn. Sinks into lava and erupts back out (`burrowed`).
 - parts: `horn` (a glowing jagged stump remains)
@@ -121,8 +124,9 @@ one huge nasal horn. Sinks into lava and erupts back out (`burrowed`).
   burrow 2.4 (→ burrowed) · erupt 2.0 [0.45] · tail_slam 2.2 [1.2] · roar 2.6 [1.0] · channel 2.0 loop · death 3.4
 
 ### `sandmaw` — Sandmaw, the Dune Devourer (sand wurm · 16 m long · rears 9.8 m · radius 3.2)
-Mostly submerged: the root sits where it breaches; below y = 0 is hidden by the ground. Shingled sandstone armour, dorsal
-chitin spikes, a four-petal beak that blooms into a ring-toothed glowing maw, sandfall streaming off the plates.
+Mostly submerged: the root sits where it breaches; below y = 0 is hidden by the ground. Shingled sandstone armour with a
+dark rust saddle banded ring by ring over a pale belly, dorsal chitin spikes, a four-petal beak that blooms into a
+ring-toothed glowing maw, sandfall streaming off the plates.
 - parts: `mandible` (the upper beak petal is torn away)
 - sockets: `head`, `mouth` (maw — spit origin), `chest`, `back`, `base` (breach point), `weapon` / `weaponTip` (beak)
 - intro 6.0 [1.0 4.4] · burrow 2.6 [1.3] (→ burrowed) · emerge 2.4 [0.5] · bite 1.9 [1.02] (lunges ~7 m forward and
@@ -130,8 +134,8 @@ chitin spikes, a four-petal beak that blooms into a ring-toothed glowing maw, sa
   sandstorm 4.2 [1.4 2.0 2.6 3.2] (towering roar-spin) · roar 2.4 [1.0] · channel 2.4 loop · death 4.0
 
 ### `nerissa` — Nerissa of the Drowned Choir (siren · 5.6 m · floats above the water · radius 2.0)
-Mask-faced siren in nacre shell armour, serpentine tail with glowing fins, bioluminescent hair fronds, branching coral
-crown, song-runes that pulse with her voice. Dives under the water and resurfaces (`burrowed` = submerged).
+Mask-faced siren in nacre armour (ribbed violet shell bodice, scallop-shell pauldrons with glowing rims), serpentine
+tail with glowing fins, bioluminescent hair fronds, branching coral crown, song-runes that pulse with her voice. Dives under the water and resurfaces (`burrowed` = submerged).
 - parts: `crown`
 - sockets: `head`, `mouth`, `chest`, `back`, `handL/R`, `orb` (between the hands — water orb), `tail`, `weapon` /
   `weaponTip` (fluke), `crown`
@@ -149,7 +153,7 @@ spots, eight tentacles that writhe independently and are driven individually by 
   pair) · tentacle_sweep 2.6 [1.3] (tentacle 1 sweeps the front) · gaze 3.6 [1.2 1.6 2.0 2.4 2.8] · summon 3.0 [1.6] ·
   submerge 2.4 (→ burrowed) · emerge 2.2 [0.6] · roar 2.4 [1.0] · channel 2.4 loop · death 4.5
 
-### `thunderhoof` — Old Thunderhoof, the Storm That Walks (stag-bull field boss · 5.9 m to the antler tips · radius 2.6)
+### `thunderhoof` — Old Thunderhoof, the Storm That Walks (stag-bull field boss · 5.9 m to the antler tips · radius 2.8)
 Bison hump under a grizzled mane, silver beard, cloven hooves, two vast antlers whose tines crackle with strobing
 lightning arcs, lightning-scarred flanks.
 - parts: `antlerL`, `antlerR` (splintered stumps remain)
@@ -172,12 +176,13 @@ lightning arcs, lightning-scarred flanks.
 ## Performance (M-series laptop, first build; cached afterwards and shared by all instances)
 | id | build | tris | bones | draw calls (+shadow) |
 |---|---|---|---|---|
-| rimewing | ~200 ms | 36k | 45 | 2 (+2) |
-| kurai | ~130 ms | 36k | 60 | 2 (+1) |
-| cinderhorn | ~180 ms | 50k | 27 | 1 (+1) |
-| sandmaw | ~310 ms | 56k | 19 | 2 (+1) |
-| nerissa | ~190 ms | 37k | 51 | 2 (+2) |
-| deep_oracle | ~210 ms | 47k | 71 | 1 (+1) |
-| thunderhoof | ~175 ms | 40k | 26 | 2 (+1) |
+| rimewing | ~250 ms | 36k | 45 | 2 (+2) |
+| kurai | ~250 ms | 45k | 60 | 2 (+1) |
+| cinderhorn | ~170 ms | 54k | 27 | 1 (+1) |
+| sandmaw | ~290 ms | 56k | 19 | 2 (+1) |
+| nerissa | ~150–250 ms | 38k | 59 | 2 (+2) |
+| deep_oracle | ~250 ms | 46k | 71 | 1 (+1) |
+| thunderhoof | ~280 ms | 44k | 26 | 2 (+1) |
 
-Per-frame `update` ≈ 0.01–0.03 ms (no allocations in the hot path).
+Build times are headless-Chrome figures and include first-use JIT; all stay under the 600 ms budget and 60k tris.
+Per-frame `update` ≈ 0.006–0.02 ms (no allocations in the hot path).

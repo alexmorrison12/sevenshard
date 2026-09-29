@@ -21,7 +21,7 @@ const ui = createUI(document.body, {
   onAction(type, payload) { log.push([type, payload]); console.log('[action]', type, JSON.stringify(payload).slice(0, 200)); },
   touch: q.touch === '1' ? true : false,
 });
-window.__ui = ui; window.__log = log;
+window.__ui = ui; window.__log = log; window.__mockWindows = mockWindows; window.__mockScreens = mockScreens;
 if (q.touch === 'skills') ui.setTouch(true, { skills: true });
 
 const mock = createMockHud({ cls: q.cls, raid: q.raid === '1', noboss: q.noboss === '1', chaos: q.chaos === '1', solo: q.solo === '1' });

@@ -39,6 +39,7 @@ export class Engine {
     this.vol = { master: 1, music: 1, sfx: 1, ambience: 1, ui: 1 };
     this.L = { x: 0, y: 0, z: 0, yaw: 0, fx: 0, fz: -1, rx: 1, rz: 0, moved: false };
     this.voices = [];
+    this.dead = []; // [node, endTime, …]: finished voice / event outputs to disconnect from their bus
     this.byName = new Map();
     this.loops = new Set();
     this.baked = new Map();
@@ -241,6 +242,7 @@ export class Engine {
     let dur = 0;
     try { dur = rec.fn(kit, { ...(rec.defaults || {}), ...o }) || 0; } catch (e) { console.error('[audio] recipe failed', name, e); }
     v.end = Math.max(kit.st.end, t + dur) + 0.05;
+    this.retire(v.head, v.end + 0.1); // disconnect the voice from its bus once it has finished
     list.push(v); this.voices.push(v);
     this.stats.played++;
     if (this.voices.length > this.stats.maxVoices) this.stats.maxVoices = this.voices.length;
@@ -248,6 +250,13 @@ export class Engine {
     return v;
   }
   _steal(v) { v.stop(0.03); this.stats.stolen++; }
+  // finished outputs leave the graph (otherwise every dead voice keeps being pulled each render quantum)
+  retire(node, end) { this.dead.push(node, end); }
+  _sweepDead(now) {
+    const d = this.dead; let w = 0;
+    for (let i = 0; i < d.length; i += 2) { if (d[i + 1] < now) { try { d[i].disconnect(); } catch (e) { /* noop */ } } else { d[w++] = d[i]; d[w++] = d[i + 1]; } }
+    d.length = w;
+  }
   _remove(v) {
     const i = this.voices.indexOf(v); if (i >= 0) this.voices.splice(i, 1);
     const l = this.byName.get(v.name); if (l) { const j = l.indexOf(v); if (j >= 0) l.splice(j, 1); }
@@ -333,6 +342,7 @@ export class Engine {
     if (!this.ctx) return;
     const t0 = performance.now(), now = this.ctx.currentTime;
     this._prune(now);
+    if (this.dead.length) this._sweepDead(now);
     const L = this.L;
     for (const h of this.loops) if (h.pos && (h.dirty || L.moved)) h._spatialize();
     L.moved = false;
@@ -383,6 +393,7 @@ class Voice {
       this.pn = ctx.createStereoPanner(); this.pn.pan.value = clamp(o.pan, -1, 1); node.connect(this.pn); node = this.pn;
     }
     node.connect(bus.in);
+    this.head = node; // everything of this voice reaches the buses through `head` (disconnected when finished)
     const sm = sp ? sp.send : 1;
     if (rec.rev) { this.sr = ctx.createGain(); this.sr.gain.value = rec.rev * sm; node.connect(this.sr); this.sr.connect(bus.rev); }
     if (rec.hall) { this.sh = ctx.createGain(); this.sh.gain.value = rec.hall * sm; node.connect(this.sh); this.sh.connect(bus.hall); }

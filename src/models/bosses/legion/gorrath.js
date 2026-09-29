@@ -689,17 +689,15 @@ function buildAxe() {
       emis: (p, uv) => sstep(0.84, 0.93, uv[0]) * 3.4,
       ext: (p, uv) => [0.95, 0, 0, uv[0] > 0.86 ? 2 : 0],
     });
-    // rune ring + glyph strokes on each blade face
+    // the Legion's horned ring branded into each blade face (same sigil as the cape and loincloth)
     for (const f of [1, -1]) {
-      const c = at(0.88).addScaledVector(bl, s * 0.17).addScaledVector(n, f * s * 0.021);
-      const rg = new THREE.TorusGeometry(0.055, 0.007, 5, 22);
+      const c = at(0.86).addScaledVector(bl, s * 0.17).addScaledVector(n, f * s * 0.02);
+      const rg = new THREE.TorusGeometry(0.042, 0.0075, 4, 18);
       const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), n.clone().multiplyScalar(f * s));
       acc.add(rg, { matrix: new THREE.Matrix4().compose(c, q, new THREE.Vector3(1, 1, 1)), skin: sk, color: 0xff5a14, emis: 2.4, dtl: [0, 0, 0, 0], ext: [0, 0, 0, 4] });
-      for (let k = 0; k < 3; k++) {
-        const a = k / 3 * TAU + 0.3;
-        const p0 = c.clone().addScaledVector(bl, Math.cos(a) * 0.025 * s).addScaledVector(h, Math.sin(a) * 0.025);
-        const p1 = c.clone().addScaledVector(bl, Math.cos(a) * 0.08 * s).addScaledVector(h, Math.sin(a) * 0.08);
-        acc.add(sweep([p0, p1], [0.005, 0.005], { radial: 4 }), { skin: sk, color: 0xff5a14, emis: 2.4, dtl: [0, 0, 0, 0], ext: [0, 0, 0, 4] });
+      for (const e of [-1, 1]) {
+        const P = (x, y) => c.clone().addScaledVector(bl, x * e).addScaledVector(h, y).toArray();
+        acc.add(sweep(bez(P(0.028, 0.03), P(0.07, 0.055), P(0.058, 0.105), 5), taper(5, 0.0085, 0.0015), { radial: 3 }), { skin: sk, color: 0xff5a14, emis: 2.4, dtl: [0, 0, 0, 0], ext: [0, 0, 0, 4] });
       }
     }
   }

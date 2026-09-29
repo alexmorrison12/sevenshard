@@ -194,7 +194,7 @@ function buildMount() {
   lab.onFrame((dt) => {
     ang += spd / R * dt;
     c.root.position.set(Math.cos(ang) * R, 0, Math.sin(ang) * R);
-    c.root.rotation.y = -ang; // tangent (counter-clockwise)
+    c.root.rotation.y = Math.PI - ang; // facing the direction of travel (model forward = −Z)
     c.update(dt, { speed: spd, turn: -spd / R, combat: false });
     if (lab.view === 'iso') lab.focus(c.root.position); else lab.controls.target.lerp(new THREE.Vector3(c.root.position.x, 1.2, c.root.position.z), 0.1);
   });
@@ -214,7 +214,7 @@ function buildShip() {
   const R = num('radius', 30); let ang = 0; const spd = num('speed', 4);
   const circle = Q.get('circle') !== '0';
   lab.onFrame((dt) => {
-    if (circle) { ang += spd / R * dt; s.root.position.set(Math.cos(ang) * R - R, 0, Math.sin(ang) * R); s.root.rotation.y = -ang; }
+    if (circle) { ang += spd / R * dt; s.root.position.set(Math.cos(ang) * R - R, 0, Math.sin(ang) * R); s.root.rotation.y = Math.PI - ang; }
     s.update(dt, { speed: spd, turn: circle ? -spd / R : 0, sail: num('sail', 1) });
     if (lab.view === 'iso') lab.focus(s.root.position); else lab.controls.target.lerp(s.root.position.clone().setY(4), 0.1);
   });

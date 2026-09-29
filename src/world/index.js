@@ -12,6 +12,11 @@ import { buildThrone, buildKennels } from './zones/throne.js';
 import * as crucible from './zones/crucible.js';
 import * as inferno from './zones/inferno.js';
 import * as stronghold from './zones/stronghold.js';
+import './zones/brighthold.js';
+import './zones/goldmeadow.js';
+import './zones/thornwood.js';
+import './zones/ashen_ridge.js';
+import './zones/pipsprout.js';
 export { applyEnv, makeEnv, PRESETS } from './env.js';
 
 export const ZONES = {

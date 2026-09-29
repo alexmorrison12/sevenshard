@@ -21,7 +21,7 @@ import { BEASTS } from './beasts/index.js';     // wolf, boar, spider, crab, tre
 import { SPIRITS } from './spirits/index.js';   // skeleton, wraith, wisp, crystal_golem
 import { MOUNTS } from './mounts/index.js';     // horse, direwolf, sunstag + pets
 import { WILD } from './wild/index.js';         // sea_serpent, kraken_tentacle + critters
-export { createShip, SHIPS } from './ships.js';
+export { createShip, SHIPS, preloadShip, shipStats, disposeShipCache } from './ships.js';
 
 // ---- registry: every contract type exists from day one (placeholder blob until its real model lands) ----
 const PH = {

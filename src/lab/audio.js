@@ -246,14 +246,21 @@ window.__lab = {
     if (o.wav) res.wav = b64(toWav(r.buf));
     return res;
   },
-  // pure DSP cost of a track: schedule `seconds` of bars up-front (no suspends) and time the offline render.
+  // DSP cost of a track, rendered offline exactly like real time: the engine tick runs every `step` s (lookahead
+  // scheduling + retiring finished notes). cpuPct = render time / audio time; idlePct = the same tick schedule with
+  // silence (graph + suspend overhead), so cpuPct − idlePct ≈ what the music itself costs.
   async cpu(n, seconds = 30, o = {}) {
-    const SR = 48000, oac = new OfflineAudioContext(2, SR * (seconds + 1), SR), a = new Engine(); a.init({ context: oac, seed: o.seed ?? 7 });
-    const mu = a._mus(); mu.solo = o.solo || null; await mu.prepare(n); mu.play(n, { fade: 0.05, seed: o.seed ?? 7 });
-    const tr = mu.cur; const tb = performance.now(); tr.schedule(seconds); const schedMs = performance.now() - tb;
-    const nodes = tr.srcs.length;
-    const t0 = performance.now(); const buf = await oac.startRendering(); const ms = performance.now() - t0;
-    return { name: n, seconds, renderMs: Math.round(ms), cpuPct: +(ms / (seconds * 10)).toFixed(2), schedMs: Math.round(schedMs), sources: nodes, srcPerSec: +(nodes / seconds).toFixed(1), lufs: analyze(buf).lufs };
+    const SR = 48000, step = o.step ?? 0.25;
+    const once = async (name) => {
+      const oac = new OfflineAudioContext(2, SR * (seconds + 1), SR), a = new Engine(); a.init({ context: oac, seed: o.seed ?? 7 });
+      const mu = a._mus(); mu.solo = o.solo || null;
+      if (name) { await mu.prepare(name); mu.play(name, { fade: 0.05, seed: o.seed ?? 7 }); }
+      for (let t = step; t < seconds; t += step) oac.suspend(+t.toFixed(3)).then(() => { a._tick(); oac.resume(); });
+      const t0 = performance.now(); const buf = await oac.startRendering(); const ms = performance.now() - t0;
+      return { ms, bars: mu.stats.bars, buf };
+    };
+    const m = await once(n), idle = await once(null);
+    return { name: n, seconds, cpuPct: +(m.ms / (seconds * 10)).toFixed(2), idlePct: +(idle.ms / (seconds * 10)).toFixed(2), bars: m.bars, lufs: analyze(m.buf).lufs };
   },
   // piano roll of the notes a track schedules (from the scheduler log)
   async roll(name, seconds = 60, o = {}) {

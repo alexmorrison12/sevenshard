@@ -23,8 +23,8 @@ import { weekId } from '../../core/util.js';
 import { Kit, M, box, cyl } from '../../world/kit.js';
 import { boulder, spike, crystal } from '../../world/cliffs.js';
 import * as SH from '../../world/shapes.js';
-import './trial.js';
-import './cube.js';
+import { trialState } from './trial.js';
+import { cubeState } from './cube.js';
 
 const Q = typeof location !== 'undefined' ? Object.fromEntries(new URLSearchParams(location.search)) : {};
 /** ?auto=1: the AI plays your hero in modes content and dialogs pick automatically (headless testing). */
@@ -134,7 +134,8 @@ export class RunParty extends Party {
   onDeath(u) { this.hooks.onDeath?.(u); }
   revive(u, at) {
     if (this.hooks.canRevive && !this.hooks.canRevive(u)) { if (u === this.game.hero?.u && this.hooks.noRevive) this.game.ui?.toast?.(this.hooks.noRevive, 'warn'); return; }
-    super.revive(u, at);
+    super.revive(u, at || this.hooks.reviveAt?.(u));
+    this.hooks.onRevive?.(u);
   }
 }
 
@@ -987,7 +988,8 @@ registerPlugin({
     if (npcId !== 'nexus') return [];
     const A = this.s.account, I = infernoRecords(A);
     const t = trialOfWeek(), def = BOSS_DEFS[t.guardian];
-    const cleared = this.s.char?.weekly?.trial?.week === t.week && this.s.char.weekly.trial.cleared;
+    const cleared = this.s.char ? trialState(this.s.char).cleared : false;
+    cubeState(A);
     return [
       { id: 'modes:inferno', text: `Inferno Descent — 100 floors, boons, one life${I.best ? ` (best: Floor ${I.best})` : ''}`, kind: 'quest' },
       { id: 'modes:trial', text: `Trial Guardian — ${def?.name || t.guardian} · ${t.affixes.map(a => AFFIXES[a].name).join(' & ')}${cleared ? ' (cleared this week)' : ' (weekly reward)'}`, kind: 'quest' },

@@ -92,8 +92,10 @@ export class Actions {
   has(name) { const L = this.list; for (let i = 0; i < L.length; i++) if (L[i].name === name && !L[i].out) return true; return false; }
   get(name) { const L = this.list; for (let i = 0; i < L.length; i++) if (L[i].name === name && !L[i].out) return L[i]; return null; }
   weight(name) { let w = 0; const L = this.list; for (let i = 0; i < L.length; i++) if (L[i].name === name && L[i].w > w) w = L[i].w; return w; }
-  update(dt) {
-    const L = this.list;
+  update(dt) { this.ctl.dt = dt; this.step(); }
+  /** advance every running action by ctl.dt (reads dt from the controller: no double crosses a call boundary) */
+  step() {
+    const L = this.list, dt = this.ctl.dt;
     for (let i = 0; i < L.length; i++) {
       const a = L[i], d = a.d, dur = d.dur;
       a.t += dt * a.speed; a.age += dt;
@@ -108,8 +110,6 @@ export class Actions {
     for (let i = 0; i < L.length; i++) { const a = L[i]; if (!a.done && !(a.out && a.w <= 0.001)) L[j++] = a; }
     L.length = j;
   }
-  /** update() reading dt from the controller (no boxed argument) */
-  step() { this.update(this.ctl.dt); }
   apply() { const L = this.list; for (let i = 0; i < L.length; i++) { const a = L[i]; if (a.w > 0) a.d.fn(this.ctl, a, a.w); } }
 }
 

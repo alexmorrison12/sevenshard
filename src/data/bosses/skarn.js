@@ -23,11 +23,11 @@ export default {
       await charge(B, t, 1.2, { coef: 1.1, trail: B.flags.partBroken ? null : 'fire' });
       await wait(B, 0.5);
     } },
-    cinder_rain: { range: 30, cd: 18, weight: 1.5, recover: 1.0, async run(B) {
+    cinder_rain: { range: 30, cd: 21, weight: 1.5, recover: 1.0, async run(B) {
       act(B, 'howl', 0.6);
-      const pts = someHeroes(B, 5).map(h => ({ x: h.pos.x, z: h.pos.z }));
+      const pts = someHeroes(B, 4).map(h => ({ x: h.pos.x, z: h.pos.z }));
       for (let i = 0; i < 3; i++) pts.push(onNav(B, { x: B.u.pos.x + rnd(B, -12, 12), z: B.u.pos.z + rnd(B, -12, 12) }));
-      await volley(B, pts.map(p => ['circle', { x: p.x, z: p.z, r: 3 }]), 1.4, { coef: 1.0, color: 'orange', fx: 'fire_burst', fxR: 3, sfx: 'explosion' });
+      await volley(B, pts.map(p => ['circle', { x: p.x, z: p.z, r: 3 }]), 1.4, { coef: 0.7, color: 'orange', fx: 'fire_burst', fxR: 3, sfx: 'explosion' });
       if (!B.flags.partBroken) for (const p of pts.slice(0, 4)) pool(B, { x: p.x, z: p.z, r: 2, dur: 4, tick: 0.5, coef: 0.12, kind: 'fire' });
       await wait(B, 0.5);
     } },

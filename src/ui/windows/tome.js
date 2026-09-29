@@ -22,6 +22,8 @@ const ring = (pct, size = 64, c = '#f3c46a') => `<div class="ss-pring" style="--
 // ================================================================================================ adventure tome
 export class TomeWin extends Win {
   static id = 'tome'; static title = 'Adventure Tome'; static glyph = 'tome'; static width = 940;
+  static aliases = { collectibles: 'collectibles' };
+  setTab(t) { this.tab = this._dt = t; this.tabs.set(t); }
   build() {
     const b = this.body; b.classList.add('ss-tm');
     this.tab = 'tome';

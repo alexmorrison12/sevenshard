@@ -26,7 +26,7 @@ export const abyss_caster = {
   config(variant, opts) {
     const v = PAL[variant] ? variant : (opts.elite ? 'archon' : 'void');
     const elite = v === 'archon' || !!opts.elite;
-    return { variant: v, pal: PAL[v === 'void' && elite ? 'archon' : v], elite, shapeKey: elite ? 'elite' : 'base', scale: elite ? 1.2 : 1, h: 0.04, hg: { 1: 0.03, 2: 0.022 }, mat: { dfreq: 3, furAxis: 1, rim: 0.4, rimColor: 0xd8b0ff }, aoScale: 1.2, grad: { top: 0.2, bottom: 0.35, y0: 0.2, y1: 1.3, low: 0.3 } };
+    return { variant: v, pal: PAL[v === 'void' && elite ? 'archon' : v], elite, shapeKey: elite ? 'elite' : 'base', scale: elite ? 1.2 : 1, h: 0.0425, hg: { 1: 0.0325, 2: 0.0232 }, mat: { dfreq: 3, furAxis: 1, rim: 0.4, rimColor: 0xd8b0ff }, aoScale: 1.2, grad: { top: 0.2, bottom: 0.35, y0: 0.2, y1: 1.3, low: 0.3 } };
   },
   rig(R) {
     R.add('root', null, [0, 1.0, 0]);

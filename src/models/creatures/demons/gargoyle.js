@@ -28,7 +28,7 @@ export const gargoyle = {
   config(variant, opts) {
     const v = PAL[variant] ? variant : (opts.elite ? 'sentinel' : 'granite');
     const elite = v === 'sentinel' || !!opts.elite;
-    return { variant: v, pal: PAL[v === 'granite' && elite ? 'sentinel' : v], elite, shapeKey: elite ? 'elite' : 'base', scale: elite ? 1.3 : 1, h: 0.048, hg: { 1: 0.032 }, mat: { dfreq: 2.6, furAxis: 1, rim: 0.22, rimColor: 0xe0e8ff, spec: elite ? 0.3 : 0.05, shine: 30 }, aoScale: 1.3, grad: { top: 0.25, bottom: 0.35, y0: 0, y1: 0.9, low: 0.2 } };
+    return { variant: v, pal: PAL[v === 'granite' && elite ? 'sentinel' : v], elite, shapeKey: elite ? 'elite' : 'base', scale: elite ? 1.3 : 1, h: 0.053, hg: { 1: 0.035 }, mat: { dfreq: 2.6, furAxis: 1, rim: 0.22, rimColor: 0xe0e8ff, spec: elite ? 0.3 : 0.05, shine: 30 }, aoScale: 1.3, grad: { top: 0.25, bottom: 0.35, y0: 0, y1: 0.9, low: 0.2 } };
   },
   rig(R) {
     R.add('hips', null, [0, 0.8, 0.05]);

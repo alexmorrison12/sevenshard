@@ -23,17 +23,34 @@ const NP = GP.length / 2;
 const PI = {}; for (let i = 0; i < NP; i++) PI[GP[i * 2]] = i;
 const O_BOB = PI.bob, O_PITCH = PI.pitch, O_ROLL = PI.roll, O_SWAY = PI.sway, O_FLEX = PI.flex, O_NOD = PI.nod;
 
-// ---- 2-bone IK (same maths as kit/rig.js makeChain / solveIK / frameRot, no boxed return value)
-const _d = new THREE.Vector3(), _pp = new THREE.Vector3(), _ax = new THREE.Vector3(), _u = new THREE.Vector3(), _w = new THREE.Vector3();
-const _m0 = new THREE.Matrix4(), _m1 = new THREE.Matrix4(), _u0 = new THREE.Vector3(), _p0 = new THREE.Vector3(), _w0 = new THREE.Vector3();
-const _kn = new THREE.Vector3(), _ss = new THREE.Vector3();
+// ---- 2-bone IK (same maths as kit/rig.js makeChain / solveIK / frameRot). Written out component-wise: no three.js calls
+// taking or returning doubles (those box a HeapNumber per call when V8 doesn't inline them).
+const _ax = new THREE.Vector3(), _ss = new THREE.Vector3();
+/** out := rotation taking the rest frame (u0, p0) onto the current frame (u, p): R = [A B C]·[a b c]ᵀ */
 function frameRot(out, u0, p0, u, p) {
-  _u0.copy(u0).normalize(); _p0.copy(p0).addScaledVector(_u0, -p0.dot(_u0)).normalize(); _w0.crossVectors(_u0, _p0);
-  _u.copy(u).normalize(); _pp.copy(p).addScaledVector(_u, -p.dot(_u));
-  if (_pp.lengthSq() < 1e-10) _pp.copy(_p0); _pp.normalize(); _w.crossVectors(_u, _pp);
-  _m0.makeBasis(_u0, _p0, _w0).transpose();
-  _m1.makeBasis(_u, _pp, _w).multiply(_m0);
-  out.setFromRotationMatrix(_m1);
+  let ax = u0.x, ay = u0.y, az = u0.z, l = Math.sqrt(ax * ax + ay * ay + az * az) || 1;
+  ax /= l; ay /= l; az /= l;
+  let d = p0.x * ax + p0.y * ay + p0.z * az;
+  let bx = p0.x - ax * d, by = p0.y - ay * d, bz = p0.z - az * d;
+  l = Math.sqrt(bx * bx + by * by + bz * bz) || 1; bx /= l; by /= l; bz /= l;
+  const cx = ay * bz - az * by, cy = az * bx - ax * bz, cz = ax * by - ay * bx;
+  let Ax = u.x, Ay = u.y, Az = u.z; l = Math.sqrt(Ax * Ax + Ay * Ay + Az * Az) || 1;
+  Ax /= l; Ay /= l; Az /= l;
+  d = p.x * Ax + p.y * Ay + p.z * Az;
+  let Bx = p.x - Ax * d, By = p.y - Ay * d, Bz = p.z - Az * d;
+  l = Bx * Bx + By * By + Bz * Bz;
+  if (l < 1e-10) { Bx = bx; By = by; Bz = bz; l = bx * bx + by * by + bz * bz; }
+  l = Math.sqrt(l) || 1; Bx /= l; By /= l; Bz /= l;
+  const Cx = Ay * Bz - Az * By, Cy = Az * Bx - Ax * Bz, Cz = Ax * By - Ay * Bx;
+  const m11 = Ax * ax + Bx * bx + Cx * cx, m12 = Ax * ay + Bx * by + Cx * cy, m13 = Ax * az + Bx * bz + Cx * cz;
+  const m21 = Ay * ax + By * bx + Cy * cx, m22 = Ay * ay + By * by + Cy * cy, m23 = Ay * az + By * bz + Cy * cz;
+  const m31 = Az * ax + Bz * bx + Cz * cx, m32 = Az * ay + Bz * by + Cz * cy, m33 = Az * az + Bz * bz + Cz * cz;
+  const tr = m11 + m22 + m33;
+  let s;
+  if (tr > 0) { s = 0.5 / Math.sqrt(tr + 1); out._w = 0.25 / s; out._x = (m32 - m23) * s; out._y = (m13 - m31) * s; out._z = (m21 - m12) * s; }
+  else if (m11 > m22 && m11 > m33) { s = 2 * Math.sqrt(1 + m11 - m22 - m33); out._w = (m32 - m23) / s; out._x = 0.25 * s; out._y = (m12 + m21) / s; out._z = (m13 + m31) / s; }
+  else if (m22 > m33) { s = 2 * Math.sqrt(1 + m22 - m11 - m33); out._w = (m13 - m31) / s; out._x = (m12 + m21) / s; out._y = 0.25 * s; out._z = (m23 + m32) / s; }
+  else { s = 2 * Math.sqrt(1 + m33 - m11 - m22); out._w = (m21 - m12) / s; out._x = (m13 + m31) / s; out._y = (m23 + m32) / s; out._z = 0.25 * s; }
 }
 function makeChain(pose, a, b, c, pole0) {
   const ra = pose.rest[a], rb = pose.rest[b], rc = pose.rest[c];
@@ -47,23 +64,25 @@ function makeChain(pose, a, b, c, pole0) {
 }
 function solveIK(pose, ch, target, pole) {
   const A = pose.wp[ch.a];
-  _d.subVectors(target, A);
-  let d = _d.length();
-  _d.divideScalar(d || 1e-6);
-  const dmax = ch.l1 + ch.l2 - 1e-4, dmin = Math.abs(ch.l1 - ch.l2) + 1e-4;
+  let dx = target.x - A.x, dy = target.y - A.y, dz = target.z - A.z;
+  let d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+  const inv = 1 / (d || 1e-6); dx *= inv; dy *= inv; dz *= inv;
+  const l1 = ch.l1, l2 = ch.l2, dmax = l1 + l2 - 1e-4, dmin = Math.abs(l1 - l2) + 1e-4;
   d = d > dmax ? dmax : d < dmin ? dmin : d;
-  _pp.copy(pole).addScaledVector(_d, -pole.dot(_d));
-  if (_pp.lengthSq() < 1e-10) { _pp.set(0, 1, 0).addScaledVector(_d, -_d.y); }
-  _pp.normalize();
-  const ca = (ch.l1 * ch.l1 + d * d - ch.l2 * ch.l2) / (2 * ch.l1 * d);
+  const pd = pole.x * dx + pole.y * dy + pole.z * dz;
+  let px = pole.x - dx * pd, py = pole.y - dy * pd, pz = pole.z - dz * pd, pl = px * px + py * py + pz * pz;
+  if (pl < 1e-10) { px = -dx * dy; py = 1 - dy * dy; pz = -dz * dy; pl = px * px + py * py + pz * pz; }
+  pl = Math.sqrt(pl) || 1; px /= pl; py /= pl; pz /= pl;
+  const ca = (l1 * l1 + d * d - l2 * l2) / (2 * l1 * d);
   const sa = Math.sqrt(Math.max(0, 1 - ca * ca));
-  _kn.copy(A).addScaledVector(_d, ch.l1 * ca).addScaledVector(_pp, ch.l1 * sa);
-  pose.wp[ch.b].copy(_kn);
-  pose.wp[ch.c].copy(A).addScaledVector(_d, d);
-  _ax.copy(_pp);
-  _ss.subVectors(_kn, A);
+  const kx = A.x + dx * l1 * ca + px * l1 * sa, ky = A.y + dy * l1 * ca + py * l1 * sa, kz = A.z + dz * l1 * ca + pz * l1 * sa;
+  const B = pose.wp[ch.b], C = pose.wp[ch.c];
+  B.x = kx; B.y = ky; B.z = kz;
+  C.x = A.x + dx * d; C.y = A.y + dy * d; C.z = A.z + dz * d;
+  _ax.x = px; _ax.y = py; _ax.z = pz;
+  _ss.x = kx - A.x; _ss.y = ky - A.y; _ss.z = kz - A.z;
   frameRot(pose.wq[ch.a], ch.u1, ch.pole0, _ss, _ax);
-  _ss.subVectors(pose.wp[ch.c], _kn);
+  _ss.x = C.x - kx; _ss.y = C.y - ky; _ss.z = C.z - kz;
   frameRot(pose.wq[ch.b], ch.u2, ch.pole0, _ss, _ax);
 }
 

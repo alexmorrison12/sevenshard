@@ -671,7 +671,7 @@ export class SailingMode {
     let made = 0;
     for (let i = 0; i < n; i++) {
       const a = i / n * TAU + rnd(-0.3, 0.3), r = rnd(12, 17), x = cx + Math.cos(a) * r, z = cz + Math.sin(a) * r;
-      if (!this.navOk(x, z)) continue;
+      if (!this.navOk(x, z) || this.hullIn({ shape: 'circle', x, z, r: 5.5 })) continue;
       const u = this.foeUnit('kraken', 'Kraken Tentacle', x, z, 9, { type: 'kraken_tentacle', radius: 1.4, height: 7, corpse: 6 });
       u.model = createCreature('kraken_tentacle', { variant: this.night > 0.5 ? 'lumen' : Math.random() < 0.5 ? 'crimson' : 'violet' });
       const ai = new TentacleAI(this, u); ai.cd = rnd(2.5, 4.5); u.ctrl = ai; this.addFoe(ai);
@@ -790,7 +790,7 @@ export class SailingMode {
   muzzle(p, dx, dz) {
     const fx = this.game.fx;
     fx?.burst?.({ pos: { x: p.x + dx * 0.8, y: p.y, z: p.z + dz * 0.8 }, kind: 'fire', color: 'ember', count: 12, speed: 8, size: 0.4, life: 0.25, dir: { x: dx, y: 0.1, z: dz }, spread: 0.3, flash: true });
-    fx?.burst?.({ pos: { x: p.x + dx * 1.5, y: p.y, z: p.z + dz * 1.5 }, kind: 'smoke', color: 0xd8d4cc, count: 10, speed: 3, size: 1.4, life: 1.6, dir: { x: dx, y: 0.3, z: dz }, spread: 0.5 });
+    fx?.burst?.({ pos: { x: p.x + dx * 1.5, y: p.y, z: p.z + dz * 1.5 }, kind: 'dust', color: 0xf4f0e8, count: 10, speed: 3, size: 1.5, life: 1.8, dir: { x: dx, y: 0.3, z: dz }, spread: 0.5 });
   }
   splash(x, z, s = 1) { this.game.fx?.burst?.({ pos: { x, y: 0.2, z }, kind: 'water', color: 'water', count: Math.round(14 * s), speed: 4 + s * 2.5, size: 0.4 * s, life: 0.9, up: 6 * s, spread: 1 }); }
   shockwave(x, z, r) { this.game.fx?.shockwave?.({ pos: { x, y: 0.2, z }, radius: r, color: 'water', dur: 0.6, dust: false }); }
@@ -948,9 +948,9 @@ export class SailingMode {
     if (o.steer) { this.course = { x: p.x, z: p.z, steer: true }; return; }
     let path = null;
     if (o.route) {
-      const C = this.C;
-      const goal = C.nav.walkable(p.x, p.z) ? p : this.nearestWater(p.x, p.z) || p;
-      path = C.nav.los(sh.x, sh.z, goal.x, goal.z, 6) ? [goal] : C.nav.path(sh.x, sh.z, goal.x, goal.z, 6, 60000);
+      const N = this.L.nav;
+      const goal = N.ok(p.x, p.z) ? p : this.nearestWater(p.x, p.z) || p;
+      path = N.los(sh.x, sh.z, goal.x, goal.z, 6) ? [goal] : N.path(sh.x, sh.z, goal.x, goal.z, 6, 60000);
       if (!path?.length) path = [goal];
       p = path[path.length - 1];
       this.say(`Course set: ${Math.round(Math.hypot(p.x - sh.x, p.z - sh.z))} m.`, 'info');
@@ -958,7 +958,7 @@ export class SailingMode {
     this.course = { x: p.x, z: p.z, path, total: Math.max(1, pathLen(sh, path || [p])), steer: false };
   }
   releaseSteer() { const c = this.course; if (c?.steer) this.course = { x: c.x, z: c.z, path: null, total: Math.max(1, Math.hypot(c.x - this.sh.x, c.z - this.sh.z)), steer: false }; }
-  nearestWater(x, z) { const p = this.C.nav.nearest(x, z, 60); return p; }
+  nearestWater(x, z) { return this.L.nav.nearest(x, z, 80); }
   marker(x, z, name, title = null) {
     const u = new Unit({ kind: 'npc', team: 2, name, x, z, radius: 0.5, stats: { hpMax: 1, speed: 0 } });
     u.data.noModel = true; u.untargetable = true; u.data.immovable = true; u.data.title = title; u.data.marker = true;
@@ -1064,7 +1064,7 @@ export class SailingMode {
     if (c && !c.steer && c.total > 40) { const left = pathLen(sh, c.path || [c]); h.progress = { label: `Course · ${Math.round(left)} m · ${kn} kn ${heading}`, pct: clamp(1 - left / c.total, 0, 1) * 100 }; }
     else h.progress = { label: `${kn} knots · heading ${heading} · wind from ${wind}`, pct: clamp(sh.v / (this.stats.speed * 1.5), 0, 1) * 100 };
     const gw = ghostWindow();
-    h.timer = this.ghost ? { label: 'The Ghost Ship', left: 0 } : gw?.live ? { label: 'Ghost Ship sighted', left: Math.max(0, (gw.end - Date.now()) / 1000), urgent: true } : null;
+    h.timer = !this.ghost && !this.ghostDone && gw?.live ? { label: 'Ghost Ship sighted', left: Math.max(0, (gw.end - Date.now()) / 1000), urgent: true } : null;
     // voyage log
     const A = this.s.account, souls = (A.roster.collect.souls || []).length, bounties = (A.roster.collect.bounties || []).length;
     h.quests = [{ id: 'sea:voyage', title: 'The Glass Sea', kind: 'guide', steps: [

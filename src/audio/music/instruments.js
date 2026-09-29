@@ -142,7 +142,7 @@ export class Ens extends Inst {
       // except brass/horn legato where the baked attack "blat" is part of the sound
       if (!this.baked || art === 'swell' || art === 'pad' || o.soft) off = z.ls + this.rng.next() * (z.le - z.ls) * 0.9;
     }
-    s.start(t, off); s.stop(end); this.tr.reg(s, end);
+    s.start(t, off); s.stop(end); this.tr.reg(s, end); this.tr.retire(g, end);
     return end;
   }
 }
@@ -162,7 +162,7 @@ export class Mallet extends Inst {
     const z = this.zone(m), rate = Math.pow(2, (m - z.root) / 12), g = this.gainNode(vel * this.scale * (o.gain ?? 1));
     let end = t + z.buf.duration / rate;
     if (o.damp) { const e = t + dur; g.gain.setValueAtTime(vel * this.scale, e); g.gain.linearRampToValueAtTime(0, e + 0.08); end = Math.min(end, e + 0.1); }
-    this.src(z.buf, t, end, g, rate);
+    this.src(z.buf, t, end, g, rate); this.tr.retire(g, end);
     return end;
   }
   hit(t, m, vel = 0.7, o = {}) { return this.note(t, m, 0.5, vel, o); }
@@ -199,14 +199,14 @@ export class Perc extends Inst {
     this.last[set] = i;
     const b = bufs[i], rate = o.pitch ?? 1; // rate exactly 1 = no resampling (≈16× cheaper); variety = variants
     const g = this.gainNode(vel * this.scale * (o.gain ?? 1));
-    this.src(b, t, t + b.duration / rate, g, rate);
+    this.src(b, t, t + b.duration / rate, g, rate); this.tr.retire(g, t + b.duration / rate);
   }
   // play a peak-at-end buffer (swell / riser) so its peak lands at t + dur
   rise(t, dur, vel = 0.6, set = 'swell') {
     const bufs = this.banks[set]; if (!bufs || !this.live(t, 99, dur, vel)) return;
     const b = bufs[0], off = Math.max(0, b.duration - dur);
     const g = this.gainNode(vel * this.scale);
-    const s = this.ctx.createBufferSource(); s.buffer = b; s.connect(g); s.start(t, off); s.stop(t + b.duration - off + 0.02); this.tr.reg(s, t + b.duration - off);
+    const s = this.ctx.createBufferSource(); s.buffer = b; s.connect(g); s.start(t, off); s.stop(t + b.duration - off + 0.02); this.tr.reg(s, t + b.duration - off); this.tr.retire(g, t + b.duration - off + 0.02);
   }
   roll(t, dur, v0 = 0.2, v1 = 0.8, o = {}) {
     const rate = o.rate ?? 16;
@@ -275,13 +275,14 @@ export class Strings extends Inst {
       this.osc('sawtooth', f, t, end, lp, this.rng.range(-8, 8));
       if (o.double !== false && vel > 0.5) this.osc('sawtooth', f, t, end, lp, this.rng.range(6, 12));
     }
+    this.tr.retire(out, end);
     return end;
   }
   pizz(t, m, vel, o = {}) {
     if (!this.live(t, m, 0.3, vel)) return;
     const f = mtof(m), buf = this.a.ks(f, { t60: clamp(1.4 - (m - 36) * 0.02, 0.35, 1.2), bright: 0.25, pos: 0.25, shape: 0.35 });
     const g = this.gainNode(vel * this.scale * 3.2 * (o.gain ?? 1));
-    this.src(buf, t, t + buf.duration, g);
+    this.src(buf, t, t + buf.duration, g); this.tr.retire(g, t + buf.duration);
   }
 }
 
@@ -311,7 +312,7 @@ export class Solo extends Inst {
       if (slur) { osc.frequency.setValueAtTime(this.prevF, t); osc.frequency.exponentialRampToValueAtTime(f, t + 0.07); }
       vg.connect(osc.detune);
     }
-    this.prevF = f; this.prevEnd = t + dur;
+    this.prevF = f; this.prevEnd = t + dur; this.tr.retire(out, end);
     return end;
   }
 }
@@ -352,6 +353,7 @@ export class Horn extends Inst {
       osc.detune.setValueAtTime(d - (brassy ? 18 : 28), t); osc.detune.linearRampToValueAtTime(d, t + 0.06);
       if (vg) vg.connect(osc.detune);
     }
+    this.tr.retire(out, end);
     return end;
   }
 }
@@ -418,6 +420,7 @@ export class Wind extends Inst {
         this.noise(t, t + 0.1, hp);
       }
     }
+    this.tr.retire(out, end);
     return end;
   }
   // accordion left-hand chord / any wind chord
@@ -435,7 +438,7 @@ export class Harp extends Inst {
     const g = this.gainNode(vel * this.scale * (o.gain ?? 1));
     const end = o.damp ? t + dur + 0.1 : t + buf.duration;
     if (o.damp) { g.gain.setValueAtTime(vel * this.scale, t + dur); g.gain.linearRampToValueAtTime(0, t + dur + 0.1); }
-    this.src(buf, t, end, g);
+    this.src(buf, t, end, g); this.tr.retire(g, end);
     return end;
   }
   gliss(t, notes, span = 0.6, vel = 0.4) { notes.forEach((m, i) => this.note(t + (i / notes.length) * span, m, 1, vel * (0.7 + 0.3 * i / notes.length))); }
@@ -454,6 +457,7 @@ export class Lute extends Inst {
     const end = t + Math.min(buf.duration, (o.let ?? 3));
     this.src(buf, t, end, g, 1, -4);
     if (this.kind === 'lute') this.src(buf, t + 0.004, end, g, 1, 4); // doubled courses
+    this.tr.retire(g, end + 0.01);
     return end;
   }
   strum(t, notes, vel = 0.5, { dir = 1, spread = 0.022 } = {}) {
@@ -472,6 +476,7 @@ export class Organ extends Inst {
     out.gain.setValueAtTime(0, t); out.gain.linearRampToValueAtTime(pk, t + a); out.gain.setValueAtTime(pk, t + hold); out.gain.setTargetAtTime(0, t + hold, r / 3.5);
     const end = t + hold + r * 1.8;
     this.osc(this.wave, f, t, end, out, -3); this.osc(this.wave, f, t, end, out, 3);
+    this.tr.retire(out, end);
     return end;
   }
 }
@@ -485,7 +490,7 @@ export class Synth extends Inst {
     if (k === 'sub') {
       const a = 0.01, hold = Math.max(a, dur), end = t + hold + 0.15;
       out.gain.setValueAtTime(0, t); out.gain.linearRampToValueAtTime(pk, t + a); out.gain.setValueAtTime(pk, t + hold); out.gain.linearRampToValueAtTime(0, t + hold + 0.12);
-      this.osc('sine', f, t, end, out); return end;
+      this.osc('sine', f, t, end, out); this.tr.retire(out, end); return end;
     }
     const lp = biq(this.ctx, 'lowpass', f * 2, k === 'lead' ? 0.9 : 3); lp.connect(out);
     const open = o.open ?? (k === 'pluck' ? 10 : k === 'lead' ? 6 : 7);
@@ -496,6 +501,7 @@ export class Synth extends Inst {
     if (k === 'pluck') out.gain.setTargetAtTime(0, t + 0.01, 0.12); else { out.gain.setValueAtTime(pk * 0.8, t + hold); out.gain.setTargetAtTime(0, t + hold, r / 3); }
     const ws = k === 'lead' ? [[-9, 'sawtooth'], [9, 'sawtooth']] : k === 'bass' ? [[0, 'sawtooth'], [-1200, 'square']] : [[0, 'sawtooth']];
     for (const [d, w] of ws) this.osc(w, f, t, end, lp, d);
+    this.tr.retire(out, end);
     return end;
   }
 }

@@ -27,12 +27,16 @@ import { Emitter } from '../core/events.js';
 import { PLUGINS, LAUNCHERS, SERVICES, WINDOWS, ACTIONS, ZONE_MODES } from './registry.js';
 import './plugins.js';
 import { TouchControls } from './touch.js';
+import { watchRaid } from './watch.js';
 import { SocialContext } from './social/context.js';
 import { sunView, rank as sunRank, resetTree as sunReset, sunState, unlocked as sunUnlocked } from './progression/sunheart.js';
 import { SUNHEART_POINTS } from '../data/sunheart.js';
 import { pickLine } from './social/chatter.js';
+import { contentRewards, moreRewards as offerMoreRewards } from './systems/hooks.js';
+import * as SYS from './systems/index.js';
 
 const q = Object.fromEntries(new URLSearchParams(location.search));
+const CONTENT_NAMES = { chaos: 'Chaos Dungeon', guardian: 'Guardian Hunt', raid: 'Legion Raid', inferno: 'Inferno Descent', cube: 'Rift Cube', trial: 'Trial Guardian', pvp: 'Proving Grounds', fieldboss: 'Field Boss', chaosgate: 'Chaos Gate', island: 'Adventure Island', ghostship: 'Ghost Ship' };
 const NEWS = [
   { tag: 'Event', title: 'The Horned Legion stirs', date: 'This week', body: 'Gorrath, the Horned Tyrant, waits beyond the Rift Nexus. Eight Shardbearers. Two gates. One weekly race.' },
   { tag: 'Guide', title: 'Counters save lives', date: 'Tip', body: 'When a boss glows blue, hit it with a counter skill (★) to stun it and cancel the attack.' },
@@ -71,6 +75,7 @@ export class Session {
     this.title();
     document.getElementById('boot')?.remove();
     if (q.join) this.together(q.join);
+    if (q.watch) watchRaid(this, { raid: 'gorrath', gate: +q.watch === 1 ? 0 : 1 });
   }
   /** Solhaven at dusk behind the menus */
   async backdrop() {
@@ -122,6 +127,7 @@ export class Session {
       case 'title:together': return this.together();
       case 'title:leaderboards': return this.openBoards();
       case 'title:settings': return this.openSettings();
+      case 'title:watch': return watchRaid(this, { raid: 'gorrath', gate: p.gate ?? 1 });
       // character select
       case 'select:pick': this.selected = p.id; A.data.lastChar = p.id; this.stage.select(p.id); return;
       case 'select:enter': { const c = A.char(p.id); if (c) return this.enterWorld(c); return; }
@@ -234,9 +240,14 @@ export class Session {
     if (performance.now() - t0 < 500) await new Promise(r => setTimeout(r, 300));
     return zone;
   }
+  /** heroStats + roster-wide mods (cards, stronghold research, titles); gem mods are applied per skill in HeroKit.rebuild */
+  statsFor(c) {
+    const ctx = SYS.statContext(this.account, c);
+    return SYS.applyMods(heroStats(c, ctx), ctx.extra);
+  }
   spawnMe(at) {
     const c = this.heroChar(this.char);
-    const st = heroStats(c, { rosterLevel: this.account.roster.level });
+    const st = this.statsFor(c);
     const look = { tier: c.gear?.lookTier ?? gearTier(c), dye: c.gear?.dye || null };
     const kit = this.game.spawnHero({ ...c, gear: look, weapon: { tier: gearTier(c), hone: c.equip.weapon?.hone || 0 } }, st, at || { x: 0, z: 0 });
     kit.items = (c.items || []).map(it => ({ id: it.id, count: Math.min(it.count, this.account.count(it.id) || it.count), cd: 0 }));
@@ -281,7 +292,7 @@ export class Session {
   refreshChar() {
     if (!this.char || !this.game.hero) return;
     const c = this.heroChar(this.char), kit = this.game.hero;
-    kit.char = c; kit.u.setStats(heroStats(c, { rosterLevel: this.account.roster.level })); kit.rebuild();
+    kit.char = c; kit.u.setStats(this.statsFor(c)); kit.rebuild();
     c.ilvl = itemLevel(c);
     this.refreshWindow('character'); this.refreshWindow('inventory');
   }
@@ -291,7 +302,7 @@ export class Session {
     const g = this.game, inp = g.input;
     this.touch?.update();
     this.social?.update(); this.social?.tick();
-    if (this.screen !== 'game' || !g.hero) return;
+    if (this.screen !== 'game' || !g.hero || this.watching || !this.char) return;
     this.char.played = (this.char.played || 0) + dt;
     for (const pl of PLUGINS) if (pl.update) { try { pl.update(dt); } catch (e) { console.error('[plugin update]', pl.id, e); } }
     if (inp.hit('interact') && !this.ui.wantsKeyboard) { const t = this.findInteractable(); if (t) this.interact(t); }
@@ -407,7 +418,7 @@ export class Session {
       const tier = CHAOS_TIERS.find(t => t.id === c.tier) || CHAOS_TIERS[0];
       await this.loadZone('chaos_rift', { kind: 'dungeon', region: tier.name });
       this.spawnMe(this.game.zone.anchors['stage1:spawn']);
-      const rested = (ch.rest?.chaos || 0) >= 20;
+      const rested = SYS.loot.restInfo(ch).chaos.rested;
       this.game.mode = new ChaosMode(this.game, { ilvl: Math.max(tier.ilvl, Math.min(itemLevel(ch), tier.ilvl + 100)), tier: tier.id, allies: c.allies ?? 0, rested, onEnd: done });
       this.game.mode.enter();
     } else if (c.kind === 'guardian') {
@@ -420,7 +431,7 @@ export class Session {
       const r = RAIDS[c.raid], gt = r.gates[c.gate];
       await this.loadZone(gt.zone, { kind: 'raid', region: r.name });
       this.spawnMe(this.game.zone.anchors.spawn);
-      if (c.trial) { const st = heroStats({ ...this.heroChar(ch), equip: Object.fromEntries(['weapon', 'head', 'shoulder', 'chest', 'pants', 'gloves'].map(s => [s, { iLvl: r.ilvl.normal, quality: 70 }])) }); this.game.hero.u.setStats(st); this.game.hero.u.hp = this.game.hero.u.hpMax; }
+      if (c.trial) { const st = this.statsFor({ ...this.heroChar(ch), equip: Object.fromEntries(['weapon', 'head', 'shoulder', 'chest', 'pants', 'gloves'].map(s => [s, { iLvl: r.ilvl.normal, quality: 70 }])) }); this.game.hero.u.setStats(st); this.game.hero.u.hp = this.game.hero.u.hpMax; }
       this.game.mode = new EncounterMode(this.game, { boss: gt.bosses[0].boss, bosses: gt.bosses, ilvl: r.ilvl.normal, partySize: r.players, hard: !!c.hard, seed: Date.now() % 1000, onEnd: done, noRevive: r.kind === 'legion' });
       this.game.mode.enter();
     }
@@ -432,38 +443,24 @@ export class Session {
     this.bus.emit('clear', { content: c, result: r });
     if (r.cleared && sunUnlocked(ch)) { const pts = SUNHEART_POINTS[c.kind] || 1; sunState(ch).points += pts; setTimeout(() => this.ui.toast(`+${pts} Sunheart point${pts > 1 ? 's' : ''}`, 'success'), 2200); }
     const loot = [], cur = { silver: 0, gold: 0, xp: 0 };
+    let R = null;
     if (r.cleared) {
-      if (c.kind === 'chaos') {
-        const t = c.tier, m = r.rested || 1;
-        cur.silver = 6000 * t * m; A.give('silver', cur.silver);
-        const give = (id, n) => { n = Math.round(n * m); A.give(id, n); loot.push({ ...ITEMS[id], id, name: ITEMS[id].name, count: n, icon: `item:${id}`, grade: ITEMS[id].grade }); };
-        give('destruction_stone', 40 * t); give('guardian_stone', 110 * t); give('leapstone', 3 * t); if (Math.random() < 0.5) give('fusion', 2 * t);
-        A.give('shards', 1500 * t * m);
-        (ch.daily ||= {}).chaos = (ch.daily.chaos || 0) + 1; if (r.rested > 1 && ch.rest) ch.rest.chaos = Math.max(0, ch.rest.chaos - 20);
-      } else {
-        const restG = c.kind === 'guardian' && (ch.rest?.guardian || 0) >= 20 ? 2 : 1;
-        if (restG > 1) { ch.rest.guardian -= 20; this.ui.toast('Rest bonus: guardian rewards doubled.', 'success'); }
-        let gold = c.kind === 'raid' ? (c.gate === 0 ? 1200 : 2400) * (c.hard ? 1.5 : 1) : 0;
-        const wk = `${c.raid || c.boss}:${c.gate ?? 0}:${c.hard ? 'h' : 'n'}`;
-        ch.weekly ||= {}; ch.weekly.raids ||= {};
-        if (gold && ch.weekly.raids[wk]) { gold = 0; this.ui.toast('Weekly raid gold already claimed on this character — practice runs still drop materials.', 'info'); }
-        if (gold && !c.trial) { cur.gold = gold; A.give('gold', gold); ch.weekly.raids[wk] = Date.now(); }
-        cur.silver = 25000; A.give('silver', cur.silver);
-        const give = (id, n) => { n *= restG; A.give(id, n); loot.push({ id, name: ITEMS[id].name, count: n, icon: `item:${id}`, grade: ITEMS[id].grade }); };
-        give('leapstone', c.kind === 'raid' ? 12 : 8); give('destruction_stone', 120); give('guardian_stone', 300);
-        if (c.kind === 'raid') give('horn_shard', c.hard ? 12 : 8);
-      }
+      // rewards: resonance chests, rest bonus, weekly gate gold and the More Rewards offer all live in the systems layer
+      R = contentRewards(this, c, r);
+      loot.push(...R.loot);
+      Object.assign(cur, R.currencies);
+      if (R.notes?.length) setTimeout(() => this.ui.toast(R.notes.join(' · '), R.result?.rested ? 'success' : 'info'), 1600);
       cur.xp = 1200 * (c.kind === 'raid' ? 3 : c.kind === 'guardian' ? 2 : 1);
       const ups = A.addXp(ch, cur.xp);
       if (ups?.length) { const lv = ups[ups.length - 1]; setTimeout(() => { this.ui.banner('Level Up', { kind: 'levelup', level: lv, sub: `You reached level ${lv}` }); this.game.audio?.stinger?.('level_up'); this.bus.emit('levelup', { level: lv }); }, 600); }
-      for (const it of loot) this.ui.hud?.loot?.({ name: it.name, grade: it.grade, count: it.count, icon: it.icon, kind: 'material' });
+      for (const it of loot) this.ui.hud?.loot?.({ name: it.name, grade: it.grade, count: it.count, icon: it.icon, kind: it.kind || 'material' });
       A.roster.stats.kills += r.kills || 1;
     }
     const me = r.meter?.find(x => x.you) || r.meter?.[0];
     const rank = !r.cleared ? 'D' : r.time < 150 ? 'S' : r.time < 240 ? 'A' : r.time < 360 ? 'B' : 'C';
     A.save();
     this.ui.screen('results', {
-      kind: r.cleared ? 'clear' : 'fail', over: c.kind === 'chaos' ? 'Chaos Dungeon' : c.kind === 'guardian' ? 'Guardian Hunt' : 'Legion Raid',
+      kind: r.cleared ? 'clear' : 'fail', over: c.kind === 'raid' && RAIDS[c.raid]?.kind === 'abyss' ? 'Abyssal Dungeon' : CONTENT_NAMES[c.kind] || 'Adventure',
       title: r.name || (c.kind === 'chaos' ? CHAOS_TIERS.find(t => t.id === c.tier)?.name : ''), sub: r.cleared ? 'Cleared' : 'Defeated', rank, time: r.time,
       stats: [{ label: 'Deaths', value: String(r.deaths ?? 0) }, { label: 'Your DPS', value: me ? fmt(me.dps) : '—' }, { label: 'Counters', value: String(me?.counters ?? 0) }],
       loot, currencies: cur, retry: true,
@@ -471,19 +468,7 @@ export class Session {
     });
     this.game.audio?.music?.(r.cleared ? 'victory' : 'defeat');
     // Lost Ark's "More Rewards" chest after a raid gate: pay gold for extra materials
-    if (r.cleared && c.kind === 'raid' && !c.trial && !this.guestMode) setTimeout(() => this.moreRewards(c), 1400);
-  }
-  async moreRewards(c) {
-    const A = this.account, cost = c.gate === 0 ? 300 : 500;
-    const ok = await this.ui.confirm({ title: 'More Rewards', text: `Open the More Rewards chest for ${cost} gold? It holds Horns of the Tyrant, leapstones and a chance at a relic accessory or an engraving recipe.`, ok: `Open (${cost} gold)`, cancel: 'Leave it' });
-    if (!ok) return;
-    if (!A.take('gold', cost)) { this.ui.toast('Not enough gold.', 'error'); return; }
-    const got = [];
-    const give = (id, n) => { A.give(id, n); got.push(`${n} × ${ITEMS[id]?.name || id}`); };
-    give('horn_shard', c.hard ? 10 : 6); give('leapstone', 8);
-    if (Math.random() < 0.3) { const acc = (await import('./systems/gear.js')).makeAccessory(['necklace', 'earring', 'ring'][Math.floor(Math.random() * 3)], 5); A.addItem(this.char, acc); got.push(acc.name); }
-    this.game.audio?.sfx?.('chest_open', {});
-    this.ui.toast(`More Rewards: ${got.join(', ')}.`, 'loot');
+    if (R?.more && !this.guestMode) setTimeout(() => offerMoreRewards(this, R.more), 1400);
   }
   async returnToHub() {
     await this.loadZone('solhaven', { kind: 'city', region: 'Valemont' });

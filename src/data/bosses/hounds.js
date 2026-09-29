@@ -124,7 +124,7 @@ export async function twinHowl(B) {
 
 // ---------------------------------------------------------------- Pack Grief (survivor enrage) and hard-mode HP
 export function onStart(enc) {
-  if (enc.o.hard) for (const b of enc.bosses) scaleHp(b, 1.2);
+  if (enc.o.hard) for (const b of enc.bosses) scaleHp(b, 1.12);
   // both hounds stop at 55% until their shared howl has started
   for (const b of enc.bosses) b.data.hpFloor = b.hpMax * 0.55;
 }

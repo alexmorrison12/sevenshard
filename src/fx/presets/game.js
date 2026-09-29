@@ -235,8 +235,6 @@ K.soulfire_nova = (fx, p) => { const c = ctx(fx, p, null, 14), s = c.R / 14, g =
 // ------------------------------------------------------------------ zones used by kits (Z(..., { kind }))
 function zoneLike(base, name, color) { return { ...base, name, init(T) { T.p = { ...T.p, color: T.p.color ?? color }; base.init(T); } }; }
 K.zone_blades = { ...SHADE.blade_storm, name: 'zone_blades', init(T) { SHADE.blade_storm.init(T); T.dur = T.p.dur ?? 3; } };
-K.zone_hellfire = zoneLike(AMBIENT.zone_fire, 'zone_hellfire', 0xa020ff);
-K.zone_blood = zoneLike(AMBIENT.zone_fire, 'zone_blood', 0xc0101a);
 K.zone_barrage = { ...K.barrage, name: 'zone_barrage' };
 K.zone_notes = AMBIENT.zone_music;
 K.zone_meteor = { ...MYSTIC.meteor_rain, name: 'zone_meteor' };

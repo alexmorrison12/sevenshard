@@ -15,7 +15,7 @@ export class Track {
     this.rev = ctx.createGain(); this.rev.connect(this.fadeR);
     this.t = t0; this.t0 = t0; this.bar = 0; this.rng = new RNG(seed); this.seed = seed;
     this.inst = {}; this.insts = []; this.pending = []; this.vl = new Map();
-    this.srcs = []; this.kept = []; this.until = t0;
+    this.srcs = []; this.kept = []; this.dead = []; this.until = t0;
     this.ended = false; this.stopping = false; this.stopAt = Infinity; this.silent = false;
     this.bpm = 90; this.spb = 60 / 90; this.bpb = 4;
     this.log = eng.log ? [] : null;
@@ -25,6 +25,13 @@ export class Track {
   // ---- lifecycle ----
   reg(src, end) { this.srcs.push(src); src._end = end; if (end > this.until) this.until = end; }
   keep(node) { this.kept.push(node); }
+  // a finished note's output node must leave the (persistent) instrument bus, or the render graph keeps pulling it
+  retire(node, end) { this.dead.push(node, end); }
+  _sweepDead(now) {
+    const d = this.dead; let w = 0;
+    for (let i = 0; i < d.length; i += 2) { if (d[i + 1] < now - 0.05) { try { d[i].disconnect(); } catch (e) { /* noop */ } } else { d[w++] = d[i]; d[w++] = d[i + 1]; } }
+    d.length = w;
+  }
   // instruments are created once per track; MIX[track][key] is the calibrated stem gain (see mix.js)
   I(key, Cls, o = {}) { return this.inst[key] || (this.inst[key] = new Cls(this, { name: key, ...o, vol: (o.vol ?? 1) * ((MIX[this.mixKey || this.name] || {})[key] ?? 1) })); }
   _ramp(p, t, from, to, dur) {
@@ -62,13 +69,15 @@ export class Track {
     }
     const now = this.ctx.currentTime;
     for (const i of this.insts) i.sweep(now);
+    if (this.dead.length) this._sweepDead(now);
     if (this.srcs.length > 300) this.srcs = this.srcs.filter((s) => s._end > now);
   }
   dispose() {
     const now = this.ctx.currentTime;
     for (const s of this.srcs) { try { s.stop(now); } catch (e) { /* not started / already stopped */ } }
     for (const k of this.kept) { try { k.stop(now); } catch (e) { /* noop */ } }
-    this.srcs = []; this.kept = [];
+    for (let i = 0; i < this.dead.length; i += 2) { try { this.dead[i].disconnect(); } catch (e) { /* noop */ } }
+    this.srcs = []; this.kept = []; this.dead = [];
     for (const i of this.insts) i.sweep(Infinity);
     try { this.fade.disconnect(); this.fadeR.disconnect(); } catch (e) { /* noop */ }
     this.ended = true;

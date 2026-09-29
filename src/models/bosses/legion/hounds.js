@@ -73,19 +73,19 @@ function makeHound(kind) {
       E('neck', [0, 1.55, -0.92], g([0.18, 0.17, 0.16]), { k: 0.1, col: c.belly, tag: 'belly', dtl: DT.hide });
       // ---------------- head (group 1): long heavy skull, brow ridges, deep muzzle
       const hh = { group: 1, ...hd, tag: 'head' };
-      E('head', H(0, 0.02, -0.07), HR([0.22 * G, 0.14, 0.2]), { k: 0.07, ...hh });                                 // flat broad skull
+      E('head', H(0, 0.015, -0.07), HR([0.19 * G, 0.125, 0.2]), { k: 0.07, ...hh });                               // flat skull
       E('head', H(0, 0.09, -0.12), HR([0.13, 0.06, 0.16]), { k: 0.05, ...hh });                                     // sagittal crest
       for (const s of [-1, 1]) {
-        E('head', H(s * 0.1, 0.07, -0.24), HR([0.095, 0.045, 0.075]), { k: 0.035, ...hh, rot: [0.2, s * 0.2, s * 0.45] });  // brow ridge
-        E('head', H(s * 0.16, -0.05, -0.1), HR([0.1, 0.12, 0.15]), { k: 0.06, ...hh });                             // masseter
+        S.box('head', H(s * 0.1, 0.066, -0.255), HR([0.088, 0.026, 0.058]), 0.022, { k: 0.03, ...hh, rot: [0.3, s * 0.3, s * 0.55] });  // brow shelf (angry V)
+        E('head', H(s * 0.155, -0.05, -0.1), HR([0.088, 0.108, 0.14]), { k: 0.05, ...hh });                          // masseter
         E('head', H(s * 0.12, -0.01, -0.26), HR([0.07, 0.06, 0.1]), { k: 0.05, ...hh });                             // cheekbone
       }
       S.seg('head', H(0, 0.0, -0.2), H(0, -0.055, -0.64), 0.135 * HS, 0.085 * HS, { k: 0.06, ...hh });              // wedge muzzle (flat top)
       E('head', H(0, 0.035, -0.4), HR([0.075, 0.03, 0.18]), { k: 0.04, ...hh });                                     // nasal ridge
-      E('head', H(0, -0.035, -0.64), HR([0.075, 0.055, 0.05]), { k: 0.03, ...hh, col: 0x0c0808, tag: 'nose' });
+      S.box('head', H(0, -0.03, -0.64), HR([0.066, 0.04, 0.04]), 0.03, { k: 0.03, ...hh, col: 0x0c0808, tag: 'nose' });   // canine nose leather
       E('head', H(0, -0.11, -0.44), HR([0.125, 0.05, 0.19]), { k: 0.04, ...hh });                                    // upper lip / fang sheath
       for (const s of [-1, 1]) {
-        E('head', H(s * 0.035, -0.03, -0.665), HR([0.02, 0.016, 0.025]), { group: 1, k: 0.01, sub: true, col: 0x050303, tag: 'nostril' });
+        E('head', H(s * 0.04, -0.048, -0.676), HR([0.024, 0.01, 0.02]), { group: 1, k: 0.008, sub: true, col: 0x050303, tag: 'nostril', rot: [0, s * 0.7, -s * 0.6] });   // comma slits
         E('head', H(s * 0.11, 0.035, -0.28), HR([0.045, 0.024, 0.035]), { group: 1, k: 0.015, sub: true, col: 0x0a0404, tag: 'socket', rot: [0, 0, s * 0.3] });
       }
       E('head', H(0, -0.16, -0.36), HR([0.1, 0.04, 0.24]), { group: 1, k: 0.02, sub: true, col: c.maw, tag: 'mouth' });
@@ -126,7 +126,7 @@ function makeHound(kind) {
       v.mix(0x050304, sstep(0.45, 0.1, y) * 0.5);
       X[0] = 0.04;
       let cr = c.crack * (0.5 + 0.5 * sstep(0.2, 0.9, -ny + 0.4)); // stronger on flanks/belly
-      if (v.group === 1) cr *= 0.35; if (v.group === 2) cr *= 0.4;
+      if (v.group === 1) cr *= 0.35 * sstep(HP[2] - 0.62 * HS, HP[2] - 0.4 * HS, z); if (v.group === 2) cr *= 0.4;   // none on the muzzle tip
       if (y < 0.3) cr *= 0.3;
       X[2] = cr * Math.min(1, hide + v.t('belly'));
       if (v.t('belly') > 0.3 && fire) { v.emis = 0.18 * v.t('belly'); }
@@ -161,7 +161,8 @@ function makeHound(kind) {
           }
         } else pts = bez(H(s * 0.1, 0.13, -0.12), H(s * 0.2, 0.3, 0.2), H(s * 0.24, 0.32, 0.72), 14);
         const N = pts.length;
-        acc.add(sweep(pts, taper(N, fire ? 0.1 : 0.07, 0.006, 1.1), { radial: 9, capStart: true }), {
+        const hr = taper(N, fire ? 0.1 : 0.07, 0.006, 1.1).map((r, i) => (fire ? r * (1 + 0.11 * Math.max(0, Math.sin(i * 2.2)) * (1 - i / N)) : r));   // ram horn growth ridges
+        acc.add(sweep(pts, hr, { radial: 9, capStart: true }), {
           skin: hb, dtl: DT.horn,
           color: (p, n, uv) => (!fire && uv[1] > 0.3 && Math.abs(Math.sin(uv[0] * TAU)) < 0.2 ? cS : lerp3(cH, cHT, Math.pow(uv[1], 1.3))),
           emis: (p, uv) => (!fire && uv[1] > 0.3 && Math.abs(Math.sin(uv[0] * TAU)) < 0.2 ? 1.8 : 0),
@@ -185,7 +186,7 @@ function makeHound(kind) {
       for (const s of [-1, 1]) spk(rigid(b(s < 0 ? 'fLL' : 'fLR')), [s * 0.33, 0.82, -0.36], [s * 0.3, 0.3, 1], 0.2, 0.04, false);
       // ears (short, swept back)
       for (const s of [-1, 1]) {
-        const g2 = leafGeo(0.06, 0.16, 0.02, 0.8, 0.3, { nu: 6, nv: 5, pw: 0.7 });
+        const g2 = leafGeo(0.055, 0.2, 0.02, 0.8, 0.35, { nu: 6, nv: 6, pw: 1.35 });
         const m = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(-1.0, s * 0.3, -s * 0.5, 'YXZ')); m.setPosition(...H(s * 0.15, 0.1, 0.02));
         acc.add(g2, { matrix: m, skin: rigid(b(s < 0 ? 'earL' : 'earR')), dtl: DT.hide, color: (p, n, uv) => (uv[0] >= 1 ? col(c.hide) : col(c.belly)) });
       }

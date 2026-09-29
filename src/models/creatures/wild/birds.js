@@ -43,11 +43,9 @@ function featherWing(acc, side, S, bones, o) {
   });
   const cf = o.cols;
   acc.add(g, {
-    skin: (p) => {
-      const u = Math.abs(p.x - S[0]) / L;
-      if (u < 0.1) { const t = sstep(0.0, 0.1, u); return { si: [bones.chest, bones.w1, 0, 0], sw: [1 - t, t, 0, 0] }; }
-      const t = sstep(ARM - 0.06, ARM + 0.04, u); return { si: [bones.w1, bones.w2, 0, 0], sw: [1 - t, t, 0, 0] };
-    },
+    // arm → hand blend only; the root chord lies on the shoulder's roll axis, so it stays attached while flapping and
+    // folds cleanly with the arm (a chest-skinned root strip would stay spread and crumple when folded)
+    skin: (p) => { const u = Math.abs(p.x - S[0]) / L, t = sstep(ARM - 0.06, ARM + 0.04, u); return { si: [bones.w1, bones.w2, 0, 0], sw: [1 - t, t, 0, 0] }; },
     dtl: [0.3, 0, 0.1, 0],
     color: (p, n, uv) => col(cf(uv[0], uv[1])),
   });
@@ -135,7 +133,7 @@ function birdWings(ctl, dt) { // allocation-free: pose writes via the framework'
     if (W.foldPitch) { R[0] = W.foldPitch * fold; R[1] = 0; R[2] = 0; rotA(P.lq[w0]); }
     R[0] = fold * W.foldRoll; R[1] = -s * fold * (Math.PI / 2 - W.foldYaw); R[2] = s * (W.mid + W.amp * beat * flapA + glide * 0.1 - tuck * 0.2) * open; rotA(P.lq[w0]);
     R[0] = s * W.foldOut * fold; R[1] = W.foldUp * fold; R[2] = 0; moveA(P.lt[w0]);
-    P.sc[w0].x = armK;
+    P.sc[w0].x = armK; P.sc[w0].z = 1 - fold * W.foldChord; P.sc[w1].z = 1 - fold * W.foldChord * 0.7; // folded feathers overlap: shorter chord
     R[0] = -s * W.L * ARM * fold * (1 - W.armFold); R[1] = 0; R[2] = 0; moveA(P.lt[w1]);
     // hand: flexes back on the upstroke, lags the beat, droops slightly when gliding
     R[0] = 0; R[1] = s * (flex0 * 0.9 + fold * 0.06); R[2] = s * (W.amp * 0.35 * lag * flapA * open - glide * 0.12); rotA(P.lq[w1]);
@@ -279,7 +277,7 @@ const SB_SPEC = {
     ],
   },
   lean: { walk: 0.05, run: 0.15, combat: 0 }, twist: 0.02, crouch: 0.01, breathe: 0.05,
-  bw: { L: SB.wingL, flapF: 11, hoverF: 15, amp: 1.05, mid: 0.25, glide: 0, bound: true, foldRoll: -0.25, foldYaw: 0.1, armFold: 0.3, foldOut: 0.005, foldUp: 0.004, foldPitch: 0.12 },
+  bw: { L: SB.wingL, flapF: 11, hoverF: 15, amp: 1.05, mid: 0.25, glide: 0, bound: true, foldRoll: 1.3, foldYaw: -0.12, armFold: 0.3, foldOut: 0.006, foldUp: 0.004, foldPitch: 0.1, foldChord: 0.3 },
   flyH: 1.5, flyBob: 0.05, flyLean: 0.45, airPaw: -1.0, bobV: 0.3, bobZ: 0.02,
   fidgets: [{ name: 'peck', w: 3 }, { name: 'look', w: 2 }, { name: 'hop', w: 2 }, { name: 'sing', w: 1 }, { name: 'preen', w: 1 }], fidgetGap: 1.6,
   pose: birdPose((ctl) => { const a = ctl.speedSm < 0 ? -ctl.speedSm : ctl.speedSm, u = a < 0.3 ? 0 : a > 1.5 ? 1 : (a - 0.3) / 1.2; RV[0] = 0.12 * ctl.fly * (1 - u * u * (3 - 2 * u)); RV[1] = 0; RV[2] = 0; rotA(ctl.pose.lq[ctl.b.hips]); }),
@@ -368,7 +366,7 @@ const SG_SPEC = {
     ],
   },
   lean: { walk: 0.08, run: 0.25, combat: 0 }, twist: 0.05, waddle: 0.12, crouch: 0.01, breathe: 0.03,
-  bw: { L: SG.wingL, flapF: 3.0, hoverF: 4.2, amp: 0.65, mid: 0.18, glide: 0.85, bound: false, foldRoll: -0.2, foldYaw: 0.1, armFold: 0.25, foldOut: 0.012, foldUp: -0.006, foldPitch: 0.16 },
+  bw: { L: SG.wingL, flapF: 3.0, hoverF: 4.2, amp: 0.65, mid: 0.18, glide: 0.85, bound: false, foldRoll: 1.3, foldYaw: -0.12, armFold: 0.25, foldOut: 0.022, foldUp: 0.004, foldPitch: 0.1, foldChord: 0.45 },
   flyH: 2.6, flyBob: 0.12, flyLean: 0.3, airPaw: -1.2, bobV: 0.5, bobZ: 0.025,
   fidgets: [{ name: 'peck', w: 3 }, { name: 'look', w: 2 }, { name: 'squawk', w: 1 }, { name: 'preen', w: 1 }], fidgetGap: 2.5,
   pose: birdPose(),
@@ -475,7 +473,7 @@ const CK_SPEC = {
     ],
   },
   lean: { walk: 0.1, run: 0.4, combat: 0 }, twist: 0.05, waddle: 0.05, breathe: 0.03,
-  bw: { L: CK.wingL, flapF: 7, hoverF: 9, amp: 0.9, mid: 0.2, glide: 0, bound: false, foldRoll: 1.15, foldYaw: 0.08, armFold: 0.3, foldOut: 0.03, foldUp: 0.0, foldPitch: 0 },
+  bw: { L: CK.wingL, flapF: 7, hoverF: 9, amp: 0.9, mid: 0.2, glide: 0, bound: false, foldRoll: 1.15, foldYaw: 0.08, armFold: 0.3, foldOut: 0.03, foldUp: 0.0, foldPitch: 0, foldChord: 0 },
   flyH: 0.6, flyBob: 0.06, flyLean: 0.4, airPaw: -0.8, bobV: 0.5, bobZ: 0.035,
   fidgets: [{ name: 'peck', w: 4 }, { name: 'scratch', w: 2 }, { name: 'cluck', w: 2 }, { name: 'look', w: 1 }, { name: 'flap', w: 1 }], fidgetGap: 2,
   pose: birdPose(),
