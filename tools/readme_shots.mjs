@@ -31,10 +31,10 @@ if (want('hero') || want('raid')) {
   await hideUi(false); await fresh();
 }
 if (want('city') || want('nexus') || want('guardian') || want('chaos')) {
-  await make('songweaver', 'powerpass');
+  await make('stormfist', 'powerpass');
   if (want('city')) { await new Promise(r => setTimeout(r, 1500)); await shot('city'); }
   if (want('nexus')) { await p.evaluate(() => __session.contentMenu('chaos')); await new Promise(r => setTimeout(r, 900)); await shot('nexus'); await p.evaluate(() => __session.ui.close('nexus')); }
-  if (want('chaos')) { await p.evaluate(() => __session.launch({ kind: 'chaos', tier: 1 })); await auto(); await new Promise(r => setTimeout(r, 9000)); await shot('chaos'); await p.evaluate(() => __session.returnToHub()); await new Promise(r => setTimeout(r, 2500)); }
+  if (want('chaos')) { await p.evaluate(() => __session.launch({ kind: 'chaos', tier: 2 })); await auto(); await new Promise(r => setTimeout(r, 16000)); await shot('chaos'); await p.evaluate(() => __session.returnToHub()); await new Promise(r => setTimeout(r, 2500)); }
   if (want('guardian')) { await p.evaluate(() => __session.launch({ kind: 'guardian', boss: 'kurai' })); await auto(); await new Promise(r => setTimeout(r, 12000)); await shot('guardian'); }
   await fresh();
 }
@@ -45,7 +45,7 @@ if (want('prologue')) {
 }
 if (want('sea')) {
   await make('pistoleer', 'powerpass', 'm');
-  await p.evaluate(async () => { await __session.launch({ kind: 'sail' }); await new Promise(r => setTimeout(r, 6000)); });
+  await p.evaluate(async () => { globalThis.__seaHour = 15.5; await __session.launch({ kind: 'sail', to: 'coinflip' }); await new Promise(r => setTimeout(r, 16000)); });
   await shot('sea');
 }
 console.log('errors', errs.slice(0, 5));
