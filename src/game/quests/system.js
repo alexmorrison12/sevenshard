@@ -330,7 +330,11 @@ export class QuestSystem {
   // ---------------------------------------------------------------- per frame
   update(dt) {
     const c = this.char; if (!c || !this.g.level) return;
-    if (this.lastChar !== c) { this.lastChar = c; this.lastLevel = c.level; this.declined.clear(); this.migrate(); this.dirty = true; }
+    if (this.lastChar !== c) {
+      this.lastChar = c; this.lastLevel = c.level; this.declined.clear(); this.migrate(); this.dirty = true;
+      // a cutscene step left unfinished last session plays again when the player is back where it happens
+      this.pendingCut = this.st?.active.find(e => this.step(e)?.type === 'cutscene') || null;
+    }
     this.t += dt;
     this.bindLevel();
     if (this.nextAccept != null) { this.nextAccept -= dt; if (this.nextAccept <= 0 && this.autoAccept()) this.nextAccept = null; }

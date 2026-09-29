@@ -25,6 +25,7 @@ import { makeFieldProp } from '../quests/props.js';
 import { Cutscene, screenFade } from '../quests/cutscene.js';
 import { createShip } from '../../models/creatures/index.js';
 
+const PROLOGUE_IDS = ['p1_fire', 'p2_blades', 'p3_guns', 'p4_shardfire', 'p5_ravager', 'p6_sails'];
 const BEAT_ANCHORS = {
   street: ['poi:barricade', 'poi:town_square', 'poi:lower_town', 'poi:street', 'spawn'],
   gate: ['poi:outer_gate', 'poi:gate_ramp', 'poi:gate', 'poi:gatehouse', 'duel'],
@@ -106,7 +107,7 @@ export class PrologueMode {
   update(dt) {
     const Q = this.Q, me = this.me; if (!Q || !me) return;
     this.t += dt;
-    if (!this.intro) { this.intro = true; this.playIntro(); return; }
+    if (!this.intro) { this.intro = true; if (this.fresh()) this.playIntro(); else this.resume(); return; }
     if (this.manning) this.tickManning(dt);
     this.tickAshmaw(dt);
     this.tickDuel(dt);
@@ -372,6 +373,35 @@ export class PrologueMode {
     if (done) { this.duelOver = true; if (v.ctrl) { v.ctrl.interrupt(0); v.ctrl.started = false; } this.Q?.signal('duel'); }
   }
   // ---------------------------------------------------------------- intro & ending
+  /** a brand-new siege (nothing done yet) opens with the intro; a prologue left mid-way picks up where it stopped */
+  fresh() { const Q = this.Q; return !PROLOGUE_IDS.some(id => Q.isDone(id)) && Q.stepOf('p1_fire') <= 0; }
+  resume() {
+    const Q = this.Q, me = this.me, st = k => Q.stepOf(k); if (!Q || !me) return;
+    let at = null;
+    if (Q.isActive('p1_fire')) at = st('p1_fire') >= 2 ? 'street' : null;
+    else if (Q.isActive('p2_blades')) at = 'gate';
+    else if (Q.isActive('p3_guns')) at = st('p3_guns') >= 1 ? 'ramparts' : 'gate';
+    else if (Q.isActive('p4_shardfire')) at = 'breach';
+    else if (Q.isActive('p5_ravager')) at = st('p5_ravager') >= 1 ? 'duel' : 'bailey';
+    else if (Q.isActive('p6_sails')) at = 'duel';
+    const a = at && anchorOf(this.g.zone, BEAT_ANCHORS[at]);
+    if (a) {
+      const p = at === 'breach' ? walkable(this.L, inward(a, 9).x, inward(a, 9).z, 6) : walkable(this.L, a.x, a.z + 3, 6);
+      me.pos.x = p.x; me.pos.z = p.z; me.pos.y = this.L.heightAt(p.x, p.z);
+      const b = this.brannoc; if (b) { const q = walkable(this.L, p.x + 2, p.z - 1.5, 4); b.pos.x = q.x; b.pos.z = q.z; }
+      this.g.player?.stop?.(); this.g.cam?.snap?.(me.pos);
+    }
+    // the Shard was already burning when they left, and the monsters it was burning for are still here
+    if (Q.isActive('p4_shardfire')) { this.spawnAshmaw(); if (st('p4_shardfire') >= 1) this.awaken(true); }
+    if (Q.isActive('p5_ravager') && st('p5_ravager') < 3) this.awaken(true);
+    if (Q.isActive('p5_ravager') && st('p5_ravager') >= 2) { const vk = anchorOf(this.g.zone, BEAT_ANCHORS.varkhul) || { x: me.pos.x, z: me.pos.z - 8 }; const v = this.spawnVarkhul({ x: vk.x, z: vk.z }); v?.faceTo(me.pos.x, me.pos.z); }
+    if (Q.isActive('p6_sails') && !this.seraphine?.level) {
+      const d = storyDef('seraphine'), q = walkable(this.L, me.pos.x - 2.5, me.pos.z + 2.5, 4);
+      if (d) { const u = makeResident(d, { x: q.x, z: q.z, facing: 0 }, { story: true }); u.data.cineActor = true; u.ctrl = null; this.L.add(u); this.units.push(u); this.seraphine = u; }
+    }
+    this.g.audio?.music?.('boss');
+    this.g.ui?.banner?.('The Siege of Brighthold', { kind: 'zone', sub: 'Prologue', dur: 3 });
+  }
   async playIntro() {
     await Cutscene.play(this.s, async cs => {
       const me = cs.hero, sp = this.A('spawn'), y = cs.L.heightAt(sp.x, sp.z);

@@ -10,6 +10,7 @@ import { BOSS_DEFS } from '../data/bosses/index.js';
 
 const CSS = `.ss-watch{position:fixed;left:50%;top:calc(max(8px,env(safe-area-inset-top,0px)) + 96px);transform:translateX(-50%);z-index:31;display:flex;align-items:center;gap:12px;padding:7px 8px 7px 14px;border-radius:4px;background:rgba(9,12,22,.9);border:1px solid #3a4560;box-shadow:0 4px 16px rgba(0,0,0,.5);font:600 12.5px "Segoe UI",Roboto,sans-serif;color:#e7e3d8;white-space:nowrap}
 .ss-watch b{color:#ff5a4a;letter-spacing:.14em;text-transform:uppercase;font-size:11px}.ss-watch b::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:#ff4a3a;box-shadow:0 0 8px #ff4a3a;margin-right:6px;vertical-align:1px;animation:ssrec 1.2s infinite}
+body.ss-watching .ss-chat,body.ss-watching .ss-menu,body.ss-watching .ss-res,body.ss-watching .ss-sc,body.ss-watching .ss-qt,body.ss-watching .ss-xp,body.ss-watching .ss-buffs,body.ss-watching .ss-id{display:none!important}
 @keyframes ssrec{50%{opacity:.35}}.ss-watch button{font:600 11.5px "Segoe UI",Roboto,sans-serif;padding:5px 10px;border-radius:3px;border:1px solid #3a4560;background:#141b2e;color:#e7e3d8;cursor:pointer}`;
 
 export async function watchRaid(session, { raid = 'gorrath', gate = 1 } = {}) {
@@ -34,6 +35,7 @@ export async function watchRaid(session, { raid = 'gorrath', gate = 1 } = {}) {
   g.onHud = () => { const h = s.hud(); if (h) { h.quests = []; } s.ui.hud.update(h); };
   // badge
   if (!document.getElementById('ss-watch-css')) { const st = document.createElement('style'); st.id = 'ss-watch-css'; st.textContent = CSS; document.head.appendChild(st); }
+  document.body.classList.add('ss-watching');   // spectator view: no skill bar, chat or menus — just the fight
   const badge = document.createElement('div'); badge.className = 'ss-watch';
   badge.innerHTML = `<b>Live</b><span>${BOSS_DEFS[gt.bosses[0].boss].name} · 8 AI raiders</span><button type="button">Leave</button>`;
   document.body.appendChild(badge);
@@ -64,7 +66,7 @@ export async function watchRaid(session, { raid = 'gorrath', gate = 1 } = {}) {
     s.watching = false; offBanner();
     removeEventListener('keydown', key, true);
     g.hooks.frame = g.hooks.frame.filter(f => f !== director);
-    badge.remove(); g.camFocus = null; g.cam.maxDist = 27;
+    badge.remove(); g.camFocus = null; g.cam.maxDist = 27; document.body.classList.remove('ss-watching');
     s.leaveWorld(); s.backdrop().then(() => s.title());
   }
   badge.querySelector('button').addEventListener('click', stop);

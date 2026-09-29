@@ -394,7 +394,7 @@ class InfernoRun {
   }
   cleanupFloor() {
     this.portalFx?.stop?.(); this.portalFx = null; this.portalOpen = false;
-    this.chest?.beam?.stop?.(); if (this.chest?.mesh) this.chest.mesh.removeFromParent(); this.chest = null;
+    this.chest?.beam?.stop?.(); if (this.chest?.mesh) { this.chest.mesh.removeFromParent(); this.chest.mesh.traverse(o => o.geometry?.dispose?.()); } this.chest = null;
     if (this.props) { this.props.removeFromParent(); this.props.traverse(o => { if (o.geometry) o.geometry.dispose(); }); this.props = null; }
     if (this.navBase && this.L && this.L.nav.data.length === this.navBase.length) this.L.nav.data.set(this.navBase);
     for (const tm of this.timers || []) this.L?.cancelTimer(tm);
@@ -925,7 +925,7 @@ class InfernoRun {
     const f = this.floor, g = this.g, me = this.me;
     g.audio?.sfx?.('chest_open', { pos: me.pos });
     this.L.emit('fx', { unit: me, preset: 'burst', x: c.x, z: c.z, ev: { color: 'gold' } });
-    const lid = c.mesh; if (lid) { lid.scale.y = 0.7; setTimeout(() => lid.removeFromParent(), 2500); }
+    const lid = c.mesh; if (lid) { lid.scale.y = 0.7; setTimeout(() => { lid.removeFromParent(); lid.traverse(o => o.geometry?.dispose?.()); }, 2500); c.mesh = null; }
     const b = { silver: 3000 + f * 350, shards: 250 + f * 25 };
     if (this.rng.chance(0.35)) b.gold = 8 + Math.floor(f / 3);
     if (this.rng.chance(0.2)) b.leapstone = 2 + Math.floor(f / 15);

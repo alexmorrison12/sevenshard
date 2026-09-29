@@ -586,7 +586,7 @@ BUILD.hushwater = ({ kit, flags, palms, flora, ox, oz, H, W, lod, spots, rng, ni
 
 // ---------------------------------------------------------------- Shellback Isle: Grandmother Shellback
 /** Grandmother Shellback's head, neck and flippers (sculpted blobs, vertex-painted); head centre (hx, hz) faces north */
-export function turtleParts(kit, hx, hz, { y = 1.2, s = 1 } = {}) {
+export function turtleParts(kit, hx, hz, { y = 1.2, s = 1, detail = true } = {}) {
   const skin = lc(0x6f8f5c), skinD = lc(0x445c3c), skinL = lc(0x9ab27a), beak = lc(0x3a3a2e);
   const paint = (base) => (p, n) => { const k = 0.72 + 0.28 * Math.max(0, n.y) + (Math.sin(p.x * 3.1) * Math.sin(p.z * 2.7)) * 0.05; return [base[0] * k, base[1] * k, base[2] * k]; };
   const at = (x, yy, z, ry = 0, sx = 1, sy = 1, sz = 1, rx = 0, rz = 0) => M(hx + x * s, y + yy * s, hz + z * s, ry, sx * s, sy * s, sz * s, rx, rz);
@@ -607,6 +607,32 @@ export function turtleParts(kit, hx, hz, { y = 1.2, s = 1 } = {}) {
   }
   // scale plates on the crown of the head
   for (let i = 0; i < 9; i++) { const a = i / 9 * Math.PI * 2; kit.add('paint', blob(1, 0, null, [1.2, 0.3, 1.1]), at(Math.cos(a) * 1.9, 4.3 - Math.abs(Math.sin(a)) * 0.4, -1 + Math.sin(a) * 2.2), { tint: paint(skinD), ao: false, chunkAt: [hx, hz] }); }
+  // she is an island, not a statue: nobody walks through her head
+  kit.block(circle(hx, hz, 5.4 * s), 0.3); for (let i = 0; i < 3; i++) kit.block(circle(hx, hz + (7 + i * 3.2) * s, (4.6 - i * 0.3) * s), 0.3);
+  if (!detail) return;
+  // mottled hide: flattened scales hugging the skull and the neck folds, moss on the crown, barnacles on the neck
+  const rng = new RNG(77), up = new THREE.Vector3(0, 1, 0), mottle = [lc(0x5a7a4a), lc(0x86a266), lc(0x4a6a3c), lc(0x7a9a5a)];
+  const hug = (cx, cy, cz, ax, ay, az, n, size, tints, th0 = 0.1, th1 = 1.15, flat = 0.18, mat = 'paint') => {
+    for (let i = 0; i < n; i++) {
+      const th = rng.range(th0, th1), ph = rng.range(0, TAU), dx = Math.sin(th) * Math.cos(ph), dy = Math.cos(th), dz = Math.sin(th) * Math.sin(ph);
+      const p = new THREE.Vector3(hx + (cx + ax * dx * 0.98) * s, y + (cy + ay * dy * 0.98) * s, hz + (cz + az * dz * 0.98) * s);
+      const q = new THREE.Quaternion().setFromUnitVectors(up, new THREE.Vector3(dx / ax, dy / ay, dz / az).normalize());
+      const r = size * rng.range(0.6, 1.25);
+      kit.add(mat, blob(1, 0, null, [r * rng.range(0.8, 1.35), r * flat, r]), new THREE.Matrix4().compose(p, q, new THREE.Vector3(s, s, s)), { tint: tints[i % tints.length], ao: false, chunkAt: [hx, hz] });
+    }
+  };
+  hug(0, 0.6, 0, 5.6, 4.0, 8.2, 38, 1.05, mottle);
+  for (let i = 0; i < 3; i++) hug(0, -0.4 - i * 0.2, 7 + i * 3.2, 5.2 - i * 0.3, 3.2 - i * 0.2, 3.4, 12, 0.95, mottle, 0.2, 1.3);
+  hug(0, 0.6, 0.5, 5.6, 4.0, 8.2, 10, 1.3, [lc(0x6a8a3a), lc(0x8aa04a)], 0.05, 0.5, 0.12);                    // moss on the crown
+  for (let i = 0; i < 26; i++) {                                                                               // barnacles on the neck
+    const th = rng.range(0.1, 0.9), ph = rng.range(0, TAU), k = rng.int(0, 2), ax = 5.2 - k * 0.3, ay = 3.2 - k * 0.2, az = 3.4;
+    const dx = Math.sin(th) * Math.cos(ph), dy = Math.cos(th), dz = Math.sin(th) * Math.sin(ph);
+    const p = new THREE.Vector3(hx + ax * dx * s, y + (-0.4 - k * 0.2 + ay * dy) * s, hz + (7 + k * 3.2 + az * dz) * s);
+    const q = new THREE.Quaternion().setFromUnitVectors(up, new THREE.Vector3(dx / ax, dy / ay, dz / az).normalize());
+    kit.add('paint', cyl(0.05, 0.16, 0.2, 6, 1), new THREE.Matrix4().compose(p, q, new THREE.Vector3(s, s, s)), { tint: 0xe8e2d4, ao: false, chunkAt: [hx, hz] });
+  }
+  // pale folds around each closed eye
+  for (const sx of [-1, 1]) kit.add('paint', blob(1, 1, null, [1.9, 0.45, 1.35]), at(sx * 4.2, 1.85, -3.1, sx * 0.4, 1, 1, 1, 0, sx * 0.3), { tint: paint(skinL), ao: false, chunkAt: [hx, hz] });
 }
 function flipper(kit, x, y, z, ry, len, s = 1) {
   const skin = lc(0x6f8f5c), dark = lc(0x445c3c);
@@ -616,7 +642,7 @@ function flipper(kit, x, y, z, ry, len, s = 1) {
 BUILD.shellback = ({ kit, flags, palms, flora, ox, oz, H, W, lod, spots, rng }) => {
   // the head rests on the north beach, eyes closed; flippers splay out into the shallows
   const [hx, hz] = W(0, -50);
-  turtleParts(kit, hx, hz, { y: 1.4, s: 1 });
+  turtleParts(kit, hx, hz, { y: 1.4, s: 1, detail: lod === 'full' });
   flipper(kit, ...W(-40, -26), 0.3, -Math.PI * 0.3, 16); flipper(kit, ...W(40, -26), 0.3, Math.PI * 0.3, 16);
   flipper(kit, ...W(-32, 38), 0.2, -Math.PI * 0.75, 11); flipper(kit, ...W(32, 38), 0.2, Math.PI * 0.75, 11);
   { const [tx, tz] = W(0, 50); kit.add('paint', blob(1, 1, null, [2.2, 1.2, 5]), M(tx, 0.3, tz, 0.1), { tint: 0x6f8f5c, chunkAt: [tx, tz] }); }
