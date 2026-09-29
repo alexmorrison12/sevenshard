@@ -165,6 +165,7 @@ export class BaseCtl {
     this.combat = 0; this.run = 0; this.turnSm = 0; this.speedSm = 0; this.accel = 0;
     this.air = 0; this.fly = 0; this.flyT = 0; this.locoW = 1; this.restW = 0;
     this.jaw = 0; this.ear = 0; this.hackle = 0; this.glow = 1; this.flame = 1; this.charge = 0; this.wingSpread = 0; this.flap = 0; this.wt = Math.random() * 10; this.wingBeat = 0;
+    this.enr = 0; // smoothed state.enraged (brighter glow, hackles up)
     this._speed = 0; this._turn = 0; this._strafe = 0; this.dt = 0.016; this._idleW = 0;
     this.look = { y: 0, p: 0, ty: 0, tp: 0, timer: 1 + Math.random() * 3 };
     this.fidgetTimer = 3 + Math.random() * 5;
@@ -173,6 +174,24 @@ export class BaseCtl {
     this.u = inst.material.userData.u;
   }
   stopActions() { this.acts.stopSoft(); }
+  /**
+   * Light damage reaction (Creature.setTint's white hit flash triggers it): plays `hit` unless the creature is dead,
+   * down, spawning or already mid-flinch. An attack still in its windup is interrupted (the game cancels it too); one past
+   * its impact plays on. → true if a flinch started.
+   */
+  flinch() {
+    const A = this.acts;
+    if (this.dead || this.isDown || !A.defs.hit) return false;
+    const L = A.list;
+    for (let i = 0; i < L.length; i++) {
+      const a = L[i], d = a.d;
+      if (a.out) continue;
+      if (a.name === 'hit') { if (a.k < 0.45) return false; continue; }
+      if (d.state && a.name !== 'stun') return false;
+      if (d.hasHit && d.hit > 0 && !d.loop) { if (a.k < d.hit * 0.9) { a.out = true; a.fo = 0.12; } else return false; }
+    }
+    return !!A.play('hit');
+  }
   play(name, dur, loop) {
     const A = this.acts;
     if (name === 'idle' || name === 'stand') { A.stopSoft(); return NOINFO; }
@@ -223,6 +242,7 @@ export class BaseCtl {
     this.flyT = (state.fly || this.spec.alwaysFly) && !this.dead && !this.isDown ? 1 : 0;
     this.fly += (this.flyT - this.fly) * (1 - Math.exp(-(this.flyT > this.fly ? 2.5 : (this.dead ? 5 : 3)) * dt));
     this.combat += ((state.combat ? 1 : 0) - this.combat) * (1 - Math.exp(-4 * dt));
+    this.enr += ((state.enraged ? 1 : 0) - this.enr) * (1 - Math.exp(-3 * dt));
     const sc = this.inst.scale, off = this.dead || this.isDown;
     const sp = state.speed, tu = state.turn, st = state.strafe;
     this._speed = off || sp === undefined ? 0 : sp / sc;
@@ -272,10 +292,11 @@ export class BaseCtl {
   }
   _uniforms() {
     const u = this.u;
-    u.uHackle.value = this.hackle;
+    const e = this.enr;
+    u.uHackle.value = this.hackle > e ? this.hackle : e;
     u.uFlame.value = this.flame;
-    u.uEmisK.value = this.glow;
-    u.uGlowAdd.value = this.charge * this.k.chargeK;
+    u.uEmisK.value = this.glow * (1 + 0.7 * e);
+    u.uGlowAdd.value = this.charge * this.k.chargeK + 0.08 * e;
     this.charge = 0;
   }
 }

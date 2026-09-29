@@ -397,7 +397,13 @@ const C = {
   reaver(x, R) { crest(x, CLASS_COLORS.reaver, () => { flame(x, R, 50, 94, 60, '#ff5a3a'); at(x, 50, 78, 0, 0.82, greatsword, { metal: 'steel', rune: '#ff4050' }); }); },
   oathkeeper(x, R) { crest(x, '#3a5aa0', () => { rays(x, R, 50, 40, 16, 8, 50, '#ffe8a0', { alpha: 0.6 }); x.fillStyle = rg(x, 50, 40, 0, 14, [[0, '#ffffff'], [0.6, '#ffe070'], [1, 'rgba(255,200,80,0)']]); circle(x, 50, 40, 14); x.fill(); at(x, 50, 76, 0, 0.9, longsword, { metal: 'silver', guard: 'gold', gem: '#4ab0ff' }); }); },
   stormfist(x, R) { crest(x, CLASS_COLORS.stormfist, () => { for (let i = 0; i < 3; i++) bolt(x, R, 50, 20, 20 + i * 30, 90, { col: '#bfe8ff', w: 1.2, gens: 4 }); at(x, 42, 50, -PI / 2, 1, fist, { metal: 'silver', cuff: '#16305a', glow: '#8ad8ff' }); }); },
-  pistoleer(x, R) { crest(x, '#8a5a2a', () => { glow(x, 50, 36, 26, '#ffb040', 0.6); for (const s of [-1, 1]) { x.save(); x.translate(50 + s * 21, 70); if (s > 0) x.scale(-1, 1); x.rotate(-0.95); x.scale(1.12, 1.12); pistol(x, {}); x.save(); x.translate(35, -8); muzzle(x, R, 0.5, '#ff9a30'); x.restore(); x.restore(); } }); },
+  pistoleer(x, R) { crest(x, '#7a4a20', () => {
+    // brass cylinder charge behind a bold revolver
+    x.save(); x.translate(50, 44); circle(x, 0, 0, 20); x.fillStyle = metalRG(x, 0, 0, 22, 'brass'); x.fill(); outline(x, INK, 1.2);
+    for (let i = 0; i < 6; i++) { const a = -PI / 2 + i * TAU / 6, cx = Math.cos(a) * 12, cy = Math.sin(a) * 12; x.fillStyle = '#1a0c04'; circle(x, cx, cy, 4.6); x.fill(); glow(x, cx, cy, 7, '#ff8a20', 0.8); x.fillStyle = rg(x, cx - 0.6, cy - 0.6, 0, 3.4, [[0, '#fff0b0'], [1, '#c05a10']]); circle(x, cx, cy, 3); x.fill(); }
+    x.restore();
+    x.save(); x.translate(30, 80); x.rotate(-0.72); x.scale(1.7, 1.7); x.shadowColor = 'rgba(0,0,0,.65)'; x.shadowBlur = 5; pistol(x, { metal: 'steel', trim: 'gold' }); x.shadowBlur = 0; x.restore();
+  }); },
   starcaller(x, R) { crest(x, CLASS_COLORS.starcaller, () => { for (let i = 0; i < 12; i++) glow(x, 20 + R() * 60, 16 + R() * 60, 1 + R() * 1.4, '#ffffff', 0.7); star(x, 50, 44, 8, 7, 24); x.fillStyle = lg(x, 30, 24, 70, 64, [[0, '#ffffff'], [0.5, '#d8c0ff'], [1, '#6a3ab0']]); x.fill(); outline(x, INK, 1); x.fillStyle = rg(x, 48, 42, 0, 8, [[0, '#ffffff'], [1, '#7ad8ff']]); circle(x, 50, 44, 6.5); x.fill(); }); },
   songweaver(x, R) { crest(x, '#b85a6a', () => { at(x, 50, 72, 0, 0.95, harp, { gem: '#36d8c6' }); note(x, 72, 36, 0.55, '#36d8c6', 0); }); },
   bladedancer(x, R) { crest(x, '#5a3a90', () => { moon(x, 50, 40, 16, '#e0d0ff', { bite: 0.5, biteY: 0.2 }); at(x, 36, 76, 0.55, 0.9, curvedBlade, { metal: 'silver', edgeGlow: '#e0b0ff' }); x.save(); x.translate(64, 76); x.rotate(-0.55); x.scale(-0.9, 0.9); curvedBlade(x, { metal: 'silver', edgeGlow: '#e0b0ff' }); x.restore(); }); },

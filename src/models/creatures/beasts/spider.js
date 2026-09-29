@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { BaseCtl } from '../ctl.js';
 import { Gait } from '../gait2.js';
-import { kf } from '../acts.js';
+import { kf, retime } from '../acts.js';
 import { sweep, rigid } from '../../kit/geo.js';
 import { col } from '../../kit/sdf.js';
 import { addEye, addHorn, addSpikes, lerp3 } from '../../kit/parts.js';
@@ -296,8 +296,8 @@ function flip(ctl, w, f, side, lift, curl, flail, t) {
 const DE_T = [0, 0.12, 0.3, 0.42, 0.5, 1], DE_Y = [0, 0.3, 0.45, 0.08, 0.14, 0.08];
 
 const ACTIONS = {
-  attack: { dur: 0.75, a: 0.1, d: 0.8, hit: 0.5, fn(ctl, a, w) { // rear a little, lunge down and bite
-    const P = ctl.pose, b = ctl.b, k = a.k;
+  attack: { dur: 0.9, a: 0.1, d: 0.8, hit: 0.44, fn(ctl, a, w) { // rear a little, lunge down and bite (hit = game windup 0.4 / 0.9 s)
+    const P = ctl.pose, b = ctl.b, k = retime(a.k, 0.5, 0.44);
     const up = sstep(0, 0.35, k) * (1 - sstep(0.4, 0.52, k));
     const strike = sstep(0.4, 0.52, k) * (1 - sstep(0.68, 1, k));
     P.move(b.body, 0, (0.1 * up - 0.07 * strike) * w, (0.07 * up - 0.24 * strike) * w);

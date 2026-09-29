@@ -4,7 +4,7 @@
 // slashes from the iso camera) the strip expands toward the camera instead, so a vertical cut still reads as a
 // bold curved stroke. A velocity turns a slash into a travelling wave (Strike Wave, Crimson Wave, wind blades).
 import * as THREE from 'three';
-import { PREMUL, GLSL_NOISE } from './util.js';
+import { PREMUL, GLSL_NOISE, queueRange } from './util.js';
 
 export const SSTRIDE = 24;
 const VERT = /* glsl */`
@@ -137,9 +137,7 @@ export class Slashes {
   }
   update() {
     if (this.hi >= this.lo) {
-      this.buf.clearUpdateRanges();
-      this.buf.addUpdateRange(this.lo * SSTRIDE, (this.hi - this.lo + 1) * SSTRIDE);
-      this.buf.needsUpdate = true;
+      queueRange(this.buf, this.lo * SSTRIDE, (this.hi - this.lo + 1) * SSTRIDE);
       this.lo = this.n; this.hi = -1;
     }
     this.mesh.visible = this.fx.time <= this.until;

@@ -1,14 +1,27 @@
-// SEVENSHARD ships — procedural, one merged wood mesh + one animated sail mesh per ship (2 draw calls, +2 shadow).
+// SEVENSHARD ships — procedural, three draw calls per ship (+2 shadow): one merged "wood" mesh (hull, decks, spars,
+// rigging, guns, lanterns, props), one animated sail mesh (sails, flags, clew sheets) and a waterline foam skirt.
 //
-//   import { createShip, SHIPS } from './models/creatures/ships/index.js';
-//   const ship = createShip('dawnrunner');         // 'dawnrunner' | 'pirate' | 'ghost' | 'merchant'
-//   scene.add(ship.root);                           // game owns root.position / root.rotation.y (bow faces −Z, waterline y = 0)
-//   ship.update(dt, { speed, turn, sail });         // m/s, rad/s (+ = turning to port / counter-clockwise), 0 furled … 1 full
-//   const { dur, times } = ship.fire('L');          // port broadside ('R' starboard); times[i] = when cannons{L|R}[i] fires
-//   ship.dispose();
+//   import { createShip, SHIPS } from './models/creatures/ships/index.js';   // (re-exported by ../ships.js and ../index.js)
+//   const ship = createShip('dawnrunner');     // 'dawnrunner' | 'pirate' | 'ghost' | 'merchant' (unknown → dawnrunner + warn)
+//   scene.add(ship.root);                       // game owns root.position / root.rotation.y; bow faces −Z; waterline y = 0
+//   ship.update(dt, { speed, turn, sail });     // speed m/s, turn rad/s (+ = turning to port / counter-clockwise from above),
+//                                               // sail 0 furled … 1 full. Call every frame; allocates nothing.
+//   const { dur, times } = ship.fire('L');      // port broadside ('R' = starboard). Guns fire bow → stern; times[i] (s) is when
+//                                               // sockets.cannons{L|R}[i] fires (muzzle flash / smoke there); dur = until the last
+//                                               // gun has eased back into battery (~1.6–1.8 s)
+//   ship.setGlow(k);                            // lantern / window emissive multiplier (1 = authored; e.g. 1.6 at night)
+//   ship.dispose();                             // removes root, frees per-instance materials (geometry/textures stay cached)
 //
-// Geometry, the sail atlas and the plank texture are built once per type and shared; each instance owns two small
-// materials (+ a shadow depth material) for its own billow / reef / recoil / wheel uniforms. update() allocates nothing.
+// Sockets (Object3D; read with getWorldPosition):
+//   helm      where the captain stands at the wheel (feet on the deck, facing −Z) — rides the rocking hull
+//   wake      stern waterline (y = 0) on the root, does not bob — spawn the wake trail here
+//   cannonsL  port muzzles, bow → stern; each socket's local −Z points out of the muzzle (world dir = getWorldDirection().negate())
+//   cannonsR  starboard muzzles, same convention
+// ship.hull is the rocking node (bob / pitch / roll / heel); ship.root is never rotated by the ship itself.
+// SHIPS[type] = { name, length (hull, m), beam, loa (overall incl. bowsprit / ram), height (truck above water), guns (per side) }
+//
+// Geometry, the sail atlas and the plank texture are built once per type and cached (preloadShip / shipStats /
+// disposeShipCache); every instance owns only its small materials, so all ships share the same GL programs.
 import * as THREE from 'three';
 import { woodMaterial, sailMaterial, sailDepthMaterial, foamMaterial, MAX_GUNS } from './mats.js';
 import { plankTex } from './tex.js';
@@ -18,10 +31,10 @@ import { buildGhost } from './ghost.js';
 import { buildMerchant } from './merchant.js';
 
 export const SHIPS = {
-  dawnrunner: { name: 'Dawnrunner', length: 18 },
-  pirate: { name: 'Pirate Brig', length: 17 },
-  ghost: { name: 'Ghost Ship', length: 19 },
-  merchant: { name: 'Merchant Cog', length: 16 },
+  dawnrunner: { name: 'Dawnrunner', length: 18, beam: 5.5, loa: 21.7, height: 17.1, guns: 4 },
+  pirate: { name: 'Pirate Brig', length: 17, beam: 5.0, loa: 20.5, height: 13.8, guns: 5 },
+  ghost: { name: 'Ghost Ship', length: 19, beam: 5.9, loa: 22.1, height: 15.0, guns: 4 },
+  merchant: { name: 'Merchant Cog', length: 16, beam: 6.3, loa: 19.9, height: 15.5, guns: 2 },
 };
 const BUILDERS = { dawnrunner: buildDawnrunner, pirate: buildPirate, ghost: buildGhost, merchant: buildMerchant };
 const CACHE = {};
@@ -109,7 +122,7 @@ export function createShip(type = 'dawnrunner') {
     st.swZV += ((-roll - st.swZ) * 9 - st.swZV * 1.6) * dt; st.swZ += st.swZV * dt;
     wu.uSway.value.set(st.swX, st.swZ);
     // --- waterline foam (thicker with speed; flows aft)
-    if (fu) { fu.uFoam.value += (Math.min(1, Math.abs(speed) / 7) - fu.uFoam.value) * (first ? 1 : 1 - Math.exp(-dt * 1.5)); fu.uFlow.value = (fu.uFlow.value + speed * dt * 0.25) % 1000; }
+    if (fu) { fu.uFoam.value += (Math.min(1, Math.abs(speed) / 7) - fu.uFoam.value) * (first ? 1 : 1 - Math.exp(-dt * 1.5)); fu.uFlow.value = (fu.uFlow.value + speed * dt * 0.25) % 20000; }
     // --- cannon recoil
     const rc = wu.uRecoil.value;
     for (let i = 0; i < MAX_GUNS; i++) { if (fireT[i] < 50) { fireT[i] += dt; rc[i] = recoilAt(fireT[i]); } }

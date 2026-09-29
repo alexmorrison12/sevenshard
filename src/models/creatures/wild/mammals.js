@@ -78,9 +78,9 @@ export const rabbit = {
       S.ell(L2(s, 'rT'), [s * 0.05, 0.085, 0.065], [0.036, 0.06, 0.058], { k: 0.025, col: c.fur, tag: 'haunch', dtl: f });
       S.cone(L2(s, 'rS'), [s * 0.055, 0.062, 0.04], [s * 0.055, 0.032, 0.09], 0.024, 0.017, { k: 0.018, col: c.fur, b2: L2(s, 'rM'), dtl: f });
     }
-    S.sph('tail', [0, 0.145, 0.135], 0.027, { k: 0.015, col: 0xf0eee8, tag: 'tail', dtl: f, cw: 3 });
+    S.sph('tail', [0, 0.145, 0.135], 0.027, { k: 0.015, col: 0xe2ded6, tag: 'tail', dtl: f, cw: 3 });
   },
-  paint(v, cfg) { v.mix(cfg.pal.belly, sstep(-0.2, -0.7, v.n[1]) * 0.8); v.mix(cfg.pal.dark, sstep(0.5, 0.9, v.n[1]) * 0.25 * (1 - v.t('tail'))); v.mix(0xf0eee8, v.t('tail')); },
+  paint(v, cfg) { v.mix(cfg.pal.belly, sstep(-0.2, -0.7, v.n[1]) * 0.8); v.mix(cfg.pal.dark, sstep(0.5, 0.9, v.n[1]) * 0.25 * (1 - v.t('tail'))); v.mix(0xe2ded6, v.t('tail')); },
   parts(acc, S, R, cfg) {
     const b = (n) => R.index(n), c = cfg.pal;
     for (const s of [-1, 1]) {
@@ -101,19 +101,19 @@ export const rabbit = {
   get actionList() { return RB_ACTIONS; },
 };
 const RB_ACTIONS = {
-  hop: { dur: 0.5, a: 0.05, d: 0.9, fn(ctl, a, w) { const P = ctl.pose, b = ctl.b, h = Math.sin(a.k * Math.PI); P.move(b.body, 0, 0.08 * h * w, -0.03 * h * w); P.rx(b.body, 0.25 * Math.sin(a.k * TAU) * w); for (const L of ctl.gait.legs) ov(L, L.toe.x, L.toe.y + 0.02, L.toe.z + (L.id[0] === 'F' ? -0.02 : 0.03), h * w, true, -0.5); } },
+  hop: { dur: 0.5, a: 0.05, d: 0.9, fn(ctl, a, w) { const P = ctl.pose, b = ctl.b, h = Math.sin(a.k * Math.PI); P.move(b.body, 0, 0.08 * h * w, -0.03 * h * w); P.rx(b.body, 0.25 * Math.sin(a.k * TAU) * w); for (let li = 0, LL = ctl.gait.legs; li < LL.length; li++) { const L = LL[li]; ov(L, L.toe.x, L.toe.y + 0.02, L.toe.z + (L.id[0] === 'F' ? -0.02 : 0.03), h * w, true, -0.5); } } },
   graze: graze(-0.6, -0.4),
   nibble: { dur: 2.0, a: 0.2, d: 0.8, fn(ctl, a, w) { const P = ctl.pose, b = ctl.b; P.rx(b.neck, -0.6 * w); P.rx(b.head, (-0.3 + Math.sin(a.t * 14) * 0.05) * w); ctl.jaw = Math.max(ctl.jaw, (0.1 + 0.1 * Math.sin(a.t * 14)) * w); } },
   situp: { dur: 2.4, a: 0.2, d: 0.8, fn(ctl, a, w) { // rear up on the haunches, look around
     const P = ctl.pose, b = ctl.b, t = a.t;
     P.move(b.body, 0, 0.03 * w, 0.02 * w); P.rx(b.body, 0.7 * w); P.rx(b.neck, -0.4 * w); P.rot(b.head, -0.25 * w, Math.sin(t * 2) * 0.5 * w, 0);
-    for (const L of ctl.gait.legs) if (L.id[0] === 'F') ov(L, L.toe.x, 0.05, L.toe.z + 0.02, w, true, -0.8);
+    for (let li = 0, LL = ctl.gait.legs; li < LL.length; li++) { const L = LL[li]; if (L.id[0] === 'F') ov(L, L.toe.x, 0.05, L.toe.z + 0.02, w, true, -0.8); }
     ctl.ear = mix(ctl.ear, -0.3, w);
   } },
   groom: { dur: 2.6, a: 0.15, d: 0.85, fn(ctl, a, w) { // sits back and washes its face with both forepaws
     const P = ctl.pose, b = ctl.b, t = a.t, rub = Math.sin(t * 11);
     P.move(b.body, 0, 0.02 * w, 0.015 * w); P.rx(b.body, 0.55 * w); P.rx(b.neck, -0.25 * w); P.rx(b.head, (-0.35 + rub * 0.08) * w);
-    for (const L of ctl.gait.legs) if (L.id[0] === 'F') ov(L, L.toe.x * 0.6, 0.1 + 0.015 * rub * L.side, L.toe.z - 0.035, w, true, -1.4);
+    for (let li = 0, LL = ctl.gait.legs; li < LL.length; li++) { const L = LL[li]; if (L.id[0] === 'F') ov(L, L.toe.x * 0.6, 0.1 + 0.015 * rub * L.side, L.toe.z - 0.035, w, true, -1.4); }
     ctl.ear = mix(ctl.ear, 0.4 + 0.3 * rub, w);
   } },
   thump: { dur: 0.9, a: 0.05, d: 0.85, fn(ctl, a, w) { // alarm: stamps a hind foot
@@ -236,7 +236,7 @@ const catSit = (ctl, w) => {
   const P = ctl.pose, b = ctl.b;
   P.move(b.body, 0, -0.06 * w, 0.03 * w); P.rx(b.body, 0.75 * w); P.rx(b.neck, -0.35 * w); P.rx(b.head, -0.35 * w);
   for (let i = 0; i < b.tail.length; i++) P.rot(b.tail[i], (i ? -0.3 : 0.9) * w, (i ? 0.5 : 0.3) * w, 0);
-  for (const L of ctl.gait.legs) { if (L.id[0] === 'R') ov(L, L.toe.x * 1.1, 0, 0.03, w, false, 0); else ov(L, L.toe.x * 0.8, 0, -0.1, w, false, 0); }
+  for (let li = 0, LL = ctl.gait.legs; li < LL.length; li++) { const L = LL[li]; if (L.id[0] === 'R') ov(L, L.toe.x * 1.1, 0, 0.03, w, false, 0); else ov(L, L.toe.x * 0.8, 0, -0.1, w, false, 0); }
 };
 const CAT_ACTIONS = {
   sit: { dur: 1, hold: true, rest: true, fadeIn: 0.5, fadeOut: 0.3, fn(ctl, a, w) { catSit(ctl, w); } },
@@ -244,7 +244,7 @@ const CAT_ACTIONS = {
     const P = ctl.pose, b = ctl.b, t = a.t;
     P.move(b.body, 0, -0.17 * w, 0); P.rx(b.neck, 0.1 * w); P.rot(b.head, -0.05 * w, Math.sin(t * 0.4) * 0.2 * w, 0);
     for (let i = 0; i < b.tail.length; i++) P.rot(b.tail[i], (i ? -0.1 : 1.2) * w, (0.55 + 0.05 * Math.sin(t * 0.8 + i)) * w, 0);
-    for (const L of ctl.gait.legs) ov(L, L.toe.x * 0.7, 0.03, L.toe.z * 0.7, w, true, -0.9);
+    for (let li = 0, LL = ctl.gait.legs; li < LL.length; li++) { const L = LL[li]; ov(L, L.toe.x * 0.7, 0.03, L.toe.z * 0.7, w, true, -0.9); }
   } },
   groom: { dur: 3, a: 0.15, d: 0.85, fn(ctl, a, w) { // sit back a little, lift a paw to the mouth and lick it
     const P = ctl.pose, b = ctl.b, t = a.t, L = ctl.gait.legs[0];
@@ -260,15 +260,16 @@ const CAT_ACTIONS = {
     const leap = Math.sin(clamp01((k - 0.52) / 0.3) * Math.PI), fwd = sstep(0.52, 0.82, k) * (1 - sstep(0.85, 1, k));
     P.move(b.body, 0, (-0.07 * crouch + 0.16 * leap) * w, (0.02 * crouch - 0.28 * fwd) * w); P.rot(b.hips, 0, 0, wig * w);
     P.rx(b.body, (-0.1 * crouch + 0.25 * leap * (1 - k)) * w); P.rx(b.neck, -0.25 * crouch * w);
-    for (const L of ctl.gait.legs) { const fr = L.id[0] === 'F'; if (leap > 0.01) ov(L, L.toe.x, 0.05 * leap, L.toe.z + (fr ? -0.08 : 0.06) * leap, leap * w, true, -0.5); }
+    for (let li = 0, LL = ctl.gait.legs; li < LL.length; li++) { const L = LL[li]; const fr = L.id[0] === 'F'; if (leap > 0.01) ov(L, L.toe.x, 0.05 * leap, L.toe.z + (fr ? -0.08 : 0.06) * leap, leap * w, true, -0.5); }
     ctl.ear = mix(ctl.ear, 0.8, crouch * w);
   } },
-  hiss: { dur: 1.6, a: 0.08, d: 0.85, fn(ctl, a, w) { // arched back, fur up, ears flat, mouth wide
-    const P = ctl.pose, b = ctl.b, e = sstep(0, 0.2, a.k) * (1 - sstep(0.8, 1, a.k));
-    P.move(b.body, 0, 0.03 * e * w, 0); P.rx(b.chest, 0.25 * e * w); P.rx(b.hips, -0.25 * e * w); P.rx(b.neck, -0.3 * e * w); P.rx(b.head, 0.25 * e * w);
-    for (let i = 0; i < b.tail.length; i++) P.rx(b.tail[i], -0.4 * e * w);
-    P.sc[b.body].set(1 + 0.08 * e * w, 1 + 0.15 * e * w, 1);
-    ctl.jaw = Math.max(ctl.jaw, 0.6 * e * w); ctl.ear = mix(ctl.ear, -1.2, e * w); ctl.hackle = Math.max(ctl.hackle, e * w);
+  hiss: { dur: 1.6, a: 0.08, d: 0.85, fn(ctl, a, w) { // Halloween-cat arch: back humped high, legs straight, fur puffed, ears flat
+    const P = ctl.pose, b = ctl.b, e = sstep(0, 0.2, a.k) * (1 - sstep(0.8, 1, a.k)), ew = e * w;
+    P.move(b.body, 0, 0.05 * ew, 0.01 * ew); P.rx(b.chest, 0.5 * ew); P.rx(b.hips, -0.5 * ew); P.rx(b.neck, -0.55 * ew); P.rot(b.head, 0.35 * ew, 0.25 * ew, 0);
+    for (let i = 0; i < b.tail.length; i++) P.rx(b.tail[i], (i ? 0.05 : -0.9) * ew);
+    P.sc[b.body].set(1 + 0.12 * ew, 1 + 0.22 * ew, 1); P.sc[b.chest].set(1 + 0.1 * ew, 1 + 0.12 * ew, 1);
+    for (let li = 0, LL = ctl.gait.legs; li < LL.length; li++) { const L = LL[li]; ov(L, L.toe.x * 1.1, 0, L.toe.z * 0.85, ew, false, 0.1); }
+    ctl.jaw = Math.max(ctl.jaw, 0.6 * ew); ctl.ear = mix(ctl.ear, -1.2, ew); ctl.hackle = Math.max(ctl.hackle, ew);
   } },
   meow: { dur: 1.1, a: 0.1, d: 0.8, fn(ctl, a, w) { const P = ctl.pose, b = ctl.b, j = bell(a.k); P.rx(b.neck, 0.2 * j * w); P.rx(b.head, 0.3 * j * w); ctl.jaw = Math.max(ctl.jaw, 0.4 * j * w); } },
   flee: { dur: 1, hold: true, fadeIn: 0.1, fadeOut: 0.5, fn(ctl, a, w) { ctl.ear = mix(ctl.ear, -1.0, w); ctl.hackle = w; } },

@@ -59,10 +59,11 @@ export function groundSmash(fx, x, y, z, R, color, o = {}) {
 export function skyBolt(fx, x, y, z, s = 1, c = [0.6, 0.8, 2.0], o = {}) {
   const top = vec(x + fx.r(-1.5, 1.5) * s, y + 16 * s, z + fx.r(-1.5, 1.5) * s), bot = vec(x, y + 0.05, z);
   fx.lightning({ from: top, to: bot, color: c, width: 0.55 * s, dur: o.dur ?? 0.32, strands: 5, impact: false });
-  fx.at(STORM.flash, bot, s * 2.2, null, null, 0, 0.6, 0);
-  fx.at(GEN.flare, bot, s * 2.6, hue(c, [0, 0, 0]), { rot: 0 }, 0, 0.5, 0);
-  fx.meshes.pillars.spawn(x, y, z, 0.55 * s, 12 * s, 0.35, 3, [c[0] * 1.2, c[1] * 1.2, c[2] * 1.2], 0.05);
-  shockwave(fx, { pos: bot, radius: 3.2 * s, color: [c[0] * 1.2, c[1] * 1.2, c[2] * 1.2], dur: 0.35, wall: false, dustCount: 6 });
+  const g = Math.min(s, 1.2);
+  fx.at(STORM.flash, bot, g * 2.0, null, null, 0, 0.6, 0);
+  fx.at(GEN.flare, bot, g * 2.4, hue(c, [0, 0, 0]), { rot: 0, i: 0.8 }, 0, 0.5, 0);
+  fx.meshes.pillars.spawn(x, y, z, 0.5 * g, Math.min(12 * s, 16), 0.35, 3, [c[0] * 1.1, c[1] * 1.1, c[2] * 1.1], 0.05);
+  shockwave(fx, { pos: bot, radius: 3.2 * s, color: [c[0] * 1.1, c[1] * 1.1, c[2] * 1.1], dur: 0.35, wall: false, dustCount: 6 });
   fx.radial(STORM.spark, 26, bot, 4, 10, 2, 7, s, null, 0.2, 0.2);
   if (o.decal !== false) decal(fx, { pos: bot, radius: 1.8 * s, kind: 'electric', dur: 2.5, color: [c[0] * 1.2, c[1] * 1.2, c[2] * 1.2] });
   if (o.shake !== 0) fx.shake(o.shake ?? 0.25 * s, bot);

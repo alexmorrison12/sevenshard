@@ -4,7 +4,7 @@
 // Styles: normal (white), crit (yellow→orange, bigger), back / head (orange tag), counter (blue + COUNTER!), heal
 // (green +), shield (cyan +), miss / immune (grey), dot (small), hurt (red, damage taken), stagger (purple).
 import * as THREE from 'three';
-import { lin } from './util.js';
+import { lin, queueRange } from './util.js';
 
 const GSTRIDE = 20;
 const CHARS = '0123456789,.+-!%?ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -185,7 +185,7 @@ export class Numbers {
   }
   update() {
     if (this.hi >= this.lo) {
-      this.buf.clearUpdateRanges(); this.buf.addUpdateRange(this.lo * GSTRIDE, (this.hi - this.lo + 1) * GSTRIDE); this.buf.needsUpdate = true;
+      queueRange(this.buf, this.lo * GSTRIDE, (this.hi - this.lo + 1) * GSTRIDE);
       this.lo = this.n; this.hi = -1;
     }
     this.mesh.visible = this.fx.time <= this.until;

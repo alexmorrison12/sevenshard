@@ -308,7 +308,7 @@ const ACTIONS = {
     P.rx(b.neck, 0.6 * up); P.rx(b.head, 0.55 * up + Math.sin(t * 5) * 0.03 * up);
     ctl.jaw = Math.max(ctl.jaw, (0.3 + 0.06 * Math.sin(t * 7) + 0.04 * Math.sin(t * 2.3)) * up * sstep(0.4, 0.7, t));
     ctl.ear = mix(ctl.ear, 0.9, up);
-    if (b.tail) for (const tb of b.tail) P.rx(tb, 0.1 * up);
+    if (b.tail) for (let i = 0; i < b.tail.length; i++) P.rx(b.tail[i], 0.1 * up);
     P.rx(b.seat, -0.1 * up);
   } },
   rear: mRear({ dur: 2.2, ang: 0.72, sit: 0.2, neck: 0.3, lift: 0.3, reach: 0.25, jaw: 1.6 }),
@@ -352,7 +352,7 @@ const SPEC = {
   pose(ctl, dt) {
     // pant when running / fighting; snarl stance in combat (feet wider); saddle-steady rider
     ctl.jaw += (0.1 + 0.05 * Math.sin(ctl.t * 14)) * ctl.run + ctl.combat * (0.12 + 0.03 * Math.sin(ctl.t * 9));
-    for (const L of ctl.gait.legs) L.homeOff.set(L.side * 0.045 * ctl.combat, 0, (L.id[0] === 'F' ? -0.07 : 0.03) * ctl.combat);
+    const G = ctl.gait.legs; for (let i = 0; i < G.length; i++) { const L = G[i]; L.homeOff.set(L.side * 0.045 * ctl.combat, 0, (L.id[0] === 'F' ? -0.07 : 0.03) * ctl.combat); }
     mountPose(ctl, dt, POSE);
     ctl.ear = ctl.run * 0.4 + ctl.combat * 0.6 + Math.pow(Math.max(0, Math.sin(ctl.t * 0.8 + 2)), 30) * 0.3;
   },

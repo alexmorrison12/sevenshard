@@ -20,7 +20,7 @@ const PAL = {
   banshee: { cloak: 0x8a988a, cloak2: 0x4a564c, inner: 0x0a100c, trim: 0xb8c4b0, glow: 0x9cff6a, glow2: 0x4a9a3a, eye: 0xeaffd0, hand: 0xb4bcae, claw: 0x28301e, rim: 0xc8ff9a, hair: 0xe4f0dc },
   dreadwraith: { cloak: 0x261a36, cloak2: 0x0e0816, inner: 0x040208, trim: 0x5a4a6a, glow: 0xd04cff, glow2: 0x6a1aa0, eye: 0xffd0ff, hand: 0x8a8298, claw: 0x120c18, rim: 0xe070ff, iron: 0x2a2830, iron2: 0x5a5660 },
 };
-const NCH = 8, LV = [1.3, 0.92, 0.54];              // cloth chains around the body, pivot heights of their 3 bones
+const NCH = 8, LV = [1.3, 0.92, 0.54], CH_G = [0.35, 0.4, 0.45];              // cloth chains around the body, pivot heights of their 3 bones
 const TOP = 1.63;                                    // robe top (under the mantle)
 const SHO = [0.215, 1.655, 0.03], ELB = [0.335, 1.4, -0.02], WRI = [0.385, 1.16, -0.1];
 const mx = (p, s) => [p[0] * s, p[1], p[2]];
@@ -37,7 +37,7 @@ export const wraith = {
     const pal = PAL[v];
     return {
       variant: v, pal, elite, dread: v === 'dreadwraith', banshee: v === 'banshee', shapeKey: 'base', scale: elite ? 1.3 : 1,
-      h: 0.034, hg: { 1: 0.032 }, aoScale: 1.2, castShadow: true,
+      h: 0.034, hg: { 1: 0.032 }, aoScale: 1.2, castShadow: true, sphereMul: 2,
       mat: { dfreq: 3.5, furAxis: 1, rim: 0.55, rimColor: pal.rim, dissolveCol: pal.glow, wrap: 0.6 },
     };
   },
@@ -275,7 +275,7 @@ class WraithCtl extends BaseCtl {
     this.flame = 1;
     // ---- hover body: slow bob, drift, lean into motion, bank into turns
     const bob = Math.sin(t * TAU * 0.35) * 0.06 + Math.sin(t * 1.3) * 0.02;
-    P.move(b.root, Math.sin(t * 0.8) * 0.02, bob * this.locoW, 0);
+    P.move(b.root, Math.sin(t * 0.8) * 0.02, bob * this.locoW + this.fly * 0.9, 0);   // fly: drifts higher
     P.rot(b.root, -0.22 * moveK * Math.sign(this.speedSm) - clamp01(this.accel * 0.08) * 0.1 + 0.08 * this.combat, Math.sin(t * 0.5) * 0.04, this.turnSm * 0.14);
     P.rot(b.spine, 0.03 * Math.sin(t * 1.3) + 0.06 * this.combat, 0, 0.02 * Math.sin(t * 0.9));
     P.rot(b.chest, 0.02 * Math.sin(t * 1.3 + 1) + 0.12 * this.combat, 0, 0);
@@ -309,7 +309,7 @@ class WraithCtl extends BaseCtl {
       this.vz[c] += ((tz - this.dz[c]) * kS - this.vz[c] * kD) * dt; this.dz[c] += this.vz[c] * dt;
       const ch = this.chains[c];
       for (let i = 0; i < 3; i++) {
-        const g = [0.35, 0.4, 0.45][i], ripple = Math.sin(t * 2.4 - i * 1.1 + th) * 0.04;
+        const g = CH_G[i], ripple = Math.sin(t * 2.4 - i * 1.1 + th) * 0.04;
         P.rot(ch[i], (-this.dz[c] + ripple * cz - this.fold * 0.25 * cz) * g, 0, (this.dx[c] + ripple * sx + this.fold * 0.25 * sx) * g);
       }
     }
@@ -463,6 +463,6 @@ const ACTIONS = {
 };
 const SPEC = {
   bones: { root: 'root', spine: 'spine', chest: 'chest', head: 'head', armL: ['armUL', 'armLL', 'handL'], armR: ['armUR', 'armLR', 'handR'] },
-  fidgets: [{ name: 'idle_alt', w: 1 }], fidgetGap: 4.5, chargeK: 0.35,
+  fidgets: [{ name: 'idle_alt', w: 1 }], fidgetGap: 4.5, chargeK: 0.2,
   actions: ACTIONS,
 };

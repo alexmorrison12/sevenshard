@@ -58,7 +58,7 @@ export function thunderhoofSpec(J) {
     U.uHeat.value = ctl.dead ? Math.max(0, U.uHeat.value - dt * 0.4) : u.heat;
     U.uEye.value = ctl.dead ? Math.max(0, U.uEye.value - dt * 0.4) : ch.eye;
     U.uFlash.value = ch.flash;
-    U.uGlowK.value = ctl.dead ? Math.max(0.1, U.uGlowK.value - dt * 0.3) : 1 + 0.5 * u.heat;
+    U.uGlowK.value = ctl.dead ? Math.max(0.1, U.uGlowK.value - dt * 0.3) : 0.35 + 0.65 * Math.min(1, u.heat * 3) + 0.5 * u.heat;
   }
 
   const loco = (speed, turn) => ({ loop: true, fin: 0.3, pre(ctl) { if (ctl.st.speed === undefined && ctl.st.turn === undefined) { ctl.ch.locoSpeed = speed || 0; ctl.ch.locoTurn = turn || 0; } } });

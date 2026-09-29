@@ -20,6 +20,7 @@ import { lockHairPiece } from './hair2.js';
 import { armGeometry, CLASS_ACCENT } from './arms.js';
 import { MOVE_NAMES } from './moves.js';
 import { FACE_PRESETS } from './head.js';
+import { demonHorns, demonWing, makeAuraMaterial } from './demon.js';
 
 export { HAIR_STYLES, FACE_PRESETS };
 
@@ -166,6 +167,8 @@ export function createHero(opts = {}) {
   const UW = { ...U, uRune: { value: new THREE.Vector4(1, 0.15, 0.05, 0) }, uCast: U.uCast }; // weapons: own rune glow (hone)
   const matSkinned = makeHeroMaterial(U);
   const matRigid = makeHeroMaterial(UW, { key: 'r' });
+  const UD = { ...U, uDemon: { value: 0 }, uRune: { value: new THREE.Vector4(0.85, 0.3, 1.0, 1.4) } }; // demon parts: own glow, no darkening
+  let matDemon = null, D = null;
   const root = new THREE.Group(); root.name = 'hero';
   const inner = new THREE.Group(); root.add(inner);
   const h = { root, inner, U, UW, opts: o, sockets: {}, stats: {}, height: 1.85, radius: 0.45 };
@@ -325,6 +328,10 @@ export function createHero(opts = {}) {
       anim.grip2v = Array.isArray(main.info.grip2) ? main.info.grip2 : null;
       anim.grip2rot = main.info.grip2rot || null;
     } else { S.handR.add(S.weapon); S.handR.add(S.weaponTip); S.weaponTip.position.set(0, 0.1, 0); }
+    // demon form: the glaive is put away and the talons carry the weapon sockets
+    const claws = kindNow() === 'claws' && D;
+    for (const w of weapons) w.mesh.visible = !claws;
+    if (claws) { S.weapon.position.set(0, 0, 0); D.clawR.add(S.weapon); D.clawR.add(S.weaponTip); S.weaponTip.position.fromArray(D.info.tip); }
   }
 
   build();
@@ -337,8 +344,9 @@ export function createHero(opts = {}) {
       const hk = Math.max(0.9, Math.min(1.1, o.look.height ?? 1));
       inner.scale.setScalar(hk * (1 + sstep(demon) * 0.18));
     }
-    const k = kindNow(); if (k !== anim.kind) anim.kind = k;
+    const k = kindNow(); if (k !== anim.kind) { anim.kind = k; syncDemonArms(); }
     const P = anim.update(dt, state);
+    if (demon > 0.001 || D) updateDemon(dt, state);
     U.uFaceTile.value.set((P.face & 1) * 0.5, (P.face >> 1) * 0.5);
     for (const w of weapons) if (w.orb && dt > 0) { w.orb.rotation.y += dt * 1.6; w.orb.rotation.x += dt * 0.7; w.orb.position.y = w.info.orb[1] + 0.03 + Math.sin(anim.t * 2.2) * 0.025; }
   };
@@ -351,12 +359,71 @@ export function createHero(opts = {}) {
     stance = s; if (o.cls === 'pistoleer') { anim.kind = kindNow(); if (!anim.drawn) anim.forceDraw(true); else attachWeapons(true); }
   };
   h.setDemonForm = (on) => { demonTarget = on ? 1 : 0; };
+
+  // demon form: horns + wings + talons + aura, grown in with the transition (built lazily, once per body kind)
+  function ensureDemon() {
+    if (D && D.base === base) return D;
+    if (D) dropDemon();
+    if (!matDemon) matDemon = makeHeroMaterial(UD, { key: 'r' });
+    const P = base.P;
+    const horns = new THREE.Mesh(demonHorns(base), matDemon); horns.castShadow = true; horns.name = 'demon_horns';
+    bones[B.head].add(horns);
+    const wing = (sg) => {
+      const piv = new THREE.Group(); piv.name = 'demon_wing' + (sg > 0 ? 'R' : 'L');
+      piv.position.set(sg * 0.07, P.shY - 0.1, P.ribs[2] + 0.05);
+      const m = new THREE.Mesh(demonWing(base, sg), matDemon); m.castShadow = true; piv.add(m);
+      bones[B.chest].add(piv); return piv;
+    };
+    const cg = armGeometry('claw', { tier: 2, cls: 'demonbound', lod: o.lod });
+    const clawR = new THREE.Mesh(cg.geo, matDemon), clawL = new THREE.Mesh(cg.geo, matDemon);
+    clawR.name = 'demon_clawR'; clawL.name = 'demon_clawL'; clawR.castShadow = clawL.castShadow = true;
+    S.handR.add(clawR); S.handL.add(clawL); clawR.visible = clawL.visible = false;
+    const auraMat = makeAuraMaterial();
+    const aura = new THREE.SkinnedMesh(mesh.geometry, auraMat); aura.name = 'demon_aura';
+    aura.bind(skeleton, new THREE.Matrix4()); aura.frustumCulled = false; aura.renderOrder = 2;
+    inner.add(aura);
+    D = { base, horns, wingR: wing(1), wingL: wing(-1), clawR, clawL, aura, auraMat, t: 0, flap: 0, info: cg.info };
+    if (kindNow() === 'claws') { clawR.visible = clawL.visible = true; attachWeapons(anim.drawn); }
+    return D;
+  }
+  function dropDemon() {
+    if (!D) return;
+    for (const m of [D.horns, D.wingR, D.wingL, D.clawR, D.clawL, D.aura]) m.parent?.remove(m);
+    D.auraMat.dispose(); D = null;
+  }
+  function syncDemonArms() {
+    const on = kindNow() === 'claws';
+    if (on) { ensureDemon(); D.clawR.visible = D.clawL.visible = true; }
+    else if (D) D.clawR.visible = D.clawL.visible = false;
+    attachWeapons(anim.drawn);
+  }
+  function updateDemon(dt, state) {
+    const s = sstep(demon);
+    if (s <= 0.001) { if (D) { D.horns.visible = D.wingR.visible = D.wingL.visible = D.aura.visible = false; } return; }
+    ensureDemon();
+    if (D.aura.geometry !== mesh.geometry) D.aura.geometry = mesh.geometry;
+    if (D.aura.skeleton !== skeleton) D.aura.bind(skeleton, new THREE.Matrix4());
+    D.t += dt;
+    D.horns.visible = D.wingR.visible = D.wingL.visible = D.aura.visible = true;
+    D.horns.scale.setScalar(Math.max(0.001, s));
+    const moving = (state.speed || 0) > 0.6, down = state.dead || state.down;
+    D.flap += dt * (moving ? 7.5 : 2.3);
+    const amp = down ? 0.02 : moving ? 0.34 : 0.1;
+    const f = Math.sin(D.flap), fold = (1 - s) * 1.3 + (down ? 0.9 : 0);
+    for (const [wg, sg] of [[D.wingR, 1], [D.wingL, -1]]) {
+      wg.scale.setScalar(Math.max(0.001, 0.25 + 0.75 * s));
+      wg.rotation.set(0.12 + fold * 0.3, -sg * (0.3 + fold + (moving ? 0.2 : 0) - f * amp * 0.5), sg * (0.1 + f * amp - fold * 0.4));
+    }
+    D.auraMat.userData.u.uAura.value = s;
+    D.auraMat.userData.u.uTime.value = D.t;
+  }
   h.setLook = (look = {}) => { Object.assign(o.look, look); build(); };
   h.setGear = (gear = {}) => { Object.assign(o.gear, gear); if (gear.tier != null && !(opts.weapon && opts.weapon.tier != null)) o.weapon.tier = gear.tier; build(); };
   h.setWeapon = (weapon = {}) => { Object.assign(o.weapon, weapon); buildWeapons(); };
   h.dispose = () => {
     root.parent?.remove(root);
     mesh.geometry.dispose(); matSkinned.dispose(); matRigid.dispose(); skeleton.dispose();
+    if (D) dropDemon(); matDemon?.dispose();
   };
   h.weapons = weapons;
   h.actions = MOVE_NAMES;

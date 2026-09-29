@@ -48,8 +48,8 @@ export const skeleton = {
     const pal = elite && v !== 'bone_knight' ? { ...PAL[v], eye: PAL.bone_knight.eye, eyeCore: PAL.bone_knight.eyeCore, eyeTip: PAL.bone_knight.eyeTip, glow: PAL.bone_knight.glow } : PAL[v];
     return {
       variant: v, pal, elite, knight: v === 'bone_knight', weapon: WEAPON[v], shapeKey: 'base', scale: elite ? 1.22 : 1,
-      h: 0.02, hg: { 1: 0.0175, 2: 0.0135 }, aoScale: 0.6,
-      mat: { dfreq: 5.5, furAxis: 1, rim: 0.3, rimColor: elite ? 0xa8d0ff : 0xffe8c8, dissolveCol: elite ? 0x3a9cff : 0xff7a20 },
+      h: 0.02, hg: { 1: 0.018, 2: 0.0135 }, aoScale: 0.6,
+      mat: { dfreq: 5.5, furAxis: 1, rim: 0.55, rimColor: elite ? 0xb8dcff : 0xfff0dc, dissolveCol: elite ? 0x3a9cff : 0xff7a20, wrap: 0.55 },
     };
   },
   rig(R, cfg) {
@@ -135,7 +135,7 @@ export const skeleton = {
       const pts = [], rad = [];
       for (let i = 0; i <= n * 2; i++) { const t = i / (n * 2); pts.push(new V3(0, mix(y0, y1, t), mix(z0, z1, t))); rad.push(i % 2 ? r * 0.72 : r); }
       acc.add(sweep(pts, rad, { radial: bone === 'chest' ? 4 : 5, capStart: true }), { skin: R0(bone), color: bc, dtl: [0, 0.1, 0.3, 0.1] });
-      for (let i = 0; i < n; i++) { const t = (i + 0.5) / n, y = mix(y0, y1, t), z = mix(z0, z1, t); acc.add(sweep([[0, y, z + r * 0.7], [0, y - r * 0.6, z + r * 0.7 + 0.028]], [r * 0.42, r * 0.12], { radial: 3 }), { skin: R0(bone), color: cB, dtl: [0, 0.1, 0.3, 0] }); }
+      if (bone !== 'chest') for (let i = 0; i < n; i++) { const t = (i + 0.5) / n, y = mix(y0, y1, t), z = mix(z0, z1, t); acc.add(sweep([[0, y, z + r * 0.7], [0, y - r * 0.6, z + r * 0.7 + 0.028]], [r * 0.42, r * 0.12], { radial: 3 }), { skin: R0(bone), color: cB, dtl: [0, 0.1, 0.3, 0] }); }
     };
     col3('neck', 1.5, 1.592, 0.028, 0.02, 0.019, 3);
     col3('chest', 1.24, 1.49, 0.094, 0.082, 0.02, 3);
@@ -257,13 +257,13 @@ function hand(acc, skin, s, wri, F, d, bc, boneCol) {
       const o = (f - 1.5) * 0.02;
       const C = Fv.clone().addScaledVector(D, o);
       const pts = [];
-      for (let j = 0; j < 5; j++) {
-        const a = -0.35 + j * 0.62;
+      for (let j = 0; j < 4; j++) {
+        const a = -0.35 + j * 0.8;
         pts.push(C.clone().addScaledVector(e1, Math.cos(a) * 0.026).addScaledVector(e2, Math.sin(a) * 0.026));
       }
       // metacarpal from the wrist to the knuckle
       const kn = pts[0];
-      acc.add(sweep([new V3(wri[0] + s * 0.006, wri[1] - 0.03, wri[2] - 0.006 + o * 0.5), ...pts], [0.0085, 0.011, 0.0095, 0.009, 0.0085, 0.006], { radial: 3 }), { skin, color: bc, dtl: [0, 0.08, 0.3, 0] });
+      acc.add(sweep([new V3(wri[0] + s * 0.006, wri[1] - 0.03, wri[2] - 0.006 + o * 0.5), ...pts], [0.0085, 0.011, 0.0095, 0.009, 0.006], { radial: 3 }), { skin, color: bc, dtl: [0, 0.08, 0.3, 0] });
     }
     const tb = Fv.clone().addScaledVector(D, -0.035).addScaledVector(e1, -0.02).addScaledVector(e2, -0.012);
     acc.add(sweep([new V3(wri[0] - s * 0.012, wri[1] - 0.03, wri[2] - 0.01), tb, Fv.clone().addScaledVector(D, -0.01).addScaledVector(e2, -0.028)], [0.009, 0.009, 0.006], { radial: 3 }), { skin, color: bc, dtl: [0, 0.08, 0.3, 0] });
@@ -803,16 +803,18 @@ function shoot(ctl, a, w, T, aimUp) {
   if (rel > 0.5 && ctl.release <= 0.01 && k < T[3] + 0.03) ctl.release = 1;
   ctl.jaw = Math.max(ctl.jaw, 0.2 * draw * w);
   legsPlant(ctl, aim * w * 0.8, 1.45, 0);
-  return { raise, draw, rel };
+  SHOT.raise = raise; SHOT.draw = draw; SHOT.rel = rel;
+  return SHOT;
 }
+const SHOT = { raise: 0, draw: 0, rel: 0 }; // scratch result (no per-frame allocation)
 const BOW = {
   attack: { dur: 1.05, a: 0.06, d: 0.88, hit: 0.7, fn(ctl, a, w) { shoot(ctl, a, w, [0, 0.24, 0.6, 0.7, 0.86], 0.05); } },
   attack2: { dur: 0.62, a: 0.05, d: 0.86, hit: 0.5, fn(ctl, a, w) { shoot(ctl, a, w, [0, 0.14, 0.42, 0.5, 0.78], -0.05); } },
   attack_big: { dur: 2.0, a: 0.05, d: 0.9, hit: 0.76, fn(ctl, a, w) { // volley: aim high, long glowing draw (telegraph) → loose into the sky
-    const r = shoot(ctl, a, w, [0, 0.2, 0.62, 0.76, 0.9], 0.75);
+    const r = shoot(ctl, a, w, [0, 0.2, 0.62, 0.76, 0.9], 1.0);
     const g = sstep(0.15, 0.7, a.k) * (1 - sstep(0.76, 0.84, a.k));
     ctl.glow = mix(ctl.glow, 1 + 3 * g, w); ctl.charge = Math.max(ctl.charge, g * w);
-    ctl.pose.rx(ctl.b.hips, 0.08 * r.raise * w);
+    ctl.pose.rx(ctl.b.hips, 0.16 * r.raise * w); ctl.pose.rx(ctl.b.spine, 0.12 * r.raise * w);
   } },
 };
 
@@ -849,7 +851,7 @@ function specFor(cfg) {
     lean: { walk: 0.08, run: 0.32, combat: 0.1 }, twist: 0.12, waddle: 0.03, crouch: 0.07, breathe: 0,
     fidgets: [{ name: 'idle_alt', w: 1 }], fidgetGap: 5,
     pose: poseFn,
-    chargeK: 0.25,
+    chargeK: 0.2,
     actions: ACTS[W],
   });
 }

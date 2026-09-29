@@ -127,7 +127,7 @@ K.black_hole = {                     // Void Rift: dark sphere, accretion swirl,
   init(T) {
     const fx = T.fx, c = ctx(fx, T.p, T.v.c = {}, 4.5, 10, 8);
     const x = T.p.target ? c.tx : c.x, z = T.p.target ? c.tz : c.z, y = fx.gy(x, z, c.y);
-    T.pos.set(x, y + 1.6 * c.s, z);
+    T.place(x, y + 1.6 * c.s, z);
     T.v.col = tc(c.tint, 0x8a3cff, 1.4); T.v.gy = y;
     T.dur = T.p.dur ?? 2.2;
     T.v.bub = fx.meshes.bubbles.alloc();
@@ -165,7 +165,7 @@ K.rune_detonation = {                // Esoteric Rune: a magic circle charges, t
   init(T) {
     const fx = T.fx, c = ctx(fx, T.p, T.v.c = {}, 3.5, 10, 7);
     const x = T.p.target ? c.tx : c.x, z = T.p.target ? c.tz : c.z, y = fx.gy(x, z, c.y);
-    T.pos.set(x, y, z); T.v.col = tc(c.tint, ARCANE, 1.5);
+    T.place(x, y, z); T.v.col = tc(c.tint, ARCANE, 1.5);
     T.v.delay = T.p.delay ?? 0.7; T.dur = T.v.delay + 0.2;
     T.v.dec = fx.decal({ pos: T.pos, radius: c.R, kind: 'arcane', dur: T.v.delay + 0.6, color: T.v.col, hot: 0 });
     fx.rings.ground(T.pos, c.R * 0.05, T.v.delay, T.v.col, { r0: c.R * 1.05, ease: 1.2, ew: 0.12, trail: 0.2, flags: 0 });
@@ -177,9 +177,9 @@ K.rune_detonation = {                // Esoteric Rune: a magic circle charges, t
       for (let i = 0; i < n; i++) { const a = fx.r(0, TAU), r = c.R * fx.r(0.3, 1); fx.spawn(ARC.glyph, P0.x + Math.cos(a) * r, P0.y + 0.1, P0.z + Math.sin(a) * r, 0, fx.r(0.5, 2), 0, fx.o(c.s, null)); }
     }
     if (T.once('boom', v.delay)) {
-      lightPillar(fx, P0.x, P0.y, P0.z, c.R * 0.8, 10 * c.s, [v.col[0] * 1.4, v.col[1] * 1.4, v.col[2] * 1.4], 0.7, 3);
-      fx.at(ARC.flash, P0, 3 * c.s, null, null, 0, 1, 0);
-      fx.at(GEN.rays, P0, 1.6 * c.s, v.col, null, 0, 1.2, 0);
+      lightPillar(fx, P0.x, P0.y, P0.z, c.R * 0.45, 7 * c.s, [v.col[0] * 1.3, v.col[1] * 1.3, v.col[2] * 1.3], 0.6, 3);
+      fx.at(ARC.flash, P0, 2.2 * c.s, null, null, 0, 1, 0);
+      fx.at(GEN.rays, P0, 1.2 * c.s, v.col, null, 0, 1.2, 0);
       shockwave(fx, { pos: P0, radius: c.R * 1.6, color: v.col, dur: 0.45, height: 2 });
       fx.sphere(ARC.star, 40, vec(P0.x, P0.y + 1, P0.z), 4, 11, c.s, null);
       for (let i = 0; i < 7; i++) fx.spawn(ARC.glyphOut, P0.x, P0.y + 0.5, P0.z, 0.3 * c.s, i / 7 * TAU, 1.2, fx.o(c.s * 1.4, null));
@@ -232,7 +232,7 @@ K.music_buff_ring = (fx, p) => {     // Heavenly Tune / Anthem: staff ring + ris
   const c = ctx(fx, p, null, 6), s = c.R / 6, col = tc(c.tint, 0xffb04a, 1.4), pos = vec(c.x, c.y, c.z);
   decal(fx, { pos, radius: c.R * 0.9, kind: 'music', dur: 2.2, color: col, hot: 0.4 });
   fx.at(STAFF, vec(c.x, c.y + 0.07, c.z), s, col);
-  shockwave(fx, { pos, radius: c.R, color: col, dur: 0.6, height: 1.4, dust: false });
+  shockwave(fx, { pos, radius: c.R, color: [col[0] * 0.7, col[1] * 0.7, col[2] * 0.7], dur: 0.6, height: 1.0, dust: false });
   risingRing(fx, c.x, c.y, c.z, c.R * 0.7, MUSIC.noteGold, 26, null, s * 1.2, [1.5, 3]);
   fx.at(GEN.rays, vec(c.x, c.y + 1.2, c.z), 1.4 * s, col);
 };

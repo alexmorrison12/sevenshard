@@ -181,7 +181,6 @@ export const horse = {
     const c = cfg.pal, T = c.t, b = (n) => R.index(n);
     // ---- eyes: large, dark, soft lashes line
     for (const s of [-1, 1]) addEye(acc, S, b('head'), H(0.17, 0.02, s * 0.086), [s * 1, -0.05, -0.32], 0.03, { iris: c.eye, pupil: 0x080404, rim: 0x120c0a, pupilA: 0.5, irisA: 0.95, sink: 0.42, group: 2, seg: 8 });
-    globalThis.__mark?.('eyes');
     // ---- ears: pricked, concave, dark tips
     for (const s of [-1, 1]) {
       const g = leafGeo(0.042, 0.15, 0.03, 0.7, -0.04, { nu: 4, nv: 5, pw: 0.9, tipW: 0.004 });
@@ -189,7 +188,6 @@ export const horse = {
       const co = col(c.coat), ci = col(c.coat2), ct = col(c.points || c.coat2);
       addG(acc, g, { matrix: m, skin: rigidSkin(b(s < 0 ? 'earL' : 'earR')), dtl: [0.25, 0, 0.1, 0], color: (p, n, uv) => uv[0] >= 1 ? lerp3(co, ct, sstep(0.65, 0.95, uv[1])) : lerp3(lerp3(ci, [0.02, 0.015, 0.012], 0.4), co, sstep(0.55, 0.9, (uv[0] % 1) * 2)) });
     }
-    globalThis.__mark?.('ears');
     // ---- mane: a hair sheet over each side of the crest (parted, falling mostly right) with a jagged jiggling hem,
     //      plus a few loose locks on top for texture
     const A0 = new V3(0, 1.84, -1.08), A1 = new V3(0, 1.34, -0.7), ax = A1.clone().sub(A0).normalize();
@@ -240,7 +238,6 @@ export const horse = {
       const hs0 = rigidSkin(b('head')), ms = rigidSkin(b('maneC'));
       lock(acc, smoothPath(pts, 5), { r0: 0.03, r1: 0.006, bulge: 0.3, flat: 0.4, radial: 4, up: NN, c0: c.mane, c1: c.maneTip, from: 0.4, skin: (tt) => mixSkin(hs0, ms, sstep(0.1, 0.8, tt) * 0.9) });
     }
-    globalThis.__mark?.('forelock');
     // ---- tail: long hair from the dock, fanning slightly toward the hocks
     const tb = ['tail1', 'tail2', 'tail3', 'tail4'].map(b);
     const tskin = pathSkin([[0, rigidSkin(tb[0])], [0.18, rigidSkin(tb[1])], [0.45, rigidSkin(tb[2])], [0.72, rigidSkin(tb[3])], [1, rigidSkin(tb[3])]]);
@@ -258,7 +255,6 @@ export const horse = {
       }
       lock(acc, pts, { r0: 0.05, r1: 0.014, bulge: 0.35, flat: 0.42, radial: 4, up: [0, 0, 1], c0: c.mane, c1: c.maneTip, from: 0.5, skin: (tt) => tskin(mix(t0, t1, tt)), dtl: [0.55, 0, 0.1, 0] });
     }
-    globalThis.__mark?.('tail');
     // ---- tack
     const barrel = (z) => [0, z < -0.2 ? 1.2 : 1.15];
     const armour = !!c.armour;
@@ -269,7 +265,6 @@ export const horse = {
       girth: armour ? null : { z: -0.3, w: 0.07, color: T.strap },
       stirrup: { x: 0.33, y: 0.86, z: -0.2, r: 0.05, top: [0.27, 1.42, -0.2], metal: T.metal, leather: T.strap, skin: rigidSkin(b('body')) },
     });
-    globalThis.__mark?.('saddleSet');
     cfg.seat = ss.seat || [0, 1.58, -0.16];
     // ---- bridle: headstall (crown, cheeks), browband, noseband, bit rings; reins to the pommel
     const hs = rigidSkin(b('head')), org = H(0.2, -0.02, 0);
@@ -286,9 +281,7 @@ export const horse = {
       const pts = smoothPath([H(0.5, -0.065, s * 0.08), H(0.4, -0.16, s * 0.1), [s * 0.13, 1.6, -1.02], [s * 0.19, 1.52, -0.8], [s * 0.17, 1.56, -0.58], [s * 0.07, horn[1] - 0.01, horn[2] - 0.01]], 10);
       strap(acc, pts, 0.02, 0.006, { up: [s, 0, 0], skin: (p, uv) => rstops(uv[1]), color: T.strap });
     }
-    globalThis.__mark?.('reins');
     if (armour) armourParts(acc, S, R, cfg);
-    globalThis.__mark?.('armour');
   },
   sockets(cfg) {
     return {
@@ -351,7 +344,6 @@ function armourParts(acc, S, R, cfg) {
     const bone = rigidSkin(b(l < 2 ? 'neck2' : 'neck1'));
     shell(acc, S, { P, N, SK }, { off: (u, v) => 0.05 + 0.015 * v + 0.01 * l * 0.2, thick: 0.012, recalcN: true, skin: () => bone, color: (u, v) => plateCol(u, v, Math.min(u, 1 - u, v * 3, (1 - v) * 3)), dtl: [0, 0, 0.1, 0] });
   }
-  globalThis.__mark?.('crinet');
   // peytral: chest plate with a boss
   {
     const nu = 7, nv = 4, P = [], N = [], SK = [];
@@ -365,7 +357,6 @@ function armourParts(acc, S, R, cfg) {
     }
     shell(acc, S, { P, N, SK }, { off: 0.03, thick: 0.014, recalcN: true, color: (u, v) => plateCol(u, v, Math.min(u, 1 - u, v * 2, (1 - v) * 2)), dtl: [0, 0, 0.1, 0] });
   }
-  globalThis.__mark?.('peytral');
   // caparison: heraldic cloth from the saddle to the croup, hanging down both flanks with a rounded, dagged hem
   {
     const zs = edgespace(-0.46, 0.8, 11, 0.03), nWrap = 9, nHang = 3, eqA = 1.45, NU0 = nWrap + nHang * 2;

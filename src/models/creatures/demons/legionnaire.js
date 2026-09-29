@@ -4,7 +4,7 @@
 // Variants: iron (default), bronze, obsidian (violet fire); elite: centurion (×1.2, gold trim, crest, cape).
 import * as THREE from 'three';
 import { BipedCtl, legsLocal, legsPlant } from '../ctl.js';
-import { bHit, bKnockback, bKnockdown, bGetup, bDeath, bStun, bSpawn, bDrop, kf } from '../acts.js';
+import { bHit, bKnockback, bKnockdown, bGetup, bDeath, bStun, bSpawn, bDrop, kf, retime } from '../acts.js';
 import { sweep, rigid, bez, taper, leafGeo, aim } from '../../kit/geo.js';
 import { col } from '../../kit/sdf.js';
 import { addHorn, lerp3 } from '../../kit/parts.js';
@@ -264,8 +264,8 @@ const ACTIONS = {
     P.rot(b.spine, (0.1 * wind - 0.15 * bash) * w, (-0.35 * wind + 0.3 * bash) * w, 0);
     legsPlant(ctl, (wind + bash) * 0.7 * w, 1.3, -0.1 * bash);
   } },
-  attack_big: { dur: 2.1, a: 0.05, d: 0.9, hit: 0.64, fn(ctl, a, w) { // raise the spear overhead point-down (telegraph), leap & impale the ground
-    const P = ctl.pose, b = ctl.b, k = a.k, t = a.t, H = ctl.H;
+  attack_big: { dur: 2.1, a: 0.05, d: 0.9, hit: 0.57, fn(ctl, a, w) { // raise the spear overhead point-down (telegraph), leap & impale the ground
+    const P = ctl.pose, b = ctl.b, k = retime(a.k, 0.64, 0.57), t = a.t, H = ctl.H;
     const lift = sstep(0, 0.3, k) * (1 - sstep(0.56, 0.64, k));
     const trem = sstep(0.3, 0.55, k) * (1 - sstep(0.56, 0.6, k)) * Math.sin(t * 50) * 0.03;
     const jump = Math.sin(clamp01((k - 0.5) / 0.14) * Math.PI) * (k < 0.64 ? 1 : 0);

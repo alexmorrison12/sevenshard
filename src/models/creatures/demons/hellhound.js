@@ -3,7 +3,7 @@
 // shoulders and a flaming whip tail. Variants: ember (default), blight (green fire), void (violet fire); elite: alpha.
 import * as THREE from 'three';
 import { QuadCtl, legsLocal, legsPlant } from '../ctl.js';
-import { qHit, qKnockback, qKnockdown, qGetup, qDeath, qStun, qSpawn, qRoar } from '../acts.js';
+import { qHit, qKnockback, qKnockdown, qGetup, qDeath, qStun, qSpawn, qRoar, retime } from '../acts.js';
 import { sweep, rigid, bez, taper, leafGeo } from '../../kit/geo.js';
 import { col } from '../../kit/sdf.js';
 import { addEye, addHorn, lerp3 } from '../../kit/parts.js';
@@ -203,8 +203,8 @@ const ACTIONS = {
     const L = ctl.gait.legs[1];
     ov(L, 0.2 + 0.12 * rise - 0.35 * sw, 0.42 * rise + 0.1, -0.62 - 0.2 * sw, rise * w, true, -0.7);
   } },
-  attack_big: { dur: 1.7, a: 0.05, d: 0.9, hit: 0.64, fn(ctl, a, w) { // crouch while the flames roar up (telegraph) → explosive pounce
-    const P = ctl.pose, b = ctl.b, k = a.k, t = a.t, H = ctl.H;
+  attack_big: { dur: 1.7, a: 0.05, d: 0.9, hit: 0.5, fn(ctl, a, w) { // crouch while the flames roar up (telegraph) → explosive pounce
+    const P = ctl.pose, b = ctl.b, k = retime(a.k, 0.64, 0.5), t = a.t, H = ctl.H;
     const crouch = sstep(0, 0.3, k) * (1 - sstep(0.52, 0.56, k));
     const trem = crouch * sstep(0.2, 0.5, k) * Math.sin(t * 55) * 0.012;
     const jump = sstep(0.52, 0.62, k) * (1 - sstep(0.68, 0.82, k));

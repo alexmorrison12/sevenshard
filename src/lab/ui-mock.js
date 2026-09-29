@@ -391,15 +391,24 @@ export const mockWindows = {
     for (const tr of t) tr.spent = tr.tiers.reduce((a, x) => a + x.nodes.reduce((b, n) => b + n.rank * n.cost, 0), 0);
     return { unlocked: q.get('locked') !== '1', unlockAt: 1400, iLvl: q.get('locked') === '1' ? 1352 : 1415, points: 60, available: 60 - t.reduce((a, x) => a + x.spent, 0), trees: t };
   },
-  partyfinder: () => ({
-    iLvl: 1415, contents: [{ id: 'Gorrath NM', label: 'Gorrath · Normal' }, { id: 'Gorrath HM', label: 'Gorrath · Hard' }, { id: 'Sunken Oratory', label: 'Sunken Oratory' }, { id: 'Kurai', label: 'Guardian: Kurai' }],
-    listings: [
-      { id: 'l1', title: 'LF1 support, know mechs, fast clear', content: 'Gorrath NM', sub: 'Gate 1–2', icon: 'boss:gorrath', leader: { name: 'Grimholt', cls: 'demonbound', iLvl: 1428 }, size: 8, members: [{ name: 'Grimholt', cls: 'demonbound' }, { name: 'Vexa', cls: 'bladedancer' }, { name: 'Kestrel', cls: 'pistoleer' }, { name: 'Lyra', cls: 'songweaver', support: true }, { name: 'Thornlight', cls: 'stormfist' }, { name: 'Moonpetal', cls: 'starcaller' }, { name: 'Oryn', cls: 'reaver' }], req: { iLvl: 1415, supports: 2 }, tags: ['Know mechs', 'Voice optional'], age: 120 },
-      { id: 'l2', title: 'Chill learning run, first clear welcome', content: 'Sunken Oratory', icon: 'boss:nerissa', leader: { name: 'Brightwen', cls: 'oathkeeper', iLvl: 1390 }, size: 4, members: [{ name: 'Brightwen', cls: 'oathkeeper', support: true }, { name: 'Ashveil', cls: 'reaver', you: true }], req: { iLvl: 1325 }, tags: ['Learning'], joined: true },
-      { id: 'l3', title: 'HM carry — 1445+ only', content: 'Gorrath HM', icon: 'boss:gorrath', leader: { name: 'Sable', cls: 'bladedancer', iLvl: 1462 }, size: 8, members: [{ name: 'Sable', cls: 'bladedancer' }, { name: 'Wren', cls: 'songweaver', support: true }, { name: 'Dax', cls: 'reaver' }], req: { iLvl: 1445, supports: 2 }, tags: ['Carry'] },
-      { id: 'l4', title: 'Kurai fox farm', content: 'Kurai', icon: 'boss:kurai', leader: { name: 'Pip', cls: 'pistoleer', iLvl: 1460 }, size: 4, members: [{ name: 'Pip', cls: 'pistoleer' }, { name: 'Ember', cls: 'starcaller' }, { name: 'Holt', cls: 'stormfist' }, { name: 'Faye', cls: 'oathkeeper', support: true }], req: { iLvl: 1460 } },
-    ],
-  }),
+  partyfinder: () => {
+    const M = (name, cls, ilvl, support) => ({ name, cls, ilvl, support });
+    return { you: { name: 'Ashveil', cls: 'reaver', ilvl: 1415 },
+      listings: [
+        { id: 'L1', title: 'Gorrath, the Horned Tyrant · Gate 2', content: { kind: 'raid', raid: 'gorrath', gate: 1 }, max: 8, req: 1415, note: 'know mechs', age: 140, leader: M('Grimholt', 'demonbound', 1428), members: [M('Grimholt', 'demonbound', 1428), M('Vexa', 'bladedancer', 1422), M('Lyra', 'songweaver', 1430, true), M('Thornlight', 'stormfist', 1419), M('Moonpetal', 'starcaller', 1416)], canApply: true },
+        { id: 'L2', title: 'Gorrath, the Horned Tyrant · Gate 1', content: { kind: 'raid', raid: 'gorrath', gate: 0, hard: true }, max: 8, req: 1445, note: 'carry mood', age: 30, leader: M('Sable', 'bladedancer', 1462), members: [M('Sable', 'bladedancer', 1462), M('Wren', 'songweaver', 1450, true)], canApply: false },
+        { id: 'L3', title: 'The Sunken Oratory · Gate 1', content: { kind: 'raid', raid: 'oratory', gate: 0 }, max: 4, req: 1325, note: 'learning party, be patient', age: 610, leader: M('Brightwen', 'oathkeeper', 1390, true), members: [M('Brightwen', 'oathkeeper', 1390, true)], canApply: true },
+        { id: 'L4', title: 'Guardian Hunt · Kurai the Pyrefox', content: { kind: 'guardian', boss: 'kurai' }, max: 4, req: 1460, note: 'fast clear', age: 50, leader: M('Pip', 'pistoleer', 1460), members: [M('Pip', 'pistoleer', 1460), M('Ember', 'starcaller', 1461), M('Holt', 'stormfist', 1466)], canApply: false },
+        { id: 'L5', title: 'Chaos Dungeon · Demon Rift III', content: { kind: 'chaos', tier: 3 }, max: 4, req: 1400, note: 'gold run', age: 200, leader: M('Dax', 'reaver', 1405), members: [M('Dax', 'reaver', 1405), M('Iri', 'songweaver', 1401, true)], canApply: true },
+      ],
+      mine: new URLSearchParams(location.search).get('mine') ? { title: 'Guardian Hunt · Rimewing', content: { kind: 'guardian', boss: 'rimewing' }, max: 4, req: 1100, note: 'chill run', members: [M('Ashveil', 'reaver', 1415), M('Oryn', 'oathkeeper', 1180, true)], applicants: [M('Kestrel', 'pistoleer', 1340), M('Faye', 'songweaver', 1120, true)] } : null,
+      contents: [
+        { kind: 'raid', raid: 'gorrath', gate: 0, title: 'Gorrath · Gate 1 (Normal)', max: 8, req: 1415 }, { kind: 'raid', raid: 'gorrath', gate: 1, title: 'Gorrath · Gate 2 (Normal)', max: 8, req: 1415 },
+        { kind: 'raid', raid: 'gorrath', gate: 1, hard: true, title: 'Gorrath · Gate 2 (Hard)', max: 8, req: 1445, locked: true },
+        { kind: 'raid', raid: 'oratory', gate: 0, title: 'Sunken Oratory · Gate 1', max: 4, req: 1325 }, { kind: 'guardian', boss: 'rimewing', title: 'Guardian Hunt · Rimewing', max: 4, req: 1100 },
+        { kind: 'chaos', tier: 3, title: 'Demon Rift III', max: 4, req: 1400 },
+      ] };
+  },
   mail: () => ({ mails: [
     { id: 'm1', from: 'Solmara Support', kind: 'system', subject: 'Please accept our compensation', date: Date.now() - 3600e3 * 5, body: 'Dear Shardbearer,\n\nThe Glass Sea was briefly unreachable during maintenance. Please accept these supplies with our apologies.\n\nMay the Shards light your way.', attachments: [{ name: 'Solar Blessing', icon: 'item:solar_blessing', grade: 3, count: 10, kind: 'material' }, { name: 'Gold', icon: 'currency:gold', grade: 4, count: 500, kind: 'currency' }, { name: 'Resurrection Feather', icon: 'item:feather', grade: 3, count: 1, kind: 'consumable' }], expires: 'in 29 days' },
     { id: 'm2', from: 'Glassborn', kind: 'guild', subject: 'Weekly guild rewards', date: Date.now() - 86400e3, read: true, body: 'Thank you for donating this week. Your share of the guild vault is attached.', attachments: [{ name: 'Bloodstone', icon: 'currency:bloodstone', grade: 4, count: 120 }], claimed: true },
@@ -486,8 +495,8 @@ export const mockWindows = {
     { id: 'bramblebeard', name: 'Bramblebeard', title: 'Elder of the Pips', icon: 'npc:bramblebeard', stage: 1, points: 200, max: 3000 },
     { id: 'merchant', name: 'Old Tobin', title: 'Travelling Merchant', icon: 'npc:merchant', stage: 0, points: 0, max: 2000 },
   ] }),
-  bid: () => ({ item: { ...{}, name: 'Horned Tyrant Horn Relic', icon: 'item:relic_shard', grade: 5, kind: 'material', desc: 'A splinter of Gorrath\'s horn. Used to craft Tyrant accessories.' }, min: 500, step: 100, left: 22, total: 30, gold: 41280, status: 'open',
-    bids: [{ name: 'Grimholt', cls: 'demonbound', amount: 1800 }, { name: 'Ashveil', cls: 'reaver', amount: 1600, you: true }, { name: 'Vexa', cls: 'bladedancer', amount: 1200 }], note: 'Winning gold is split among the other 7 raiders.' }),
+  bid: () => ({ item: { uid: 'bk1', name: 'Engraving Recipe: Grudge', kind: 'book', grade: 4, icon: 'item:book:grudge', desc: 'Learn 20 nodes of Grudge.' }, min: 500, step: 100, current: { amount: 1800, by: 'Grimholt' }, left: 22, split: 257, gold: 41280, you: 'Ashveil',
+    history: [{ by: 'Vexa', amount: 1200 }, { by: 'Ashveil', amount: 1600 }, { by: 'Grimholt', amount: 1800 }] }),
   quests: () => ({ tracked: ['msq1', 'side1'], quests: [
     { id: 'msq1', title: "The Tyrant's Shadow", kind: 'msq', level: 50, zone: 'Ashen Ridge', giver: 'Commander Brannoc Hale', desc: 'Legion scouts have been sighted on the ridge road. Brannoc wants them silenced before they report back to Gorrath — and wants to know what they were looking for.', steps: [{ text: 'Defeat Legion scouts', n: 7, need: 10 }, { text: 'Report to Commander Brannoc', n: 0, need: 1 }], rewards: [{ name: 'Experience', icon: 'item:scroll', grade: 2, count: 128000 }, { name: 'Leapstone', icon: 'item:leapstone', grade: 4, count: 10 }] },
     { id: 'side1', title: 'Seeds in the Wheat', kind: 'side', zone: 'Goldmeadow', giver: 'Bramblebeard', desc: 'The Pips hid their seeds in the wheat again.', steps: [{ text: 'Find hidden Pip Seeds', n: 2, need: 5 }] },

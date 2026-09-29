@@ -74,6 +74,19 @@ export function fuse(account, char, type, level, { count = 1 } = {}) {
   const notes = emit(account, char, 'fuse', { type, level: level + 1, count: made.length });
   return ok({ made, cost: spent, notes });
 }
+/** Fuse three specific loose gems (same type & level) → 1 of the next level. */
+export function fuseUids(account, char, uids = []) {
+  const gs = [...new Set(uids)].map(u => (char.inv || []).find(it => it.uid === u && isGem(it)));
+  if (gs.length !== 3 || gs.some(g => !g)) return fail('count', 'Pick three gems from your bag.');
+  const [a] = gs;
+  if (gs.some(g => g.gem !== a.gem || g.level !== a.level)) return fail('mismatch', 'Fusion needs three gems of the same type and level.');
+  if (a.level >= MAX_LEVEL) return fail('level', 'Lv.10 gems cannot be fused further.');
+  if (!pay(account, fuseCost(a.level))) return fail('materials', 'Not enough silver.', { cost: fuseCost(a.level) });
+  for (const g of gs) char.inv.splice(char.inv.indexOf(g), 1);
+  const n = makeGem(a.gem, a.level + 1); char.inv.push(n); account.save();
+  const notes = emit(account, char, 'fuse', { type: a.gem, level: a.level + 1, count: 1 });
+  return ok({ made: [n], cost: fuseCost(a.level), notes });
+}
 export function openPouch(account, char, pouchId = 'gem_pouch', { rng } = {}) {
   const range = POUCHES[pouchId]; if (!range) return fail('unknown', 'That is not a gem pouch.');
   if (!account.take(pouchId, 1)) return fail('none', 'You have no gem pouch.');

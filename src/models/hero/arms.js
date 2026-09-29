@@ -284,11 +284,18 @@ const BUILDERS = {
     pb.add(new THREE.OctahedronGeometry(0.03, 0), { m: T(0, top - 0.04, 0.02), slot: SLOT.GEM, bw: 0, emis: 1 });
     return { len: top + 0.34, tip: [0.2, top + 0.2, 0], grip2: -0.34 };
   },
-  // Demon form claws (rigid, on each hand)
+  // Demon form claws (rigid, on each hand): four horn talons rising from a knuckle guard, curving toward the edge
   claw(pb, t) {
-    for (let i = 0; i < 3; i++) { const z = (i - 1) * 0.028; hornCurve(pb, [0.02, 0.02, z], [0.2, 0.9, 0], [0.4, -0.2, 0], 0.18, 0.012, SLOT.HORN, null, 5); }
-    pb.add(new THREE.BoxGeometry(0.06, 0.07, 0.09), { m: T(0, -0.01, 0), slot: SLOT.DARK, bw: 0 });
-    return { len: 0.2, tip: [0.06, 0.2, 0] };
+    const lens = [0.19, 0.25, 0.24, 0.18];
+    for (let i = 0; i < 4; i++) {
+      const z = (i - 1.5) * 0.021, L = lens[i], pts = [], rads = [];
+      for (let k = 0; k <= 9; k++) { const u = k / 9; pts.push(new THREE.Vector3(0.028 + u * L * 0.16 + u * u * L * 0.42, 0.035 + u * L * 0.96 - u * u * L * 0.16, z * (1 + u * 0.8))); rads.push(0.012 * Math.pow(1 - u, 0.85) + 0.0015); }
+      const tip = pts[9];
+      pb.add(tubeGeo(pts, rads, 7), { slot: SLOT.HORN, bw: 0, mulFn: (p, n) => { const f = 0.7 + 0.35 * Math.max(0, n.y) + 0.1 * Math.abs(Math.sin(p.y * 160)); return [f, f * 0.95, f]; }, rune: (p) => (p.distanceTo(tip) < L * 0.28 ? 1 : 0) });
+    }
+    pb.add(new THREE.BoxGeometry(0.06, 0.06, 0.095), { m: T(0.012, 0.0, 0), slot: SLOT.DARK, bw: 0, mulFn: topLit(0.3, 0.8) });
+    for (let i = 0; i < 4; i++) pb.add(new THREE.SphereGeometry(0.013, 6, 5), { m: T(0.03, 0.03, (i - 1.5) * 0.021), slot: SLOT.HORN, bw: 0 });
+    return { len: 0.24, tip: [0.14, 0.22, 0] };
   },
 
   // ---- props for life skills / items (held in the fist grip; handle along +Y) ----

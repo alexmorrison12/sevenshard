@@ -144,7 +144,7 @@ const FRAG_EMIS = /* glsl */`
     gFlameA = tongue * ( 1.0 - smoothstep( 0.8, 1.0, f ) ) * clamp( vAux.x, 0.0, 1.5 );
   } else if ( abs( kind - 10.0 ) < 0.5 ) {   // lightning arc: strobing on / off per arc, white-hot core
     float tq = floor( uTime * 14.0 + vAux.w * 3.7 );
-    float on = step( 0.62 - 0.3 * uHeat, fract( sin( tq * 12.9898 + vAux.w * 78.233 ) * 43758.5453 ) );
+    float on = step( 0.95 - 0.5 * min( uHeat, 1.6 ), fract( sin( tq * 12.9898 + vAux.w * 78.233 ) * 43758.5453 ) );
     ec = mix( uGlowCol, vec3( 3.0, 3.2, 3.6 ), 0.45 );
     em = vAux.x * on * ( 0.5 + uHeat ) * uGlowK;
     gFlameA = on * min( 1.0, 0.4 + uHeat );

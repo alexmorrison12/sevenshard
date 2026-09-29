@@ -5,6 +5,7 @@
 // Death: gutters, flickers and pops out of existence (scale → 0). Spawn: flares into being with a flash.
 import * as THREE from 'three';
 import { BaseCtl } from '../ctl.js';
+import { retime } from '../acts.js';
 import { sweep } from '../../kit/geo.js';
 import { col } from '../../kit/sdf.js';
 import { flame } from '../parts2.js';
@@ -27,7 +28,7 @@ export const wisp = {
   canFly: true,
   config(variant, opts) {
     const v = PAL[variant] ? variant : 'blue', elite = !!opts.elite;
-    return { variant: v, pal: PAL[v], elite, scale: elite ? 1.35 : 1, castShadow: true, mat: { dfreq: 2, furAxis: 1, rim: 0.5, rimColor: PAL[v].main, dissolveCol: PAL[v].main, flameAmp: 1.4 } };
+    return { variant: v, pal: PAL[v], elite, scale: elite ? 1.35 : 1, castShadow: true, sphereMul: 3.5, mat: { dfreq: 2, furAxis: 1, rim: 0.5, rimColor: PAL[v].main, dissolveCol: PAL[v].main, flameAmp: 1.4 } };
   },
   rig(R0) {
     R0.add('root', null, C); R0.add('core', 'root', C);
@@ -123,7 +124,7 @@ class WispCtl extends BaseCtl {
     if (spec.post) spec.post(this, dt);
     // ---- body: bob + drift + dart + action offsets; lean into motion
     const bob = Math.sin(t * TAU * 0.7) * 0.06 + Math.sin(t * 1.9) * 0.02;
-    const dx = this.dart.x + Math.sin(t * 1.3) * 0.03, dy = this.dart.y + bob * this.locoW + this.offY, dz = this.dart.z + this.offZ;
+    const dx = this.dart.x + Math.sin(t * 1.3) * 0.03, dy = this.dart.y + bob * this.locoW + this.offY + this.fly * 0.8, dz = this.dart.z + this.offZ;
     P.move(b.root, dx, dy, dz);
     P.rot(b.root, -0.35 * this.run - 0.02 * dvy, this.spin, -this.turnSm * 0.25 - dvx * 0.05);
     // squash & stretch along the travel direction (z) with speed, darts and action bursts
@@ -180,8 +181,8 @@ const ACTIONS = {
     ctl.spin += (8 * charge * k) * w;
     ctl.glow = mix(ctl.glow, 1 + 3.5 * charge + 2 * dive, w); ctl.charge = Math.max(ctl.charge, charge * w);
   } },
-  cast: { dur: 1.1, a: 0.06, d: 0.85, hit: 0.62, fn(ctl, a, w) { // rise & spin up, flash-release
-    const k = a.k;
+  cast: { dur: 1.0, a: 0.06, d: 0.85, hit: 0.56, fn(ctl, a, w) { // rise & spin up, flash-release (game zap: dur 0.9, windup 0.5)
+    const k = retime(a.k, 0.62, 0.56);
     const up = sstep(0, 0.55, k) * (1 - sstep(0.7, 1, k)), rel = sstep(0.58, 0.64, k) * (1 - sstep(0.68, 0.9, k));
     ctl.offY += 0.28 * up * w; ctl.spin += 10 * sstep(0, 0.62, k) * w;
     ctl.scale = mix(ctl.scale, 1 + 0.15 * up + 0.3 * rel, w);

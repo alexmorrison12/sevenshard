@@ -102,6 +102,9 @@ export class Creature {
     this.actions = def.actionNames || Object.keys(def.actionList || {});
     /** optional callback (legId, worldPosition: Vector3, strength 0..1) fired when a foot plants — dust puffs / footstep sounds */
     this.onFootstep = null;
+    /** a white setTint flash (the game's damage flash) plays a light `hit` flinch; false for super-armoured types */
+    this.autoFlinch = def.autoFlinch ?? true;
+    this._tintA = 0;
     this.ctl = def.controller(this, opts);
     const g = this.ctl.gait;
     if (g) {
@@ -115,12 +118,17 @@ export class Creature {
     this._dis = 0;
     if (opts.rest !== true) this.update(0, {});
   }
-  /** state: { speed (m/s along facing), turn (rad/s), combat, dead, down, stunned, fly } */
+  /** state: { speed (m/s along facing), turn (rad/s), strafe, combat, dead, down, stunned, fly, enraged } */
   update(dt, state = {}) { this.ctl.update(dt, state); }
   /** One-shot (or looped until the next play / stop) layered action. Returns { dur, hit? } in seconds (hit = impact moment). */
   play(action, opts = {}) { return this.ctl.play(action, opts.dur, opts.loop) || NOOP; }
   stop() { this.ctl.stopActions(); }
-  setTint(hex, amount = 0.5) { const u = this.material.userData.u; u.uTint.value.set(hex); u.uTintAmt.value = amount; }
+  setTint(hex, amount = 0.5) {
+    const u = this.material.userData.u; u.uTint.value.set(hex); u.uTintAmt.value = amount;
+    // rising white flash = fresh damage → flinch (see autoFlinch)
+    if (this.autoFlinch && hex === 0xffffff && amount >= 0.25 && amount > this._tintA + 0.05) this.ctl.flinch?.();
+    this._tintA = amount;
+  }
   /** Emissive multiplier (1 = authored). e.g. 2.5 for an enrage / charge flash. */
   setGlow(k = 1) { this.material.userData.u.uGlow.value = k; }
   /** 0..1 burn-away with ember edges (hide the corpse after death; reverse it for a magical spawn). */

@@ -22,7 +22,6 @@ export * as shops from './shops.js';
 export * as mail from './mail.js';
 export * as titles from './titles.js';
 export * as boards from './boards.js';
-export * as partyfinder from './partyfinder.js';
 export * as mods from './mods.js';
 export { market, stronghold, lifeskills, tasks };
 export { track } from './tasks.js';

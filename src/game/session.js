@@ -50,6 +50,7 @@ export class Session {
     this.stage = new MenuStage(this.game);
     this.char = null; this.hub = null; this.screen = null;
     this.bus = new Emitter();
+    if (this.account.settings.binds) Object.assign(this.game.input.binds, this.account.settings.binds);
     this.touch = new TouchControls(this.game);
     this.social = new SocialContext(this);
     this.game.invitedSims = this.invited = [];
@@ -76,6 +77,7 @@ export class Session {
     if (this.backdropZone && this.game.zone === this.backdropZone) return;
     const zone = await buildZone('solhaven', { quality: this.game.renderer.quality });
     zone.name = ZONES.solhaven?.name || 'Solhaven';
+    if (zone.setEnv) zone.setEnv('dusk');      // the menus always get the golden hour
     this.game.setZone(zone); this.backdropZone = zone;
     this.game.renderer.grade = { ...this.game.renderer.grade, exposure: 0.92, vignette: 0.5 };
   }
@@ -176,6 +178,22 @@ export class Session {
       case 'sunheart:reset': sunReset(this.char, p.tree); A.save(); this.refreshChar(); return this.refreshWindow('sunheart');
       // settings
       case 'settings:change': return this.setting(p.key, p.value);
+      case 'settings:rebind': {
+        this.ui.toast(`Press a key for "${p.action}" (Esc to cancel)\u2026`, 'info');
+        const onKey = e => {
+          e.preventDefault(); e.stopPropagation(); removeEventListener('keydown', onKey, true);
+          if (e.code === 'Escape') return;
+          const binds = this.game.input.binds;
+          for (const [k, v] of Object.entries(binds)) if (v === e.code && k !== p.action) binds[k] = binds[p.action];   // swap on conflict
+          binds[p.action] = e.code;
+          this.account.settings.binds = { ...binds }; this.account.save();
+          this.ui.toast(`${p.action} → ${e.code.replace(/^Key|^Digit/, '')}`, 'success');
+          this.openSettings();
+        };
+        addEventListener('keydown', onKey, true);
+        return;
+      }
+      case 'settings:reset': this.game.input.binds = { ...(await import('../engine/input.js')).DEFAULT_BINDS }; delete this.account.settings.binds; this.account.save(); return this.openSettings();
       case 'dialog:choice': return;
       default: if (__DEV__ && !/^hud:party|resize|touch|screen|window:close/.test(type)) console.log('[ui]', type, p);
     }
@@ -201,11 +219,16 @@ export class Session {
     if (c.level < 10 && !c.flags?.welcomed) { (c.flags ||= {}).welcomed = true; this.ui.dialog({ name: 'Seraphine', title: 'Oracle of the Shards' }, ['Shardbearer! You made it out of Brighthold alive.', 'The Legion is moving. The Rift Nexus in the east plaza leads to where the fighting is — and the harbour to everything else.', { text: 'Speak with the townsfolk (G), and when you are ready, step onto a rift portal.', choices: [{ id: 'ok', text: 'I’m ready.', kind: 'talk' }] }]); }
   }
   async loadZone(id, o = {}) {
+    if (this.ui.npc?.active) this.ui.npc.finish?.(null);
     this.ui.screen('loading', { zone: ZONES[id]?.name || id, region: o.region, kind: o.kind || ZONES[id]?.kind, pct: 5, tip: TIPS[Math.floor(Math.random() * TIPS.length)] });
     const t0 = performance.now();
     const zone = await buildZone(id, { quality: this.game.renderer.quality, onProgress: f => this.ui.screen('loading', { pct: 5 + f * 85 }) });
     zone.name = zone.name || ZONES[id]?.name || id; zone.id = id;
     this.game.setZone(zone);
+    // compile every shader now, behind the loading screen, instead of hitching the first time water or foliage appears
+    try { await Promise.race([zone.precompile?.(this.game.renderer, this.game.cam.cam, this.game.scene), new Promise(r => setTimeout(r, 2500))]); } catch (e) { console.warn('[precompile]', e); }
+    // towns follow your local clock: day, dusk, night
+    if (zone.setEnv && (zone.kind === 'city' || ZONES[id]?.kind === 'city' || id === 'stronghold')) { const hr = new Date().getHours(); const tod = hr >= 7 && hr < 17 ? 'day' : hr >= 17 && hr < 20 ? 'dusk' : 'night'; try { zone.setEnv(tod); this.game.applyEnv(zone.env); } catch (e) { console.warn('[env]', e); } }
     this.relayLevel(this.game.level);
     this.ui.screen('loading', { pct: 100 });
     if (performance.now() - t0 < 500) await new Promise(r => setTimeout(r, 300));
@@ -275,11 +298,22 @@ export class Session {
     if (inp.hit('chat') && !this.ui.wantsKeyboard) this.ui.chat.focus?.();
     // death overlay
     const me = g.hero.u;
-    if (me.dead && !this.deadShown) { this.deadShown = true; this.ui.screen('death', { reason: me.lastHitBy ? `Slain by ${me.lastHitBy.name}` : 'You have fallen', revives: [{ id: 'entrance', label: 'Revive at the entrance', sub: 'Return to the start of the area', wait: 6 }, { id: 'feather', label: 'Resurrection Feather', sub: 'Revive where you fell', count: this.account.count('feather'), disabled: this.account.count('feather') <= 0 }] }); }
-    if (!me.dead && this.deadShown) { this.deadShown = false; this.ui.screen('game'); }
+    if (me.dead && !this.deadShown) {
+      this.deadShown = true;
+      const raid = g.mode?.o?.noRevive;          // legion raids: no revive at the entrance (Lost Ark rules)
+      const feathers = this.account.count('feather');
+      const revives = raid
+        ? [{ id: 'feather', label: 'Resurrection Feather', sub: 'Revive where you fell (1 per gate)', count: feathers, disabled: feathers <= 0 || (g.mode.featherUsed ?? false) }, { id: 'spectate', label: 'Spectate', sub: 'Watch your raid finish the fight' }]
+        : [{ id: 'entrance', label: 'Revive at the entrance', sub: 'Return to the start of the area', wait: 6 }, { id: 'feather', label: 'Resurrection Feather', sub: 'Revive where you fell', count: feathers, disabled: feathers <= 0 }];
+      this.ui.screen('death', { reason: me.lastHitBy ? `Slain by ${me.lastHitBy.name}` : 'You have fallen', revives });
+    }
+    if (!me.dead && this.deadShown) { this.deadShown = false; this.spectating = false; g.camFocus = null; this.ui.screen('game'); }
+    if (me.dead && this.spectating) { const alive = g.party?.members.map(m => m.kit.u).find(u => !u.dead); g.camFocus = alive ? alive.pos : null; }
   }
   revive(id) {
     const me = this.game.hero?.u; if (!me?.dead) return;
+    if (id === 'spectate') { this.ui.screen('game'); this.spectating = true; return; }
+    if (id === 'feather' && this.game.mode?.o?.noRevive) { if (this.game.mode.featherUsed) return; this.game.mode.featherUsed = true; }
     const party = this.game.party;
     const at = id === 'feather' && this.account.take('feather', 1) ? { x: me.pos.x, z: me.pos.z } : null;
     if (party) party.revive(me, at || undefined);
@@ -387,7 +421,7 @@ export class Session {
       await this.loadZone(gt.zone, { kind: 'raid', region: r.name });
       this.spawnMe(this.game.zone.anchors.spawn);
       if (c.trial) { const st = heroStats({ ...this.heroChar(ch), equip: Object.fromEntries(['weapon', 'head', 'shoulder', 'chest', 'pants', 'gloves'].map(s => [s, { iLvl: r.ilvl.normal, quality: 70 }])) }); this.game.hero.u.setStats(st); this.game.hero.u.hp = this.game.hero.u.hpMax; }
-      this.game.mode = new EncounterMode(this.game, { boss: gt.bosses[0].boss, bosses: gt.bosses, ilvl: r.ilvl.normal, partySize: r.players, hard: !!c.hard, seed: Date.now() % 1000, onEnd: done });
+      this.game.mode = new EncounterMode(this.game, { boss: gt.bosses[0].boss, bosses: gt.bosses, ilvl: r.ilvl.normal, partySize: r.players, hard: !!c.hard, seed: Date.now() % 1000, onEnd: done, noRevive: r.kind === 'legion' });
       this.game.mode.enter();
     }
     this.inWorld();
@@ -407,13 +441,15 @@ export class Session {
         A.give('shards', 1500 * t * m);
         (ch.daily ||= {}).chaos = (ch.daily.chaos || 0) + 1; if (r.rested > 1 && ch.rest) ch.rest.chaos = Math.max(0, ch.rest.chaos - 20);
       } else {
+        const restG = c.kind === 'guardian' && (ch.rest?.guardian || 0) >= 20 ? 2 : 1;
+        if (restG > 1) { ch.rest.guardian -= 20; this.ui.toast('Rest bonus: guardian rewards doubled.', 'success'); }
         let gold = c.kind === 'raid' ? (c.gate === 0 ? 1200 : 2400) * (c.hard ? 1.5 : 1) : 0;
         const wk = `${c.raid || c.boss}:${c.gate ?? 0}:${c.hard ? 'h' : 'n'}`;
         ch.weekly ||= {}; ch.weekly.raids ||= {};
         if (gold && ch.weekly.raids[wk]) { gold = 0; this.ui.toast('Weekly raid gold already claimed on this character — practice runs still drop materials.', 'info'); }
         if (gold && !c.trial) { cur.gold = gold; A.give('gold', gold); ch.weekly.raids[wk] = Date.now(); }
         cur.silver = 25000; A.give('silver', cur.silver);
-        const give = (id, n) => { A.give(id, n); loot.push({ id, name: ITEMS[id].name, count: n, icon: `item:${id}`, grade: ITEMS[id].grade }); };
+        const give = (id, n) => { n *= restG; A.give(id, n); loot.push({ id, name: ITEMS[id].name, count: n, icon: `item:${id}`, grade: ITEMS[id].grade }); };
         give('leapstone', c.kind === 'raid' ? 12 : 8); give('destruction_stone', 120); give('guardian_stone', 300);
         if (c.kind === 'raid') give('horn_shard', c.hard ? 12 : 8);
       }
@@ -557,7 +593,7 @@ export class Session {
     if (id === 'charselect' || id === 'logout') { this.account.save(true); this.leaveWorld(); return this.backdrop().then(() => this.charSelect()); }
     if (id === 'title') { this.account.save(true); this.leaveWorld(); return this.backdrop().then(() => this.title()); }
   }
-  leaveWorld() { this.game.clearLevel(); this.hub = null; this.game.party = null; this.game.onHud = null; }
+  leaveWorld() { if (this.ui.npc?.active) this.ui.npc.finish?.(null); this.game.clearLevel(); this.hub = null; this.game.party = null; this.game.onHud = null; }
   chat(p) { const text = String(p.text || '').slice(0, 240); if (!text) return; this.ui.chat.add({ channel: p.channel || 'area', from: this.char?.name, text, you: true }); this.game.net?.send?.({ t: 'ch', ch: p.channel, text }); }
   command(p) {
     const cmd = p.cmd.toLowerCase();

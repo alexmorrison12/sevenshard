@@ -278,6 +278,12 @@ if (Q.has('t') && mode !== 'strip') {
   if (act) for (const it of api.list) it.c.play(act, { loop: Q.get('loop') === '1' });
   const steps = Math.round(num('t', 0) / dt);
   for (let s = 0; s < steps; s++) { G.uTime.value += dt; lab.time += dt; for (const it of api.list) it.c.update(dt, it.st || state); }
+  if (Q.has('focus') && api.list[0]) { // re-aim at the socket in its captured pose
+    const c0 = api.list[0].c; c0.root.updateMatrixWorld(true);
+    const p = c0.sockets[Q.get('focus')].getWorldPosition(new THREE.Vector3()), d = num('dist', 3);
+    const a = THREE.MathUtils.degToRad(num('camYaw', 0)), pp = THREE.MathUtils.degToRad(num('camPitch', 10));
+    lab.controls.target.copy(p); lab.camera.position.set(p.x + Math.sin(a) * Math.cos(pp) * d, p.y + Math.sin(pp) * d, p.z + Math.cos(a) * Math.cos(pp) * d); lab.controls.update();
+  }
 }
 api.step = (sec, dt = 1 / 60) => { for (let s = 0; s < Math.round(sec / dt); s++) { G.uTime.value += dt; for (const it of api.list) it.c.update(dt, it.st || state); } };
 api.state = state;

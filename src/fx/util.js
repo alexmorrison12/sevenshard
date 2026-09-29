@@ -126,6 +126,25 @@ export const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 export const lerp = (a, b, t) => a + (b - a) * t;
 export const smooth = (a, b, v) => { const t = clamp((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 
+/** Queue [start, start + count) of a (interleaved) buffer for GPU upload. three.js clears `updateRanges` only after it
+ *  actually uploads, so when several fx.update() calls run before one render (lab stepping, catch-up frames) the new
+ *  range is merged into the one still pending instead of replacing it — an upload is never lost. Allocation-free. */
+export function queueRange(buf, start, count) {
+  const R = buf.updateRanges;
+  if (R.length) {
+    const r = R[0];
+    for (let i = 1; i < R.length; i++) { const q = R[i], e = Math.max(r.start + r.count, q.start + q.count); r.start = Math.min(r.start, q.start); r.count = e - r.start; }
+    R.length = 1;
+    const e = Math.max(r.start + r.count, start + count); r.start = Math.min(r.start, start); r.count = e - r.start;
+  } else {
+    const r = buf._fxRange || (buf._fxRange = { start: 0, count: 0 });
+    r.start = start; r.count = count; R.push(r);
+  }
+  buf.needsUpdate = true;
+}
+/** queue the whole buffer (stays whole even if partial ranges are queued before the next render) */
+export function queueAll(buf) { queueRange(buf, 0, buf.array.length); }
+
 // premultiplied-alpha blending: rgb added, alpha occludes (one draw call can mix additive + alpha-blended content)
 export const PREMUL = {
   transparent: true, depthWrite: false,

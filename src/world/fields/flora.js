@@ -35,8 +35,8 @@ function tuftGeometry(shape, height, width) {
     if (P[P.length - 1][1] === 0) { const a = base + (pairs - 1) * 2; idx.push(a, a + 1, a + 2); }
   };
   if (shape === 'wheat') {
-    for (let b = 0; b < 5; b++) {
-      const a = b / 5 * Math.PI * 2 + b * 1.3, r = b === 0 ? 0 : 0.06 + (b % 2) * 0.05;
+    for (let b = 0; b < 4; b++) {
+      const a = b / 4 * Math.PI * 2 + b * 1.3, r = b === 0 ? 0.02 : 0.07 + (b % 2) * 0.05;
       const h = (0.82 + ((b * 29) % 7) / 7 * 0.3) * height;
       // thin stalk that widens into a plump ear, then a short awned tip
       blade(Math.cos(a) * r, Math.sin(a) * r, a + 1.1 + b, 0.1 + (b % 3) * 0.04, h, 0.012 * width, Math.cos(a), Math.sin(a),
@@ -402,6 +402,23 @@ export function mushroomGeo({ h = 0.35, r = 0.22, cap = 0xc03020, spots = 0xfff4
   }, { extra: { sway: sway } });
   const under = new THREE.CircleGeometry(r * 0.98, 18); under.rotateX(Math.PI / 2);
   b.add(under, new THREE.Matrix4().makeTranslation(top.x, top.y - r * flat * 0.3 + 0.005, top.z), gC, { extra: { sway: sway } });
+  return b.build();
+}
+/** reed clump for banks and marshes: blades + two cattails (static, instanced) */
+export function reedGeo(seed = 1, { h = 1.6, color = 0x4a6a24, tip = 0xa8b060, n = 9 } = {}) {
+  const rng = new RNG(seed), b = MB(), c0 = linColor(color), c1 = linColor(tip), cat = linColor(0x5a3a1c);
+  for (let i = 0; i < n; i++) {
+    const a = rng.range(0, Math.PI * 2), r = rng.range(0, 0.22), L = h * rng.range(0.6, 1.05), lean = rng.range(0.1, 0.35);
+    const g = new THREE.PlaneGeometry(0.06, L, 1, 3); g.translate(0, L / 2, 0);
+    const pp = g.attributes.position; for (let k = 0; k < pp.count; k++) { const t = pp.getY(k) / L; pp.setX(k, pp.getX(k) * (1 - t * 0.9)); pp.setZ(k, t * t * lean * L); }
+    g.rotateY(a); g.translate(Math.cos(a) * r, 0, Math.sin(a) * r);
+    b.add(g, null, (p) => lerpC(c0, c1, clamp(p.y / h, 0, 1)), { extra: { sway: p => clamp(p.y / h, 0, 1) ** 2 } });
+  }
+  for (let i = 0; i < 2; i++) {
+    const x = rng.range(-0.12, 0.12), z = rng.range(-0.12, 0.12), L = h * rng.range(0.85, 1.1);
+    const st = new THREE.CylinderGeometry(0.01, 0.014, L, 3); st.translate(x, L / 2, z); b.add(st, null, c0, { extra: { sway: p => clamp(p.y / h, 0, 1) ** 2 } });
+    const hd = new THREE.CylinderGeometry(0.045, 0.045, 0.24, 6); hd.translate(x, L - 0.14, z); b.add(hd, null, cat, { extra: { sway: (L / h) ** 2 } });
+  }
   return b.build();
 }
 /** single fern fan (instanced on the forest floor) */

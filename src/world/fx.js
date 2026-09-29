@@ -76,8 +76,15 @@ export class LightPool {
     this._t -= dt;
     if (this._t <= 0 || Math.hypot(focus.x - this._fx, focus.z - this._fz) > 1.5) {
       this._t = 0.3; this._fx = focus.x; this._fz = focus.z;
-      const best = this.src.map(l => [l, (l.x - focus.x) ** 2 + ((l.z - focus.z) * 1.4) ** 2]).sort((a, b) => a[1] - b[1]).slice(0, this.K);
-      for (let i = 0; i < this.K; i++) this.assigned[i] = best[i] ? best[i][0] : null;
+      // K nearest without allocating: insertion into a fixed-size list
+      const K = this.K, as = this.assigned, ds = this._d || (this._d = new Float64Array(K));
+      for (let i = 0; i < K; i++) { as[i] = null; ds[i] = Infinity; }
+      for (const l of this.src) {
+        const d = (l.x - focus.x) ** 2 + ((l.z - focus.z) * 1.4) ** 2;
+        if (d >= ds[K - 1]) continue;
+        let i = K - 1; while (i > 0 && ds[i - 1] > d) { ds[i] = ds[i - 1]; as[i] = as[i - 1]; i--; }
+        ds[i] = d; as[i] = l;
+      }
     }
     for (let i = 0; i < this.K; i++) {
       const l = this.pl[i], s = this.assigned[i];

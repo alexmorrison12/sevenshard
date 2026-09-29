@@ -7,8 +7,7 @@
 // rapport data: { npcs: [{ id, name, title, icon?, stage (0–5), points, max, daily?: { songs, songsMax, emotes, emotesMax },
 //   songs: [{ id, name, locked? }], emotes: [{ id, name }], gifts: [Item], rewards: [{ stage, name, icon, grade, count?, claimed }] }], selected? }
 //   Actions: rapport:select { id } · rapport:song { npc, id } · rapport:emote { npc, id } · rapport:gift { npc, uid } · rapport:claim { npc, stage }
-// bid data: { item: Item, bids: [{ name, cls?, amount, you? }], min, step, left (s), gold, status: 'open'|'won'|'lost'|'closed', winner?, note? }
-//   Actions: bid:place { amount } · bid:pass {}
+// bid data: see the Raid Auction section below.
 // quests data (optional; defaults to HudState.quests): { quests: [{ id, title, kind, desc?, giver?, zone?, level?, steps, rewards?: [Item] }], tracked?: [ids] }
 //   Actions: quest:track { id, on } · quest:abandon { id }
 import { h, btn, esc, fmtInt, clear } from '../core/util.js';
@@ -132,51 +131,83 @@ export class RapportWin extends Win {
 }
 
 // ================================================================================================ raid bid
+// Data (lead: src/game/social/bidding.js; pushed every 0.25 s):
+//   { item: Item, min, step, current: null | { amount, by }, left (s), split (gold each other raider gets if it wins),
+//     gold (yours), you (your name), history: [{ by, amount }] (last 6), done?: { winner, amount } }
+// Actions: bid:place { amount } · bid:raise { step } · bid:pass {}
+// Lives in the modal layer so it shows above the results screen. Built once and updated in place (the custom
+// amount field keeps its value and focus across the 4 Hz pushes).
 export class BidWin extends Win {
-  static id = 'bid'; static title = 'Auction'; static glyph = 'crown'; static width = 520;
+  static id = 'bid'; static title = 'Raid Auction'; static glyph = 'crown'; static width = 540; static layer = 'modal';
   build() {
-    this.body.classList.add('ss-bd');
-    this.amt = 0;
-  }
-  shown() { clearInterval(this._iv); this._iv = setInterval(() => this.tick(), 250); }
-  hidden() { clearInterval(this._iv); }
-  render(d) {
-    this.d = d = d || {}; this.t0 = performance.now();
-    const B = this.body; clear(B);
-    const it = d.item || {};
-    const bids = [...(d.bids || [])].sort((a, b) => b.amount - a.amount);
-    const top = bids[0];
-    const minNext = top ? top.amount + (d.step || 100) : (d.min || 0);
-    if (!this.amt || this.amt < minNext) this.amt = minNext;
+    const B = this.body; B.classList.add('ss-bd');
     const hd = h('div', 'ss-bd-hd', B);
-    hd.appendChild(slot(it, { size: 64 }));
-    h('div', 'ss-bd-it', hd).innerHTML = `<b style="color:${grade(it.grade).c}">${esc(it.name || '')}</b><span>${esc(d.note || 'Gold is split between the other raid members.')}</span>`;
-    this.clock = h('div', 'ss-bd-clock', hd);
-    const cur = h('div', 'ss-bd-cur', B);
-    cur.innerHTML = top ? `<span>Highest bid</span><b>${fmtInt(top.amount)}<i style="background-image:url('${iconUrl('currency:gold', 22)}')"></i></b><em>${esc(top.name)}${top.you ? ' (you)' : ''}</em>` : `<span>Opening bid</span><b>${fmtInt(d.min || 0)}<i style="background-image:url('${iconUrl('currency:gold', 22)}')"></i></b><em>No bids yet</em>`;
-    if (d.status && d.status !== 'open') {
-      const res = h('div', 'ss-bd-res is-' + d.status, B);
-      res.innerHTML = d.status === 'won' ? `${glyph('crown')}<b>You won the auction</b>` : d.status === 'lost' ? `<b>${esc(d.winner || 'Someone')} won the auction</b>` : '<b>The auction has closed</b>';
-    } else {
-      const ctl = h('div', 'ss-bd-ctl', B);
-      const inp = h('input', 'ss-input ss-bd-amt', ctl); inp.value = this.amt; inp.inputMode = 'numeric'; inp.setAttribute('aria-label', 'Bid amount');
-      inp.addEventListener('keydown', e => e.stopPropagation());
-      inp.addEventListener('input', () => { this.amt = parseInt(inp.value) || 0; place.disabled = this.amt < minNext || this.amt > (d.gold ?? Infinity); });
-      for (const inc of [d.step || 100, (d.step || 100) * 5, (d.step || 100) * 10]) btn('ss-btn ss-btn--sm', ctl, `+${fmtInt(inc)}`, () => { this.amt = Math.max(this.amt, minNext - inc) + inc; inp.value = this.amt; place.disabled = this.amt > (d.gold ?? Infinity); });
-      const row = h('div', 'ss-bd-row', B);
-      h('span', 'ss-bd-have', row).innerHTML = `You have <b>${fmtInt(d.gold ?? 0)}</b> gold`;
-      btn('ss-btn ss-btn--ghost', row, 'Pass', () => this.ui.emit('bid:pass', {}));
-      const place = btn('ss-btn ss-btn--primary', row, 'Place Bid', () => this.ui.emit('bid:place', { amount: this.amt }));
-      place.disabled = this.amt < minNext || this.amt > (d.gold ?? Infinity);
-    }
-    const hist = h('div', 'ss-bd-hist ss-scroll', B);
-    for (const b of bids.slice(0, 8)) h('div', 'ss-bd-b' + (b.you ? ' is-you' : ''), hist).innerHTML = `<span>${b.cls ? `<i class="ss-crest" style="width:16px;height:16px;background-image:url('${iconUrl('class:' + b.cls, 16)}')"></i>` : ''}${esc(b.name)}</span><b>${fmtInt(b.amount)}</b>`;
-    this.tick();
+    this.slotWrap = h('div', '', hd);
+    this.itemTx = h('div', 'ss-bd-it', hd);
+    this.clock = h('div', 'ss-pring ss-bd-ring', hd);
+    this.clockT = h('b', '', this.clock);
+    this.cur = h('div', 'ss-bd-cur', B);
+    this.curL = h('span', '', this.cur);
+    this.curV = h('b', '', this.cur);
+    this.curBy = h('em', '', this.cur);
+    this.splitEl = h('div', 'ss-bd-split', B);
+    const ctl = h('div', 'ss-bd-ctl', B);
+    this.r1 = btn('ss-btn', ctl, '+', () => this.raise(1));
+    this.r5 = btn('ss-btn', ctl, '+', () => this.raise(5));
+    this.inp = h('input', 'ss-input ss-bd-amt', ctl);
+    this.inp.inputMode = 'numeric'; this.inp.setAttribute('aria-label', 'Custom bid amount');
+    this.inp.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') this.place(); });
+    this.inp.addEventListener('input', () => { this.dirty = true; this.check(); });
+    this.placeB = btn('ss-btn ss-btn--primary', ctl, 'Bid', () => this.place());
+    const row = h('div', 'ss-bd-row', B);
+    this.have = h('span', 'ss-bd-have', row);
+    this.pass = btn('ss-btn ss-btn--ghost', row, 'Pass', () => { this.passed = true; this.ui.emit('bid:pass', {}); this.check(); });
+    this.hist = h('div', 'ss-bd-hist', B);
+    this.res = h('div', 'ss-bd-res', B);
+    this.total = 0; this._item = null;
   }
-  tick() {
-    const d = this.d || {}; if (!this.clock) return;
-    const left = Math.max(0, (d.left || 0) - (performance.now() - this.t0) / 1000);
-    this.clock.innerHTML = `<div class="ss-pring sm${left < 5 ? ' is-urgent' : ''}" style="--p:${d.total ? (left / d.total).toFixed(3) : 1};--c:${left < 5 ? '#ff7a64' : '#f3c46a'}"><b>${Math.ceil(left)}</b></div>`;
+  shown() { this.passed = false; this.dirty = false; this.total = 0; }
+  next() { const d = this.d || {}; return d.current ? d.current.amount + (d.step || 100) : (d.min || 0); }
+  raise(k) {
+    const d = this.d || {}; const step = (d.step || 100) * k;
+    this.ui.emit('bid:raise', { step });
+    const base = d.current ? d.current.amount : Math.max(0, (d.min || 0) - step);
+    this.inp.value = base + step; this.dirty = false; this.check();
+  }
+  place() { const a = parseInt(this.inp.value) || 0; if (a >= this.next() && a <= (this.d?.gold ?? Infinity)) this.ui.emit('bid:place', { amount: a }); }
+  check() {
+    const d = this.d || {}, a = parseInt(this.inp.value) || 0, open = !d.done && (d.left ?? 1) > 0;
+    this.placeB.disabled = !open || this.passed || a < this.next() || a > (d.gold ?? Infinity);
+    for (const [b, k] of [[this.r1, 1], [this.r5, 5]]) { const nv = (d.current ? d.current.amount : Math.max(0, (d.min || 0) - (d.step || 100) * k)) + (d.step || 100) * k; b.disabled = !open || this.passed || nv > (d.gold ?? Infinity); }
+    this.pass.disabled = !open || this.passed;
+  }
+  render(d) {
+    this.d = d = d || {};
+    const it = d.item || {};
+    if (it !== this._item && (it.uid !== this._item?.uid || it.name !== this._item?.name)) {
+      this._item = it; clear(this.slotWrap); this.slotWrap.appendChild(slot(it, { size: 64 }));
+      this.itemTx.innerHTML = `<span>Up for auction</span><b style="color:${grade(it.grade).c}">${esc(it.name || '')}</b><em>Hover the item for details</em>`;
+    }
+    if ((d.left || 0) > this.total) this.total = d.left || 0;
+    const left = Math.max(0, d.left || 0), f = this.total ? left / this.total : 0;
+    this.clock.style.setProperty('--p', f.toFixed(3));
+    this.clock.style.setProperty('--c', left < 5 ? '#ff7a64' : '#f3c46a');
+    this.clock.classList.toggle('is-urgent', left < 5);
+    this.clockT.textContent = Math.ceil(left);
+    const cur = d.current;
+    this.curL.textContent = cur ? 'Highest bid' : 'Opening bid';
+    this.curV.innerHTML = `${fmtInt(cur ? cur.amount : d.min || 0)}<i style="background-image:url('${iconUrl('currency:gold', 22)}')"></i>`;
+    this.curBy.textContent = cur ? (cur.by === d.you ? 'You lead!' : cur.by) : 'No bids yet';
+    this.cur.classList.toggle('is-you', !!cur && cur.by === d.you);
+    this.splitEl.innerHTML = d.split ? `If this bid wins, every other raider receives <b>${fmtInt(d.split)}</b> gold.` : '';
+    this.r1.textContent = `+${fmtInt(d.step || 100)}`; this.r5.textContent = `+${fmtInt((d.step || 100) * 5)}`;
+    if (!this.dirty || (parseInt(this.inp.value) || 0) < this.next()) { this.inp.value = this.next(); this.dirty = false; }
+    this.have.innerHTML = `Your gold <b>${fmtInt(d.gold ?? 0)}</b>${this.passed ? ' · <em>You passed</em>' : ''}`;
+    this.hist.innerHTML = (d.history || []).slice(-6).reverse().map((b, i) => `<div class="ss-bd-b${b.by === d.you ? ' is-you' : ''}${i === 0 ? ' is-top' : ''}"><span>${esc(b.by)}</span><b>${fmtInt(b.amount)}</b></div>`).join('') || '<div class="ss-empty">Be the first to bid.</div>';
+    const done = d.done || (left <= 0 && this.total > 0 ? { winner: cur?.by, amount: cur?.amount } : null);
+    this.res.className = 'ss-bd-res' + (done ? (done.winner === d.you ? ' is-won' : ' is-lost') : '');
+    this.res.innerHTML = done ? (done.winner ? (done.winner === d.you ? `${glyph('crown')}<b>You won for ${fmtInt(done.amount || 0)} gold</b>` : `<b>${esc(done.winner)} won for ${fmtInt(done.amount || 0)} gold</b>`) : '<b>No bids — the item is split by roll</b>') : '';
+    this.check();
   }
 }
 

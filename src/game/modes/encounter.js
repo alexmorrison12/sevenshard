@@ -53,8 +53,12 @@ export class EncounterMode {
       g.audio?.stinger?.('boss_intro');
     }
     g.audio?.music?.(this.def.music || 'boss');
+    // big bosses need room: Lost Ark pulls the camera out for raids and guardians
+    this.camWas = { zoom: g.cam.zoom, max: g.cam.maxDist };
+    const far = (o.partySize || 4) >= 8 ? 25 : 23;
+    g.cam.maxDist = Math.max(g.cam.maxDist, far + 4); g.cam.zoom = Math.max(g.cam.zoom, far);
   }
-  exit() { for (const f of this.offs || []) f(); this.party?.dispose(); this.game.renderer.fx.letterbox = 0; this.game.inputBlocked = false; }
+  exit() { for (const f of this.offs || []) f(); this.party?.dispose(); this.game.renderer.fx.letterbox = 0; this.game.inputBlocked = false; if (this.camWas) { this.game.cam.zoom = this.camWas.zoom; this.game.cam.maxDist = this.camWas.max; } }
   update(dt) {
     const g = this.game;
     this.t += dt;

@@ -144,8 +144,8 @@ export const PORTS = {
 };
 // port facing = the ship's heading when it casts off (out to sea); island docks are on the south shore
 for (const I of ISLANDS) PORTS[I.id] = { id: I.id, name: I.name, title: I.title, x: I.x + I.dock.x, z: I.z + I.dock.z + 14, facing: Math.PI, zone: I.zone, anchor: 'spawn', kind: 'island', region: SEA_NAME, island: I.id };
-/** where Solhaven's harbour sits on the chart: chart = solhaven zone coords + this offset */
-export const SOLHAVEN_OFFSET = { x: -643.5, z: 24 };
+/** where Solhaven sits on the chart: chart = solhaven zone coords + this offset (the zone's sea level −3 is the chart's 0) */
+export const SOLHAVEN_OFFSET = { x: -643.5, y: 3, z: 24 };
 
 /** Non-island landmarks on the chart (silhouettes only): Brightwater Isle and Pipsprout Hollow. */
 export const LANDMARKS = [

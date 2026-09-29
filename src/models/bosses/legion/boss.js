@@ -590,7 +590,7 @@ export class Boss {
     const U = this.U, g = this.glow, st = this.state, sp = this.special.num, gs = this.glowSet;
     const k = dt > 0 ? 1 - Math.exp(-8 * dt) : 0;
     const tgt = {
-      counter: Math.max(gs.counter, clamp01(sp.$counter ?? 0)),
+      counter: Math.max(gs.counter, this.opts.autoGlow === false ? 0 : clamp01(sp.$counter ?? 0)),
       enrage: Math.max(gs.enrage, st.enraged ? 1 : 0, clamp01(sp.$enrage ?? 0)),
       ghost: Math.max(gs.ghost, clamp01(st.ghost ?? 0), clamp01(sp.$ghost ?? 0)),
       charge: clamp01(sp.$charge ?? 0), body: clamp01(sp.$body ?? 0),

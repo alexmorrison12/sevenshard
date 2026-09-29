@@ -93,6 +93,13 @@ export function eyePiece(base, d, key) {
     for (let j = 0; j < cols; j++) { const a = rim[j][0], b = rim[j + 1][0], cc = rim[j + 1][1], dd = rim[j][1]; pb.tri(a, b, cc); pb.tri(a, cc, dd); pb.tri(a, cc, b); pb.tri(a, dd, cc); }
   }
   const pc = pb.build();
+  // eyeball flag for the shader (aFace < −1.5): sclera −2, iris / pupil −3 (demon form blackens and lights them)
+  pc.face = new Float32Array(pc.n * 2).fill(-1);
+  for (let v = 0; v < pc.n; v++) {
+    const sl = pc.slot[v];
+    const f = sl === SLOT.SCLERA ? -2 : (sl === SLOT.IRIS || sl === SLOT.DARK) ? -3 : -1;
+    pc.face[v * 2] = pc.face[v * 2 + 1] = f;
+  }
   CACHE.set(k, pc);
   return pc;
 }

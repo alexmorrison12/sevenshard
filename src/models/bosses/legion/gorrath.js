@@ -151,17 +151,18 @@ export const gorrath = {
     E('head', HP(0, 0.055, 0.0), HR([0.14, 0.12, 0.14]), { k: 0.05, ...hd });
     E('head', HP(0, 0.12, -0.03), HR([0.18, 0.06, 0.09]), { k: 0.05, ...hd });                      // poll: horn base ridge
     for (const s of [-1, 1]) {
-      E('head', HP(s * 0.088, 0.082, -0.13), HR([0.08, 0.04, 0.06]), { k: 0.03, ...hd, rot: [0.2, 0, s * 0.42] });   // brow ridge (angry slant)
+      E('head', HP(s * 0.088, 0.07, -0.155), HR([0.085, 0.042, 0.07]), { k: 0.03, ...hd, rot: [0.4, s * 0.25, s * 0.5] });   // heavy brow (angry V, overhangs the eyes)
+      E('head', HP(s * 0.075, -0.1, -0.29), HR([0.058, 0.062, 0.1]), { k: 0.035, ...hd });                                   // jowls / flews
       E('head', HP(s * 0.1, -0.01, -0.1), HR([0.075, 0.08, 0.11]), { k: 0.05, ...hd });                                // cheeks
     }
     E('head', HP(0, -0.035, -0.22), HR([0.12, 0.1, 0.14]), { k: 0.06, ...hd });                       // muzzle
-    E('head', HP(0, -0.065, -0.33), HR([0.13, 0.08, 0.06]), { k: 0.04, ...hd, col: C.nose, tag: 'nose' });
+    E('head', HP(0, -0.06, -0.32), HR([0.13, 0.07, 0.045]), { k: 0.035, ...hd, col: C.nose, tag: 'nose' });
     E('head', HP(0, -0.11, -0.27), HR([0.105, 0.045, 0.1]), { k: 0.04, ...hd });                      // upper lip
     for (const s of [-1, 1]) K('head', HP(s * 0.02, -0.13, -0.35), HP(s * 0.11, -0.125, -0.17), 0.009 * HS, 0.007 * HS, { group: 2, k: 0.012, sub: true, col: C.mouth, tag: 'mouth' });  // mouth line
     K('neck', [0, 1.7, -0.02], HP(0, 0.0, 0.02), 0.15, 0.14, { group: 2, k: 0.06, ...sk, b2: 'head', t0: 0.3, t1: 0.9 });
     for (const s of [-1, 1]) {
-      E('head', HP(s * 0.057, -0.063, -0.385), HR([0.03, 0.022, 0.035]), { group: 2, k: 0.012, sub: true, col: 0x0a0404, tag: 'nostril', rot: [0, s * 0.3, 0] });
-      E('head', HP(s * 0.1, 0.05, -0.16), HR([0.045, 0.026, 0.035]), { group: 2, k: 0.018, sub: true, col: 0x100404, tag: 'socket', rot: [0, 0, s * 0.3] });
+      E('head', HP(s * 0.06, -0.045, -0.36), HR([0.03, 0.011, 0.028]), { group: 2, k: 0.01, sub: true, col: 0x0a0404, tag: 'nostril', rot: [0.5, s * 0.6, s * 0.5] });   // flared slit nostrils
+      E('head', HP(s * 0.1, 0.045, -0.17), HR([0.045, 0.02, 0.035]), { group: 2, k: 0.016, sub: true, col: 0x100404, tag: 'socket', rot: [0, 0, s * 0.35] });
     }
     E('head', HP(0, -0.14, -0.22), HR([0.085, 0.03, 0.13]), { group: 2, k: 0.02, sub: true, col: C.mouth, tag: 'mouth' });
     const jw = { group: 3, ...sk, tag: 'jaw' };
@@ -176,9 +177,9 @@ export const gorrath = {
       const n = s < 0 ? 'L' : 'R';
       // three curved lames (hollow ellipsoid shells) stacked down the shoulder, bronze rims, raised ridge + boss
       const shell = (t, y0) => (x, y, z, d) => Math.max(d, y0 - y);   // solid cap (the inside is body anyway)
-      E('clav' + n, [s * 0.47, 1.62, 0.03], [0.27, 0.19, 0.27], { ...ar, k: 0.008, rot: [0, 0, s * 0.28], mod: shell(0.02, 1.705), tag: 'pauldron' });
-      E('armU' + n, [s * 0.55, 1.55, 0.035], [0.26, 0.18, 0.26], { ...ar, k: 0.008, rot: [0, 0, s * 0.45], mod: shell(0.019, 1.615), tag: 'pauldron' });
-      E('armU' + n, [s * 0.62, 1.47, 0.04], [0.23, 0.16, 0.235], { ...ar, k: 0.008, rot: [0, 0, s * 0.62], mod: shell(0.018, 1.53), tag: 'pauldron' });
+      E('clav' + n, [s * 0.47, 1.64, 0.03], [0.28, 0.16, 0.28], { ...ar, k: 0.006, rot: [0, 0, s * 0.28], mod: shell(0.02, 1.705), tag: 'pauldron' });
+      E('armU' + n, [s * 0.555, 1.565, 0.035], [0.27, 0.15, 0.27], { ...ar, k: 0.006, rot: [0, 0, s * 0.45], mod: shell(0.019, 1.615), tag: 'pauldron' });
+      E('armU' + n, [s * 0.625, 1.485, 0.04], [0.24, 0.135, 0.245], { ...ar, k: 0.006, rot: [0, 0, s * 0.62], mod: shell(0.018, 1.53), tag: 'pauldron' });
       K('clav' + n, [s * 0.3, 1.8, 0.03], [s * 0.66, 1.66, 0.03], 0.035, 0.022, { ...ar, k: 0.02, tag: 'pauldron' });   // ridge
       E('clav' + n, [s * 0.44, 1.79, 0.03], [0.085, 0.04, 0.095], { ...ar, k: 0.02, col: C.bronze, tag: 'bronze' });   // boss
       // bracer
@@ -240,9 +241,9 @@ export const gorrath = {
     const skinAt = (p) => { const s = S.sampleAt(p[0], p[1], p[2]); return { si: s.si, sw: s.sw }; };
     // ---------------- eyes: burning slits deep under the brow (hot white core → orange rim)
     for (const s of [-1, 1]) {
-      const c = HPt(s * 0.1, 0.048, -0.172);
+      const c = HPt(s * 0.1, 0.043, -0.165);
       const eg = new THREE.SphereGeometry(0.026, 14, 10);
-      const m = new THREE.Matrix4().compose(new THREE.Vector3(...c), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, s * 0.35, s * 0.3, 'YXZ')), new THREE.Vector3(1.25, 0.5, 0.7));
+      const m = new THREE.Matrix4().compose(new THREE.Vector3(...c), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, s * 0.35, s * 0.35, 'YXZ')), new THREE.Vector3(1.35, 0.38, 0.7));
       const hot = col(0xffd070), rim = col(0xff4a08);
       acc.add(eg, { matrix: m, skin: rigid(b('head')), dtl: [0, 0, 0, 0], color: (p, n) => lerp3(rim, hot, sstep(0.3, 0.95, -n.z * 0.8 + 0.2)), emis: 3.6, ext: [0, 0, 0, 1] });
     }
@@ -283,7 +284,7 @@ export const gorrath = {
     }
     // ---------------- teeth / tusks
     for (const s of [-1, 1]) {
-      acc.add(sweep(bez(HPt(s * 0.075, -0.125, -0.27), HPt(s * 0.085, -0.075, -0.3), HPt(s * 0.11, -0.03, -0.29), 5), taper(5, 0.018, 0.002), { radial: 6 }), { skin: rigid(b('jaw')), color: C.tooth, dtl: [0, 0, 0.1, 0], ext: [0.1, 0, 0, 0] });
+      acc.add(sweep(bez(HPt(s * 0.085, -0.13, -0.25), HPt(s * 0.11, -0.06, -0.3), HPt(s * 0.16, 0.0, -0.27), 7), taper(7, 0.026, 0.003), { radial: 8 }), { skin: rigid(b('jaw')), color: (p, n, uv) => lerp3(col(0xa89478), col(C.tooth), uv[1]), dtl: [0, 0, 0.1, 0], ext: [0.12, 0, 0, 0] });
       for (let i = 0; i < 3; i++) acc.add(sweep([HPt(s * (0.035 + i * 0.022), -0.13, -0.3 + i * 0.025), HPt(s * (0.035 + i * 0.022), -0.155, -0.302 + i * 0.025)], [0.01, 0.001], { radial: 4 }), { skin: rigid(b('head')), color: C.tooth, dtl: [0, 0, 0.1, 0] });
     }
     // ---------------- nose ring (gold) through the septum
@@ -307,11 +308,23 @@ export const gorrath = {
       const p = [Math.sin(a) * 0.23, yy, 0.02 + Math.cos(a) * 0.2];
       tuft(p, [Math.sin(a) * 0.55, 0.1 + rnd() * 0.25 - (yy - 1.6) * 0.3, 0.9], 0.1 + rnd() * 0.1, 0.02 + rnd() * 0.012);
     }
-    for (let i = 0; i < 16; i++) { // forelock between the horns
-      const x = (rnd() - 0.5) * 0.2;
-      tuft(HPt(x, 0.15, -0.06 + rnd() * 0.04), [x * 1.5, 0.35, -0.5], 0.06 + rnd() * 0.04, 0.013);
+    for (let i = 0; i < 26; i++) { // curly forelock between the horns, falling over the brow
+      const x = (rnd() - 0.5) * 0.22;
+      tuft(HPt(x, 0.14, -0.05 + rnd() * 0.06), [x * 1.8, -0.2 + rnd() * 0.4, -1], 0.07 + rnd() * 0.05, 0.016);
     }
     for (let i = 0; i < 7; i++) { const x = (i - 3) * 0.02; tuft(HPt(x, -0.19, -0.26 + Math.abs(x)), [x * 2, -1, -0.25], 0.09 + (3 - Math.abs(i - 3)) * 0.016, 0.017); }
+    // ---------------- pauldron rivets along the lame rims
+    for (const s of [-1, 1]) {
+      const n = s < 0 ? 'L' : 'R';
+      for (const [bone, cy, cx, y0, rx, rz] of [['clav' + n, 1.64, 0.47, 1.715, 0.26, 0.26], ['armU' + n, 1.565, 0.555, 1.625, 0.25, 0.25], ['armU' + n, 1.485, 0.625, 1.54, 0.22, 0.225]]) {
+        for (let k = 0; k < 9; k++) {
+          const a = -1.2 + k * 0.3;
+          const p0 = [s * (cx + Math.sin(a) * rx * 0.55), y0 - 0.004, 0.035 - Math.cos(a) * rz * 0.9];
+          const pr = S.project(p0.slice(), 1, 3).p;
+          acc.add(new THREE.SphereGeometry(0.011, 6, 4), { matrix: new THREE.Matrix4().setPosition(pr[0], pr[1], pr[2]), skin: rigid(b(bone)), color: C.bronze, dtl: DT.metal, ext: [0.6, 0, 0, 0] });
+        }
+      }
+    }
     // ---------------- pauldron spikes (iron, glowing tips) + bracer studs
     const cI = col(C.iron), cIL = col(C.ironL), cG = col(0xff8a3a);
     const spike = (bone, p, d, L, r, glowTip = true) => {

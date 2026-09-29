@@ -1,5 +1,7 @@
 // Builds the HudState object (ARCHITECTURE.md "Shared data shapes") from the running game for the UI.
 import { eff } from './combat.js';
+import { BATTLE_ITEMS } from './hero.js';
+const BATTLE_NAMES = new Proxy({}, { get: (_, k) => BATTLE_ITEMS[k]?.name });
 
 const TYPE_NAME = { normal: 'Normal', combo: 'Combo', chain: 'Chain', holding: 'Holding', charge: 'Charge', casting: 'Casting', point: 'Point', toggle: 'Toggle' };
 export function skillView(kit, def, key) {
@@ -30,7 +32,7 @@ export function buildHud(game) {
     skills: keys.map((k, i) => skillView(kit, kit.skillAt(i), k)),
     awaken: { ...skillView(kit, kit.awaken, 'V'), uses: kit.awakenUses },
     dash: { cd: kit.cls.dash.cd, cdLeft: Math.max(0, kit.dashCd), charges: 1, stand: kit.standCd, down: u.cc.down > 0 },
-    items: kit.items.map((it, i) => ({ id: it.id, icon: `item:${it.id}`, count: it.count, cd: 1, cdLeft: Math.max(0, it.cd), key: String(i + 1) })),
+    items: kit.items.map((it, i) => ({ id: it.id, icon: `item:${it.id}`, count: it.count, cd: it.cdMax || 10, cdLeft: Math.max(0, it.cd), key: String(i + 1), name: BATTLE_NAMES[it.id] || it.id })),
     buffs, party, boss,
     cast: u.skill && (u.skill.castLeft > 0 || (u.skill.def.type === 'charge' && !u.skill.chargeDone)) ? { name: u.skill.def.name, pct: u.skill.castLeft > 0 ? 1 - u.skill.castLeft / u.skill.casting : u.skill.charge, perfect: u.skill.def.perfect || null, kind: u.skill.def.type } : null,
     dead: u.dead, down: u.cc.down > 0,

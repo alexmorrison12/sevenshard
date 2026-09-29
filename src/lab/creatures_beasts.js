@@ -59,6 +59,16 @@ function frameCam(h, center = new THREE.Vector3(0, 0, 0), how = Q.get('cam') || 
   cam.fov = 35; cam.updateProjectionMatrix(); ctr.update();
 }
 api.frame = frameCam;
+// ?focus=<socket>&dist=<m>: aim the orbit camera at a socket of the first creature (face / claw close-ups)
+function focusSocket() {
+  const f = Q.get('focus'); if (!f || !api.list.length || lab.view === 'iso') return;
+  const c = api.list[0].c; c.root.updateMatrixWorld(true);
+  const so = c.sockets[f] || c.sockets.head; const p = so.getWorldPosition(new THREE.Vector3());
+  const d = num('dist', 1.2), a = THREE.MathUtils.degToRad(num('camYaw', 0)), pt = THREE.MathUtils.degToRad(num('camPitch', 14));
+  lab.controls.target.copy(p);
+  lab.camera.position.set(p.x + Math.sin(a) * Math.cos(pt) * d, p.y + Math.sin(pt) * d, p.z + Math.cos(a) * Math.cos(pt) * d);
+  lab.camera.fov = 35; lab.camera.updateProjectionMatrix(); lab.controls.update();
+}
 
 // ------------------------------------------------------------------------------------------------ single / lineup / strip
 function buildSingle() {
@@ -273,5 +283,6 @@ if (Q.has('t') && mode !== 'strip') {
   const steps = Math.round(num('t', 0) / dt);
   for (let s = 0; s < steps; s++) { G.uTime.value += dt; for (const it of api.list) it.c.update(dt, state); }
 }
+focusSocket();
 api.step = (sec, dt = 1 / 60) => { for (let s = 0; s < Math.round(sec / dt); s++) { G.uTime.value += dt; for (const it of api.list) it.c.update(dt, state); } };
 api.state = state;

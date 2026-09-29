@@ -55,6 +55,19 @@ export const CARD_LIST = [
   C('iolanthe', 'Madame Iolanthe', 2, 'npc', [], 'Card packs', 'Collects faces on cards. Yours is next.'),
 ];
 export const CARDS = Object.fromEntries(CARD_LIST.map(c => [c.id, c]));
+const BOSS_ART = new Set(['gorrath', 'skarn', 'vesk', 'varkhul', 'ashmaw', 'gatekeeper', 'rimewing', 'cinderhorn', 'sandmaw', 'kurai', 'nerissa', 'deep_oracle', 'thunderhoof']);
+const LEGEND_ART = { aurelion: 'oathkeeper', ithra: 'songweaver', solenne: 'starcaller', maelis: 'starcaller', vaelor: 'reaver', kest: 'bladedancer', corvan: 'stormfist' };
+/** Portrait icon id for a card (canonical icon ids: boss:<id>, npc:<id>, class:<id>). */
+export function cardIcon(id) {
+  if (BOSS_ART.has(id)) return `boss:${id}`;
+  if (id === 'brannoc' || id === 'seraphine' || id === 'bramblebeard') return `npc:${id}`;
+  if (LEGEND_ART[id]) return `class:${LEGEND_ART[id]}`;
+  if (id === 'vorrathis') return 'boss:gatekeeper';
+  if (id === 'ghost_captain') return 'boss:nerissa';
+  if (CARDS[id]?.kind === 'pip') return 'npc:bramblebeard';
+  return 'npc:merchant';
+}
+
 
 export const CARD_SETS = {
   tides: { id: 'tides', name: 'Tides of Light', cards: ['seraphine', 'ithra', 'aurelion', 'solenne', 'brannoc', 'maelis'], bonuses: [

@@ -122,8 +122,9 @@ export function fanSheet(outline, root, map, rings = 3, o = {}) {
   const pos = [], F = [], T = [], idx = [];
   const m = outline.length;
   pos.push(...map(root[0], root[1], 0, 0.5)); F.push(0); T.push(0.5);
+  if (o.fs) rings = o.fs.length;
   for (let r = 1; r <= rings; r++) {
-    const f = Math.pow(r / rings, o.pow ?? 1);
+    const f = o.fs ? o.fs[r - 1] : Math.pow(r / rings, o.pow ?? 1);
     for (let j = 0; j < m; j++) {
       const u = mix(root[0], outline[j][0], f), v = mix(root[1], outline[j][1], f);
       pos.push(...map(u, v, f, j / (m - 1))); F.push(f); T.push(j / (m - 1));

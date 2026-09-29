@@ -20,7 +20,7 @@ import { buildWater } from '../water.js';
 import { boulder } from '../cliffs.js';
 import { blob } from '../../engine/geom.js';
 import { FieldGround, DistGrid, FieldKit, Anchors, snapAnchors, seedSpots, spline, along, paintPath, pieces, scatter, bump, ramp, faceTo, S, RNG, clamp, smoothstep, lerp } from '../fields/common.js';
-import { FieldGrass, FieldFlora, sunflowerGeo } from '../fields/flora.js';
+import { FieldGrass, FieldFlora, sunflowerGeo, reedGeo } from '../fields/flora.js';
 import { Mist, buildSmoke, buildDrifters, buildButterflies } from '../fields/fx.js';
 import * as F from '../fields/props.js';
 
@@ -100,7 +100,7 @@ export async function build(zone, { quality = 1 } = {}) {
     const dr = riverD.at(x, z);
     h = lerp(h, 0.3 + (h - 0.3) * 0.25, smoothstep(24, 7, dr));
     const dc = Math.min(dr, Math.max(0.01, pondD(x, z) + 4.3));
-    const hc = dc < 6.2 ? lerp(-2.3, 0.15, smoothstep(2.0, 6.2, dc)) : 0.15 + (dc - 6.2) * 0.4;
+    const hc = dc < 6.2 ? lerp(-3.0, 0.15, smoothstep(1.6, 6.2, dc)) : 0.15 + (dc - 6.2) * 0.4;
     h = Math.min(h, hc);
     // worn roads sit a hand lower
     h -= 0.12 * smoothstep(2.5, 0.5, roadD.at(x, z));
@@ -122,8 +122,8 @@ export async function build(zone, { quality = 1 } = {}) {
   // meadow variation: lush moss-green hollows, drier patches, flowering clover
   for (let i = 0; i < 70; i++) { const x = rng.range(-100, 100), z = rng.range(-100, 100); g.paint(rng.chance(0.6) ? 'moss' : 'dirt', S.circle(x, z, rng.range(3, 9)), { soft: 4, noise: 3, nscale: 5, amount: rng.range(0.25, 0.55) }); }
   // outside: rock on the western cliffs, forest floor north
-  g.paint('rock', { sd: (x, z) => Math.max(bound.sd(x, z) - 1, -x - 88), box: [-150, -150, -80, 150] }, { soft: 4, noise: 4, nscale: 6 });
-  g.paint('moss', { sd: (x, z) => Math.max(bound.sd(x, z) - 2, z + 85), box: [-150, -150, 150, -80] }, { soft: 5, noise: 5, nscale: 8, amount: 0.8 });
+  g.paint('rock', { sd: (x, z) => Math.max(1 - bound.sd(x, z), x + 88), box: [-150, -150, -80, 150] }, { soft: 4, noise: 4, nscale: 6 });
+  g.paint('moss', { sd: (x, z) => Math.max(2 - bound.sd(x, z), z + 85), box: [-150, -150, 150, -80] }, { soft: 5, noise: 5, nscale: 8, amount: 0.8 });
   // river: mud bed, gravel shores, reedy mud at the water's edge
   g.paint('gravel', { sd: (x, z) => chanD(x, z) - 7.2, box: [-60, -150, 80, 150] }, { soft: 1.5, noise: 1.6, nscale: 3 });
   g.paint('mud', { sd: (x, z) => chanD(x, z) - 4.6, box: [-60, -150, 80, 150] }, { soft: 1.2, noise: 1.2, nscale: 2 });
@@ -171,7 +171,7 @@ export async function build(zone, { quality = 1 } = {}) {
   g.paint('moss', S.rect(ORCHARD[0], ORCHARD[1], 34, 26), { soft: 4, noise: 3, nscale: 4, amount: 0.6 });
   g.paint('flagstone', S.circle(WATERMILL[0] + 3, WATERMILL[1] + 1, 4), { soft: 1, noise: 0.6, nscale: 1.5, amount: 0.8 });
   // the southern drop: grassy slope with rocky breaks
-  g.paint('rock', { sd: (x, z) => Math.max(bound.sd(x, z) - 6, 70 - z), box: [-150, 60, 150, 150] }, { soft: 3, noise: 4, nscale: 5, amount: 0.55 });
+  g.paint('rock', { sd: (x, z) => Math.max(6 - bound.sd(x, z), 70 - z), box: [-150, 60, 150, 150] }, { soft: 3, noise: 4, nscale: 5, amount: 0.55 });
   await tick();
 
   // ---------------------------------------------------------------- structures & props
@@ -341,7 +341,7 @@ export async function build(zone, { quality = 1 } = {}) {
   await tick();
 
   // ---------------------------------------------------------------- water
-  const river = buildWater(g, { x: 13, z: 0, w: 110, d: 262, level: WL, shallow: 0x5ab0a0, deep: 0x1c5a6a, swell: 0.02, foam: 0.7 });
+  const river = buildWater(g, { x: 13, z: 0, w: 110, d: 262, level: WL, shallow: 0x4a8c70, deep: 0x163e44, sky: 0x9ab8c8, swell: 0.02, foam: 0.35 });
   zone.root.add(river);
 
   // ---------------------------------------------------------------- foliage
@@ -357,7 +357,7 @@ export async function build(zone, { quality = 1 } = {}) {
   // willows along the river
   for (let s = 12; s < 250; s += 13) { const p = along(RIVER, s + rng.range(-3, 3)), side = rng.sign(), x = p.x - p.dz * 7.5 * side, z = p.z + p.dx * 7.5 * side; if (bound.sd(x, z) < -3 && roadD.at(x, z) > 5 && Math.hypot(x - BR.x, z - BR.z) > 13 && Math.hypot(x - WATERMILL[0], z - WATERMILL[1]) > 9 && rng.chance(0.6)) T('willow', x, z, { s: rng.range(0.9, 1.15), variant: rng.int(0, 1) }); }
   // hamlet green oak + garden trees
-  T('oak', hx + 3, hz + 10.5, { s: 0.95, variant: 0 });
+  T('oak', hx - 6, hz - 3.5, { s: 0.8, variant: 0 });
   T('apple', FARM[0] - 22, FARM[1] - 4, { s: 1.0 }); T('apple', FARM[0] - 23, FARM[1] + 10, { s: 0.9, variant: 1 });
   // outside the outline: dense firs north (Thornwood's edge), pines on the western cliffs, oaks east & south
   for (const [x, z] of scatter(rng, [-150, -150, 150, 150], 5.5, 3200, (x, z) => { const sd = bound.sd(x, z); return sd > 2.5 && sd < 34 && riverD.at(x, z) > 9 && roadD.at(x, z) > 5; })) {
@@ -371,17 +371,20 @@ export async function build(zone, { quality = 1 } = {}) {
   for (const [x, z] of scatter(rng, [-100, -100, 104, 104], 9, 500, (x, z) => free(x, z, 1.2, 3) && rng.chance(0.4))) T('bush', x, z, { s: rng.range(0.7, 1.2), variant: rng.int(0, 2) });
   // wildflowers: drifts of colour in the meadows
   const FL = [0xffffff, 0xf4d040, 0xe04040, 0xa070e0, 0xffa0c0, 0xf8f0a0];
-  for (const [x, z] of scatter(rng, [-100, -100, 104, 104], 2.2, 5200, (x, z) => free(x, z, 0.5, 2.8) && N.noise2(x / 18, z / 18) > 0.1)) flora.flower(x, H(x, z), z, FL[(Math.floor(N.noise2(x / 9 + 3, z / 9) * 3 + 3) + (rng.chance(0.2) ? 1 : 0)) % FL.length], { s: rng.range(0.8, 1.3) });
+  for (const [x, z] of scatter(rng, [-100, -100, 104, 104], 2.6, 3400, (x, z) => free(x, z, 0.5, 2.8) && N.noise2(x / 18, z / 18) > 0.1)) flora.flower(x, H(x, z), z, FL[(Math.floor(N.noise2(x / 9 + 3, z / 9) * 3 + 3) + (rng.chance(0.2) ? 1 : 0)) % FL.length], { s: rng.range(0.8, 1.3) });
   // Sunflower Hill: every head faces the camera (south)
   const sunMat = flora.mats.flower;
   for (const [x, z] of scatter(rng, [SUNHILL[0] - 20, SUNHILL[1] - 18, SUNHILL[0] + 20, SUNHILL[1] + 16], 1.15, 2600, (x, z) => Math.hypot(x - SUNHILL[0], (z - SUNHILL[1]) * 1.1) < 17 && bound.sd(x, z) < -2 && roadD.at(x, z) > 1.8 && Math.hypot(x - SUNHILL[0], z - SUNHILL[1]) > 2.6)) flora.thing('sunflower' + (Math.round(x * 3) & 1), () => sunflowerGeo(Math.round(x * 3) & 1), sunMat, x, H(x, z) - 0.05, z, { s: rng.range(0.85, 1.12), rot: rng.range(-0.25, 0.25), cast: true });
+  // reeds along the waterline and in the wallows
+  const reedM = flora.mats.flower;
+  for (let s2 = 0; s2 < 262; s2 += 0.9) { const p = along(RIVER, s2); for (const side of [-1, 1]) { if (rng.chance(0.45)) continue; const d = rng.range(3.6, 5.4), x = p.x - p.dz * d * side, z = p.z + p.dx * d * side; if (bound.sd(x, z) > 4 || Math.hypot(x - BR.x, z - BR.z) < 9 || roadD.at(x, z) < 2.5) continue; flora.thing('reed' + (Math.round(s2) % 3), () => reedGeo(Math.round(s2) % 3), reedM, x, H(x, z) - 0.05, z, { s: rng.range(0.7, 1.15), rot: rng.range(0, 6.28), cast: false }); } }
+  for (let i = 0; i < 70; i++) { const a = rng.range(0, 6.28), d = POND.r + rng.range(-0.6, 1.4), x = POND.x + Math.cos(a) * d, z = POND.z + Math.sin(a) * d; if (Math.hypot(x - WATERMILL[0], z - WATERMILL[1]) > 6) flora.thing('reed' + (i % 3), () => reedGeo(i % 3), reedM, x, H(x, z) - 0.05, z, { s: rng.range(0.7, 1.1), rot: rng.range(0, 6.28), cast: false }); }
+  for (let i = 0; i < 40; i++) { const x = WALLOW[0] + rng.range(-15, 15), z = WALLOW[1] + rng.range(-13, 13); if (g.weight('mud', x, z) > 0.4 && rng.chance(0.6)) flora.thing('reed' + (i % 3), () => reedGeo(i % 3), reedM, x, H(x, z) - 0.05, z, { s: rng.range(0.6, 0.9), rot: rng.range(0, 6.28), cast: false }); }
   flora.build(zone.root);
   kit.colliders.push(...flora.colliders);
   const grass = new FieldGrass(g, { layer: 'grass', shape: 'grass', density: quality, height: 1.15 });
-  const lush = new FieldGrass(g, { layer: 'moss', shape: 'grass', density: quality * 0.7, height: 1.35, spacing: 0.5, threshold: [0.45, 0.85] });
-  const wheat = new FieldGrass(g, { layer: 'sand', shape: 'wheat', density: Math.min(1, quality * 1.1), height: 1.12, spacing: 0.34, colors: [0x7a6a28, 0xc8a444, 0xffd66a], layerMix: 0.15, threshold: [0.55, 0.85], push: 0.8, sway: 0.25, scaleVar: [0.85, 1.15] });
-  const reeds = new FieldGrass(g, { layer: 'mud', shape: 'reed', density: quality * 0.55, height: 1.5, spacing: 0.55, colors: [0x3a4a1a, 0x6a8a30, 0xa8b060], layerMix: 0.1, threshold: [0.55, 0.9], push: 0.6, sway: 0.2 });
-  for (const gr of [grass, lush, wheat, reeds]) zone.root.add(gr.mesh);
+  const wheat = new FieldGrass(g, { layer: 'sand', shape: 'wheat', w: 42, d: 36, density: Math.min(1, quality * 1.1), height: 1.12, spacing: 0.36, colors: [0x7a6a28, 0xc8a444, 0xffd66a], layerMix: 0.15, threshold: [0.55, 0.85], push: 0.8, sway: 0.25, scaleVar: [0.85, 1.15] });
+  for (const gr of [grass, wheat]) zone.root.add(gr.mesh);
   await tick();
 
   // ---------------------------------------------------------------- decals
@@ -412,7 +415,8 @@ export async function build(zone, { quality = 1 } = {}) {
   for (const m of [pollen, fluff, smokeMesh, bflies]) if (m) zone.root.add(m);
   zone.onUpdate((dt, t, focus) => {
     pool.update(dt, t, focus); pollen.userData.update(focus); fluff.userData.update(focus);
-    for (const gr of [grass, lush, wheat, reeds]) gr.update(focus);
+    grass.update(focus); wheat.update(focus);
+    if (focus) wheat.mesh.visible = FIELDS.some(f => f.kind !== 'stubble' && fieldRect(f).sd(focus.x, focus.z) < 30);
     wmill.spin.rotation.z = -t * 0.45; wheelMesh.rotation.z = t * 0.6;
   });
   zone.onEnv(env => { pool.scale = 0.45 + env.night * 1.6; kitMaterial('window').emissiveIntensity = env.night * 1.8; river.userData.setEnv?.(env); });

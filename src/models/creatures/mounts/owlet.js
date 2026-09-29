@@ -138,7 +138,8 @@ class OwletCtl extends BipedCtl {
 }
 
 const hopArc = (k, a0, a1) => (k > a0 && k < a1 ? Math.sin((k - a0) / (a1 - a0) * Math.PI) : 0);
-const bothLegs = (ctl, fn) => { const L = ctl.gait.legs; for (let i = 0; i < L.length; i++) fn(L[i]); };
+/** both feet to a body-local target (plain loop, no per-frame closure) */
+function feetTo(ctl, dy, dz, w, local = true, paw = -0.6, sx = 1) { const G = ctl.gait.legs; for (let i = 0; i < G.length; i++) { const L = G[i]; legTo(L, L.toe.x * sx, L.toe.y + dy, L.toe.z + dz, w, local, paw); } }
 const ACTIONS = {
   hop: { dur: 0.5, a: 0.02, d: 0.95, fn(ctl, a, w) {
     const P = ctl.pose, b = ctl.b, k = a.k, h = hopArc(k, 0.2, 0.8);
@@ -146,7 +147,7 @@ const ACTIONS = {
     P.move(b.hips, 0, (0.11 * h - 0.02 * sq) * w, 0);
     P.sc[b.spine].set(1 + 0.08 * sq * w, 1 - 0.1 * sq * w + 0.06 * h * w, 1 + 0.08 * sq * w);
     ctl.flap = Math.max(ctl.flap, 0.5 * h * w);
-    if (h > 0) bothLegs(ctl, (L) => legTo(L, L.toe.x, 0.025, L.toe.z, h * w, true, -0.6));
+    if (h > 0) feetTo(ctl, 0.025, 0, h * w);
   } },
   happy: { dur: 1.4, a: 0.03, d: 0.94, fn(ctl, a, w) { // flutter up, twirl, eyes ^ ^
     const P = ctl.pose, b = ctl.b, k = a.k, h = hopArc(k, 0.1, 0.8);
@@ -154,14 +155,14 @@ const ACTIONS = {
     P.rot(b.hips, 0, sstep(0.15, 0.7, k) * TAU * w, 0);
     ctl.flap = Math.max(ctl.flap, h * w); ctl.wingSpread = Math.max(ctl.wingSpread, 0.8 * h * w);
     ctl.happy = Math.max(ctl.happy || 0, sstep(0.05, 0.2, k) * w);
-    if (h > 0) bothLegs(ctl, (L) => legTo(L, L.toe.x, 0.02, L.toe.z, h * w, true, -0.6));
+    if (h > 0) feetTo(ctl, 0.02, 0, h * w);
   } },
   sit: { dur: 1, hold: true, rest: true, fadeIn: 0.4, fadeOut: 0.3, fn(ctl, a, w) { // settle down, fluffed up
     const P = ctl.pose, b = ctl.b, t = a.t;
     P.move(b.hips, 0, -0.045 * w, 0);
     P.sc[b.spine].set(1 + 0.08 * w, 1 - 0.04 * w + Math.sin(t * 2) * 0.01 * w, 1 + 0.08 * w);
     ctl.eyeClose = Math.max(ctl.eyeClose || 0, 0.35 * w);
-    bothLegs(ctl, (L) => legTo(L, L.toe.x, 0.0, L.toe.z + 0.01, w, true, 0));
+    feetTo(ctl, 0, 0.01, w, true, 0);
   } },
   sleep: { dur: 1, hold: true, rest: true, fadeIn: 0.8, fadeOut: 0.5, fn(ctl, a, w) { // puffed, head tucked, eyes shut, slow breath
     const P = ctl.pose, b = ctl.b, t = a.t, br = Math.sin(t * 1.6);
@@ -169,7 +170,7 @@ const ACTIONS = {
     P.sc[b.spine].set(1 + (0.1 + 0.015 * br) * w, 1 - 0.05 * w, 1 + (0.1 + 0.015 * br) * w);
     P.rot(b.head, 0.28 * w, 0.2 * w, 0.18 * w);
     ctl.eyeClose = Math.max(ctl.eyeClose || 0, w);
-    bothLegs(ctl, (L) => legTo(L, L.toe.x, 0.0, L.toe.z + 0.01, w, true, 0));
+    feetTo(ctl, 0, 0.01, w, true, 0);
   } },
   pickup: { dur: 0.8, a: 0.05, d: 0.85, hit: 0.45, fn(ctl, a, w) { // bob down & grab with the beak, flick up
     const P = ctl.pose, b = ctl.b, k = a.k;
@@ -211,7 +212,7 @@ const ACTIONS = {
     P.rx(b.hips, -1.35 * f * w);
     ctl.wingSpread = Math.max(ctl.wingSpread, 0.7 * f * w);
     ctl.eyeClose = Math.max(ctl.eyeClose || 0, sstep(0.25, 0.4, k) * w);
-    bothLegs(ctl, (L) => legTo(L, L.toe.x * 1.4, L.toe.y + 0.03, L.toe.z, f * w, true, -0.8));
+    feetTo(ctl, 0.03, 0, f * w, true, -0.8, 1.4);
   } },
   spawn: popIn(0.75, { fn(ctl, a, w) { ctl.flap = Math.max(ctl.flap, (1 - sstep(0.3, 0.8, a.k)) * w); ctl.wingSpread = Math.max(ctl.wingSpread, 0.6 * (1 - sstep(0.3, 0.8, a.k)) * w); } }),
 };

@@ -38,9 +38,11 @@ slot.style.background = gradeFrame(item.grade);              // CSS background m
 `'engr:All-Out Attack'`, `"skill:stormfist:Heaven's Fury"` all work).
 
 **Sizes & speed** — request the pixel size you display × `devicePixelRatio`. Icons are painted at 2× internally (≤128 px)
-and downsampled; designed to read at 32 px and look good at 128–256 px. Measured (headless Chrome, M-series): all 446
-core icons at 64 px in ~430 ms total — median 0.9 ms, p95 1.7 ms per icon; 32 px median 0.5 ms; 128 px ~3 ms;
-256-px dialog portraits ~10 ms. Nothing is painted until first requested.
+and downsampled; designed to read at 32 px and look good at 128–256 px. Measured in headless Chrome (M-series), incl.
+PNG encoding: all 557 ids at 64 px ≈ 600 ms total — median 1.1 ms, p95 1.6 ms, p99 2.0 ms per icon; 32 px median
+0.6 ms; cards at 128 px median 3.2 ms; NPC portraits at 256 px median 3.8 ms. The very first paint also builds the shared
+canvas-grain texture (~20 ms, once). Nothing is painted until first requested; `preloadIcons` can warm a list in idle time.
+Code size: ~290 KB minified / ~88 KB gzipped.
 
 ## Shapes & backgrounds per family
 

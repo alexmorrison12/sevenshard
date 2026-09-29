@@ -99,6 +99,7 @@ export async function build(zone, { quality = 1 } = {}) {
   zone.onUpdate((dt, t, focus) => { pool.update(dt, t, focus); dust.userData.update(focus); });
   const nav = new NavGrid(-R - 3, -R - 3, 2 * R + 6, 2 * R + 6, 0.5).walk(S.circle(0, 0, R - 0.3));
   for (const c of kit.colliders) nav.block(c.shape, c.inflate);
+  nav.keepConnected([[0, R - 5]]);
   zone._nav = nav; zone.nav = nav.toContract();
   zone.anchor('spawn', 0, R - 5, 0);
   [-3, 0, 3].forEach((x, i) => { zone.anchor(`team:a${i + 1}`, x, R - 5, 0); zone.anchor(`team:b${i + 1}`, x, -R + 5, Math.PI); });

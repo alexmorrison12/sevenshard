@@ -6,7 +6,7 @@
 // Every boulder rides its own bone, so death crumbles it into a rubble heap and spawn assembles it out of the ground.
 import * as THREE from 'three';
 import { BipedCtl, armRot, legsLocal, legsPlant } from '../ctl.js';
-import { bHit, bKnockback, bKnockdown, bGetup, bStun, kf } from '../acts.js';
+import { bHit, bKnockback, bKnockdown, bGetup, bStun, retime } from '../acts.js';
 import { rigid } from '../../kit/geo.js';
 import { col } from '../../kit/sdf.js';
 import { orb } from '../parts2.js';
@@ -189,8 +189,8 @@ const ACTIONS = {
     ctl.glow = mix(ctl.glow, 1 + 1.2 * lift + 1.2 * sm, w);
     legsPlant(ctl, (lift + sm) * w * 0.8, 1.35, -0.06 * sm);
   } },
-  attack_big: { dur: 2.4, a: 0.04, d: 0.9, hit: 0.7, fn(ctl, a, w) { // crystals flare, fists rise high (trembling telegraph) → earth-shattering ground slam
-    const P = ctl.pose, b = ctl.b, k = a.k, t = a.t;
+  attack_big: { dur: 1.9, a: 0.04, d: 0.9, hit: 0.53, fn(ctl, a, w) { // crystals flare, fists rise high (trembling telegraph) → earth-shattering ground slam
+    const P = ctl.pose, b = ctl.b, k = retime(a.k, 0.7, 0.53), t = a.t; // authored impact at 0.70 lands at 0.53 (game: dur 1.5, hit 0.8 s)
     const rise = sstep(0.02, 0.5, k) * (1 - sstep(0.64, 0.7, k)), trem = sstep(0.35, 0.64, k) * (1 - sstep(0.64, 0.66, k)) * Math.sin(t * 48) * 0.03;
     const slam = sstep(0.64, 0.7, k) * (1 - sstep(0.86, 1, k));
     P.move(b.hips, trem, (0.03 * rise - 0.34 * slam) * w, (0.1 * rise - 0.2 * slam) * w);
@@ -199,7 +199,7 @@ const ACTIONS = {
     P.rot(b.head, (0.35 * rise - 0.2 * slam) * w, 0, 0);
     for (let s = -1; s <= 1; s += 2) up2(ctl, s, 3.0 * rise + 0.55 * slam + trem * 4, 0.35 * rise - 0.05 * slam, 0.35 * rise, 0, w);
     const g = sstep(0.02, 0.62, k) * (1 - sstep(0.72, 0.9, k));
-    ctl.glow = mix(ctl.glow, 1 + 3.2 * g + 1.5 * slam, w); ctl.charge = Math.max(ctl.charge, g * w);
+    ctl.glow = mix(ctl.glow, 1 + 2.4 * g + 1.2 * slam, w); ctl.charge = Math.max(ctl.charge, g * w);
     legsPlant(ctl, (rise + slam) * w * 0.9, 1.45, -0.08 * slam);
   } },
   roar: { dur: 1.8, a: 0.1, d: 0.85, fn(ctl, a, w) { // chest out, arms spread, crystals blaze
@@ -247,7 +247,7 @@ const SPEC = {
   gait: GAIT,
   arm: { swing: 0.28, out: 0.12, elbow: 0.25, runSwing: 0.45, runOut: 0.15, runElbow: 0.5, combatUp: 0.45, combatElbow: 0.55, combatOut: 0.1 },
   lean: { walk: 0.08, run: 0.22, combat: 0.12 }, twist: 0.08, waddle: 0.05, crouch: 0.08, breathe: 0.006,
-  fidgets: [{ name: 'idle_alt', w: 1 }], fidgetGap: 6, chargeK: 0.3,
+  fidgets: [{ name: 'idle_alt', w: 1 }], fidgetGap: 6, chargeK: 0.16,
   pose(ctl) { // heavy footfalls: every stomp jolts the body and shakes the crystals
     const P = ctl.pose, b = ctl.b, G = ctl.gait;
     let jolt = 0; for (let i = 0; i < G.legs.length; i++) jolt = Math.max(jolt, G.legs[i].down);

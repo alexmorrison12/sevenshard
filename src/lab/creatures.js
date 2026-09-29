@@ -112,11 +112,11 @@ function buildHorde() {
     it.speed *= 0.85 + rng() * 0.3;
     it.reach = c.radius + 0.9 + (t === 'abyss_caster' ? 5 : 0);
     it.phase = 'spawn'; it.timer = 0.3 + rng() * 2.5; it.st = { speed: 0, turn: 0, combat: true, dead: false, down: false, stunned: false, fly: false };
-    it.face = 0; it.first = true;
+    it.face = 0; it.first = true; it.fl = 0;
   });
   const buildMs = performance.now() - T0;
   lab.setView('iso', new THREE.Vector3(0, 0, 0));
-  let upd = 0, frames = 0, acc = 0, swing = 3;
+  let upd = 0, frames = 0, acc = 0, swing = 3, slashT = 0.5;
   const L = api.list;
   lab.onFrame((dt) => {
     const t0 = performance.now();
@@ -124,6 +124,9 @@ function buildHorde() {
     swing -= dt;
     let whirl = false;
     if (swing <= 0) { swing = 2.8 + rng() * 1.5; whirl = true; }
+    // between whirlwinds the hero slashes the pack in front of it: white hit flashes (the game's damage flash) → flinches
+    slashT -= dt; const slash = slashT <= 0 && swing > 0.8; if (slash) slashT = 0.32;
+    const hf = hero.rotation.y, hfx = -Math.sin(hf), hfz = -Math.cos(hf);
     for (let i = 0; i < L.length; i++) {
       const it = L[i], c = it.c, r = c.root, st = it.st;
       it.timer -= dt;
@@ -150,6 +153,8 @@ function buildHorde() {
         c.setDissolve(Math.min(1, Math.max(0, (it.timer0 - it.timer - 1.3) / 1.1)));
         if (it.timer <= 0) { ringPos(it); r.position.y = -50; it.phase = 'spawn'; it.timer = 0.2 + rng() * 2; it.first = false; }
       }
+      if (slash && it.phase === 'fight' && dist < 3.2 && (-dx * hfx - dz * hfz) / dist > 0.5) it.fl = 0.45;
+      if (it.fl > 0) { it.fl = Math.max(0, it.fl - dt * 4); c.setTint(0xffffff, it.fl); }
       if (whirl && it.phase !== 'dead' && it.phase !== 'spawn' && dist < 5.5 && rng() < 0.65) {
         if (rng() < 0.85) { c.play('death'); st.dead = true; it.phase = 'dead'; it.timer = it.timer0 = 2.6; want = Math.atan2(-dx, -dz); }
         else { c.play('knockback'); r.position.x -= dx / dist * 1.2; r.position.z -= dz / dist * 1.2; }

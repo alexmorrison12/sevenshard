@@ -14,7 +14,7 @@ import { loftZ, chainSkin, fanSheet, vnoise, V3 } from './common.js';
 
 const PAL = {
   monarch: { base: 0xf07818, base2: 0xf8a030, vein: 0x140c08, border: 0x120a08, dot: 0xf4f0e0, body: 0x1a1210, em: 0 },
-  azure: { base: 0x1a78f0, base2: 0x6ad0ff, vein: 0x0a1a3a, border: 0x080c18, dot: 0xe8f4ff, body: 0x121620, em: 0.35 },
+  azure: { base: 0x1a6ae0, base2: 0x3ab0f8, vein: 0x0a1a3a, border: 0x080c18, dot: 0xd8ecff, body: 0x121620, em: 0.3 },
   sulphur: { base: 0xf2d830, base2: 0xfff07a, vein: 0x8a6a10, border: 0x3a2a08, dot: 0xf08a20, body: 0x2a2410, em: 0 },
   rose: { base: 0xf07aa8, base2: 0xffd0e0, vein: 0x8a2a50, border: 0x5a1a38, dot: 0xfff0f6, body: 0x2a1418, em: 0, eyes: true },
   glow: { base: 0x6af0ff, base2: 0xd0a0ff, vein: 0x2a4a8a, border: 0x9a6aff, dot: 0xffffff, body: 0x20264a, em: 1.25 },
@@ -24,6 +24,9 @@ const S = 1.1; // wing scale
 const FW = [[0.012, -0.012], [0.035, -0.03], [0.062, -0.041], [0.086, -0.043], [0.1, -0.034], [0.103, -0.02], [0.098, -0.004], [0.088, 0.01], [0.075, 0.02], [0.056, 0.022], [0.034, 0.018], [0.016, 0.01]].map(([u, v]) => [u * S, v * S]);
 const HW = [[0.012, 0.002], [0.038, -0.003], [0.062, 0.006], [0.076, 0.024], [0.076, 0.042], [0.064, 0.058], [0.046, 0.068], [0.028, 0.066], [0.014, 0.052], [0.006, 0.03]].map(([u, v]) => [u * S, v * S]);
 const Y0 = 0.012; // body height when perched
+// subdivide an outline (1 extra point per edge): veins run along original points, dots sit between them
+const sub2 = (O) => { const out = []; for (let i = 0; i < O.length; i++) { out.push(O[i]); if (i < O.length - 1) out.push([(O[i][0] + O[i + 1][0]) / 2, (O[i][1] + O[i + 1][1]) / 2]); } return out; };
+const FS = [0.3, 0.55, 0.75, 0.86, 0.93, 1.0]; // ring radii: crisp border band between 0.86 and 1
 
 export const butterfly = {
   name: 'Butterfly',
@@ -55,24 +58,25 @@ export const butterfly = {
     // wings: fan sheets painted per variant (single-sided; the controller sets a double-sided material)
     const cBase = col(c.base), cBase2 = col(c.base2), cVein = col(c.vein), cBorder = col(c.border), cDot = col(c.dot);
     const paintW = (hind, f, t, m) => {
-      const j = Math.round(t * (m - 1)), vein = Math.abs(t * (m - 1) - j) < 0.02 && j % 2 === 0 && f > 0.12 ? 1 : 0;
-      let cc = lerp3(cBase, cBase2, sstep(0.2, 0.7, f) * 0.6 + (hind ? 0.1 : 0));
-      const bw = hind ? 0.84 : 0.8, border = sstep(bw, bw + 0.04, f);
-      cc = lerp3(cc, cVein, vein * 0.85);
+      const j = Math.round(t * (m - 1)), onRay = Math.abs(t * (m - 1) - j) < 0.02;
+      const vein = onRay && j % 4 === 0 && j > 0 && j < m - 1 && f > 0.2 && f < 0.9 ? 1 : 0;
+      let cc = lerp3(cBase, cBase2, sstep(0.3, 0.75, f) * 0.5 + (hind ? 0.1 : 0));
+      cc = lerp3(cc, cBorder, (1 - sstep(0.05, 0.4, f)) * 0.55);                             // dusky wing root
+      cc = lerp3(cc, cVein, vein * 0.6);
+      const border = f > 0.9 ? 1 : f > 0.8 ? 0.35 : 0;
       cc = lerp3(cc, cBorder, border);
-      const dot = border > 0.5 && j % 2 === 1 && f > 0.88 && f < 0.99 ? 1 : 0;       // pearl dots in the border
-      cc = lerp3(cc, cDot, dot * 0.9);
-      if (!hind && t < 0.45 && f > 0.62) cc = lerp3(cc, cBorder, sstep(0.62, 0.7, f) * 0.85); // dark apex
-      if (!hind && t < 0.4 && f > 0.66 && f < 0.8 && j % 2 === 1) cc = lerp3(cc, cDot, 0.85);  // apex spots
-      if (c.eyes && hind && Math.abs(t - 0.5) < 0.15 && f > 0.5 && f < 0.75) cc = lerp3(cc, cBorder, 0.8); // eyespot
+      if (border === 1 && f < 0.97 && onRay && j % 4 === 2) cc = lerp3(cc, cDot, 0.9);          // pearl dots in the border
+      if (!hind && t < 0.4 && f > 0.72) cc = lerp3(cc, cBorder, 0.9);                           // dark apex …
+      if (!hind && t < 0.34 && f > 0.72 && f < 0.8 && onRay && j % 2 === 1) cc = lerp3(cc, cDot, 0.9); // … with a row of spots
+      if (c.eyes && hind && Math.abs(t - 0.5) < 0.1 && f > 0.5 && f < 0.8) cc = lerp3(cc, f > 0.7 ? cBase2 : cBorder, 0.85); // eyespot
       return cc;
     };
     const wEm = (hind, f, t) => c.em * (0.35 + 0.65 * sstep(0.7, 1, f));
     for (const s of [-1, 1]) {
       const n = s < 0 ? 'L' : 'R';
       for (const hind of [false, true]) {
-        const O = hind ? HW : FW, bone = b((hind ? 'hw' : 'fw') + n), root = hind ? [s * 0.004, Y0 + 0.002, 0.003] : [s * 0.004, Y0 + 0.003, -0.003];
-        const g = fanSheet(O, [0, 0], (u, v) => [root[0] + s * u, root[1] + 0.004 * u * u / 0.01, root[2] + v], 4);
+        const O = sub2(hind ? HW : FW), bone = b((hind ? 'hw' : 'fw') + n), root = hind ? [s * 0.004, Y0 + 0.002, 0.003] : [s * 0.004, Y0 + 0.003, -0.003];
+        const g = fanSheet(O, [0, 0], (u, v) => [root[0] + s * u, root[1] + 0.004 * u * u / 0.01, root[2] + v], 0, { fs: FS });
         acc.add(g, { skin: rigid(bone), dtl: [0, 0, 0.15, 0], color: (p, nn, uv) => paintW(hind, uv[0], uv[1], O.length), emis: (p, uv) => wEm(hind, uv[0], uv[1]) });
       }
     }

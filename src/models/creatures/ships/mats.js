@@ -69,7 +69,8 @@ export function woodMaterial(o = {}) {
       .replace('#include <map_fragment>', `#ifdef USE_MAP
         vec4 texelColor = texture2D( map, vMapUv );
         diffuseColor.rgb *= mix( vec3( 1.0 ), texelColor.rgb * 1.18, vAux.y );
-      #endif`)
+      #endif
+      diffuseColor.rgb *= 1.0 - 0.5 * vAux.z;   // metals: darker diffuse, light comes from spec + sky reflection`)
       .replace('#include <emissivemap_fragment>', `{
         float fl = 1.0;
         if ( vAux.x > 1.5 ) {
@@ -81,7 +82,7 @@ export function woodMaterial(o = {}) {
           vec3 upV = normalize( ( viewMatrix * vec4( 0.0, 1.0, 0.0, 0.0 ) ).xyz );
           vec3 rv = reflect( -normalize( vViewPosition ), normal );
           float sky = dot( rv, upV );
-          totalEmissiveRadiance += vColor.rgb * vMetal * ( 0.04 + 0.42 * smoothstep( -0.1, 0.9, sky ) - 0.03 * smoothstep( 0.0, -0.8, sky ) );
+          totalEmissiveRadiance += vColor.rgb * vMetal * ( 0.03 + 0.75 * smoothstep( 0.15, 0.95, sky ) + 0.12 * smoothstep( -0.2, 0.3, sky ) );
         }
       }`)
       .replace('totalEmissiveRadiance + gSpecAcc', 'totalEmissiveRadiance + gSpecAcc * mix( vec3( 1.0 ), diffuseColor.rgb * 1.5 + 0.1, vMetal )'),

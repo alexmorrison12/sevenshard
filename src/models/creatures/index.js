@@ -37,6 +37,8 @@ const PH = {
 for (const [t, [h, r, c, fly]] of Object.entries(PH)) if (!DEFS[t]) register(t, placeholderDef(t, { height: h, radius: r, color: c, flying: fly }));
 const OWN = { imp, hellhound, legionnaire, brute, abyss_caster, gargoyle, rift_crystal, pip, pip_seed, pip_pet };
 for (const defs of [OWN, BEASTS, SPIRITS, MOUNTS, WILD]) for (const [t, d] of Object.entries(defs)) register(t, d);
+// super-armoured heavies shrug off hit flashes (no auto-flinch) unless their def says otherwise
+for (const t of ['brute', 'crystal_golem', 'treant', 'sea_serpent', 'kraken_tentacle']) if (DEFS[t] && DEFS[t].autoFlinch === undefined) DEFS[t].autoFlinch = false;
 
 const NAMES = {
   imp: 'Imp', hellhound: 'Hellhound', legionnaire: 'Legionnaire', brute: 'Abyssal Brute', abyss_caster: 'Abyss Caster', gargoyle: 'Gargoyle',

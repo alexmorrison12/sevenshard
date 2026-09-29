@@ -39,9 +39,17 @@ export function sidePair(KD, GU, DE) {
  * Crisp glowing crack (or scar) ribbon laid onto an SDF surface: pts = rough surface points (model space), projected
  * onto `group`'s surface and lifted by `lift`; 3 verts across (edge / core / edge), width tapers to the ends with a
  * jagged wobble; skinned with the surface's own weights (follows the body's deformation). ~4 tris per segment.
- * o: { width, core (hex), edge (hex), emis (core emissive), group, lift, seed }
+ * o: { width, core (hex), edge (hex), emis (core emissive), group, lift, seed, n (resample to n points) }
  */
 export function surfaceCrack(acc, S, pts, o = {}) {
+  if (o.n && o.n > pts.length) { // resample the polyline densely so the ribbon hugs curved surfaces
+    const out = [], m = pts.length - 1;
+    for (let i = 0; i < o.n; i++) {
+      const f = i / (o.n - 1) * m, j = Math.min(m - 1, Math.floor(f)), u = f - j, a = pts[j], b = pts[j + 1];
+      out.push([a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u, a[2] + (b[2] - a[2]) * u]);
+    }
+    pts = out;
+  }
   const w0 = o.width ?? 0.03, E = o.emis ?? 2, g = o.group ?? 0, lift = o.lift ?? 0.012;
   const cc = col(o.core ?? 0xffe0a0), ce = col(o.edge ?? o.core ?? 0xff8a20);
   const n = pts.length, P = [], N = [], SK = [];

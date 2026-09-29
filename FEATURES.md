@@ -10,11 +10,11 @@ encounters, systems, story, modes, meta.
 | Roster of characters, character select lineup | 6 slots, 3D lineup on the Solhaven plaza, roster level | ✅ |
 | Advanced classes chosen at creation | 8 advanced classes, both sexes | ✅ |
 | Detailed customization | face/hair/colours/skin/eyes/height/build/war paint, live 3D preview, face camera | 🟡 heroes |
-| Class skill preview videos | live 3D skill demos on the creation stage (the preview hero performs the selected skill with FX) | ⬜ lead |
+| Class skill preview videos | live 3D skill demos on the creation stage: the preview hero loops its skills with full FX; hover a skill to watch it | ✅ |
 | Powerpass / Knowledge Transfer | "Powerpass" path at creation (Lv 60, Vanguard +10) | ✅ |
 | Roster-wide storage, roster-bound materials | roster wallet + materials + bank | 🟡 systems/ui |
 | Titles, achievements | titles + achievements | 🟡 systems |
-| Wardrobe, avatars, dyes | tailor: dyes and cosmetic tiers | ⬜ ui/lead |
+| Wardrobe, avatars, dyes | tailor: 9 dye palettes, wear any armour look you've earned | ✅ |
 | Photo mode | hide HUD (Ctrl+Z), free zoom | ✅ |
 
 ## Combat
@@ -32,9 +32,9 @@ encounters, systems, story, modes, meta.
 | Layered boss HP (×145), enrage timers, mechanic callouts | layered bars in cycling colours, enrage, banners | ✅ |
 | Damage numbers (crit, back/head, counter) | WebGL numbers with Lost Ark styles | ✅ fx |
 | DPS meter (community logs) | party meter + results table; in-fight meter panel | 🟡 meta/ui |
-| Death: revive at entrance / feathers | both, with death overlay | ✅ |
-| Mounts, pets (auto-loot) | mounts (T), pets that follow and loot | 🟡 creatures/lead |
-| Touch controls (Lost Ark Mobile) | virtual stick + skill buttons | 🟡 ui/lead |
+| Death: revive at entrance / feathers | both, with death overlay; legion raids: feathers only (1 per gate) or spectate | ✅ |
+| Mounts, pets (auto-loot) | mount up with T (+70% speed, thrown off in combat), pets follow you | ✅ lead · 🟡 creatures models |
+| Touch controls (Lost Ark Mobile) | floating virtual stick, touch skill cluster, auto-aim, tap to attack, pinch zoom | ✅ |
 
 ## Progression
 | Lost Ark | SEVENSHARD | Status |
@@ -50,7 +50,7 @@ encounters, systems, story, modes, meta.
 | Cards & card sets | ~32 cards, deck of 6, sets with awakening | 🟡 systems |
 | Bracelets | random effect lines | ✅ |
 | Combat stats (crit, spec, swift, dom, endur, expert) | all six | ✅ |
-| Ark Passive (late Lost Ark) | Sunheart Passive: Evolution / Enlightenment / Leap trees | ⬜ lead |
+| Ark Passive (late Lost Ark) | Sunheart Passive: Evolution / Enlightenment / Leap trees, points from clears, Hyper Awakening Technique | ✅ logic · 🟡 window |
 
 ## Content
 | Lost Ark | SEVENSHARD | Status |
@@ -75,19 +75,19 @@ encounters, systems, story, modes, meta.
 | Trade skills (6) + Life Energy | foraging, logging, mining, hunting, fishing, archaeology + minigames | 🟡 systems · ⬜ story/fields |
 | Mokoko seeds, collectibles, Adventure Tome | 120 Pip Seeds, Island Souls, Giant's Hearts, Masterpieces, Omnium Stars, Sea Bounties, World Tree Leaves, Vistas; Tome per region | 🟡 systems · ⬜ placement |
 | Rapport, songs, emotes | 8 rapport NPCs, 5 songs (real in-world performances), 20+ emotes | 🟡 systems/audio |
-| Triports, Song of Escape | triports + Hymn of Homeward | ⬜ lead |
+| Triports, Song of Escape | Songs (,): Hymn of Homeward returns you to Solhaven; rapport songs; triports in fields | ✅ songs · 🟡 story triports |
 | PvP Proving Grounds 3v3, duels | Deathmatch & Elimination vs AI (friends as teammates), ranks, duels | ⬜ modes |
 | Guild | AI guilds, donations, bloodstones, research, shop | 🟡 systems |
 | Auction house, crystal exchange, vendors | simulated market with SimPlayer listings, exchange rate | 🟡 systems · ⬜ ui |
 | Mail | mailbox (+ tongue-in-cheek compensation letters) | 🟡 systems |
-| Party finder, matchmaking | listings from SimPlayers and friends, AI fill | 🟡 lead/ui |
-| Raid auction (bidding) and "More rewards" chests | yes | ⬜ lead/systems |
+| Party finder, matchmaking | live AI listings (Lost Ark culture notes), apply/create/accept applicants, matchmaking, AI fill | ✅ logic · 🟡 window |
+| Raid auction (bidding) and "More rewards" chests | AI raiders bid gold, pot split among the rest; More Rewards chest after every gate | ✅ logic · 🟡 bid window |
 
 ## MMO layer & multiplayer (Everdawn carry-over, adapted)
 | | SEVENSHARD | Status |
 |---|---|---|
 | Living world of AI players | 28+ AI adventurers in Solhaven with Lost Ark-culture chatter, LF parties, AI raiders with personalities | ✅ |
-| Online co-op | host/join by room code (WebRTC), up to 8 players; each browser owns its hero; host owns enemies | ✅ |
+| Online co-op | host/join by room code or invite link (WebRTC), up to 8 players; friends follow the host into every instance; each browser owns its hero; host owns enemies | ✅ |
 | Multi-character roster | ✅ | ✅ |
 | Leaderboards, share cards, challenge links | weekly legion race, daily guardian, inferno, pvp, stones, honing | ⬜ meta |
 | Test tooling | flow, coop, errors, shot, labs | ✅ |
@@ -100,3 +100,10 @@ encounters, systems, story, modes, meta.
 | Procedural music, SFX, ambience | orchestral-ish score per place, 70+ SFX, songs | 🟡 audio |
 | Boss intro title cards | cinematic camera + letterbox + name card | ✅ |
 | One HTML file, everything procedural | ✅ | ✅ |
+
+## Social (Lost Ark UX)
+| | SEVENSHARD | Status |
+|---|---|---|
+| Click players → context menu | Inspect (their gear), Invite to party, Whisper (they answer), Add friend, Duel | ✅ |
+| Emotes that the world answers | `/dance`, `/wave`… nearby adventurers sometimes join in | ✅ |
+| Save transfer | export/import save codes from the game menu | ✅ |

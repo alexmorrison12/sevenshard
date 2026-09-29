@@ -16,7 +16,7 @@ import { eyeGeo, aim } from '../../kit/geo.js';
 
 const PAL = {
   trout: { back: 0x4e6036, side: 0xb8bca8, belly: 0xece8dc, band: 0xd8807a, spots: 0x1a1a14, fin: 0x8a8a6a, fin2: 0xd89a8a, eye: 0xd8b060 },
-  koi: { back: 0xe8e2d6, side: 0xeeeae2, belly: 0xf2eee6, patch: 0xe8561e, spots: 0x16161a, fin: 0xf0e8e0, fin2: 0xf0a080, eye: 0x1a1a1a },
+  koi: { back: 0xd8d2c6, side: 0xdcd8d0, belly: 0xe0dcd4, patch: 0xe0501a, spots: 0x16161a, fin: 0xf0e8e0, fin2: 0xf0a080, eye: 0x1a1a1a },
   reef: { back: 0x1e4ed0, side: 0x2a62e8, belly: 0x5a8ae8, stripe: 0x0a0e24, fin: 0x1a3aa0, fin2: 0xf4d020, eye: 0x1a1a1a, tail: 0xf4d020 },
   salmon: { back: 0x9a2020, side: 0xc83026, belly: 0xd8584a, head: 0x3a5a3a, spots: 0x5a1010, fin: 0x6a2a24, fin2: 0x3a5a3a, eye: 0xd8c060 },
 };
@@ -55,10 +55,12 @@ export const fish = {
           cc = lerp3(cc, col(c.band), (1 - sstep(0.004, 0.012, Math.abs(y - 0.002))) * sstep(-0.16, -0.1, z) * 0.7);
           const sp = hs(Math.floor(z * 90) * 7.3 + Math.floor(y * 90) * 3.1 + (p.x > 0 ? 1 : 0));
           cc = lerp3(cc, col(c.spots), (sp > 0.8 ? 1 : 0) * sstep(-0.1, 0.4, up) * 0.85);
-        } else if (v === 'koi') {
-          const bl = vnoise(z * 22 + 3, 1) + vnoise(z * 9 + p.x * 40, 2) * 0.6 + up * 0.5;
-          cc = lerp3(cc, col(c.patch), sstep(0.25, 0.4, bl) * sstep(-0.3, 0.2, up));
-          cc = lerp3(cc, col(c.spots), sstep(0.62, 0.7, vnoise(z * 31 + 7, 3) + p.x * 8) * sstep(0.2, 0.6, up) * 0.9);
+        } else if (v === 'koi') { // kohaku-style: head cap + two saddle patches, a few sumi dots
+          const e = (z0, x0, rz, rx) => ((z - z0) / rz) ** 2 + ((p.x - x0) / rx) ** 2;
+          const pt = Math.max(1 - sstep(0.75, 1.0, e(-0.15, 0, 0.05, 0.04)), 1 - sstep(0.75, 1.0, e(-0.02, 0.008, 0.055, 0.045)), 1 - sstep(0.75, 1.0, e(0.085, -0.006, 0.035, 0.03)));
+          cc = lerp3(cc, col(c.patch), pt * sstep(-0.35, 0.1, up));
+          const dot = Math.max(1 - sstep(0.006, 0.012, Math.hypot(z - 0.03, p.x - 0.014)), 1 - sstep(0.006, 0.011, Math.hypot(z + 0.07, p.x + 0.012)), 1 - sstep(0.005, 0.01, Math.hypot(z - 0.11, p.x - 0.006)));
+          cc = lerp3(cc, col(c.spots), dot * sstep(0.1, 0.5, up) * 0.9);
         } else if (v === 'reef') {
           const sw = Math.abs(y - (0.012 - (z + 0.06) * 0.25)) < 0.009 && z > -0.13 && z < 0.08 ? 1 : 0;
           cc = lerp3(cc, col(c.stripe), sw * 0.9 * sstep(-0.3, 0.3, Math.abs(n.x)));

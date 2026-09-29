@@ -1,10 +1,10 @@
 // Cards: collection, card packs (incl. the Legendary selector), awakening 0–5 with duplicates, the 6-card deck and
 // set bonuses by count and total awakening. State: roster.cards[id] = { n: duplicates, awaken }, roster.deck,
 // roster.cardChoice (pending selector). cardMods()/mods() export the stat mods for stats (see mods.js).
-import { CARDS, CARD_LIST, CARD_SETS, CARD_PACKS, AWAKEN_DUPES, DECK_SIZE } from '../../data/cards.js';
+import { CARDS, CARD_LIST, CARD_SETS, CARD_PACKS, AWAKEN_DUPES, DECK_SIZE, cardIcon } from '../../data/cards.js';
 import { ok, fail, rngOf, addCardRaw, pay, emit } from './common.js';
 
-export { CARDS, CARD_LIST, CARD_SETS, CARD_PACKS };
+export { CARDS, CARD_LIST, CARD_SETS, CARD_PACKS, cardIcon };
 export const MAX_AWAKEN = 5;
 
 function st(account) {
@@ -138,7 +138,7 @@ export function view(account) {
   const collection = CARD_LIST.map(c => {
     const s = r.cards[c.id], cost = s ? awakenCost(c.id, s.awaken) : null;
     return { id: c.id, name: c.name, grade: c.grade, kind: c.kind, sets: c.sets, owned: !!s, dupes: s?.n || 0, awaken: s?.awaken || 0, maxAwaken: MAX_AWAKEN,
-      canAwaken: !!(s && cost && s.n >= cost.dupes && account.has('silver', cost.silver)), awakenCost: cost, inDeck: deck.includes(c.id), source: c.source, flavor: c.flavor, icon: `card:${c.id}` };
+      canAwaken: !!(s && cost && s.n >= cost.dupes && account.has('silver', cost.silver)), awakenCost: cost, inDeck: deck.includes(c.id), source: c.source, flavor: c.flavor, icon: cardIcon(c.id) };
   });
   const sets = setState(deck, r.cards).map(s => ({ id: s.S.id, name: s.S.name, cards: s.S.cards.map(id => ({ id, name: CARDS[id].name, owned: !!r.cards[id], inDeck: deck.includes(id), awaken: r.cards[id]?.awaken || 0 })),
     inDeck: s.inDeck.length, awk: s.awk, bonuses: s.S.bonuses.map((b, i) => ({ n: b.n, awk: b.awk, desc: b.desc, active: s.active[i], reached: s.reached[i] })) }));

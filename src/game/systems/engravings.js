@@ -17,9 +17,12 @@ const engrDesc = id => ENGRAVINGS[id]?.desc || classEngr(id)?.desc || '';
 /** learned points map (migrates equipped books of premade characters) */
 export function learned(char) {
   if (!char.learned || typeof char.learned !== 'object') char.learned = {};
-  const books = normBooks(char);
-  for (const b of books) char.learned[b.id] = Math.max(char.learned[b.id] || 0, Math.ceil(b.nodes / 3) * LEARN_STEP);
-  return char.learned;
+  const L = char.learned, books = normBooks(char);
+  for (const b of books) L[b.id] = Math.max(L[b.id] || 0, Math.ceil(b.nodes / 3) * LEARN_STEP);
+  // char.library (id → equippable nodes) is what the session's engravings window reads: keep both in step
+  for (const [id, n] of Object.entries(char.library || {})) L[id] = Math.max(L[id] || 0, Math.ceil(n / 3) * LEARN_STEP);
+  char.library = {}; for (const [id, p] of Object.entries(L)) { const n = Math.min(MAX_EQUIP, Math.floor(p / LEARN_STEP) * 3); if (n > 0) char.library[id] = n; }
+  return L;
 }
 function normBooks(char) {
   if (!Array.isArray(char.books)) char.books = [];

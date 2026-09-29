@@ -77,8 +77,8 @@ export function buildMerchant() {
   const yA = 3.25, yRT = H.railY(0), zT = y => H.zStern(y);
   {
     const span = H.hb(2.55, 0) * 1.2;
-    for (let i = 0; i < 3; i++) windowAt(wb, M(lerp(-span / 2, span / 2, i / 2), 2.55, zT(2.55) + 0.05, -0.08), 0.44, 0.55, { frame: C.gold, glow: 0.8, mullion: C.cap, metal: 0.6 });
-    for (const side of [-1, 1]) for (const u of [0.08, 0.17]) windowAt(wb, H.mat(u, 2.55, side, 0.03), 0.36, 0.46, { frame: C.gold, glow: 0.7, mullion: C.cap, metal: 0.6 });
+    for (let i = 0; i < 3; i++) windowAt(wb, M(lerp(-span / 2, span / 2, i / 2), 2.55, zT(2.55) + 0.05, -0.08), 0.44, 0.55, { frame: C.gold, glass: lc(0xc07a38), glow: 1.6, mullion: C.cap, metal: 0.6 });
+    for (const side of [-1, 1]) for (const u of [0.08, 0.17]) windowAt(wb, H.mat(u, 2.55, side, 0.03), 0.36, 0.46, { frame: C.gold, glass: lc(0xc07a38), glow: 1.4, mullion: C.cap, metal: 0.6 });
     wb.add(box(H.hb(3.0, 0) * 1.9, 0.1, 0.08), M(0, 3.05, zT(3.05) + 0.05, -0.08), { color: C.gold, metal: 0.6, d: 0 });
     const zb = H.zAt(0.25, yA), w = H.hb(yA, 0.25) - 0.17;
     balustrade(wb, V3(-w, yA, zb + 0.05), V3(w, yA, zb + 0.05), { h: 0.85, wood: C.oakD, cap: C.cap, skip: p => Math.abs(p.x) < 0.42, posts: 4 });

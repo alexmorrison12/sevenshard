@@ -13,8 +13,8 @@ import { shroudLines, yard, anchor, rudder, chain, skull, breach, barnacles, sea
 import { Atlas, rgb, tatter, hh } from './tex.js';
 
 const C = {
-  bottom: lc(0x28302a), algae: lc(0x1c2c20), wood: lc(0x55605a), woodD: lc(0x3c4640), woodL: lc(0x75827a), deck: lc(0x6a7068),
-  inner: lc(0x2e3632), cap: lc(0x2a302c), bone: lc(0xc9c6b2), rust: lc(0x4a3426), glass: lc(0x46ffc0), glassW: lc(0x7affe0),
+  bottom: lc(0x28302a), algae: lc(0x1c2c20), wood: lc(0x5e6a62), woodD: lc(0x424c46), woodL: lc(0x7a887e), deck: lc(0x6a7068),
+  inner: lc(0x2e3632), cap: lc(0x2a302c), bone: lc(0xc9c6b2), rust: lc(0x3c4238), glass: lc(0x46ffc0), glassW: lc(0x7affe0),
   mast: lc(0x4a524c), spar: lc(0x353c38), rope: lc(0x28302a), shroud: lc(0x1e2420), weed: lc(0x10261a), chain: lc(0x2a2a26), barn: lc(0x8a8e80),
 };
 const OPEN3 = (h, o) => [[0, -h], [o, -h * 0.9], [o, h * 0.9], [0, h]];
@@ -81,7 +81,7 @@ export function buildGhost() {
     sweep(wb, sidePath(H, 0.005, 0.99, u => H.railY(u) - 0.1, side, 50), OPEN3(0.03, 0.03), { color: C.bone, d: 0.3, closed: false });
   }
   // breaches, barnacles, weed
-  for (const [u, y, side, w, h] of [[0.62, 0.95, -1, 1.0, 0.7], [0.36, 1.45, -1, 0.8, 0.55], [0.55, 1.05, 1, 1.1, 0.75], [0.2, 0.8, 1, 0.7, 0.5], [0.83, 2.25, 1, 0.7, 0.45]]) breach(wb, H, u, y, side, { w, h, wood: C.woodL, rib: C.woodD });
+  for (const [u, y, side, w, h] of [[0.62, 0.95, -1, 1.0, 0.7], [0.36, 1.45, -1, 0.8, 0.55], [0.55, 1.05, 1, 1.1, 0.75], [0.2, 0.8, 1, 0.7, 0.5], [0.83, 2.25, 1, 0.7, 0.45]]) breach(wb, H, u, y, side, { w, h, wood: C.woodL, rib: C.woodD, dark: lc(0x0a3a30), glow: 0.9 });
   for (const side of [-1, 1]) for (let k = 0; k < 9; k++) barnacles(wb, H, 0.08 + k * 0.105, 0.2 + hh(k, side, 1) * 0.35, side, 7, { color: C.barn, dark: C.algae });
   for (const side of [-1, 1]) for (let k = 0; k < 9; k++) {
     const u = 0.1 + k * 0.095 + hh(k, side, 3) * 0.03, f = H.frame(u, H.railY(u) - 0.05, side);
@@ -137,7 +137,7 @@ export function buildGhost() {
   for (const side of [-1, 1]) for (const z of [-3.6, -2.0, -0.4, 2.8]) {
     const u = H.uAtZ(z, 2.2), y = mainY(u) + 0.47, xo = H.hb(y, u);
     gunport(wb, H, { z, y: y - 0.02, side, frame: C.woodD, lid: false });
-    const muzzle = cannon(wb, { x: side * (xo - 0.72), y, z, slot, barrel: C.rust, metal: 0.15, wood: C.woodD });
+    const muzzle = cannon(wb, { x: side * (xo - 0.72), y, z, slot, barrel: C.rust, metal: 0.12, wood: C.woodD });
     (side < 0 ? guns.L : guns.R).push({ pos: muzzle, slot: slot++ });
   }
   wb.mark('guns');
@@ -230,7 +230,7 @@ export function buildGhost() {
       cannonsL: guns.L.map(g => g.pos.toArray()), cannonsR: guns.R.map(g => g.pos.toArray()),
       slotsL: guns.L.map(g => g.slot), slotsR: guns.R.map(g => g.slot),
     },
-    look: { wood: { rim: 0.55, rimColor: 0x4affc8, flick: 1.7, wrap: 0.55 }, sail: { trans: 0.9, glow: 1.25, glowCol: 0xffffff, pulse: 1.0, wrap: 0.7 }, foam: { color: 0x7affd8 } },
+    look: { wood: { rim: 0.42, rimColor: 0x4affc8, flick: 1.7, wrap: 0.55 }, sail: { trans: 0.9, glow: 1.25, glowCol: 0xffffff, pulse: 1.0, wrap: 0.7 }, foam: { color: 0x7affd8 } },
     motion: { bob: 0.11, roll: 0.034, pitch: 0.016, period: 0.72 },
   };
 }

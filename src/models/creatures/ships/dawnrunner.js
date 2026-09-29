@@ -15,7 +15,7 @@ import { Atlas, cloth, rgb } from './tex.js';
 const C = {
   bottom: lc(0x7a3322), boot: lc(0x241810), honey: lc(0xc48a48), honeyD: lc(0x9a6232), walnut: lc(0x3e2414),
   blue: lc(0x1d4a86), gold: lc(0xd8a032), deck: lc(0xd9ae70), inner: lc(0x8e3e26),
-  mast: lc(0xa8743e), spar: lc(0x6e4424), rope: lc(0x3a2818), shroud: lc(0x2a1c12), bronze: lc(0x5a4424), coil: lc(0xa8844e),
+  mast: lc(0xa8743e), spar: lc(0x6e4424), rope: lc(0x3a2818), shroud: lc(0x2a1c12), bronze: lc(0x5a4424), coil: lc(0xa8844e), glass: lc(0xc07a38),
 };
 const OPEN3 = (h, o) => [[0, -h], [o, -h * 0.9], [o, h * 0.9], [0, h]];   // open moulding profile (against the hull)
 
@@ -77,7 +77,7 @@ export function buildDawnrunner() {
   const yQ = 3.1, yRT = H.railY(0), zT = y => H.zStern(y);
   {
     const nW = 5, wy = 2.45, span = H.hb(wy, 0) * 1.55;
-    for (let i = 0; i < nW; i++) windowAt(wb, M(lerp(-span / 2, span / 2, i / (nW - 1)), wy, zT(wy) + 0.06, -0.14), 0.4, 0.62, { frame: C.gold, glow: 0.8, mullion: C.walnut });
+    for (let i = 0; i < nW; i++) windowAt(wb, M(lerp(-span / 2, span / 2, i / (nW - 1)), wy, zT(wy) + 0.06, -0.14), 0.4, 0.62, { frame: C.gold, glass: C.glass, glow: 1.7, mullion: C.walnut });
     sunDisc(wb, M(0, 1.45, zT(1.45) + 0.08, -0.12), 0.5, C.gold, { rays: 14 });
     wb.add(box(H.hb(1.95, 0) * 1.9, 0.08, 0.08), M(0, 1.95, zT(1.95) + 0.05, -0.14), { color: C.gold, metal: 1, d: 0 });
     wb.add(box(H.hb(3.15, 0) * 1.95, 0.1, 0.1), M(0, 3.15, zT(3.15) + 0.05, -0.14), { color: C.gold, metal: 1, d: 0 });
@@ -92,7 +92,7 @@ export function buildDawnrunner() {
       wb.add(box(0.12, a.distanceTo(b), 0.1), MY(a, b).multiply(M(0, a.distanceTo(b) / 2, 0)), { color: C.gold, metal: 1, d: 0 });
     }
   }
-  for (const side of [-1, 1]) for (const [u, y] of [[0.07, 2.45], [0.16, 2.45], [0.24, 2.4]]) windowAt(wb, H.mat(u, y, side, 0.03), 0.36, 0.5, { frame: C.gold, glow: 0.7, mullion: C.walnut });
+  for (const side of [-1, 1]) for (const [u, y] of [[0.07, 2.45], [0.16, 2.45], [0.24, 2.4]]) windowAt(wb, H.mat(u, y, side, 0.03), 0.36, 0.5, { frame: C.gold, glass: C.glass, glow: 1.5, mullion: C.walnut });
   {
     const zb = H.zAt(0.29, 2.3) - 0.03, y0 = mainY(0.3);
     for (const x of [-1.3, 1.3]) {
@@ -113,8 +113,8 @@ export function buildDawnrunner() {
     for (const s of [-1, 1]) wb.add(box(0.5, 0.05, 0.84), M(s * 0.28, yQ + 0.44, 4.35, 0, 0, s * 0.5), { color: lc(0x5a3c1c), e: 0.5, d: 0 });
     wb.add(box(0.06, 0.14, 0.9), M(0, yQ + 0.58, 4.35), { color: C.gold, metal: 1, d: 0 });
     for (const s of [-1, 1]) { const c = V3(s * 1.55, yQ, 7.4); barrel(wb, c.x, c.y, c.z, { wood: C.honeyD, r: 0.22, h: 0.55 }); }
-    lantern(wb, V3(0, yRT + 0.12, zT(yRT) + 0.12), { s: 1.35, glow: 2.6, frame: C.gold });
-    for (const s of [-1, 1]) lantern(wb, V3(s * (H.hb(yRT, 0) - 0.05), yRT + 0.1, zT(yRT) - 0.02), { s: 1.0, glow: 2.4, frame: C.gold });
+    lantern(wb, V3(0, yRT + 0.12, zT(yRT) + 0.12), { s: 1.35, glow: 2.2, frame: C.gold });
+    for (const s of [-1, 1]) lantern(wb, V3(s * (H.hb(yRT, 0) - 0.05), yRT + 0.1, zT(yRT) - 0.02), { s: 1.0, glow: 2.0, frame: C.gold });
   }
   rudder(wb, H, { wood: C.honeyD, bottom: C.bottom, iron: IRON });
   wb.mark('stern castle');

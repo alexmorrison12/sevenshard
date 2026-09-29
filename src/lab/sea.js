@@ -87,4 +87,6 @@ lab.onFrame((dt, t) => {
   const e = S.envNow; if (e) { lab.sun.position.set(st.x + e.sunDir[0] * 80, e.sunDir[1] * 80, st.z + e.sunDir[2] * 80); lab.sun.target.position.set(st.x, 0, st.z); lab.sun.target.updateMatrixWorld(); }
 });
 if (Q.t) setTimeout(() => { lab.paused = true; }, 10);
-build(Q.mode === 'zone' ? (Q.zone || 'glass_sea') : null).then(() => { if (Q.t) { lab.step(Math.round(num('t', 0) * 60)); } });
+S.showChart = () => { const c = S.zone?.minimap?.canvas; if (!c) return; c.style.cssText = 'position:fixed;right:10px;top:10px;width:860px;height:860px;z-index:200;border:2px solid #c9a45a'; document.body.appendChild(c); };
+S.overview = (h = 900) => { lab.setView('orbit', new THREE.Vector3(0, 0, 0)); lab.camera.position.set(0, h, h * 0.35); lab.controls.target.set(0, 0, 0); lab.camera.far = 5000; lab.camera.updateProjectionMatrix(); lab.controls.update(); };
+build(Q.mode === 'zone' ? (Q.zone || 'glass_sea') : null).then(() => { if (Q.t) { lab.step(Math.round(num('t', 0) * 60)); } if (Q.chart === '1') S.showChart(); if (Q.overview) S.overview(+Q.overview); console.log('phases', JSON.stringify(S.zone?.stats)); });

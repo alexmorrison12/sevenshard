@@ -1,7 +1,7 @@
 // The auction house: order books for every tradable item (gold per bundle), SimPlayer listings (named with
 // social/names.js simName) that relist every 10 minutes, reference prices that drift with deterministic supply/demand
 // noise over real time plus the impact of your own trades, buying cheapest-first, listing with a 5% sales fee and a
-// 24 h expiry, your listings selling over time (proceeds and returns arrive by mail), unique accessory listings, a
+// 3-day expiry, your listings selling over time (proceeds and returns arrive by mail), unique accessory listings, a
 // price history for charts, and the Crystal ↔ Gold exchange with a drifting rate. State: roster.market.
 import { ITEMS, SILVER_PER_GOLD } from '../../data/items.js';
 import { ENGRAVINGS, COMBAT_ENGRAVINGS } from '../../data/engravings.js';
@@ -14,7 +14,7 @@ import { send as sendMail } from './mail.js';
 import { ok, fail, pay, grantBundle, bundleRows, itemInfo, iconFor, seeded, emit, hash01, clamp, MIN, HOUR, DAY } from './common.js';
 import { uid } from '../../core/util.js';
 
-export const FEE = 0.05, EXPIRY = 24 * HOUR, STEP = 10 * MIN, MAX_LISTINGS = 20;
+export const FEE = 0.05, EXPIRY = 72 * HOUR, STEP = 10 * MIN, MAX_LISTINGS = 20;
 const WEEK = 7 * DAY, TAU = 6 * HOUR;
 
 // ------------------------------------------------------------------------------------------------ catalog

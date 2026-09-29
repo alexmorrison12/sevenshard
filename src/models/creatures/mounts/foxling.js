@@ -113,8 +113,8 @@ export const foxling = {
 
 // ------------------------------------------------------------------------------------------------ animation
 const V3 = THREE.Vector3;
-const allLegs = (ctl, fn) => { const L = ctl.gait.legs; for (let i = 0; i < L.length; i++) fn(L[i], L[i].id[0] === 'F'); };
-const tuck = (ctl, w, up = 0.05) => allLegs(ctl, (L, f) => legTo(L, L.toe.x, L.toe.y + up * (f ? 1 : 0.8), L.toe.z + (f ? 0.02 : -0.02), w, true, -0.8, f ? undefined : 1.0));
+// leg helpers: plain loops (no per-frame closures)
+function tuck(ctl, w, up = 0.05) { const G = ctl.gait.legs; for (let i = 0; i < G.length; i++) { const L = G[i], f = L.id[0] === 'F'; legTo(L, L.toe.x, L.toe.y + up * (f ? 1 : 0.8), L.toe.z + (f ? 0.02 : -0.02), w, true, -0.8, f ? undefined : 1.0); } }
 const hopArc = (k, a0, a1) => (k > a0 && k < a1 ? Math.sin((k - a0) / (a1 - a0) * Math.PI) : 0);
 const ACTIONS = {
   hop: { dur: 0.55, a: 0.02, d: 0.95, fn(ctl, a, w) {
@@ -140,7 +140,7 @@ const ACTIONS = {
     const P = ctl.pose, b = ctl.b;
     P.move(b.body, 0, -0.045 * w, 0.03 * w); P.rx(b.body, 0.62 * w); P.rx(b.hips, 0.3 * w); P.rx(b.neck, -0.4 * w); P.rx(b.head, -0.2 * w);
     const T = b.tail; P.rot(T[0], 1.0 * w, 0.4 * w, 0); P.rot(T[1], 0.5 * w, 0.7 * w, 0); P.rot(T[2], 0.3 * w, 0.6 * w, 0);
-    allLegs(ctl, (L, f) => { if (f) legTo(L, L.toe.x * 0.8, 0, -0.07, w, false, 0); else legTo(L, L.toe.x * 1.2, 0, 0.055, w, false, 0, 1.3); });
+    const G = ctl.gait.legs; for (let i = 0; i < G.length; i++) { const L = G[i]; if (L.id[0] === 'F') legTo(L, L.toe.x * 0.8, 0, -0.07, w, false, 0); else legTo(L, L.toe.x * 1.2, 0, 0.055, w, false, 0, 1.3); }
   } },
   sleep: { dur: 1, hold: true, rest: true, fadeIn: 0.8, fadeOut: 0.5, fn(ctl, a, w) { // curl up: belly down, head on paws, tail over the nose
     const P = ctl.pose, b = ctl.b, t = a.t, br = Math.sin(t * 1.8) * 0.004;
@@ -148,7 +148,7 @@ const ACTIONS = {
     P.rot(b.neck, -0.45 * w, 0.5 * w, 0.15 * w); P.rot(b.head, 0.2 * w, 0.35 * w, 0.2 * w);
     const T = b.tail; P.rot(T[0], 0.35 * w, -0.9 * w, 0); P.rot(T[1], 0.2 * w, -0.9 * w, 0); P.rot(T[2], 0.15 * w, -0.8 * w, 0);
     ctl.eyeClose = Math.max(ctl.eyeClose || 0, w); ctl.ear = mix(ctl.ear, 0.7, w);
-    allLegs(ctl, (L, f) => legTo(L, L.toe.x * (f ? 0.6 : 1.3) + (f ? 0.02 : 0.03), 0.0, f ? -0.13 : 0.05, w, false, 0, f ? undefined : 1.4));
+    const G = ctl.gait.legs; for (let i = 0; i < G.length; i++) { const L = G[i], f = L.id[0] === 'F'; legTo(L, L.toe.x * (f ? 0.6 : 1.3) + (f ? 0.02 : 0.03), 0.0, f ? -0.13 : 0.05, w, false, 0, f ? undefined : 1.4); }
   } },
   pickup: { dur: 0.8, a: 0.06, d: 0.85, hit: 0.45, fn(ctl, a, w) { // dip & snap up the loot
     const P = ctl.pose, b = ctl.b, k = a.k;
@@ -183,7 +183,7 @@ const ACTIONS = {
       const T = b.tail; for (let i = 0; i < T.length; i++) P.rot(T[i], 0, -0.4 * w, 0);
       P.move(b.body, 0, 0.02 * Math.abs(Math.sin(t * 16)) * w, 0);
       ctl.happy = Math.max(ctl.happy || 0, 0.5 * w);
-      allLegs(ctl, (L) => legTo(L, L.toe.x, 0.02 * Math.max(0, Math.sin(t * 16 + L.toe.z * 40)), L.toe.z, w, true, -0.3));
+      const G = ctl.gait.legs; for (let i = 0; i < G.length; i++) { const L = G[i]; legTo(L, L.toe.x, 0.02 * Math.max(0, Math.sin(t * 16 + L.toe.z * 40)), L.toe.z, w, true, -0.3); }
     }
   } },
   hit: { dur: 0.45, a: 0.04, d: 0.5, hit: 0, fn(ctl, a, w) {
@@ -199,7 +199,7 @@ const ACTIONS = {
     P.rot(b.neck, -0.2 * f * w, 0, 0.3 * f * w); P.rot(b.head, 0, 0, 0.4 * f * w);
     const T = b.tail; for (let i = 0; i < T.length; i++) P.rot(T[i], 0.2 * f * w, 0.5 * f * w, 0);
     ctl.eyeClose = Math.max(ctl.eyeClose || 0, sstep(0.3, 0.5, k) * w); ctl.jaw = Math.max(ctl.jaw, 0.25 * f * w);
-    allLegs(ctl, (L, fr) => legTo(L, L.toe.x * 1.3, L.toe.y + 0.05 + 0.01 * Math.sin(t * 3 + L.toe.z * 30) * (1 - f), L.toe.z * 0.9, f * w, true, -0.9, fr ? undefined : 0.8));
+    const G = ctl.gait.legs; for (let i = 0; i < G.length; i++) { const L = G[i], fr = L.id[0] === 'F'; legTo(L, L.toe.x * 1.3, L.toe.y + 0.05 + 0.01 * Math.sin(t * 3 + L.toe.z * 30) * (1 - f), L.toe.z * 0.9, f * w, true, -0.9, fr ? undefined : 0.8); }
   } },
   spawn: popIn(0.75, { fn(ctl, a, w) { const h = Math.sin(clamp01((a.k - 0.3) / 0.5) * Math.PI); ctl.pose.move(ctl.b.body, 0, 0.08 * h * w, 0); if (h > 0) tuck(ctl, h * w, 0.05); } }),
 };

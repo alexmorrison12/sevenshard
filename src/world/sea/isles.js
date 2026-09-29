@@ -98,7 +98,7 @@ const shellback = terrain({
 // Low sandbars and wading shallows among the drowned chapel's ruins; the Bellwarden rises from the pool in the middle.
 const drownbell = terrain({
   coast: smoothUnion(8, ellipse(0, -4, 34, 22), ellipse(-26, 20, 16, 9, 0.5), ellipse(28, 18, 14, 8, -0.4), ellipse(0, 30, 9, 16)),
-  beach: 10, land: 0.9, landRamp: 10, shelf: 30, shelfDepth: -1.4, beachTop: 0.6,
+  beach: 10, land: 0.9, landRamp: 10, shelf: 22, shelfDepth: -1.4, beachTop: 0.6,
   bumps: [{ x: -20, z: -14, r: 10, h: 0.8 }, { x: 18, z: -16, r: 9, h: 0.7 }],
   carve: [
     { shape: S.circle(0, -6, 14), h: 0.5, soft: 4 },                       // arena sand (flat)

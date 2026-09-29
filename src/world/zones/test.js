@@ -135,6 +135,7 @@ export async function build(zone, { quality = 1 } = {}) {
   const nav = new NavGrid(-HALF, -HALF, 2 * HALF, 2 * HALF, 0.5);
   nav.walk(S.rect(0, 0, 2 * HALF - 0.8, 2 * HALF - 0.8));
   for (const c of kit.colliders) nav.block(c.shape, c.inflate);
+  nav.keepConnected([[0, 18]]);
   zone._nav = nav; zone.nav = nav.toContract();
 
   // ---------- anchors, regions, env, minimap

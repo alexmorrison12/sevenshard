@@ -49,7 +49,7 @@ export function tripod(entry) {
     const val = v !== undefined ? +v : g.v;
     return { id, name: g.name, desc: g.desc(val), apply: d => g.apply(d, val), icon: `tripod:${id}`, v: val };
   }
-  return { icon: `tripod:${entry.icon || 'element'}`, ...entry };
+  return { icon: `tripod:${entry.icon || entry.id}`, ...entry };
 }
 
 export const TRIPOD_LEVELS = [4, 7, 10];

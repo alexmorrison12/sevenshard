@@ -7,7 +7,7 @@
 //   · chains — metal links (alpha-blended) for pull skills
 //   · tracers — fast bullet streaks with a moving head
 import * as THREE from 'three';
-import { PREMUL, GLSL_NOISE, col as parseCol, v3 } from './util.js';
+import { PREMUL, GLSL_NOISE, col as parseCol, v3, queueRange } from './util.js';
 
 const MAXV = 60000, MAXI = 150000;
 const KIND = { glow: 0, lightning: 1, chain: 2, blade: 3, energy: 4, tracer: 5 };
@@ -197,10 +197,8 @@ export class Ribbons {
     g.setDrawRange(0, this.i);
     this.mesh.visible = this.i > 0;
     if (this.i) {
-      g.attributes.position.clearUpdateRanges(); g.attributes.position.addUpdateRange(0, this.v * 3); g.attributes.position.needsUpdate = true;
-      g.attributes.aUv.clearUpdateRanges(); g.attributes.aUv.addUpdateRange(0, this.v * 4); g.attributes.aUv.needsUpdate = true;
-      g.attributes.aCol.clearUpdateRanges(); g.attributes.aCol.addUpdateRange(0, this.v * 4); g.attributes.aCol.needsUpdate = true;
-      g.index.clearUpdateRanges(); g.index.addUpdateRange(0, this.i); g.index.needsUpdate = true;
+      queueRange(g.attributes.position, 0, this.v * 3); queueRange(g.attributes.aUv, 0, this.v * 4);
+      queueRange(g.attributes.aCol, 0, this.v * 4); queueRange(g.index, 0, this.i);
     }
   }
 

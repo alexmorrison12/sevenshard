@@ -12,7 +12,7 @@
 import { h, btn, esc, fmtInt, clear } from '../core/util.js';
 import { glyph } from '../core/glyphs.js';
 import { iconUrl } from '../core/icon.js';
-import { slot, tabs, select, seg } from '../core/kit.js';
+import { slot, tabs } from '../core/kit.js';
 import { cls as clsInfo, CLASS_IDS } from '../core/data.js';
 import { Win } from '../core/windows.js';
 
@@ -41,7 +41,6 @@ function pfIcon(c) {
   if (c.kind === 'chaos') return 'boss:gatekeeper';
   return 'boss:' + ({ gorrath: c.gate === 0 ? 'skarn' : 'gorrath', oratory: c.gate === 0 ? 'nerissa' : 'deep_oracle' }[c.raid] || 'gorrath');
 }
-const sameContent = (a, b) => a && b && a.kind === b.kind && a.raid === b.raid && a.gate === b.gate && !!a.hard === !!b.hard && a.boss === b.boss && a.tier === b.tier;
 const ago = s => s < 60 ? 'just now' : s < 3600 ? Math.floor(s / 60) + 'm ago' : Math.floor(s / 3600) + 'h ago';
 function seats(members, max) {
   let out = '';
@@ -140,7 +139,6 @@ export class PartyFinderWin extends Win {
 }
 /** The content key the game expects back (drops UI-only fields). */
 function strip(c) { const o = { kind: c.kind }; for (const k of ['raid', 'gate', 'hard', 'boss', 'tier']) if (c[k] != null) o[k] = c[k]; return o; }
-export { sameContent };
 
 // ================================================================================================ mail
 export class MailWin extends Win {

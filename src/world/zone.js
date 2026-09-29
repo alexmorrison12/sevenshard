@@ -50,7 +50,16 @@ export class Zone {
     return this.env;
   }
   onEnv(fn) { (this._envHooks ||= []).push(fn); fn(this.env); }
+  /** Compile every shader the zone uses up-front (avoids hitches the first time water/foliage comes into view).
+   *  renderer: the game's Renderer (or a THREE.WebGLRenderer); scene: the scene zone.root was added to. */
+  async precompile(renderer, camera, scene) {
+    const r = renderer?.r || renderer;
+    if (!r) return;
+    try { if (r.compileAsync) await r.compileAsync(this.root, camera, scene); else r.compile(this.root, camera, scene); } catch (e) { console.warn('[world] precompile', e); }
+  }
   dispose() {
+    const g = this.ground;
+    if (g) for (const t of [g.ctrlA, g.ctrlB, g.ctrlC, g.infoTex, g.heightTex]) t?.dispose();
     this.root.traverse(o => {
       if (o.geometry && !o.geometry.userData?.shared) o.geometry.dispose();
       const ms = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];

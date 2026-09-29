@@ -186,7 +186,7 @@ export function breach(wb, H, u, y, side, o = {}) {
   // ragged dark recess: overlapping rotated slabs
   for (let i = 0; i < 4; i++) {
     const rw = w * (0.55 + hh(i, seed, 1) * 0.45), rh = h * (0.5 + hh(i, seed, 2) * 0.5);
-    wb.add(box(rw, rh, 0.03), at((hh(i, seed, 3) - 0.5) * w * 0.35, (hh(i, seed, 4) - 0.5) * h * 0.35, 0.02, (hh(i, seed, 5) - 0.5) * 0.9), { color: dark, d: 0 });
+    wb.add(box(rw, rh, 0.03), at((hh(i, seed, 3) - 0.5) * w * 0.35, (hh(i, seed, 4) - 0.5) * h * 0.35, 0.02, (hh(i, seed, 5) - 0.5) * 0.9), { color: dark, d: 0, e: o.glow || 0, piv: [f.o.x, f.o.y, f.o.z] });
   }
   // exposed ribs across the hole
   for (let k = -1; k <= 1; k += 2) wb.add(box(0.1, h * 1.05, 0.08), at(k * w * 0.18, 0, 0.005), { color: o.rib || wood, d: 0.8 });

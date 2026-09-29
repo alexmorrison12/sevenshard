@@ -8,7 +8,7 @@
 //   props     CPU-posed solid/emissive meshes: spinning glaive, meteor rock, grenade, ice lance, giant light sword, orbs
 import * as THREE from 'three';
 import { G } from '../engine/materials.js';
-import { PREMUL, GLSL_NOISE, GLSL_GROUND } from './util.js';
+import { PREMUL, GLSL_NOISE, GLSL_GROUND, queueRange, queueAll } from './util.js';
 
 const DEF_TINT = [1, 0.5, 0.2];
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _s = new THREE.Vector3(), _fwd = new THREE.Vector3(0, 0, -1), _y = new THREE.Vector3(0, 1, 0);
@@ -189,7 +189,7 @@ class MeshPool {
   }
   kill(slot) { if (slot < 0) return; this.data[slot * MSTRIDE + 15] = this.fx.time; if (slot < this.lo) this.lo = slot; if (slot > this.hi) this.hi = slot; }
   update() {
-    if (this.hi >= this.lo) { this.buf.clearUpdateRanges(); this.buf.addUpdateRange(this.lo * MSTRIDE, (this.hi - this.lo + 1) * MSTRIDE); this.buf.needsUpdate = true; this.lo = this.n; this.hi = -1; }
+    if (this.hi >= this.lo) { queueRange(this.buf, this.lo * MSTRIDE, (this.hi - this.lo + 1) * MSTRIDE); this.lo = this.n; this.hi = -1; }
     this.mesh.visible = this.fx.time <= this.until + 0.5;
   }
   reset() { for (let i = 0; i < this.n; i++) { this.data[i * MSTRIDE + 3] = -1e9; this.data[i * MSTRIDE + 15] = 1e9; } this.lo = 0; this.hi = this.n - 1; this.until = -1; }
@@ -266,7 +266,7 @@ class Bubbles {
     d[b + 9] = hit; d[b + 10] = style; d[b + 11] = squash;
   }
   free(i) { if (i < 0) return; this.used[i] = 0; this.data[i * 12 + 7] = 0; while (this.hi > 0 && !this.used[this.hi - 1]) this.hi--; this.geo.instanceCount = this.hi; }
-  update() { if (this.hi) { this.buf.clearUpdateRanges(); this.buf.addUpdateRange(0, this.hi * 12); this.buf.needsUpdate = true; } this.mesh.visible = this.hi > 0; }
+  update() { if (this.hi) { queueRange(this.buf, 0, this.hi * 12); } this.mesh.visible = this.hi > 0; }
   reset() { this.used.fill(0); this.data.fill(0); this.hi = 0; this.geo.instanceCount = 0; }
   dispose() { this.geo.dispose(); this.mat.dispose(); }
 }
@@ -369,7 +369,7 @@ class Pillars {
   move(s, x, y, z) { const b = s * 16; this.data[b] = x; this.data[b + 1] = y; this.data[b + 2] = z; if (s < this.lo) this.lo = s; if (s > this.hi) this.hi = s; }
   kill(s) { if (s < 0) return; this.data[s * 16 + 12] = this.fx.time; if (s < this.lo) this.lo = s; if (s > this.hi) this.hi = s; }
   update() {
-    if (this.hi >= this.lo) { this.buf.clearUpdateRanges(); this.buf.addUpdateRange(this.lo * 16, (this.hi - this.lo + 1) * 16); this.buf.needsUpdate = true; this.lo = this.n; this.hi = -1; }
+    if (this.hi >= this.lo) { queueRange(this.buf, this.lo * 16, (this.hi - this.lo + 1) * 16); this.lo = this.n; this.hi = -1; }
     this.mesh.visible = this.fx.time <= this.until + 1;
   }
   reset() { for (let i = 0; i < this.n; i++) { this.data[i * 16 + 3] = -1e9; this.data[i * 16 + 12] = 1e9; } this.lo = 0; this.hi = this.n - 1; this.until = -1; }
@@ -444,7 +444,7 @@ class Portals {
   }
   kill(i) { if (i < 0) return; this.data[i * 16 + 12] = this.fx.time; this.dirty = true; }
   free(i) { if (i < 0) return; this.used[i] = 0; this.data[i * 16 + 3] = -1e9; this.data[i * 16 + 12] = -1e9; this.dirty = true; }
-  update() { if (this.dirty) { this.buf.clearUpdateRanges(); this.buf.needsUpdate = true; this.dirty = false; } let any = 0; for (let i = 0; i < this.n; i++) any |= this.used[i]; this.mesh.visible = !!any; }
+  update() { if (this.dirty) { queueAll(this.buf); this.dirty = false; } let any = 0; for (let i = 0; i < this.n; i++) any |= this.used[i]; this.mesh.visible = !!any; }
   reset() { this.used.fill(0); for (let i = 0; i < this.n; i++) { this.data[i * 16 + 3] = -1e9; this.data[i * 16 + 12] = -1e9; } this.dirty = true; }
   dispose() { this.geo.dispose(); this.mat.dispose(); }
 }

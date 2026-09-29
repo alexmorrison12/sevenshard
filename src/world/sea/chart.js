@@ -34,27 +34,28 @@ export function coastX(z) {
 }
 function continent(x, z) {
   const cx = coastX(z), d = x - cx;                         // > 0 at sea
-  // Solhaven harbour: the promenade level (−1.5) between the quay and the city wall, piers are decks (kit)
+  // Solhaven (zone heights + 3: the zone's sea level −3 is the chart's 0): city 3, terrace 6, harbour promenade 1.5
   const zx = x - SO.x, zz = z - SO.z;
   const inCity = zx > -95 && zx < 62 && zz > -40 && zz < 92;
   if (d >= 0) {
     const harbour = sst(-40, -20, zz) * (1 - sst(80, 110, zz)) * (1 - sst(40, 70, d));
     let h = lerp(-1.2, -3.2, sst(0, 10, d)) + (-22 + 3.2) * sst(12, 90, d);
-    h = lerp(h, Math.min(h, -8.5), harbour);
+    h = lerp(h, Math.min(h, -6), harbour);
     // the breakwater and the lighthouse islet (zone [[70,70],[100,58]], islet (104, 56))
     const bw = segDist(zx, zz, 70, 70, 100, 58);
-    h = Math.max(h, lerp(4.5, h, sst(3.2, 6.5, bw)));
-    h = Math.max(h, lerp(6.5, h, sst(7, 12, Math.hypot(zx - 104, zz - 56))));
+    h = Math.max(h, lerp(2.2, h, sst(3.2, 6.5, bw)));
+    h = Math.max(h, lerp(2.6, h, sst(7, 12, Math.hypot(zx - 104, zz - 56))));
     return h;
   }
   const u = -d;
   if (inCity) {
-    if (zx >= 46) return -1.5;
-    return zz < -32 ? 3 : 0;
+    if (zx >= 46) return 1.5;
+    return zz < -32 ? 6 : 3;
   }
-  let h = Math.min(1.1, u * 0.18) + 6 * sst(10, 60, u) + 12 * sst(60, 160, u) * (0.6 + 0.4 * noise2(x / 80, z / 80));
+  let h = Math.min(1.6, u * 0.2) + 5 * sst(10, 60, u) + 12 * sst(60, 160, u) * (0.6 + 0.4 * noise2(x / 80, z / 80));
   h += fbm2(x / 40, z / 40, 3) * 2.5 * sst(8, 30, u);
-  // cliffs along the northern coast
+  // the keep hill north of the city, cliffs along the northern coast
+  h += 9 * sst(-86 + SO.z, -130 + SO.z, z) * sst(-120 + SO.x, -60 + SO.x, x) * (1 - sst(50 + SO.x, 90 + SO.x, x));
   if (z < -120) h += 9 * sst(2, 14, u) * sst(-120, -200, z);
   return h;
 }

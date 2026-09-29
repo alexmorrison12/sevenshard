@@ -129,13 +129,18 @@ export function makeHeroMaterial(U, opts = {}) {
             c = mix(c, uInk, f.r);
             diffuseColor.rgb = c;
           }
+          if (vFace.x < -1.5 && uDemon > 0.001) { // eyeballs: black sclera, burning iris
+            eyeEmit = smoothstep(-2.3, -2.8, vFace.x) * uDemon;
+            diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.015, 0.0, 0.02), uDemon);
+          }
         }`)
       .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
         totalEmissiveRadiance += diffuseColor.rgb * vMat.y * uGlow * (0.85 + 0.15 * sin(uTime * 3.0 + vOP.y * 14.0));
         float castA = min(uCast.a, 3.0);
         totalEmissiveRadiance += uCast.rgb * castA * vMat.z * 1.1;
         totalEmissiveRadiance += uRune.rgb * uRune.a * vMat.w * (0.8 + 0.2 * sin(uTime * 4.0 + vOP.y * 9.0));
-        totalEmissiveRadiance += vec3(1.1, 0.1, 0.9) * veins * 2.2 * (0.75 + 0.25 * sin(uTime * 5.0 + vOP.y * 20.0));`)
+        totalEmissiveRadiance += vec3(1.1, 0.1, 0.9) * veins * 2.2 * (0.75 + 0.25 * sin(uTime * 5.0 + vOP.y * 20.0));
+        totalEmissiveRadiance += vec3(1.6, 0.35, 1.3) * eyeEmit * 2.2;`)
       .replace('+ gSpecAcc +', `+ gSpecAcc * vMat.x * (0.12 + smoothstep(0.5, 1.0, vMat.x) * 0.2 + diffuseColor.rgb * 0.32) + heroEnv(geometryNormal, geometryViewDir, diffuseColor.rgb, vMat.x) +`)
       .replace('vec3 outgoingLight = reflectedLight', `
         float rimG = pow(1.0 - saturate(dot(geometryNormal, geometryViewDir)), 2.5);

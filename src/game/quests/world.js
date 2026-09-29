@@ -76,6 +76,11 @@ export class QuestWorld {
     const Q = this.Q, zid = this.zone.id, want = new Map();
     for (const e of Q.st?.active || []) {
       const q = Q.def(e.id), s = q?.steps[e.step];
+      if (s?.type === 'clear' && s.launch && (!s.launchZone || s.launchZone === zid)) {
+        const a = anchorOf(this.zone, s.launchAt || s.at);
+        if (a) { const p = walkable(this.L, a.x, a.z, 4); want.set(`${e.id}:${e.step}:launch`, { key: `${e.id}:${e.step}:launch`, e, s, q, idx: -1, x: p.x, z: p.z, launch: s.launch }); }
+        continue;
+      }
       if (!s || s.type !== 'interact' || !Q.inZone(q, s)) continue;
       const pts = this.points(q, s, e); if (!pts) continue;
       const used = e.used || [];

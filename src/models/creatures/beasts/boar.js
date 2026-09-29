@@ -4,12 +4,12 @@
 // scar-latticed hide, burning ember eyes and a hunter's broken spears still stuck in its hump.
 import * as THREE from 'three';
 import { QuadCtl } from '../ctl.js';
-import { qHit, qKnockback, qKnockdown, qGetup, qDeath, qStun, qSpawn } from '../acts.js';
+import { qHit, qKnockback, qKnockdown, qGetup, qDeath, qStun, qSpawn, retime } from '../acts.js';
 import { leafGeo, rigid, sweep } from '../../kit/geo.js';
 import { col } from '../../kit/sdf.js';
 import { addEye, addSpikes, addHorn, lerp3 } from '../../kit/parts.js';
 import { sstep, clamp01, mix, bell } from '../../kit/rig.js';
-import { ov, cancelRestOnMove, prepLegs, sidePair } from './util.js';
+import { ov, cancelRestOnMove, prepLegs, sidePair, surfaceCrack } from './util.js';
 
 const PAL = {
   bristleback: { base: 0x7c4a30, dark: 0x3a1f14, belly: 0xc08e70, stripe: 0xd2a476, snout: 0xc98676, nose: 0xe0a092, hoof: 0x2a1e1a, mane: 0x22120c, maneTip: 0x5e3a26, tusk: 0xf4e8cc, eye: 0x1a0c08, glow: 0xff5a1a },
@@ -23,7 +23,7 @@ export const boar = {
   config(variant, opts = {}) {
     const v = PAL[variant] ? variant : (opts.elite ? 'gnarltusk' : 'bristleback');
     const elite = v === 'gnarltusk' || !!opts.elite;
-    return { variant: elite ? 'gnarltusk' : v, pal: PAL[elite ? 'gnarltusk' : v], elite, shapeKey: elite ? 'elite' : 'base', scale: elite ? 1.5 : 1, h: elite ? 0.036 : 0.042, hg: { 1: 0.03 }, mat: { dfreq: 2.6, rim: 0.3, rimColor: 0xffe8cc } };
+    return { variant: elite ? 'gnarltusk' : v, pal: PAL[elite ? 'gnarltusk' : v], elite, shapeKey: elite ? 'elite' : 'base', scale: elite ? 1.5 : 1, h: elite ? 0.037 : 0.044, hg: { 1: 0.03 }, mat: { dfreq: 3.2, rim: 0.3, rimColor: 0xffe8cc } };
   },
   rig(R) {
     R.add('body', null, [0, 0.6, 0.0]);
@@ -42,12 +42,12 @@ export const boar = {
   },
   sculpt(S, cfg) {
     const c = cfg.pal, E = cfg.elite;
-    const hair = [0.3, 0, 0.18, 0], skin = [0.05, 0.05, 0.2, 0], hoofD = [0, 0, 0.15, 0.2];
-    // barrel body, big hunched shoulders, compact rump
+    const hair = [0.5, 0, 0.2, 0], skin = [0.05, 0.05, 0.2, 0], hoofD = [0, 0, 0.15, 0.2];
+    // front-heavy: big hunched shoulders, deep chest, a slimmer rump
     S.ell('body', [0, 0.53, 0.02], [0.25, 0.24, 0.36], { k: 0.1, col: c.base, tag: 'body', dtl: hair });
-    S.ell('chest', [0, 0.74, -0.2], [0.23, 0.25 * (E ? 1.08 : 1), 0.26], { k: 0.1, col: c.base, tag: 'hump', dtl: hair });
+    S.ell('chest', [0, 0.76, -0.2], [0.24, 0.28 * (E ? 1.08 : 1), 0.27], { k: 0.1, col: c.base, tag: 'hump', dtl: hair });
     S.ell('chest', [0, 0.55, -0.32], [0.21, 0.23, 0.18], { k: 0.09, col: c.base, tag: 'body', dtl: hair });
-    S.ell('hips', [0, 0.58, 0.28], [0.2, 0.2, 0.18], { k: 0.09, col: c.base, tag: 'body', dtl: hair });
+    S.ell('hips', [0, 0.57, 0.28], [0.18, 0.18, 0.17], { k: 0.09, col: c.base, tag: 'body', dtl: hair });
     for (const s of [-1, 1]) {
       const n = s < 0 ? 'L' : 'R';
       S.ell('rT' + n, [s * 0.13, 0.48, 0.34], [0.1, 0.16, 0.13], { k: 0.08, col: c.base, tag: 'ham', rot: [0.2, 0, 0], dtl: hair });
@@ -55,7 +55,7 @@ export const boar = {
     }
     // neck + wedge head
     S.cone('neck', [0, 0.64, -0.34], [0, 0.63, -0.52], 0.2, 0.16, { k: 0.08, col: c.base, b2: 'head', t0: 0.5, t1: 1, dtl: hair });
-    S.ell('head', [0, 0.63, -0.6], [0.15, 0.155, 0.17], { k: 0.07, col: c.base, tag: 'head', dtl: hair });
+    S.ell('head', [0, 0.63, -0.6], [0.16, 0.165, 0.18], { k: 0.07, col: c.base, tag: 'head', dtl: hair });
     S.ell('head', [0, 0.705, -0.65], [0.12, 0.07, 0.11], { k: 0.05, col: c.dark, tag: 'brow', dtl: hair });
     for (const s of [-1, 1]) S.ell('head', [s * 0.1, 0.53, -0.66], [0.072, 0.085, 0.1], { k: 0.05, col: c.base, tag: 'jowl', dtl: hair });
     S.cone('head', [0, 0.575, -0.7], [0, 0.505, -0.86], 0.115, 0.082, { k: 0.05, col: c.snout, tag: 'snout', dtl: skin });
@@ -66,8 +66,8 @@ export const boar = {
     S.cone('jaw', [0, 0.49, -0.62], [0, 0.462, -0.83], 0.07, 0.045, { group: 1, k: 0.03, col: c.snout, tag: 'jaw', dtl: skin });
     // dorsal crest (SDF ridge; bristles added as parts)
     for (let i = 0; i < 7; i++) {
-      const t = i / 6, z = -0.58 + t * 0.7, y = 0.78 + Math.sin(t * Math.PI) * 0.12 * (E ? 1.15 : 1) - t * 0.02;
-      S.cone(i < 2 ? 'head' : i < 5 ? 'chest' : 'body', [0, y - 0.06, z], [0, y + 0.02, z + 0.1], 0.06, 0.02, { k: 0.05, col: c.mane, tag: 'mane', dtl: hair });
+      const t = i / 6, z = -0.58 + t * 0.7, y = 0.8 + Math.sin(t * Math.PI) * 0.14 * (E ? 1.15 : 1) - t * 0.02;
+      S.cone(i < 2 ? 'head' : i < 5 ? 'chest' : 'body', [0, y - 0.07, z], [0, y + 0.03, z + 0.1], 0.08, 0.03, { k: 0.05, col: c.mane, tag: 'mane', dtl: hair });
     }
     // legs: short, thick above, trim below, dark hooves
     for (const s of [-1, 1]) {
@@ -104,10 +104,7 @@ export const boar = {
     // hoof tops darker, legs darker toward the bottom
     v.mix(c.dark, v.t('leg') * sstep(0.2, 0.05, y) * 0.5);
     if (cfg.elite) {
-      // lattice of old scars across the flanks & shoulders, frosted muzzle
-      const s1 = Math.abs(Math.sin(y * 31 + z * 22 + 0.4)), s2 = Math.abs(Math.sin(y * 27 - z * 29 + 1.7));
-      const scar = Math.max(1 - sstep(0.0, 0.05, s1), 1 - sstep(0.0, 0.05, s2)) * sstep(0.4, 0.8, Math.abs(nx)) * sstep(0.35, 0.55, y) * sstep(0.35, 0.6, Math.sin(x * 13 + z * 7) * 0.5 + 0.5);
-      v.mix(c.scar, scar * 0.7 * (1 - v.t('snout') - v.t('nose')));
+      // frosted jowls & brow (the scars are crisp ribbons, see parts)
       v.mix(0xb8aea4, v.t('jowl') * 0.4 + v.t('brow') * 0.25);
     }
     v.mul(1 + Math.sin(x * 11 + z * 7) * Math.sin(y * 9) * 0.05);
@@ -130,16 +127,26 @@ export const boar = {
     }
     // bristles along the crest (stand up when charging / in combat)
     const list = [];
-    const n = E ? 34 : 28;
+    const n = E ? 36 : 30;
     const hs = (i) => { const q = Math.sin(i * 91.7 + 13.1) * 43758.5; return q - Math.floor(q); };
-    for (let i = 0; i < n; i++) {
-      const t = i / (n - 1), z = -0.6 + t * 0.78, y = 0.84 + Math.sin(t * Math.PI) * 0.14 * (E ? 1.15 : 1);
-      const x = (hs(i) - 0.5) * 0.1;
-      const L = (0.11 + 0.11 * Math.sin(Math.min(1, t * 1.3) * Math.PI)) * (0.75 + 0.5 * hs(i + 50)) * (E ? 1.35 : 1);
-      list.push({ p: [x, y + 0.05, z], dir: [x * 4 + (hs(i + 9) - 0.5) * 0.4, 0.75 - t * 0.25 + (hs(i + 3) - 0.5) * 0.3, 0.6 + t * 0.35], len: L, r: 0.01 + 0.005 * hs(i + 7) });
+    for (let i = 0; i < n; i++) { // two rows of long bristles along the crest, longest over the shoulders
+      const t = (i >> 1) / ((n >> 1) - 1), side = i & 1 ? 1 : -1;
+      const z = -0.62 + t * 0.8, y = 0.88 + Math.sin(t * Math.PI) * 0.15 * (E ? 1.15 : 1);
+      const x = side * (0.025 + 0.03 * hs(i));
+      const L = (0.12 + 0.14 * Math.sin(Math.min(1, t * 1.3) * Math.PI)) * (0.8 + 0.4 * hs(i + 50)) * (E ? 1.3 : 1);
+      list.push({ p: [x, y + 0.04, z], dir: [side * (0.35 + 0.3 * hs(i + 9)), 0.8 - t * 0.25 + (hs(i + 3) - 0.5) * 0.25, 0.55 + t * 0.35], len: L, r: 0.016 + 0.006 * hs(i + 7) });
     }
-    addSpikes(acc, S, list, { base: c.mane, tip: c.maneTip, radial: 4, hackle: 1, bend: 0.35 });
+    addSpikes(acc, S, list, { base: c.mane, tip: c.maneTip, radial: 4, hackle: 1, bend: 0.3 });
+    const tufts = []; // whiskery cheek tufts sweeping back off the jowls
+    for (const s of [-1, 1]) for (let i = 0; i < 3; i++) tufts.push({ p: [s * 0.16, 0.56 - i * 0.035, -0.62 + i * 0.03], dir: [s * 0.7, -0.25 - i * 0.1, 0.65], len: 0.1 + 0.02 * i, r: 0.014 });
+    addSpikes(acc, S, tufts, { base: c.base, tip: c.belly, radial: 3, bend: 0.2 });
     if (E) {
+      // old gashes across both flanks and the right shoulder
+      const sc = { core: c.scar, edge: 0x4a2a24, emis: 0, lift: 0.006, n: 8 };
+      surfaceCrack(acc, S, [[0.26, 0.72, -0.34], [0.28, 0.62, -0.24], [0.27, 0.52, -0.12]], { ...sc, width: 0.02, seed: 1 });
+      surfaceCrack(acc, S, [[0.25, 0.74, -0.22], [0.28, 0.64, -0.12], [0.27, 0.55, -0.02]], { ...sc, width: 0.016, seed: 2 });
+      surfaceCrack(acc, S, [[-0.26, 0.68, -0.1], [-0.27, 0.6, 0.04], [-0.24, 0.52, 0.16]], { ...sc, width: 0.02, seed: 3 });
+      surfaceCrack(acc, S, [[-0.2, 0.78, -0.4], [-0.25, 0.66, -0.36], [-0.25, 0.54, -0.3]], { ...sc, width: 0.014, seed: 4 });
       // broken hunters' spears stuck in the hump
       const spear = (p, d, L, bone) => {
         const q = [p[0] + d[0] * L, p[1] + d[1] * L, p[2] + d[2] * L];
@@ -166,8 +173,8 @@ function scrape(ctl, sc, w) {
 }
 
 const ACTIONS = {
-  attack: { dur: 0.8, a: 0.1, d: 0.78, hit: 0.42, fn(ctl, a, w) { // tusk gore: dip, then rip upward with a twist
-    const P = ctl.pose, b = ctl.b, k = a.k;
+  attack: { dur: 0.9, a: 0.1, d: 0.78, hit: 0.5, fn(ctl, a, w) { // tusk gore: dip, then rip upward with a twist (hit = game windup 0.45 / 0.9 s)
+    const P = ctl.pose, b = ctl.b, k = retime(a.k, 0.42, 0.5);
     const dip = sstep(0, 0.3, k) * (1 - sstep(0.3, 0.45, k));
     const rip = sstep(0.3, 0.48, k) * (1 - sstep(0.6, 1, k));
     P.move(b.body, 0, -0.04 * dip * w, (0.05 * dip - 0.2 * rip) * w);

@@ -193,7 +193,7 @@ const birdPose = (extra) => (ctl, dt) => {
   P.move(B.head, 0, 0, (hold - 0.5) * (ctl.spec.bobZ ?? 0.03) * ctl.H * v * G.act * (1 - ctl.fly));
   // flight posture: tail streams, feet tucked up & back under the tail
   P.rx(B.tail[0], 0.15 * ctl.fly);
-  if (ctl.fly > 0.01) for (const L of G.legs) {
+  if (ctl.fly > 0.01) for (let li = 0, LL = G.legs; li < LL.length; li++) { const L = LL[li];
     const hip = P.rest[L.idx[0]];
     ov(L, L.toe.x * 0.7, hip.y * 0.62, hip.z + hip.y * 0.55, ctl.fly, true, -1.3);
   }
@@ -207,10 +207,10 @@ const SB = { // dims (model space, faces −Z, feet at y = 0)
   hip: (s) => [s * 0.014, 0.08, 0.008], knee: (s) => [s * 0.017, 0.062, -0.006], ankle: (s) => [s * 0.017, 0.016, 0.006], legR: 0.0026, toe: 0.016,
 };
 const SB_PAL = {
-  bluebird: { crown: 0x3a6ad8, back: 0x3a64c8, face: 0x3a64c8, throat: 0xd8783a, breast: 0xe0823c, belly: 0xf0ece4, wing: 0x3c6ae0, wing2: 0x2a3e8a, bar: null, tail: 0x2e4ea8, beak: 0x2a2a30, leg: 0x3a3438, eye: 0x1a1210 },
-  robin: { crown: 0x3a3632, back: 0x6a5e52, face: 0x2e2a28, throat: 0xe06a2a, breast: 0xe8662a, belly: 0xf2ece2, wing: 0x5e544a, wing2: 0x3e3630, bar: null, tail: 0x3a3430, beak: 0xe8b030, leg: 0x6a5a4a, eye: 0x1a1210 },
-  sparrow: { crown: 0x8a5a34, back: 0x9a6a3a, face: 0x9a9a92, throat: 0x2a2624, breast: 0xc8c0b0, belly: 0xe4dccc, wing: 0x8a5a30, wing2: 0x4e3420, bar: 0xf4f0e8, tail: 0x5a4028, beak: 0x4a3a2a, leg: 0x9a7a60, eye: 0x1a1210, streak: 0x3a2414 },
-  goldfinch: { crown: 0x1a1a1c, back: 0xf4d020, face: 0xf4d428, throat: 0xf8dc30, breast: 0xf8d82c, belly: 0xf6ecc0, wing: 0x1c1c20, wing2: 0x0c0c0e, bar: 0xf8f4e8, tail: 0x1a1a1c, beak: 0xe8a07a, leg: 0xb89a80, eye: 0x1a1210 },
+  bluebird: { crown: 0x3a6ad8, back: 0x3a64c8, face: 0x3a64c8, throat: 0xd8783a, breast: 0xe0823c, belly: 0xd6d0c6, wing: 0x3c6ae0, wing2: 0x2a3e8a, bar: null, tail: 0x2e4ea8, beak: 0x2a2a30, leg: 0x3a3438, eye: 0x1a1210 },
+  robin: { crown: 0x3a3632, back: 0x6a5e52, face: 0x2e2a28, throat: 0xe06a2a, breast: 0xe8662a, belly: 0xd8d0c4, wing: 0x5e544a, wing2: 0x3e3630, bar: null, tail: 0x3a3430, beak: 0xe8b030, leg: 0x6a5a4a, eye: 0x1a1210 },
+  sparrow: { crown: 0x8a5a34, back: 0x9a6a3a, face: 0x9a9a92, throat: 0x2a2624, breast: 0xc8c0b0, belly: 0xd4cab8, wing: 0x8a5a30, wing2: 0x4e3420, bar: 0xf4f0e8, tail: 0x5a4028, beak: 0x4a3a2a, leg: 0x9a7a60, eye: 0x1a1210, streak: 0x3a2414 },
+  goldfinch: { crown: 0x1a1a1c, back: 0xf4d020, face: 0xf4d428, throat: 0xf8dc30, breast: 0xf8d82c, belly: 0xdcd2a8, wing: 0x1c1c20, wing2: 0x0c0c0e, bar: 0xf8f4e8, tail: 0x1a1a1c, beak: 0xe8a07a, leg: 0xb89a80, eye: 0x1a1210 },
   cardinal: { crown: 0xd8201c, back: 0xb8241e, face: 0x141010, throat: 0x141010, breast: 0xe0281e, belly: 0xd8342a, wing: 0xb02a22, wing2: 0x8a1a16, bar: null, tail: 0x9a1e18, beak: 0xf07a28, leg: 0x8a6a5a, eye: 0x1a1210, crest: true },
 };
 export const bird = {

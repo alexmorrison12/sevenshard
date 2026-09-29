@@ -4,7 +4,7 @@
 // carried on the shoulder. Variants: crimson (default), ashen, bile; elite: warlord (×1.15, plate & skull trophies).
 import * as THREE from 'three';
 import { BipedCtl, legsLocal, legsPlant, armRot } from '../ctl.js';
-import { bHit, bKnockback, bKnockdown, bGetup, bDeath, bStun, bSpawn, kf } from '../acts.js';
+import { bHit, bKnockback, bKnockdown, bGetup, bDeath, bStun, bSpawn, kf, retime } from '../acts.js';
 import { sweep, rigid, bez, taper, leafGeo, aim } from '../../kit/geo.js';
 import { col } from '../../kit/sdf.js';
 import { addEye, addHorn, lerp3 } from '../../kit/parts.js';
@@ -223,8 +223,8 @@ const ACTIONS = {
     ctl.jaw = Math.max(ctl.jaw, 0.6 * sstep(0.4, 0.55, k) * (1 - sstep(0.7, 0.9, k)) * w);
     legsPlant(ctl, lv * 0.8 * w, 1.3, 0);
   } },
-  attack_big: { dur: 2.5, a: 0.04, d: 0.9, hit: 0.62, fn(ctl, a, w) { // two-handed overhead ground pound — long, readable windup
-    const P = ctl.pose, b = ctl.b, k = a.k, t = a.t, H = ctl.H;
+  attack_big: { dur: 2.5, a: 0.04, d: 0.9, hit: 0.54, fn(ctl, a, w) { // two-handed overhead ground pound — long, readable windup
+    const P = ctl.pose, b = ctl.b, k = retime(a.k, 0.62, 0.54), t = a.t, H = ctl.H;
     const lift = sstep(0, 0.3, k) * (1 - sstep(0.56, 0.62, k));
     const trem = sstep(0.3, 0.56, k) * (1 - sstep(0.56, 0.6, k)) * Math.sin(t * 45) * 0.025;
     const hop = Math.sin(clamp01((k - 0.5) / 0.12) * Math.PI) * (k < 0.62 ? 1 : 0);

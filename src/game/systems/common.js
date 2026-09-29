@@ -5,6 +5,7 @@
 import { RNG, hashStr } from '../../core/noise.js';
 import { ITEMS, SILVER_PER_GOLD } from '../../data/items.js';
 import { ENGRAVINGS } from '../../data/engravings.js';
+import { CARDS, cardIcon } from '../../data/cards.js';
 
 export const SEC = 1000, MIN = 60e3, HOUR = 3600e3, DAY = 86400e3;
 export { SILVER_PER_GOLD };
@@ -87,7 +88,7 @@ export function itemInfo(id) {
   let m;
   if ((m = /^book:(.+)$/.exec(id))) return { id, name: `${ENGRAVINGS[m[1]]?.name || pretty(m[1])} Engraving Recipe`, grade: 4, icon: iconFor(id), kind: 'book', desc: 'Read to learn engraving nodes.', value: 0, tradable: true, bound: null };
   if ((m = /^gem:(ruin|swift):(\d+)$/.exec(id))) return { id, name: `Lv.${m[2]} ${m[1] === 'ruin' ? 'Ruinstone' : 'Swiftstone'}`, grade: Math.min(7, 2 + Math.floor(+m[2] / 2)), icon: iconFor(id), kind: 'gem', desc: '', value: 0, tradable: true, bound: null };
-  if ((m = /^card:(.+)$/.exec(id))) return { id, name: pretty(m[1]), grade: 3, icon: `card:${m[1]}`, kind: 'card', desc: '', value: 0, tradable: false, bound: 'roster' };
+  if ((m = /^card:(.+)$/.exec(id))) return { id, name: CARDS[m[1]]?.name || pretty(m[1]), grade: CARDS[m[1]]?.grade ?? 3, icon: cardIcon(m[1]), kind: 'card', desc: CARDS[m[1]]?.flavor || '', value: 0, tradable: false, bound: 'roster' };
   return { id, name: pretty(id), grade: 1, icon: `item:${id}`, kind: 'material', desc: '', value: 0, tradable: false, bound: null };
 }
 
@@ -180,7 +181,7 @@ export function bundleRows(b, catalog = {}) {
   mats.sort((a, c) => c.grade - a.grade || a.name.localeCompare(c.name));
   rows.unshift(...cur); rows.push(...mats);
   for (const it of b.items || []) rows.push({ id: it.id, uid: it.uid, name: it.name || itemInfo(it.id).name, count: it.count || 1, grade: it.grade ?? itemInfo(it.id).grade, icon: it.icon || iconFor(it.id), kind: it.kind || itemInfo(it.id).kind, item: it });
-  for (const [id, n] of Object.entries(b.cards || {})) { const c = catalog.cards?.[id]; rows.push({ id: `card:${id}`, name: c?.name || itemInfo(`card:${id}`).name, count: n, grade: c?.grade ?? 3, icon: `card:${id}`, kind: 'card' }); }
+  for (const [id, n] of Object.entries(b.cards || {})) { const c = CARDS[id]; rows.push({ id: `card:${id}`, name: c?.name || itemInfo(`card:${id}`).name, count: n, grade: c?.grade ?? 3, icon: cardIcon(id), kind: 'card' }); }
   for (const k of LISTS) for (const id of b[k] || []) { const c = catalog[k]?.[id]; rows.push({ id: `${k}:${id}`, name: c?.name || pretty(id), count: 1, grade: c?.grade ?? 4, icon: k === 'mounts' ? 'item:mount_whistle' : k === 'pets' ? 'item:pet_charm' : 'ui:' + (k === 'titles' ? 'character' : k === 'songs' ? 'songs' : k === 'emotes' ? 'emotes' : 'wardrobe'), kind: k.replace(/s$/, ''), unlock: UNLOCK_NAMES[k] }); }
   return rows;
 }

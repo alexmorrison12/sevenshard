@@ -89,31 +89,26 @@ if (q.tip) setTimeout(() => {
   else console.log('[lab] no element for tip', sel);
 }, 400);
 
-// perf: 8 skills + 30 buffs + 8 party, full HudState pushes
-if (q.perf) setTimeout(() => {
-  const m = createMockHud({ cls: 'reaver', raid: true });
-  const s = m.state;
-  while (s.buffs.length < 30) s.buffs.push({ ...s.buffs[s.buffs.length % 8], id: 'b' + s.buffs.length, left: 5 + s.buffs.length });
-  ui.screen('game');
-  const N = 600;
-  // warm up
-  for (let i = 0; i < 30; i++) { m.step(1 / 15); ui.hud.update(s); }
-  const t0 = performance.now();
-  for (let i = 0; i < N; i++) { m.step(1 / 15); ui.hud.update(s); }
-  const t1 = performance.now();
-  // include style/layout cost of the resulting DOM changes by forcing a layout every update
-  const t2 = performance.now();
-  for (let i = 0; i < 200; i++) { m.step(1 / 15); ui.hud.update(s); void document.body.offsetHeight; }
-  const t3 = performance.now();
-  console.log(`[perf] hud.update avg ${((t1 - t0) / N).toFixed(3)} ms (script only), ${((t3 - t2) / 200).toFixed(3)} ms incl. style+layout; ${s.skills.length} skills, ${s.buffs.length} buffs, ${s.party.length} party`);
-  window.__perf = { script: (t1 - t0) / N, withLayout: (t3 - t2) / 200 };
-}, 300);
+// perf: 8 skills + 30 buffs + 8 raid frames, full HudState pushes (also runnable from shot.mjs --evalAfter)
+window.__benchHud = (N = 200) => {
+  const s = mock.state;
+  s.party = ['reaver', 'oathkeeper', 'pistoleer', 'starcaller', 'stormfist', 'songweaver', 'demonbound', 'bladedancer'].map((c, i) => ({ name: 'P' + i, cls: c, hp: 30000, hpMax: 45000, shield: i % 3 ? 0 : 4000, you: i === 0, support: i === 1 || i === 5 }));
+  while (s.buffs.length < 30) s.buffs.push({ ...s.buffs[s.buffs.length % 8], id: 'b' + s.buffs.length, left: 5 + s.buffs.length, dur: 40 });
+  for (let i = 0; i < 10; i++) { mock.step(1 / 15); ui.hud.update(s); }
+  let t0 = performance.now(); for (let i = 0; i < N; i++) mock.step(1 / 15); const step = (performance.now() - t0) / N;
+  t0 = performance.now(); for (let i = 0; i < N; i++) { mock.step(1 / 15); ui.hud.update(s); } const upd = (performance.now() - t0) / N - step;
+  t0 = performance.now(); for (let i = 0; i < 50; i++) { mock.step(1 / 15); ui.hud.update(s); void document.body.offsetHeight; } const lay = (performance.now() - t0) / 50 - step;
+  const r = { hudUpdateMs: +upd.toFixed(3), withStyleLayoutMs: +lay.toFixed(3), skills: s.skills.length, buffs: s.buffs.length, party: s.party.length };
+  console.log('[perf] ' + JSON.stringify(r));
+  return r;
+};
+if (q.perf) setTimeout(() => { window.__perf = window.__benchHud(); }, 500);
 
 // ------------------------------------------------------------------------------------------------ backdrop
 function paintBackdrop(kind) {
   let cv = document.getElementById('lab-bg');
   if (!cv) { cv = document.createElement('canvas'); cv.id = 'lab-bg'; cv.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;z-index:0'; document.body.prepend(cv); }
-  const W = cv.width = innerWidth, H = cv.height = innerHeight;
+  const W = cv.width = innerWidth || 1600, H = cv.height = innerHeight || 900;
   const x = cv.getContext('2d');
   let seed = 7; const r = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
   if (kind === 'scene') { // stand-in for the lead's 3D key scene: dusk sky, sea of glass, distant citadel

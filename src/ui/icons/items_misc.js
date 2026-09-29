@@ -141,10 +141,10 @@ const M = {
   },
   shards(x, R) {
     glow(x, 50, 52, 38, '#fff0c0', 0.5);
-    for (const [px, py, l, w, a] of [[50, 76, 44, 13, -PI / 2], [34, 78, 30, 10, -PI / 2 - 0.5], [66, 78, 32, 10, -PI / 2 + 0.45], [44, 82, 18, 7, -PI / 2 - 1.1], [58, 84, 18, 7, -PI / 2 + 1]]) crystal(x, px, py, l, w, a, '#ffe8b0', { glowA: 0.3 });
+    for (const [px, py, l, w, a] of [[50, 86, 58, 17, -PI / 2], [30, 88, 38, 13, -PI / 2 - 0.5], [70, 88, 40, 13, -PI / 2 + 0.45], [42, 90, 22, 9, -PI / 2 - 1.1], [60, 92, 22, 9, -PI / 2 + 1]]) crystal(x, px, py, l, w, a, '#ffe8b0', { glowA: 0.3 });
     sparkle(x, 50, 30, 9); sparkle(x, 30, 50, 5);
   },
-  solar_grace(x, R) { sunOrb(x, R, 50, 52, 16, '#ffd040'); },
+  solar_grace(x, R) { sunOrb(x, R, 50, 52, 22, '#ffd040'); },
   solar_blessing(x, R) {
     x.save(); x.translate(50, 58); featherWing(x, -1, 1.05, ['#ffffff', '#ffe0a0', '#b07a2a'], 7); featherWing(x, 1, 1.05, ['#ffffff', '#ffe0a0', '#b07a2a'], 7); x.restore();
     sunOrb(x, R, 50, 52, 14, '#ffa030');
@@ -196,7 +196,7 @@ const M = {
   },
   feather(x, R) {
     glow(x, 50, 50, 40, '#ffe8a0', 0.6);
-    x.save(); x.translate(26, 84); x.rotate(-0.85);
+    x.save(); x.translate(18, 90); x.rotate(-0.85); x.scale(1.25, 1.25);
     x.beginPath(); x.moveTo(0, 0); x.bezierCurveTo(8, -14, 30, -18, 66, -2); x.bezierCurveTo(30, 12, 8, 10, 0, 0); x.closePath();
     x.fillStyle = lg(x, 0, -14, 0, 10, [[0, '#ffffff'], [0.5, '#ffe8b0'], [1, '#c09040']]); x.fill(); outline(x, 'rgba(90,60,10,.8)', 1);
     x.strokeStyle = 'rgba(150,110,40,.7)'; x.lineWidth = 0.6; for (let i = 1; i < 9; i++) { const px = i * 7; x.beginPath(); x.moveTo(px, 0); x.lineTo(px + 5, -9 + i * 0.4); x.moveTo(px, 0); x.lineTo(px + 5, 7 - i * 0.3); x.stroke(); }
@@ -206,8 +206,10 @@ const M = {
   },
   // ---- trade goods
   herb(x, R) {
-    for (const [a, l, c] of [[-2.1, 38, '#5ab040'], [-1.7, 44, '#6ac850'], [-1.3, 40, '#4a9a38'], [-1.0, 32, '#7ad060'], [-2.4, 30, '#5aa848']]) leaf(x, 50, 84, l, 7, a, c);
-    x.fillStyle = lg(x, 42, 0, 58, 0, [[0, '#8a6a3a'], [1, '#4a3418']]); x.fillRect(44, 74, 12, 6); outline(x, INK, 0.7); x.strokeRect(44, 74, 12, 6);
+    glow(x, 50, 50, 34, '#8ae060', 0.35);
+    for (const [a, l, c] of [[-2.2, 50, '#5ab040'], [-1.75, 60, '#6ac850'], [-1.35, 56, '#4a9a38'], [-0.95, 44, '#7ad060'], [-2.55, 40, '#5aa848']]) leaf(x, 50, 90, l, 10, a, c);
+    x.fillStyle = lg(x, 42, 0, 58, 0, [[0, '#a07a3a'], [1, '#4a3418']]); x.fillRect(43, 80, 14, 8); outline(x, INK, 0.7); x.strokeRect(43, 80, 14, 8);
+    x.strokeStyle = '#6a2a1a'; x.lineWidth = 1.4; x.beginPath(); x.moveTo(43, 84); x.lineTo(57, 84); x.stroke();
   },
   flower(x, R) {
     x.strokeStyle = '#3a7a2a'; x.lineWidth = 2.4; x.beginPath(); x.moveTo(50, 92); x.quadraticCurveTo(46, 70, 50, 50); x.stroke();
@@ -226,7 +228,7 @@ const M = {
     }
   },
   ore(x, R) { rock(x, R, 50, 58, 38, 30, ['#c0c0cc', '#6a6a78', '#22222a']); for (let i = 0; i < 7; i++) { const px = 30 + R() * 40, py = 44 + R() * 26; x.fillStyle = metalRG(x, px, py, 3, 'silver'); circle(x, px, py, 1.8 + R() * 1.6); x.fill(); } sparkle(x, 40, 44, 5); },
-  gem_ore(x, R) { rock(x, R, 50, 64, 34, 22, ['#8a7a70', '#4a3a34', '#18100c']); crystal(x, 42, 62, 26, 10, -PI / 2 - 0.35, '#c050ff', { glowA: 0.3 }); crystal(x, 58, 64, 30, 11, -PI / 2 + 0.25, '#40c0ff', { glowA: 0.3 }); crystal(x, 50, 66, 18, 8, -PI / 2, '#ff4a8a', { glowA: 0.3 }); },
+  gem_ore(x, R) { rock(x, R, 50, 68, 38, 24, ['#b0a498', '#6a5a50', '#221812']); crystal(x, 38, 64, 36, 13, -PI / 2 - 0.4, '#c050ff', { glowA: 0.4 }); crystal(x, 60, 66, 40, 14, -PI / 2 + 0.3, '#40c0ff', { glowA: 0.4 }); crystal(x, 50, 70, 24, 10, -PI / 2, '#ff4a8a', { glowA: 0.4 }); },
   fish(x, R) {
     x.save(); x.translate(50, 52); x.rotate(-0.25);
     x.beginPath(); x.moveTo(-32, 0); x.bezierCurveTo(-20, -18, 14, -18, 26, -2); x.lineTo(38, -12); x.lineTo(36, 0); x.lineTo(38, 12); x.lineTo(26, 2); x.bezierCurveTo(14, 18, -20, 18, -32, 0); x.closePath();
@@ -387,7 +389,7 @@ const M = {
   },
   mount_whistle(x, R) {
     x.strokeStyle = '#6a3a1a'; x.lineWidth = 1.6; x.beginPath(); x.moveTo(70, 44); x.bezierCurveTo(88, 30, 80, 12, 60, 16); x.stroke();
-    x.save(); x.translate(46, 56); x.rotate(-0.5);
+    x.save(); x.translate(46, 58); x.rotate(-0.5); x.scale(1.3, 1.3);
     x.beginPath(); x.moveTo(-26, -5); x.lineTo(10, -6); x.bezierCurveTo(22, -12, 30, -4, 28, 6); x.bezierCurveTo(26, 16, 12, 16, 8, 8); x.lineTo(-26, 5); x.closePath();
     x.fillStyle = metalLG(x, -26, -10, 28, 14, 'brass'); x.fill(); outline(x, INK, 1.1);
     x.fillStyle = '#1a1008'; x.fillRect(-10, -6, 6, 3); ellipse(x, 18, 4, 5, 5); x.fill();

@@ -165,7 +165,7 @@ export class HeroKit {
     const def = BATTLE_ITEMS[it.id]; if (!def) return false;
     if (def.needsReady && !this.ready(null)) return false;
     def.use(L, u, aim, this);
-    it.count--; it.cd = def.cd || 1;
+    it.count--; it.cd = def.cd || 1; it.cdMax = def.cd || 1;
     L.emit('itemUsed', { unit: u, item: it.id });
     return true;
   }
@@ -187,15 +187,16 @@ export class HeroKit {
 
 // ---------------------------------------------------------------- battle items
 export const BATTLE_ITEMS = {
-  hp_potion: { name: 'Healing Potion', cd: 1, use(L, u) { heal(L, u, u, u.hpMax * 0.3); u.model?.play?.('use_item', { dur: 0.6 }); L.emit('fx', { unit: u, preset: 'heal_burst', x: u.pos.x, z: u.pos.z }); L.emit('sfx', { unit: u, name: 'heal', pos: u.pos }); } },
-  destruction_bomb: { name: 'Destruction Bomb', cd: 1, use(L, u, aim) { throwItem(L, u, aim, { coef: 4, r: 2.6, wp: 3, stagger: 30, destruction: 30, fx: 'explosion' }); } },
-  flame_grenade: { name: 'Flame Grenade', cd: 1, use(L, u, aim) { throwItem(L, u, aim, { coef: 6, r: 3, status: [{ id: 'burn', dur: 6, power: 1 }], fx: 'fire_burst', elem: 'fire' }); } },
-  frost_grenade: { name: 'Frost Grenade', cd: 1, use(L, u, aim) { throwItem(L, u, aim, { coef: 3, r: 3, status: [{ id: 'freeze', dur: 3 }], fx: 'frost_burst', elem: 'ice' }); } },
-  whirlwind_grenade: { name: 'Whirlwind Grenade', cd: 1, use(L, u, aim) { throwItem(L, u, aim, { coef: 2, r: 3.5, stagger: 45, knock: 'pull', kb: 3, fx: 'wind_burst' }); } },
-  clay_grenade: { name: 'Clay Grenade', cd: 1, use(L, u, aim) { throwItem(L, u, aim, { coef: 2, r: 3, stagger: 30, status: [{ id: 'stun', dur: 2.5 }], fx: 'dust_burst' }); } },
-  dark_grenade: { name: 'Dark Grenade', cd: 1, use(L, u, aim) { throwItem(L, u, aim, { coef: 3, r: 3, status: [{ id: 'def_down', dur: 10 }], fx: 'dark_burst' }); } },
-  time_stop: { name: 'Time Stop Potion', cd: 1, use(L, u) { applyStatus(L, u, 'invuln', { dur: 3, src: u }); u.invuln = Math.max(u.invuln, 3); u.data.rooted = true; L.after(3, () => { u.data.rooted = false; }); L.emit('fx', { unit: u, preset: 'time_stop', x: u.pos.x, z: u.pos.z }); } },
-  panacea: { name: 'Panacea', cd: 1, use(L, u) { for (const s of u.statuses.slice()) if (s.def.debuff) removeStatus(L, u, s.id); L.emit('fx', { unit: u, preset: 'cleanse', x: u.pos.x, z: u.pos.z }); } },
+  hp_potion: { name: 'Healing Potion', cd: 10, use(L, u) { heal(L, u, u, u.hpMax * 0.3); u.model?.play?.('use_item', { dur: 0.6 }); L.emit('fx', { unit: u, preset: 'heal_burst', x: u.pos.x, z: u.pos.z }); L.emit('sfx', { unit: u, name: 'heal', pos: u.pos }); } },
+  elixir: { name: 'Major Elixir', cd: 30, use(L, u) { heal(L, u, u, u.hpMax * 0.5); u.model?.play?.('use_item', { dur: 0.6 }); L.emit('fx', { unit: u, preset: 'heal_burst', x: u.pos.x, z: u.pos.z }); L.emit('sfx', { unit: u, name: 'heal', pos: u.pos }); } },
+  destruction_bomb: { name: 'Destruction Bomb', cd: 25, use(L, u, aim) { throwItem(L, u, aim, { coef: 4, r: 2.6, wp: 3, stagger: 30, destruction: 30, fx: 'explosion' }); } },
+  flame_grenade: { name: 'Flame Grenade', cd: 25, use(L, u, aim) { throwItem(L, u, aim, { coef: 6, r: 3, status: [{ id: 'burn', dur: 6, power: 1 }], fx: 'fire_burst', elem: 'fire' }); } },
+  frost_grenade: { name: 'Frost Grenade', cd: 25, use(L, u, aim) { throwItem(L, u, aim, { coef: 3, r: 3, status: [{ id: 'freeze', dur: 3 }], fx: 'frost_burst', elem: 'ice' }); } },
+  whirlwind_grenade: { name: 'Whirlwind Grenade', cd: 25, use(L, u, aim) { throwItem(L, u, aim, { coef: 2, r: 3.5, stagger: 45, knock: 'pull', kb: 3, fx: 'wind_burst' }); } },
+  clay_grenade: { name: 'Clay Grenade', cd: 25, use(L, u, aim) { throwItem(L, u, aim, { coef: 2, r: 3, stagger: 30, status: [{ id: 'stun', dur: 2.5 }], fx: 'dust_burst' }); } },
+  dark_grenade: { name: 'Dark Grenade', cd: 25, use(L, u, aim) { throwItem(L, u, aim, { coef: 3, r: 3, status: [{ id: 'def_down', dur: 10 }], fx: 'dark_burst' }); } },
+  time_stop: { name: 'Time Stop Potion', cd: 60, use(L, u) { applyStatus(L, u, 'invuln', { dur: 3, src: u }); u.invuln = Math.max(u.invuln, 3); u.data.rooted = true; L.after(3, () => { u.data.rooted = false; }); L.emit('fx', { unit: u, preset: 'time_stop', x: u.pos.x, z: u.pos.z }); } },
+  panacea: { name: 'Panacea', cd: 30, use(L, u) { for (const s of u.statuses.slice()) if (s.def.debuff) removeStatus(L, u, s.id); L.emit('fx', { unit: u, preset: 'cleanse', x: u.pos.x, z: u.pos.z }); } },
   feather: { name: 'Resurrection Feather', cd: 1, use() {} },
 };
 function throwItem(L, u, aim, o) {

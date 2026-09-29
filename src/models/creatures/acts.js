@@ -4,12 +4,18 @@
 import { legsLocal, legsPlant, armRot, ease, sstep, clamp01, mix, TAU } from './ctl.js';
 
 /** piecewise smooth interpolation through keys (T ascending) */
+/** Time-warp for re-timing an authored action: normalised k where the authored impact (`from`) should land at `to`. */
+export const retime = (k, from, to) => k < to ? k * from / to : from + (k - to) * (1 - from) / (1 - to);
 export function kf(k, T, V) {
   if (k <= T[0]) return V[0];
   for (let i = 1; i < T.length; i++) if (k <= T[i]) { const u = (k - T[i - 1]) / (T[i] - T[i - 1]); return V[i - 1] + (V[i] - V[i - 1]) * u * u * (3 - 2 * u); }
   return V[V.length - 1];
 }
 const sideOf = (a) => (Math.sin(a.seed * 7.13) > 0 ? 1 : -1);
+// knockdown → getup / lying death continuity: the side it fell on is stored on the controller at knockdown start, and
+// the backward slide of the fall (in body heights) is carried through the getup / lying death so nothing pops
+const downSide = (ctl, a) => ctl.downSide || sideOf(a);
+const KD_ZB = 0.2, KD_ZQ = 0.15;
 const hipsY = (ctl) => ctl.pose.rest[ctl.b.hips].y;
 const bodyY = (ctl) => ctl.pose.rest[ctl.b.body].y;
 
@@ -29,7 +35,7 @@ function bLieLimbs(ctl, w, side, t, o) {
 }
 function bLie(ctl, w, side, t, o) {
   const P = ctl.pose, b = ctl.b, lie = hipsY(ctl) - (o.lieY ?? ctl.H * 0.11);
-  P.move(b.hips, 0, -lie * w, 0);
+  P.move(b.hips, 0, -lie * w, KD_ZB * ctl.H * w);
   P.rot(b.hips, (o.pitch ?? 1.5) * w, 0, 0.1 * side * w);
   bLieLimbs(ctl, w, side, t, o);
 }
@@ -64,13 +70,15 @@ export function bKnockback(o = {}) {
 }
 
 export function bKnockdown(o = {}) {
-  return { dur: o.dur ?? 0.8, hold: true, excl: true, state: true, fadeIn: 0.02, fadeOut: 0.05, hit: 0, fn(ctl, a, w) {
-    const P = ctl.pose, b = ctl.b, k = a.k, t = a.t, s = sideOf(a), H = ctl.H;
+  return { dur: o.dur ?? 0.8, hold: true, excl: true, state: true, fadeIn: 0.02, fadeOut: 0.05, hit: 0,
+    start(ctl, a) { ctl.downSide = sideOf(a); ctl.downO = o; },
+    fn(ctl, a, w) {
+    const P = ctl.pose, b = ctl.b, k = a.k, t = a.t, s = downSide(ctl, a), H = ctl.H;
     const lie = hipsY(ctl) - (o.lieY ?? H * 0.11);
     const fall = ease.in(clamp01((k - 0.08) / 0.55));
     const bounce = Math.sin(clamp01((k - 0.63) / 0.2) * Math.PI) * 0.05 * H;
     const jolt = sstep(0, 0.08, k) * (1 - sstep(0.1, 0.5, k));
-    P.move(b.hips, 0, (-lie * fall + bounce + 0.04 * H * jolt) * w, (0.2 * H * ease.out(k / 0.6)) * w);
+    P.move(b.hips, 0, (-lie * fall + bounce + 0.04 * H * jolt) * w, (KD_ZB * H * ease.out(k / 0.6)) * w);
     P.rot(b.hips, ((o.pitch ?? 1.5) * fall + 0.2 * jolt) * w, 0, 0.1 * s * fall * w);
     armRot(ctl, -1, 1.5 * jolt, 0.3, w, 0.5 * jolt); armRot(ctl, 1, 1.3 * jolt, 0.3, w, 0.5 * jolt);
     // struggle twitches while down
@@ -85,20 +93,25 @@ export function bKnockdown(o = {}) {
 const GU_T = [0, 0.3, 0.62, 1], GU_Y = [-1, -0.8, -0.45, 0], GU_P = [1.5, 0.55, -0.35, 0], GU_S = [0.05, -0.35, -0.2, 0], GU_A = [0.35, -0.5, 0.7, 0];
 export function bGetup(o = {}) {
   return { dur: o.dur ?? 1.0, a: 0.001, d: 0.85, state: true, fn(ctl, a, w) {
-    const P = ctl.pose, b = ctl.b, k = a.k, H = ctl.H;
+    const P = ctl.pose, b = ctl.b, k = a.k, H = ctl.H, side = ctl.downSide || 1;
     const lie = hipsY(ctl) - (o.lieY ?? H * 0.11);
     const pitch = kf(k, GU_T, GU_P) * (o.pitch ?? 1.5) / 1.5;
-    P.move(b.hips, 0, kf(k, GU_T, GU_Y) * lie * w, 0);
-    P.rx(b.hips, pitch * w);
+    const f = sstep(0, 0.3, k), lw0 = (1 - f) * w; // f: lying pose → getup pose
+    P.move(b.hips, 0, kf(k, GU_T, GU_Y) * lie * w, KD_ZB * H * (1 - sstep(0.3, 1, k)) * w);
+    P.rot(b.hips, pitch * w, 0, 0.1 * side * lw0);
     P.rx(b.spine, kf(k, GU_T, GU_S) * w); P.rx(b.chest, kf(k, GU_T, GU_S) * 0.6 * w);
-    P.rot(b.head, 0.2 * sstep(0.2, 0.6, k) * (1 - sstep(0.7, 1, k)) * w, 0, 0);
-    const au = kf(k, GU_T, GU_A);
-    armRot(ctl, -1, au, 0.3 + 0.4 * sstep(0.3, 0.6, k), w * (1 - sstep(0.75, 1, k)), 0.5 * (1 - sstep(0.3, 0.7, k)));
-    armRot(ctl, 1, au, 0.3 + 0.4 * sstep(0.3, 0.6, k), w * (1 - sstep(0.75, 1, k)), 0.5 * (1 - sstep(0.3, 0.7, k)));
+    if (b.neck !== undefined) P.rx(b.neck, -0.1 * lw0);
+    P.rot(b.head, (0.2 * sstep(0.2, 0.6, k) * (1 - sstep(0.7, 1, k))) * w - 0.15 * lw0, 0.6 * side * lw0, 0.15 * side * lw0);
+    if (b.tail) for (let i = 0; i < b.tail.length; i++) P.rot(b.tail[i], 0.25 * lw0, side * 0.2 * lw0, 0);
+    const au = kf(k, GU_T, GU_A), aw = w * (1 - sstep(0.75, 1, k)), lo = 0.3 + 0.4 * sstep(0.3, 0.6, k), out = 0.5 * (1 - sstep(0.3, 0.7, k));
+    const armUp = o.armUp ?? -0.2, armOut = o.armOut ?? 1.15;
+    armRot(ctl, -1, mix(armUp, au, f), mix(0.25, lo, f), aw, mix(armOut, out, f));
+    armRot(ctl, 1, mix(armUp * 0.6, au, f), mix(0.35, lo, f), aw, mix(armOut * 0.8, out, f));
     const lw = 1 - sstep(0.22, 0.42, k), pw = sstep(0.22, 0.42, k) * (1 - sstep(0.8, 1, k));
-    if (lw > 0) legsLocal(ctl, lw * w, 0.08, 1.2, 0, (o.legBack ?? 0.28) * (1 - sstep(0, 0.3, k)));
+    if (lw > 0) legsLocal(ctl, lw * w, mix(0.04, 0.08, f), 1.2, 0, (o.legBack ?? 0.28) * (1 - sstep(0, 0.3, k)));
     if (pw > 0) legsPlant(ctl, pw * w, 1.25, 0.05 * H);
-    ctl.wingSpread = mix(ctl.wingSpread, 0.8, (1 - k) * w);
+    ctl.jaw = Math.max(ctl.jaw, 0.3 * lw0);
+    ctl.wingSpread = mix(ctl.wingSpread, mix(o.wingLie ?? 0.9, 0.8, f), (1 - k) * w);
   } };
 }
 
@@ -107,8 +120,8 @@ export function bDeath(o = {}) {
   return { dur: o.dur ?? 1.5, hold: true, excl: true, state: true, fadeIn: 0.02, keep: true,
     start(ctl, a) { a.u.spin = Math.random() < (o.spin ?? 0.4) ? 1 : 0; a.u.side = sideOf(a); a.u.dist = (o.dist ?? 1.6) * (0.75 + Math.random() * 0.5); },
     fn(ctl, a, w) {
-      const P = ctl.pose, b = ctl.b, k = a.k, t = a.t, H = ctl.H, s = a.u.side;
-      if (a.u.fromDown) { bLie(ctl, w, s, t, o); const tw = Math.sin(t * 30) * 0.08 * (1 - sstep(0.1, 0.6, t)); P.rx(b.chest, -tw * w); ctl.jaw = Math.max(ctl.jaw, 0.5 * w); return; }
+      const P = ctl.pose, b = ctl.b, k = a.k, t = a.t, H = ctl.H, s = a.u.fromDown ? (ctl.downSide || a.u.side) : a.u.side;
+      if (a.u.fromDown) { bLie(ctl, w, s, t, ctl.downO || o); const tw = Math.sin(t * 30) * 0.08 * (1 - sstep(0.1, 0.6, t)); P.rx(b.chest, -tw * w); ctl.jaw = Math.max(ctl.jaw, 0.5 * w); return; }
       const lie = hipsY(ctl) - (o.lieY ?? H * 0.11), dist = a.u.dist * H, peak = (o.peak ?? 0.45) * H;
       const T1 = o.air ?? 0.38;
       const u = clamp01(k / T1);
@@ -238,13 +251,15 @@ export function qKnockback(o = {}) {
   } };
 }
 export function qKnockdown(o = {}) {
-  return { dur: o.dur ?? 0.8, hold: true, excl: true, state: true, fadeIn: 0.02, fadeOut: 0.05, hit: 0, fn(ctl, a, w) {
-    const P = ctl.pose, b = ctl.b, k = a.k, t = a.t, s = sideOf(a), H = ctl.H;
+  return { dur: o.dur ?? 0.8, hold: true, excl: true, state: true, fadeIn: 0.02, fadeOut: 0.05, hit: 0,
+    start(ctl, a) { ctl.downSide = sideOf(a); ctl.downO = o; },
+    fn(ctl, a, w) {
+    const P = ctl.pose, b = ctl.b, k = a.k, t = a.t, s = downSide(ctl, a), H = ctl.H;
     const lie = bodyY(ctl) - (o.lieY ?? H * 0.2);
     const fall = ease.in(clamp01((k - 0.1) / 0.5));
     const bounce = Math.sin(clamp01((k - 0.6) / 0.2) * Math.PI) * 0.04 * H;
     const jolt = sstep(0, 0.08, k) * (1 - sstep(0.1, 0.45, k));
-    P.move(b.body, 0, (-lie * fall + bounce + 0.06 * H * jolt) * w, 0.15 * H * ease.out(k / 0.6) * w);
+    P.move(b.body, 0, (-lie * fall + bounce + 0.06 * H * jolt) * w, KD_ZQ * H * ease.out(k / 0.6) * w);
     P.rot(b.body, (0.25 * jolt + 0.05 * fall) * w, 0, s * (o.roll ?? 1.45) * fall * w);
     const tw = Math.pow(Math.max(0, Math.sin(t * 1.4 + a.seed)), 10) * sstep(1.2, 1.6, t);
     P.rx(b.neck, (0.2 * tw + 0.35 * jolt) * w);
@@ -254,26 +269,26 @@ export function qKnockdown(o = {}) {
 }
 export function qGetup(o = {}) {
   return { dur: o.dur ?? 0.9, a: 0.001, d: 0.85, state: true, fn(ctl, a, w) {
-    const P = ctl.pose, b = ctl.b, k = a.k, H = ctl.H;
+    const P = ctl.pose, b = ctl.b, k = a.k, H = ctl.H, side = ctl.downSide || 1;
     const lie = bodyY(ctl) - (o.lieY ?? H * 0.2);
-    const s = ctl.acts.list.length ? 1 : 1;
-    const roll = 1 - sstep(0.0, 0.5, k), up = sstep(0.3, 1.0, k);
-    const side = a.u.side ?? (a.u.side = Math.sin(a.seed * 7.13) > 0 ? 1 : -1);
-    P.move(b.body, 0, -lie * (1 - up) * w, 0);
-    P.rot(b.body, -0.15 * sstep(0.3, 0.6, k) * (1 - sstep(0.7, 1, k)) * w, 0, side * (o.roll ?? 1.45) * roll * w);
+    const roll = 1 - sstep(0.0, 0.5, k), up = sstep(0.3, 1.0, k), lw0 = (1 - sstep(0, 0.35, k)) * w;
+    P.move(b.body, 0, -lie * (1 - up) * w, KD_ZQ * H * (1 - sstep(0.3, 1, k)) * w);
+    P.rot(b.body, (-0.15 * sstep(0.3, 0.6, k) * (1 - sstep(0.7, 1, k)) + 0.05 * roll) * w, 0, side * (o.roll ?? 1.45) * roll * w);
     P.rx(b.neck, (-0.2 * roll + 0.25 * sstep(0.4, 0.7, k) * (1 - sstep(0.8, 1, k))) * w);
+    P.rot(b.head, -0.1 * lw0, 0, side * 0.35 * lw0);
+    if (b.tail) for (let i = 0; i < b.tail.length; i++) P.rot(b.tail[i], -0.12 * lw0, side * 0.15 * lw0, 0);
     legsLocal(ctl, (1 - sstep(0.25, 0.5, k)) * w, 0.22, 1.1);
     legsPlant(ctl, sstep(0.25, 0.5, k) * (1 - sstep(0.8, 1, k)) * w, 1.1, 0);
-    ctl.ear = mix(ctl.ear, 0.8, (1 - k) * w);
+    ctl.ear = mix(ctl.ear, 0.8, (1 - k) * w); ctl.jaw = Math.max(ctl.jaw, 0.25 * lw0);
   } };
 }
 export function qDeath(o = {}) {
   return { dur: o.dur ?? 1.5, hold: true, excl: true, state: true, fadeIn: 0.02, keep: true,
     start(ctl, a) { a.u.spin = Math.random() < (o.spin ?? 0.35) ? 1 : 0; a.u.side = sideOf(a); a.u.dist = (o.dist ?? 1.1) * (0.75 + Math.random() * 0.5); },
     fn(ctl, a, w) {
-      const P = ctl.pose, b = ctl.b, k = a.k, t = a.t, H = ctl.H, s = a.u.side;
+      const P = ctl.pose, b = ctl.b, k = a.k, t = a.t, H = ctl.H, s = a.u.fromDown ? (ctl.downSide || a.u.side) : a.u.side;
       const lie = bodyY(ctl) - (o.lieY ?? H * 0.2);
-      if (a.u.fromDown) { P.move(b.body, 0, -lie * w, 0); P.rot(b.body, 0.05 * w, 0, s * (o.roll ?? 1.45) * w); qLie(ctl, w, s, t, o, true); ctl.glow = mix(ctl.glow, 0.15, sstep(0.2, 1.2, t) * w); return; }
+      if (a.u.fromDown) { const d = ctl.downO || o, dl = bodyY(ctl) - (d.lieY ?? H * 0.2); P.move(b.body, 0, -dl * w, KD_ZQ * H * w); P.rot(b.body, 0.05 * w, 0, s * (d.roll ?? 1.45) * w); qLie(ctl, w, s, t, d, true); ctl.glow = mix(ctl.glow, 0.15, sstep(0.2, 1.2, t) * w); return; }
       const dist = a.u.dist * H, peak = (o.peak ?? 0.35) * H, T1 = o.air ?? 0.36;
       const u = clamp01(k / T1), land = sstep(T1 * 0.75, T1 * 1.1, k);
       const fz = ease.out(u) * dist + sstep(T1, T1 + 0.35, k) * dist * 0.15;

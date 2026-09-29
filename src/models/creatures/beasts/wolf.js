@@ -3,7 +3,7 @@
 // coat under a silver-white lion mane, scarred muzzle, torn ear, glowing amber eyes and a broken arrow in the shoulder.
 import * as THREE from 'three';
 import { QuadCtl } from '../ctl.js';
-import { qHit, qKnockback, qKnockdown, qGetup, qDeath, qStun, qSpawn } from '../acts.js';
+import { qHit, qKnockback, qKnockdown, qGetup, qDeath, qStun, qSpawn, retime } from '../acts.js';
 import { sweep, eyeGeo, rigid, bez, taper, leafGeo, eyeMatrix } from '../../kit/geo.js';
 import { col } from '../../kit/sdf.js';
 import { lerp3 } from '../../kit/parts.js';
@@ -223,10 +223,10 @@ export const wolf = {
     }
     if (E) {
       // three claw scars raked across the left eye down the cheek, and a long pale scar along the right flank
-      const sc = { core: c.scar, edge: 0x5a2e2c, emis: 0, lift: 0.004 };
+      const sc = { core: c.scar, edge: 0x6a3634, emis: 0, lift: 0.005, n: 9 };
       for (let i = 0; i < 3; i++) {
         const o = (i - 1) * 0.026;
-        surfaceCrack(acc, S, [hx([-0.02 + o * 0.4, 1.17, -0.7 + o]), hx([-0.05 + o * 0.5, 1.12, -0.74 + o]), hx([-0.08 + o * 0.5, 1.06, -0.77 + o]), hx([-0.1 + o * 0.4, 1.0, -0.79 + o])], { ...sc, width: 0.011, group: 2, seed: i });
+        surfaceCrack(acc, S, [hx([-0.02 + o * 0.4, 1.17, -0.7 + o]), hx([-0.05 + o * 0.5, 1.12, -0.74 + o]), hx([-0.08 + o * 0.5, 1.06, -0.77 + o]), hx([-0.1 + o * 0.4, 1.0, -0.79 + o])], { ...sc, width: 0.008, group: 2, seed: i });
       }
       surfaceCrack(acc, S, [[0.2, 0.86, -0.2], [0.2, 0.8, -0.1], [0.19, 0.74, 0.0], [0.17, 0.7, 0.1], [0.15, 0.68, 0.18]], { ...sc, width: 0.016, seed: 9 });
       // a broken hunter's arrow lodged in the left shoulder: splintered shaft + torn fletching
@@ -271,8 +271,8 @@ const HOWL = { dur: 3.4, a: 0.12, d: 0.88, fn(ctl, a, w) { // head thrown back, 
 } };
 
 const ACTIONS = {
-  attack: { dur: 0.7, a: 0.12, d: 0.75, hit: 0.45, fn(ctl, a, w) { // lunge bite
-    const P = ctl.pose, b = ctl.b, k = a.k;
+  attack: { dur: 0.8, a: 0.12, d: 0.75, hit: 0.44, fn(ctl, a, w) { // lunge bite (hit = game windup 0.35 / 0.8 s)
+    const P = ctl.pose, b = ctl.b, k = retime(a.k, 0.45, 0.44);
     const wind = sstep(0, 0.3, k) * (1 - sstep(0.3, 0.45, k));
     const lunge = sstep(0.28, 0.45, k) * (1 - sstep(0.6, 1, k));
     P.move(b.body, 0, (-0.03 * wind - 0.04 * lunge) * w, (0.06 * wind - 0.24 * lunge) * w);

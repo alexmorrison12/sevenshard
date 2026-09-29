@@ -92,7 +92,7 @@ K.music_burst = (fx, p) => {         // anthem burst: notes erupt over the party
   fx.at(GEN.bigFlash, up, 0.6 * s, col);
   shockwave(fx, { pos, radius: c.R * 1.2, color: col, dur: 0.6, height: 2, delay: 0.05, dust: false });
 };
-K.music_circle = { ...MYSTIC.heal_zone, name: 'music_circle', init(T) { T.p = { kind: 'music', ...T.p }; MYSTIC.heal_zone.init(T); T.v.dec.stop(); T.v.dec = T.fx.decal({ pos: T.pos, radius: T.v.R, kind: 'music', dur: Infinity, color: tc(T.v.c.tint, MUSICC, 1.3), hot: 0.4 }); } };
+K.music_circle = { ...MYSTIC.heal_zone, name: 'music_circle', init(T) { T.p = { kind: 'music', ...T.p, color: T.p.color ?? MUSICC }; MYSTIC.heal_zone.init(T); T.v.dec.stop(); T.v.dec = T.fx.decal({ pos: T.pos, radius: T.v.R, kind: 'music', dur: Infinity, color: tc(T.v.c.tint, MUSICC, 1.3), hot: 0.4 }); } };
 K.music_shield = (fx, p) => fx.play('shield_bubble', { ...p, color: p.color ?? 0x8ae8ff });
 K.music_wind = (fx, p) => MYSTIC.wind_of_music(fx, { ...p, color: p.color ?? 0xc8f0ff });
 K.sound_wave = (fx, p) => { const c = ctx(fx, p, null, 5); MYSTIC.harp_note_wave(fx, { ...p, len: c.R }); const o = fx.o(c.s, tc(c.tint, MUSICC, 1.2)); for (let k = 0; k < 4; k++) { o.dt = k * 0.06; o.rot = 0; fx.spawn(SONIC_RING, c.x + c.f.x * (1 + k * c.R / 4.5), c.y + 1.1, c.z + c.f.z * (1 + k * c.R / 4.5), c.f.x * 3, 0, c.f.z * 3, o); } };

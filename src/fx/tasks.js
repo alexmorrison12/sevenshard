@@ -2,7 +2,8 @@
 // Tasks are pooled; callers get a Handle whose methods are no-ops once the task has finished (generation check), so a
 // stale handle can never stop an unrelated effect.
 //   T.p       params (the object passed to play / the primitive)
-//   T.pos     live position (follows T.attach — an Object3D — when given, plus T.offset in its local space)
+//   T.pos     live position (follows T.attach — an Object3D — when given, plus T.offset in its local space);
+//             T.place(x, y, z) pins it at a world point and drops attach/follow
 //   T.dir     unit horizontal forward, T.right = its right vector
 //   T.age     seconds since start, T.dur, T.u = age / dur
 //   T.rate(key, perSecond) → how many to emit this frame (fractional accumulation, quality-scaled)
@@ -40,6 +41,8 @@ export class Task {
     return this;
   }
   get u() { return isFinite(this.dur) ? Math.min(1, this.age / this.dur) : 0; }
+  /** pin the effect at a world point and stop following (a spell cast at a target while the caster is attached) */
+  place(x, y, z) { this.attach = null; this.follow = null; this.offset = null; this.pos.set(x, y, z); this.prev.copy(this.pos); return this; }
   readPos(out) {
     if (this.attach) {
       if (this.offset) { out.copy(this.offset); this.attach.localToWorld(out); }

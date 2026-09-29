@@ -16,10 +16,16 @@ export const familyOf = (type, tpl = templateOf(type)) => tpl?.family || FAMILY[
 // ------------------------------------------------------------------------------------------------ anchors
 const warned = new Set();
 export function warnOnce(key, ...msg) { if (warned.has(key)) return; warned.add(key); console.info('[story]', ...msg); }
-/** first existing anchor among names (string | [names]) → { x, z, facing, name } or null. Entries may be [name, dx, dz]. */
+/**
+ * first existing anchor among names → { x, z, facing, name } or null. names: 'anchor' | [entries]; an entry is an anchor
+ * name, [name, dx, dz], an absolute point [x, z] (numbers) or { x, z } — so content can say at: ['poi:x', [0, -74]].
+ */
 export function anchorOf(zone, names, off = null) {
   const A = zone?.anchors || {};
-  for (const n of [].concat(names || [])) {
+  const list = typeof names === 'string' || (Array.isArray(names) && typeof names[0] === 'number') || (names && !Array.isArray(names)) ? [names] : (names || []);
+  for (const n of list) {
+    if (n && typeof n === 'object' && !Array.isArray(n)) return { x: n.x + (off?.[0] || 0), z: n.z + (off?.[1] || 0), facing: n.facing || 0, name: 'point' };
+    if (Array.isArray(n) && typeof n[0] === 'number') return { x: n[0] + (off?.[0] || 0), z: n[1] + (off?.[1] || 0), facing: n[2] || 0, name: 'point' };
     const [name, dx = 0, dz = 0] = Array.isArray(n) ? n : [n];
     const a = A[name]; if (!a) continue;
     return { ...a, x: a.x + dx + (off?.[0] || 0), z: a.z + dz + (off?.[1] || 0), name };

@@ -2,7 +2,7 @@
 // read, soft trailing wash, noise break-up) and vertical ring walls (energy curtains that rise and fade as they
 // expand). One instanced draw call per style; fully analytic after spawn.
 import * as THREE from 'three';
-import { PREMUL, GLSL_NOISE, GLSL_GROUND } from './util.js';
+import { PREMUL, GLSL_NOISE, GLSL_GROUND, queueRange } from './util.js';
 
 export const RSTRIDE = 16;
 const RING_VERT = /* glsl */`
@@ -128,7 +128,7 @@ class RingPool {
   }
   update() {
     if (this.hi >= this.lo) {
-      this.buf.clearUpdateRanges(); this.buf.addUpdateRange(this.lo * RSTRIDE, (this.hi - this.lo + 1) * RSTRIDE); this.buf.needsUpdate = true;
+      queueRange(this.buf, this.lo * RSTRIDE, (this.hi - this.lo + 1) * RSTRIDE);
       this.lo = this.n; this.hi = -1;
     }
     this.mesh.visible = this.fx.time <= this.until;

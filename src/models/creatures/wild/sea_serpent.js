@@ -289,14 +289,14 @@ export class SerpentCtl extends BaseCtl {
     this.px = new Float32Array(M); this.py = new Float32Array(M); this.pz = new Float32Array(M); this.ps = new Float32Array(M); this.np = 0;
     this.ph = Math.random() * TAU; this.swim = 0;
     this.hb = new V3(); this.bk = new V3();
-    this._idle(0);
+    this._baseParams(0);
   }
   play(name, dur, loop) {
     if (name === 'emerge') name = 'spawn';
     return super.play(name, dur, loop);
   }
   /** base pose parameters (actions then blend on top) */
-  _idle(dt) {
+  _baseParams(dt) {
     const t = this.t, c = this.combat, sw = this.swim, L = this.look;
     this.hx = Math.sin(t * 0.37) * 0.4 + L.y * 0.7;
     this.hy = 4.25 + Math.sin(t * 0.61 + 1) * 0.16 - 0.45 * c - 0.7 * sw;
@@ -323,7 +323,7 @@ export class SerpentCtl extends BaseCtl {
     P.reset();
     const idle = 1 - this.swim;
     this._look(dt, idle * (1 - this.restW), 0.6);
-    this._idle(dt);
+    this._baseParams(dt);
     this._fidget(dt, idle);
     this.acts.apply();
     this.ph += dt * this.wSpd * TAU / this.wL;
@@ -456,7 +456,7 @@ const ACTIONS = {
     ctl.hpitch = mix(ctl.hpitch, mix(0.55, -0.45, sstep(0.3, 0.55, k)), rise * w); ctl.hyaw = mix(ctl.hyaw, 0, rise * w); ctl.hroll += trem * w;
     ctl.ey += 0.7 * rise * w; ctl.ez = mix(ctl.ez, 1.7, rise * w); ctl.a1 += 0.4 * rise * w; ctl.a2 += 1.2 * rise * w; ctl.bulge += 0.4 * rise * w;
     ctl.wA = mix(ctl.wA, 0.7, rise * w);
-    ctl.hx = mix(ctl.hx, 0, crash * w); ctl.hy = mix(ctl.hy, 0.45 + 0.25 * env2(k, 0.7, 0.74, 0.76, 0.82), crash * w); ctl.hz = mix(ctl.hz, -6.8, crash * w);
+    ctl.hx = mix(ctl.hx, 0, crash * w); ctl.hy = mix(ctl.hy, 1.5 + 0.3 * env2(k, 0.7, 0.74, 0.76, 0.82), crash * w); ctl.hz = mix(ctl.hz, -6.2, crash * w); // lands on a deck ~6 m ahead (2.1 m high)
     ctl.hpitch = mix(ctl.hpitch, -0.3, crash * w); ctl.ez = mix(ctl.ez, 0.2, crash * w); ctl.a2 += 0.8 * crash * w; ctl.bulge += 1.2 * crash * w;
     ctl.jaw = Math.max(ctl.jaw, (0.95 * env2(k, 0.05, 0.25, 0.45, 0.6) + 0.5 * env2(k, 0.6, 0.64, 0.68, 0.72)) * w);
     ctl.frill = mix(ctl.frill, 1.2, (rise + crash * 0.5) * w);

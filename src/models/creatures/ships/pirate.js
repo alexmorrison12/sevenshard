@@ -12,8 +12,8 @@ import { shroudLines, yard, anchor, pinRail, rudder, chain, spikes, shotPile, sk
 import { Atlas, cloth, tatter, patch, rgb, hh } from './tex.js';
 
 const C = {
-  bottom: lc(0x2a1412), boot: lc(0x0e0b0a), hull: lc(0x2a2320), hullD: lc(0x1a1614), red: lc(0x7a1812), redD: lc(0x4a0e0a),
-  deck: lc(0x7a6246), inner: lc(0x5a120e), cap: lc(0x14100e), bone: lc(0xd8ccb0), brass: lc(0x8a6a3a),
+  bottom: lc(0x3a1a16), boot: lc(0x120e0c), hull: lc(0x3c322c), hullD: lc(0x2a2420), red: lc(0x8e1c14), redD: lc(0x5a140e),
+  deck: lc(0x8a7458), inner: lc(0x6a1812), cap: lc(0x14100e), bone: lc(0xd8ccb0), brass: lc(0x8a6a3a),
   mast: lc(0x4a3a2a), spar: lc(0x2e241c), rope: lc(0x2a2018), shroud: lc(0x161210), iron: lc(0x1a1818), glow: lc(0xff4a1a),
 };
 const OPEN3 = (h, o) => [[0, -h], [o, -h * 0.9], [o, h * 0.9], [0, h]];
@@ -69,9 +69,9 @@ export function buildPirate() {
   const wb = new WoodBuilder(), sb = new SailBuilder(), atlas = new Atlas(1024);
   // ---------------------------------------------------------------------------------------------- sail atlas
   const black = (seed, o = {}) => (g, w, h) => {
-    cloth(g, w, h, { base: 0x1d1a1c, seam: 0x000000, seamA: 0.5, panels: o.panels ?? 9, reefs: o.reefs ?? [0.22], point: 0x6a5a4a, seed, dirt: 0.25, borderCol: 0x3a0a08 });
+    cloth(g, w, h, { base: 0x2c282c, seam: 0x000000, seamA: 0.45, panels: o.panels ?? 9, reefs: o.reefs ?? [0.22], point: 0x6a5a4a, seed, dirt: 0.25, borderCol: 0x3a0a08 });
     // faded streaks + red patches
-    for (let i = 0; i < (o.patches ?? 4); i++) patch(g, (0.15 + hh(i, seed, 1) * 0.7) * w, (0.2 + hh(i, seed, 2) * 0.55) * h, (0.08 + hh(i, seed, 3) * 0.08) * w, (0.1 + hh(i, seed, 4) * 0.1) * h, i % 3 ? 0x5a1210 : 0x3a3230, 0x0a0806, hh(i, seed, 5) - 0.5);
+    for (let i = 0; i < (o.patches ?? 4); i++) patch(g, (0.15 + hh(i, seed, 1) * 0.7) * w, (0.2 + hh(i, seed, 2) * 0.55) * h, (0.08 + hh(i, seed, 3) * 0.08) * w, (0.1 + hh(i, seed, 4) * 0.1) * h, i % 3 ? 0x7e1a14 : 0x4a4244, 0x0a0806, hh(i, seed, 5) - 0.5);
     if (o.stripe) { g.fillStyle = rgb(0x8a1612, 0.9); g.fillRect(0, h * 0.8, w, h * 0.07); }
     if (o.emblem) paintHornedGrin(g, w / 2, h * 0.45, h * o.emblem);
     tatter(g, w, h, { foot: o.foot ?? 0.1, teeth: o.teeth ?? 13, holes: o.holes ?? 2, holeR: 0.05, seed: seed + 7, sides: o.sides });
@@ -121,11 +121,14 @@ export function buildPirate() {
   {
     const wy = 1.7, span = H.hb(wy, 0) * 1.4;
     for (let i = 0; i < 4; i++) windowAt(wb, M(lerp(-span / 2, span / 2, i / 3), wy, zT(wy) + 0.05, -0.1), 0.34, 0.46, { frame: C.cap, glass: lc(0xff5a24), glow: 0.9, mullion: C.cap, metal: 0 });
+    for (const [yy, t] of [[1.28, 0.08], [2.12, 0.08], [yRT - 0.12, 0.1]]) wb.add(box(H.hb(yy, 0) * 1.96, t, 0.08), M(0, yy, zT(yy) + 0.05, -0.1), { color: yy > 3 ? C.bone : C.red, d: 0.3 });
+    for (const s2 of [-1, 1]) { const a = V3(s2 * H.hb(1.1, 0) * 0.96, 1.1, zT(1.1) + 0.04), b = V3(s2 * H.hb(yRT, 0) * 0.96, yRT, zT(yRT) + 0.04); wb.add(box(0.1, a.distanceTo(b), 0.09), MY(a, b).multiply(M(0, a.distanceTo(b) / 2, 0)), { color: C.red, d: 0.3 }); }
     skull(wb, M(0, 2.75, zT(2.75) + 0.15, 0, Math.PI, 0), 0.62, { bone: C.bone, horns: true, horn: lc(0x3a2e24), eyes: C.glow, eyeGlow: 2.2, piv: [0, 2.75, 8] });
     for (const s of [-1, 1]) lantern(wb, V3(s * (H.hb(yRT, 0) - 0.08), yRT + 0.08, zT(yRT) - 0.05), { s: 0.95, glow: 2.4, frame: C.iron, glass: lc(0xff3a14), metal: 0.3 });
     const zb = H.zAt(0.23, yQ), w = H.hb(yQ, 0.23) - 0.15;
     balustrade(wb, V3(-w, yQ, zb + 0.05), V3(w, yQ, zb + 0.05), { h: 0.75, wood: C.hullD, cap: C.cap, skip: p => Math.abs(p.x) < 0.42, posts: 4 });
     ladder(wb, V3(0, mainY(0.25), zb - 0.95), V3(0, yQ, zb - 0.02), 0.7, { wood: C.hullD, step: C.deck });
+    for (const s2 of [-1, 1]) skull(wb, M(s2 * w, yQ + 0.95, zb + 0.05, 0.2, 0, 0), 0.2, { bone: C.bone });
     wheel(wb, V3(0, yQ + 1.0, 5.95), yQ, { wood: C.spar, gold: C.brass });
     lamp(wb, V3(0, yQ + 0.7, 5.25), { s: 0.7, glow: 1.8, glass: lc(0xff4a1a) });
     wb.add(box(0.36, 0.66, 0.36), M(0, yQ + 0.33, 5.25), { color: C.hullD, d: 1 });
@@ -154,7 +157,7 @@ export function buildPirate() {
       wb.add(box(0.18, 0.18, 0.6), MY(f.o, b).multiply(M(0, 0.3, 0, Math.PI / 2)), { color: C.hullD, d: 0.8 });
       anchor(wb, b.x, b.y - 0.05, b.z, 0.66, { ry: s > 0 ? -0.4 : 0.4, rz: s * 0.15, color: C.iron, stock: C.hullD });
     }
-    skull(wb, M(0, 2.2, H.zBow(2.2) - 0.42, 0.25, 0, 0), 0.62, { bone: C.bone, horns: true, horn: lc(0x2a221c), eyes: C.glow, eyeGlow: 2.6, piv: [0, 2.2, -8.4] });
+    skull(wb, M(0, 2.45, H.zBow(2.45) - 0.55, 0.3, 0, 0), 0.88, { bone: C.bone, horns: true, horn: lc(0x3a2e24), eyes: C.glow, eyeGlow: 2.8, piv: [0, 2.45, -8.6] });
   }
   wb.mark('bow');
   // ---------------------------------------------------------------------------------------------- guns (red lids)

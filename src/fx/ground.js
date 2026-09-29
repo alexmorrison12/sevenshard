@@ -5,7 +5,7 @@
 // analytically from the spawn time, so the CPU writes an instance once (and again only on setFill / stop).
 import * as THREE from 'three';
 import { G, FOG_GLSL_PARS } from '../engine/materials.js';
-import { GLSL_GROUND, GLSL_NOISE, PREMUL } from './util.js';
+import { GLSL_GROUND, GLSL_NOISE, PREMUL, queueRange, queueAll } from './util.js';
 import { D, DGRID } from './textures.js';
 
 export const SHAPE = { circle: 0, cone: 1, rect: 2, line: 2, donut: 3, wedges: 4, ring: 3 };
@@ -384,16 +384,14 @@ class Layer {
   }
   flush() {
     if (!this.dirty) return;
-    this.buf.clearUpdateRanges();
-    this.buf.addUpdateRange(this.minD * this.stride, (this.maxD - this.minD + 1) * this.stride);
-    this.buf.needsUpdate = true;
+    queueRange(this.buf, this.minD * this.stride, (this.maxD - this.minD + 1) * this.stride);
     this.dirty = false; this.minD = this.n; this.maxD = -1;
   }
   reset() {
     for (let i = 0; i < this.n; i++) { this.used[i] = 0; this.data[i * this.stride + 3] = 1e9; }
     this.nFree = 0; for (let i = this.n - 1; i >= 0; i--) this.free[this.nFree++] = i;
     this.hi = 0; this.geo.instanceCount = 0;
-    this.buf.clearUpdateRanges(); this.buf.needsUpdate = true;
+    queueAll(this.buf);
   }
   count() { let c = 0; for (let i = 0; i < this.hi; i++) c += this.used[i]; return c; }
 }

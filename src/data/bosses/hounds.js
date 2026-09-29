@@ -1,6 +1,6 @@
 // Shared script pieces for the twin hounds of the Horned Tyrant (legion raid gate 1): Skarn (fire) and Vesk (shadow).
-//  • Twin Howl — when either hound drops to 55%, BOTH leap apart and howl: each has its own stagger bar and both must
-//    be broken (split the raid). Every unbroken howl tears through the kennels.
+//  • Twin Howl — when either hound drops to 55%, BOTH leap to the middle and howl as one: a single stagger bar shared by
+//    the pair (damage to either hound depletes it). If it holds, both howls tear through the kennels (near-wipe).
 //  • Crossfire — at 75% (and again later) the hounds take opposite edges and breathe across the arena: a burning line
 //    and a void line cross; stand in a quadrant.
 //  • Pack Grief — when one dies the other is enraged (+damage, faster, and a grief howl every 10 s that grows): bring
