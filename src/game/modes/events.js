@@ -548,6 +548,7 @@ const PLUGIN = {
   update(dt) {
     const s = this.s, g = s.game;
     this.fb?.update(dt);
+    if (this.fb?.disposed) this.fb = null;
     this.t -= dt; if (this.t > 0) return; this.t = 1;
     if (!s.char || s.screen !== 'game') return;
     const now = Date.now();

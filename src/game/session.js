@@ -250,7 +250,9 @@ export class Session {
     this.char = c; this.account.data.lastChar = c.id; this.account.save();
     if (this.joinCode) { const code = this.joinCode; this.joinCode = null; return this.joinWorld(c, code); }
     this.stage.leave();
-    const zoneId = c.zone === 'prologue' && !CLASSES[c.cls] ? 'solhaven' : (c.zone === 'prologue' ? 'solhaven' : (c.zone || 'solhaven'));
+    // a new story character opens with the Siege of Brighthold (the prologue moves them to Solhaven when it ends)
+    if (c.zone === 'prologue' && CLASSES[c.cls] && LAUNCHERS.prologue) return this.launch({ kind: 'prologue' });
+    const zoneId = c.zone === 'prologue' ? 'solhaven' : (c.zone || 'solhaven');
     await this.loadZone(zoneId, { region: 'Valemont', kind: 'city' });
     this.spawnMe(this.game.zone.anchors.spawn);
     this.game.mode = this.hub = this.zoneMode(zoneId);
