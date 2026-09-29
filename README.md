@@ -13,8 +13,8 @@ friends in the same world, all in a single HTML file.
 </div>
 
 Everything you see and hear is generated in code at runtime. That covers the 3D models, animation rigs, terrain,
-textures, spell effects, 900+ icons, the orchestral score and every sound effect. The repository contains no image,
-model or audio files. `node build.mjs` bundles the whole game into one ~4 MB HTML page (≈1.2 MB gzipped).
+textures, spell effects, hundreds of icons, the synthesized score and every sound effect. The game loads no image, model or
+audio files; the only images in the repo are these README screenshots and the link-preview card. `node build.mjs --min` bundles the whole game into one ~5.5 MB HTML page (≈1.8 MB gzipped).
 
 ## What's in it
 
