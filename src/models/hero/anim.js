@@ -129,7 +129,7 @@ export class Animator {
       return { dur: 0.35, hits: [] };
     }
     const def = resolveMove(name, this.kind, this);
-    if (!def) return null;
+    if (!def) return { dur: 0, hits: [] }; // unknown action: nothing plays
     const dur = Math.max(0.05, o.dur ?? def.dur ?? 1);
     const loop = o.loop ?? !!def.loop;
     if (def.draw !== false && !this.drawn && this.kind !== 'none' && (def.attack || def.draw)) this.forceDraw(true);
@@ -464,7 +464,7 @@ export class Animator {
       const v = this.hair[i].step(clamp(tgt, -1.2, 1.2), dt, this.accel.z * 0.2);
       const vr = this.hairR[i].step((i === 0 ? -hr * 0.8 : 0) + clamp(this.turnS * 0.04, -0.3, 0.3), dt, this.accel.x * 0.15);
       eulerQuat(_q, v, 0, vr, XZY);
-      const b = B[['hairA', 'hairB', 'hairC'][i]];
+      const b = HAIR_BONES[i];
       bones[b].quaternion.multiplyQuaternions(this.Npi[b], _q).multiply(this.N[b]);
     }
     for (let i = 0; i < 2; i++) {
@@ -499,6 +499,7 @@ export class Animator {
 }
 // forward swing of a thigh from its quaternion (approx, bind-neutral frames): positive = forward
 const _tv = new THREE.Vector3();
+const HAIR_BONES = [B.hairA, B.hairB, B.hairC];
 function thighSwing(q) { _tv.set(0, -1, 0).applyQuaternion(q); return Math.atan2(-_tv.z, -_tv.y); }
 
 const POLE_R = [0.7, -0.6, 0.45], POLE_L = [-0.7, -0.6, 0.45], POLE_L2 = [-0.5, -1, 0.4];

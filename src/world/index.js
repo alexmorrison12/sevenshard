@@ -14,6 +14,8 @@ import * as inferno from './zones/inferno.js';
 import * as stronghold from './zones/stronghold.js';
 import * as cinderforge from './zones/cinderforge.js';
 import * as sunscar from './zones/sunscar.js';
+import * as foxfireShrine from './zones/foxfire_shrine.js';
+import { buildChoir, buildAbyss } from './zones/oratory.js';
 import './zones/brighthold.js';
 import './zones/goldmeadow.js';
 import './zones/thornwood.js';
@@ -33,6 +35,9 @@ export const ZONES = {
   stronghold: { name: 'Brightwater Isle', kind: 'stronghold', size: 120 },
   cinderforge: { name: 'Cinderforge', kind: 'arena', size: 64 },
   sunscar: { name: 'Sunscar Basin', kind: 'arena', size: 76 },
+  foxfire_shrine: { name: 'Foxfire Shrine', kind: 'arena', size: 60 },
+  oratory_choir: { name: 'The Drowned Choir', kind: 'arena', size: 56 },
+  oratory_abyss: { name: 'Oracle of the Deep', kind: 'arena', size: 56 },
 };
 
 const BUILDERS = {
@@ -47,6 +52,9 @@ const BUILDERS = {
   stronghold: stronghold.build,
   cinderforge: cinderforge.build,
   sunscar: sunscar.build,
+  foxfire_shrine: foxfireShrine.build,
+  oratory_choir: buildChoir,
+  oratory_abyss: buildAbyss,
 };
 /** Register / replace a zone builder at runtime (used as real builders land). */
 export function registerZone(id, def, build) { if (def) ZONES[id] = def; BUILDERS[id] = build; }

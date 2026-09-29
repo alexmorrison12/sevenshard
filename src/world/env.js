@@ -109,11 +109,11 @@ export const PRESETS = {
     weather: 'motes', night: 0.6,
   },
   abyss: {                         // the Deep Oracle: deep blue-violet gloom over black water
-    sunColor: 0x9a8cff, sunIntensity: 1.5, sunDir: n3(-0.3, 0.88, 0.3),
-    hemiSky: 0x2e2c6c, hemiGround: 0x06060e, hemiIntensity: 0.8,
-    fogColor: 0x0a0a20, fogSunColor: 0x3a2a7a, fogDensity: 0.012, fogHeight: 0.05, fogBase: -6,
+    sunColor: 0xc4c0f0, sunIntensity: 1.7, sunDir: n3(-0.3, 0.88, 0.3),
+    hemiSky: 0x3c3e6c, hemiGround: 0x08080e, hemiIntensity: 0.85,
+    fogColor: 0x0a0c1e, fogSunColor: 0x3a2e70, fogDensity: 0.011, fogHeight: 0.05, fogBase: -6,
     background: 0x03030a,
-    grade: { exposure: 1.1, saturation: 1.06, contrast: 1.12, vignette: 0.48, warm: 0.0, cool: 0.1, lift: [0.01, 0.0, 0.03], gain: [0.97, 0.97, 1.05], bloom: 0.95, bloomRadius: 0.62, bloomThreshold: 0.78 },
+    grade: { exposure: 1.1, saturation: 0.94, contrast: 1.12, vignette: 0.48, warm: 0.0, cool: 0.06, lift: [0.008, 0.004, 0.024], gain: [0.98, 0.98, 1.04], bloom: 0.9, bloomRadius: 0.62, bloomThreshold: 0.8 },
     weather: 'plankton', night: 0.9,
   },
 };

@@ -12,7 +12,7 @@ import { engravingLevels } from '../../data/engravings.js';
 import { itemLevel } from '../systems/stats.js';
 import { engr as engrInfo } from '../../ui/core/data.js';
 import { glyph } from '../../ui/core/glyphs.js';
-import { bossName, todaysGuardian } from './boards.js';
+import { bossName, todaysGuardian, fmtValue } from './boards.js';
 import { pbStore } from './records.js';
 import { clock, esc, pretty } from './fmt.js';
 
@@ -36,11 +36,11 @@ export function clearData(meta, clear) {
     if (c.gate === 0 && c.raid === 'gorrath') boss = 'skarn';
   } else if (c.kind === 'chaos') { over = 'Chaos Dungeon'; title = CHAOS_NAMES[(c.tier || 1) - 1] || 'Demon Rift'; sub = r.kills ? `${r.kills} demons purged` : 'Three stages of demon hordes'; boss = 'gatekeeper'; }
   else if (c.kind) { over = pretty(c.kind); title = title || 'Victory'; }
-  if (!r.cleared) over = over.replace('Cleared', '') + ' · Defeated';
+  if (!r.cleared) over = over === 'Cleared' ? 'Defeated' : `${over} · Defeated`;
   const party = (r.meter || []).map(m => ({ name: m.name, cls: m.cls, dps: m.dps, dmg: m.dmg, share: m.share, you: !!m.you }));
   const me = party.find(m => m.you) || { name: ch.name, cls: ch.cls };
   const badges = [...(clear.badges || [])];
-  return { content: c.kind, boss, over, title, sub, time: r.time, rank: rankOf(r.cleared, r.time || 0), deaths: r.deaths, kills: r.kills, board: clear.board || null, badges, party,
+  return { content: c.kind, boss, over, title, sub, time: r.time, rank: r.cleared ? rankOf(true, r.time || 0) : null, failed: !r.cleared, deaths: r.deaths, kills: r.kills, board: clear.board || null, badges, party,
     you: { name: me.name || ch.name, cls: me.cls || ch.cls, iLvl: ch.equip ? Math.floor(itemLevel(ch)) : null }, date: clear.t || Date.now() };
 }
 export function infernoData(meta, clear) {
@@ -69,7 +69,8 @@ export async function profileData(meta) {
   const lv = engravingLevels(ch) || {};
   const engravings = Object.entries(lv).filter(([, l]) => l > 0).sort((a, b) => b[1] - a[1] || (a[0].startsWith('neg_') ? 1 : -1)).map(([id, level]) => ({ id, level, name: engrInfo(id)?.name || pretty(id), neg: id.startsWith('neg_') }));
   const pb = pbStore(s.account);
-  const recs = Object.values(pb).sort((a, b) => (b.t || 0) - (a.t || 0)).slice(0, 2).map(r => `${r.label}: ${r.unit === 'time' || !r.unit ? clock(r.v) : r.v}`);
+  const weight = k => (/^raid:.*full/.test(k) ? 5 : /^raid:/.test(k) ? 4 : /^inferno/.test(k) ? 3 : /^guardian:/.test(k) ? 2 : /^dps:/.test(k) ? 2 : 1);
+  const recs = Object.entries(pb).sort((a, b) => weight(b[0]) - weight(a[0]) || (b[1].t || 0) - (a[1].t || 0)).slice(0, 2).map(([, r]) => `${r.label} ${fmtValue(r.unit || 'time', r.v)}`);
   const w = ch.equip?.weapon;
   const titleName = typeof ch.title === 'string' ? pretty(ch.title) : null;
   const portrait = await heroPortrait(ch);

@@ -1,0 +1,25 @@
+// Phone check: landscape 844×390 with touch → title, city HUD, chaos combat. node tools/mobile.mjs <outdir>
+import puppeteer from 'puppeteer-core';
+const out = process.argv[2];
+const b = await puppeteer.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: 'new', args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] });
+const p = await b.newPage();
+await p.emulate({ viewport: { width: 844, height: 390, deviceScaleFactor: 2, isMobile: true, hasTouch: true, isLandscape: true }, userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1' });
+const errs = [];
+p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error') errs.push(m.text().slice(0, 200)); });
+await p.goto('http://localhost:5299/index.html', { waitUntil: 'load' });
+await p.evaluate(() => localStorage.clear());
+await p.goto('http://localhost:5299/index.html', { waitUntil: 'load' });
+await p.waitForFunction(() => window.__session?.screen === 'title', { timeout: 60000 });
+await new Promise(r => setTimeout(r, 1500));
+await p.screenshot({ path: `${out}/m1_title.png` });
+await p.evaluate(async () => { await __session.route('title:enter'); });
+await new Promise(r => setTimeout(r, 1500));
+await p.screenshot({ path: `${out}/m2_create.png` });
+await p.evaluate(async () => { await __session.route('create:confirm', { cls: 'stormfist', sex: 'f', look: {}, name: 'Phone', path: 'powerpass' }); await new Promise(r => setTimeout(r, 3000)); });
+await p.screenshot({ path: `${out}/m3_city.png` });
+await p.evaluate(async () => { await __session.launch({ kind: 'chaos', tier: 1 }); const g = __game; g.player.input = () => {}; g.hero.u.ctrl = new window.__AllyAI(g.hero, 'tryhard'); g.hero.u.invuln = 1e9; await new Promise(r => setTimeout(r, 5000)); });
+await p.screenshot({ path: `${out}/m4_chaos.png` });
+await p.evaluate(() => __session.menu('inventory')); await new Promise(r => setTimeout(r, 800));
+await p.screenshot({ path: `${out}/m5_inventory.png` });
+console.log('errors', errs);
+await b.close();

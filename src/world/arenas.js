@@ -339,7 +339,7 @@ export function buildMoonPond({ x, z, r, level, moon = [0, -0.2], moonR = 0.24, 
   const g = new THREE.CircleGeometry(r, 48); g.rotateX(-Math.PI / 2);
   const u = {
     uTime: G.uTime, uNoise: { value: noiseTex() }, uDeep: { value: new THREE.Color(deep) }, uSky: { value: new THREE.Color(sky) },
-    uMoon: { value: new THREE.Color(moonCol).multiplyScalar(2.2) }, uMoonP: { value: new THREE.Vector2(moon[0], moon[1]) }, uMoonR: { value: moonR }, uR: { value: r }, uC: { value: new THREE.Vector2(x, z) },
+    uMoon: { value: new THREE.Color(moonCol).multiplyScalar(0.8) }, uMoonP: { value: new THREE.Vector2(moon[0], moon[1]) }, uMoonR: { value: moonR }, uR: { value: r }, uC: { value: new THREE.Vector2(x, z) },
     uFogColor: G.uFogColor, uFogSunColor: G.uFogSunColor, uFogDensity: G.uFogDensity, uFogHeight: G.uFogHeight, uFogBase: G.uFogBase, uSunDir: G.uSunDir, uCamPos: G.uCamPos,
   };
   const mat = new THREE.ShaderMaterial({
@@ -362,7 +362,7 @@ export function buildMoonPond({ x, z, r, level, moon = [0, -0.2], moonR = 0.24, 
         float disc = smoothstep(uMoonR, uMoonR * 0.9, length(mp * vec2(1.0, 1.25)));
         float halo = exp(-length(mp) * 5.0) * 0.35;
         float path = exp(-abs(mp.x) * 10.0) * smoothstep(0.9, 0.0, mp.y) * smoothstep(-0.02, 0.1, mp.y) * smoothstep(0.55, 0.8, n2.g + n1.b * 0.4);
-        col += uMoon * (disc * 0.85 + halo + path * 0.7);
+        col += uMoon * (disc * 0.8 + halo * 0.6 + path * 0.45);
         float edge = smoothstep(1.0, 0.9, length(p));
         col = applyFog(col, vW);
         gl_FragColor = vec4(col, 0.9 * edge);

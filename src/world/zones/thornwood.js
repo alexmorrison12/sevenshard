@@ -250,7 +250,7 @@ export async function build(zone, { quality = 1 } = {}) {
   zone.root.add(creek, marshW);
 
   // ---------------------------------------------------------------- foliage
-  const flora = new FieldFlora({ cell: 64 });
+  const flora = new FieldFlora({ cell: 80 });
   const T = (sp, x, z, o = {}) => flora.tree(sp, x, H(x, z) - 0.15, z, { rot: rng.range(0, 6.28), ...o });
   const DK = { dark: 0x0e2a1a, light: 0x4a7a4a, core: 0x08160e };
   // ancients: huge trees well away from paths; the Hollow Oak and the Treant Grove's heart-tree
@@ -261,17 +261,16 @@ export async function build(zone, { quality = 1 } = {}) {
   // the forest body: firs, dark oaks, pines, snags — dense but clear of paths & clearings
   for (const [x, z] of scatter(rng, [-104, -104, 104, 104], 6.2, 2600, (x, z) => free(x, z, 2, 5.5), ancients)) {
     const k = rng.next(), edge = bound.sd(x, z) > -14;
-    if (k < (edge ? 0.45 : 0.12)) T('fir', x, z, { s: rng.range(0.85, 1.1), variant: rng.int(0, 1) });
-    else if (k < 0.8) T('oak', x, z, { s: rng.range(0.95, 1.3), variant: rng.int(0, 1), opts: DK });
-    else if (k < 0.9) T('autumn', x, z, { s: rng.range(0.9, 1.15), variant: 0, opts: { dark: 0x2a2a12, light: 0x8a8a3a, core: 0x141408 } });
+    if (k < (edge ? 0.45 : 0.14)) T('fir', x, z, { s: rng.range(0.85, 1.1), variant: 0 });
+    else if (k < 0.9) T('oak', x, z, { s: rng.range(0.95, 1.3), variant: rng.int(0, 1), opts: DK });
     else T('dead', x, z, { s: rng.range(0.8, 1.2), variant: 0, opts: { tint: 0x5a5048 } });
   }
   // the web trees around the Spider Hollow, the owls' great snag
-  for (const [x, z] of webTrees) T('dead', x, z, { s: rng.range(1.0, 1.3), variant: 1, opts: { tint: 0x4a4440 } });
-  T('dead', OWLS[0], OWLS[1] - 3, { s: 1.6, variant: 2, opts: { tint: 0x5a5048 } });
+  for (const [x, z] of webTrees) T('dead', x, z, { s: rng.range(1.0, 1.3), variant: 0, opts: { tint: 0x5a5048 } });
+  T('dead', OWLS[0], OWLS[1] - 3, { s: 1.6, variant: 0, opts: { tint: 0x5a5048 } });
   // beyond the outline: a wall of trees
-  for (const [x, z] of scatter(rng, [-150, -150, 150, 150], 5.5, 2600, (x, z) => { const sd = bound.sd(x, z); return sd > 2 && sd < 30 && roadD.at(x, z) > 5; })) T(rng.chance(0.6) ? 'fir' : 'pine', x, z, { s: rng.range(1.0, 1.4), variant: rng.int(0, 1), block: false, opts: rng.chance(0.5) ? null : { dark: 0x0a2016, light: 0x2e5236 } });
-  for (const [x, z] of scatter(rng, [-104, -104, 104, 104], 5, 1400, (x, z) => free(x, z, 0.8, 3.5))) T('bush', x, z, { s: rng.range(0.7, 1.2), variant: rng.int(0, 1), opts: { dark: 0x12301a, light: 0x4a7a3a } });
+  for (const [x, z] of scatter(rng, [-150, -150, 150, 150], 5.5, 2600, (x, z) => { const sd = bound.sd(x, z); return sd > 2 && sd < 30 && roadD.at(x, z) > 5; })) { if (rng.chance(0.55)) T('fir', x, z, { s: rng.range(1.0, 1.4), variant: 0, block: false }); else T('oak', x, z, { s: rng.range(1.1, 1.4), variant: rng.int(0, 1), opts: DK, block: false }); }
+  for (const [x, z] of scatter(rng, [-104, -104, 104, 104], 5, 1400, (x, z) => free(x, z, 0.8, 3.5))) T('bush', x, z, { s: rng.range(0.7, 1.2), variant: 0, opts: { dark: 0x12301a, light: 0x4a7a3a } });
   // ferns, forest-floor mushrooms, toadstool ring, reeds on the creek, marsh grass
   const fm = flora.mats.core;
   for (const [x, z] of scatter(rng, [-104, -104, 104, 104], 2.2, 9000, (x, z) => free(x, z, 0.3, 2.8) && N.noise2(x / 16, z / 16 + 4) > -0.2)) flora.thing('fern' + (Math.round(x + z) & 1), () => fernGeo(Math.round(x + z) & 1, { h: 1.0, color: 0x2a5a2a, tip: 0x6a9a48 }), fm, x, H(x, z) - 0.05, z, { s: rng.range(0.7, 1.35), rot: rng.range(0, 6.28), cast: false });

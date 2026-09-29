@@ -4,7 +4,7 @@
 // slashes from the iso camera) the strip expands toward the camera instead, so a vertical cut still reads as a
 // bold curved stroke. A velocity turns a slash into a travelling wave (Strike Wave, Crimson Wave, wind blades).
 import * as THREE from 'three';
-import { PREMUL, GLSL_NOISE, queueRange } from './util.js';
+import { PREMUL, GLSL_NOISE, queueRange, SlotTimes } from './util.js';
 
 export const SSTRIDE = 24;
 const VERT = /* glsl */`
@@ -115,7 +115,7 @@ export class Slashes {
     this.mat = new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: FRAG, uniforms: { uFxTime: fx.u.uFxTime }, ...PREMUL, depthTest: true, side: THREE.DoubleSide });
     this.mesh = new THREE.Mesh(g, this.mat);
     this.mesh.frustumCulled = false; this.mesh.renderOrder = 24; this.mesh.name = 'fx-slashes';
-    this.head = 0; this.until = -1;
+    this.slots = new SlotTimes(n); this.until = -1;
     this.lo = n; this.hi = -1;
   }
   /**
@@ -124,8 +124,9 @@ export class Slashes {
    * null), flags (1 straight, 2 dark, 4 flat), delay.
    */
   spawn(c, A, B, R, arc, W, col, dur, sweep, grow, vel, flags, delay = 0) {
-    const s = this.head; this.head = (this.head + 1) % this.n;
+    const s = this.slots.take(this.fx.time);
     const d = this.data, b = s * SSTRIDE, t0 = this.fx.time + delay;
+    this.slots.end[s] = t0 + dur;
     d[b] = c.x; d[b + 1] = c.y; d[b + 2] = c.z; d[b + 3] = t0;
     d[b + 4] = A.x; d[b + 5] = A.y; d[b + 6] = A.z; d[b + 7] = R;
     d[b + 8] = B.x; d[b + 9] = B.y; d[b + 10] = B.z; d[b + 11] = arc;
@@ -142,8 +143,9 @@ export class Slashes {
       queueRange(this.buf, this.lo * SSTRIDE, (this.hi - this.lo + 1) * SSTRIDE);
       this.lo = this.n; this.hi = -1;
     }
+    this.geo.instanceCount = this.slots.count(this.fx.time);
     this.mesh.visible = this.fx.time <= this.until;
   }
-  reset() { for (let i = 0; i < this.n; i++) this.data[i * SSTRIDE + 3] = -1e9; this.lo = 0; this.hi = this.n - 1; this.until = -1; }
+  reset() { for (let i = 0; i < this.n; i++) this.data[i * SSTRIDE + 3] = -1e9; this.lo = 0; this.hi = this.n - 1; this.until = -1; this.slots.reset(); this.geo.instanceCount = 0; }
   dispose() { this.geo.dispose(); this.mat.dispose(); }
 }

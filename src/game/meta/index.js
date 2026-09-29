@@ -81,6 +81,9 @@ class MetaPlugin {
    *  'game', so update() — and Backquote — keep working there) */
   frame(dt) {
     const s = this.s;
+    const uiMeter = !!s.ui?.isOpen?.('meter');
+    if (uiMeter && !this.uiMeterWas && this.panel.isOpen) this.panel.close();
+    this.uiMeterWas = uiMeter;
     this.t2 -= dt;
     if (this.t2 <= 0) {
       this.t2 = 0.25; this.tick2++;
@@ -94,7 +97,12 @@ class MetaPlugin {
       else if (s.shareCard.kind === 'hone') this.share('hone', honeData(this, s.shareCard));
     }
   }
-  toggleMeter() { const t = this.s.game?.time; if (this.toggledAt === t) return; this.toggledAt = t; this.panel.toggle(); }
+  /** Backquote: the detailed panel. It and the UI's compact meter window (Y) are alternatives: opening one closes the other. */
+  toggleMeter() {
+    const t = this.s.game?.time; if (this.toggledAt === t) return; this.toggledAt = t;
+    this.panelRestore = false;
+    if (this.panel.toggle() && this.s.ui?.isOpen?.('meter')) this.s.ui.close('meter');
+  }
   onKey(e) {
     if (!this.ui) return;
     const tag = e.target?.tagName;
@@ -110,6 +118,15 @@ class MetaPlugin {
     if (menus) this.panel.close();
     if (this.boardsPanel.isOpen && name !== 'title' && name !== 'game') this.boardsPanel.close();
     if (this.shareModal.isOpen && (menus || name === 'loading')) this.shareModal.close();
+    // the results screen owns the middle of the screen: park the meter (Backquote brings it back for the post-fight log)
+    if (name === 'results') {
+      if (this.panel.isOpen) { this.panel.close(); this.panelRestore = true; }
+      if (!this.logHinted && this.meter.segs[0]?.rows?.size) {
+        this.logHinted = true;
+        setTimeout(() => { if (this.s.ui?.currentName === 'results') this.ui.ribbon({ over: 'Combat log', text: 'Full fight breakdown ready', sub: 'Press ` (Backquote) any time', kind: 'info', glyph: 'bolt', action: { label: 'Open', fn: () => this.panel.open() }, dur: 10 }); }, 3400);
+      }
+    }
+    if (name === 'game' && this.panelRestore) { this.panelRestore = false; this.panel.open(); }
   }
 
   // ------------------------------------------------------------------------------------------------ clears
@@ -135,7 +152,12 @@ class MetaPlugin {
     const post = (board, variant, value, sub) => B.submit({ ...this.base({ trial, party }), board, variant, value, sub, extra: { ch: chal } });
     const pb = (key, label, v, better, unit, sub, icon) => {
       const res = recordPB(s.account, key, v, better, { name: ch.name, cls: ch.cls, sub, label, unit });
-      if (res.improved) { notes.push({ over: res.first ? 'First clear' : 'New personal best', text: pbLine(label, unit, v, res.prev), sub: sub || '', kind: 'gold', icon }); if (!clear.badges.includes('Personal best')) clear.badges.push(res.first ? 'First clear' : 'Personal best'); }
+      if (res.improved) {
+        notes.push({ over: res.first ? 'First clear' : 'New personal best', text: pbLine(label, unit, v, res.prev), sub: sub || '', kind: 'gold', icon });
+        const badge = res.first ? 'First clear' : 'Personal best';
+        if (badge === 'Personal best') { const i = clear.badges.indexOf('First clear'); if (i >= 0) clear.badges.splice(i, 1); }
+        if (!clear.badges.includes(badge) && !(badge === 'First clear' && clear.badges.includes('Personal best'))) clear.badges.unshift(badge);
+      }
       return res;
     };
     const deathsTxt = r.deaths === 0 ? 'Deathless' : r.deaths != null ? `${r.deaths} death${r.deaths === 1 ? '' : 's'}` : '';
@@ -227,12 +249,14 @@ class MetaPlugin {
     delete D0.hone[key]; saveDb();
     const rec = this.lastHone = { item: { name: it.name, icon: it.icon, grade: it.grade, slot: it.slot, iLvl: it.iLvl }, to, taps, chance: e.chance, base: fresh?.base ?? (same ? tr.base : e.chance) ?? e.chance,
       energy: fresh?.energy ?? (same ? tr.energy : 0), luck: fresh?.luck ?? (guaranteed ? null : 1 - odds), odds, guaranteed, t: Date.now() };
-    if (!guaranteed && to >= 10 && odds < 0.999) {
+    if (!guaranteed && to >= 10 && odds < 0.5) {
       B.submit({ ...this.base(), board: 'honing', value: odds, sub: `+${to} in ${taps} tap${taps > 1 ? 's' : ''}${it.name ? ` · ${it.name}` : ''}` });
       const res = recordPB(s.account, 'hone:luck', odds, 'lower', { name: s.char.name, cls: s.char.cls, label: 'Luckiest honing', unit: 'luck', sub: `+${to} in ${taps} tap${taps > 1 ? 's' : ''}` });
       if (res.improved && !res.first) this.ui.note(`Luckiest honing yet: +${to} in ${taps} tap${taps > 1 ? 's' : ''} (1 in ${int(1 / odds)})`, 'success');
     }
-    if (to >= 15 || (odds < 0.3 && to >= 8)) setTimeout(() => this.ui.pill({ text: `+${to} in ${taps} tap${taps > 1 ? 's' : ''}!`, sub: guaranteed ? 'Artisan’s Energy came through' : `1-in-${int(Math.max(1, 1 / odds))} luck · ${it.name || ''}`, icon: it.icon, fn: () => this.share('hone', honeData(this, rec)) }), 1400);
+    const lucky = !guaranteed && odds < 0.35;
+    if (to >= 18 || (lucky && to >= 10) || (guaranteed && to >= 15)) setTimeout(() => this.ui.pill({ text: `+${to} in ${taps} tap${taps > 1 ? 's' : ''}!`,
+      sub: guaranteed ? `Artisan’s Energy came through · ${it.name || ''}` : lucky ? `1-in-${int(Math.max(1, 1 / odds))} luck · ${it.name || ''}` : `${it.name || ''}`, icon: it.icon, fn: () => this.share('hone', honeData(this, rec)) }), 1400);
   }
   onFacet(e) {
     const v = e.stone, s = this.s; if (!v?.done || !s.char) return;

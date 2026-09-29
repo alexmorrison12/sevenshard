@@ -88,7 +88,7 @@ export function foxGuardian(kit, x, y, z, rot, { s = 1, stone = 0xb4b0a8 } = {})
 }
 
 /** Upswept hip-roof tier: hip roof + four curling corner ridges + a ridge beam with curled ends. */
-function sweptRoof(kit, F, lx, ly, lz, w, d, rise, { over = 1.6, tint = 0x3a3e48 } = {}) {
+function sweptRoof(kit, F, lx, ly, lz, w, d, rise, { over = 1.6, tint = 0x5a6478 } = {}) {
   kit.add('slate', hipRoof(w, d, rise, over, 2), F.at(lx, ly, lz), { tint, ao: false });
   const W = w / 2 + over, D = d / 2 + over, y0 = -over * rise / (Math.min(w, d) / 2);
   const ridgeHalf = Math.max(0, (w - d) / 2);
@@ -168,7 +168,7 @@ export function shrineHall(kit, flags, x, y, z, { w = 22, d = 11, rot = 0 } = {}
 
 export function stage(kit, zone, x, y, z, w, d, h = 0.4, { rot = 0, rail = true } = {}) {
   const F = new Frame(x, y, z, rot);
-  kit.add('planks', box(w, h, d, 2.2), F.at(0, h / 2, 0), { tint: 0x8a5a36, yGround: y - 0.1, aoH: 0.8 });
+  kit.add('planks', box(w, h, d, 2.2), F.at(0, h / 2, 0), { tint: 0xc08a58, yGround: y - 0.1, aoH: 0.8 });
   for (let i = 0; i <= Math.round(w / 2); i++) kit.add('timber', box(0.28, h + 0.02, 0.28, 1), F.at(-w / 2 + i * w / Math.round(w / 2), h / 2, d / 2 - 0.1), { ao: false });
   kit.add('timber', box(w + 0.1, 0.12, 0.2, 1), F.at(0, h - 0.04, d / 2 + 0.02), { ao: false });
   // two broad steps on the south edge
@@ -181,13 +181,13 @@ export function stage(kit, zone, x, y, z, w, d, h = 0.4, { rot = 0, rail = true 
   if (zone) zone.deck(rect(x, z, w - 0.1, d - 0.1, rot), y + h);
 }
 
-export function paperLanterns(kit, a, b, { sag = 0.5, n = 6, colors = [0xff5a3a, 0xfff0d8] } = {}) {
+export function paperLanterns(kit, a, b, { sag = 0.5, n = 6, colors = [0xff5a3a, 0xffc890] } = {}) {
   const pts = [];
   for (let i = 0; i <= 12; i++) { const t = i / 12; pts.push(V(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t - Math.sin(t * Math.PI) * sag, a[2] + (b[2] - a[2]) * t)); }
   kit.add('metal', tube(pts, pts.map(() => 0.015), 3, false), null, { tint: 0x2a2020, ao: false, chunkAt: [(a[0] + b[0]) / 2, (a[2] + b[2]) / 2] });
   for (let i = 1; i <= n; i++) {
     const t = i / (n + 1), x = a[0] + (b[0] - a[0]) * t, y = a[1] + (b[1] - a[1]) * t - Math.sin(t * Math.PI) * sag, z = a[2] + (b[2] - a[2]) * t;
-    kit.glow(sphere(0.22, 10, 8), M(x, y - 0.32, z, 0, 1, 1.2, 1), colors[i % colors.length], 1.8);
+    kit.glow(sphere(0.22, 10, 8), M(x, y - 0.32, z, 0, 1, 1.2, 1), colors[i % colors.length], i % 2 ? 1.25 : 1.6);
     kit.add('lacquer', cyl(0.12, 0.12, 0.06, 8, 1), M(x, y - 0.06, z), { tint: BLACK_LACQUER, ao: false, cast: false });
   }
 }

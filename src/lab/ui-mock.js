@@ -304,9 +304,12 @@ export const mockWindows = {
   }),
   skills: () => ({ cls: 'reaver', points: 14, pointsTotal: 420, skills: mockAllSkills('reaver'), bar: mockSkills('reaver').map(s => s.id), selected: 'reaver_5' }),
   engravings: () => ({
-    active: [{ id: 'grudge', nodes: 15, sources: [{ name: 'Book', v: 12 }, { name: 'Necklace', v: 3 }] }, { id: 'keen_edge', nodes: 15 }, { id: 'adrenaline', nodes: 13 }, { id: 'bloodfrenzy', nodes: 10 }, { id: 'cursed_doll', nodes: 7 }, { id: 'atk_reduction', nodes: 6, neg: true }, { id: 'move_speed_reduction', nodes: 2, neg: true }],
+    active: [{ id: 'grudge', nodes: 15, sources: [{ name: 'Book', v: 12 }, { name: 'Necklace', v: 3 }] }, { id: 'keen_edge', nodes: 15 }, { id: 'adrenaline', nodes: 13 }, { id: 'bloodfrenzy', nodes: 10 }, { id: 'cursed_doll', nodes: 5 }, { id: 'neg_speed', nodes: 4, neg: true }],
     equipped: [{ id: 'grudge', nodes: 12 }, { id: 'keen_edge', nodes: 12 }],
-    books: [{ id: 'grudge', nodes: 20 }, { id: 'keen_edge', nodes: 20 }, { id: 'adrenaline', nodes: 15 }, { id: 'cursed_doll', nodes: 12 }, { id: 'bloodfrenzy', nodes: 9 }, { id: 'spirit_absorption', nodes: 5 }, { id: 'hexed_idol', nodes: 0 }],
+    books: [{ id: 'grudge', nodes: 12 }, { id: 'keen_edge', nodes: 12 }, { id: 'adrenaline', nodes: 9 }, { id: 'cursed_doll', nodes: 6 }, { id: 'bloodfrenzy', nodes: 3 }],
+    learned: [{ id: 'grudge', points: 80, max: 80, equipMax: 12 }, { id: 'keen_edge', points: 80, max: 80, equipMax: 12 }, { id: 'adrenaline', points: 65, max: 80, equipMax: 9 }, { id: 'cursed_doll', points: 45, max: 80, equipMax: 6 }, { id: 'bloodfrenzy', points: 25, max: 80, equipMax: 3 }],
+    unread: [{ uid: 'bk1', engr: 'adrenaline', name: 'Adrenaline Engraving Recipe', grade: 4, points: 20 }, { uid: 'bk2', engr: 'cursed_doll', name: 'Cursed Doll Engraving Recipe', grade: 3, points: 10 }],
+    summary: { label: '3 3 2 2 1' },
   }),
   settings: () => ({ values: { quality: 'high', master: 0.8, music: 0.55, sfx: 0.9, ambience: 0.4, moveButton: 'right', damageNumbers: true, cameraShake: 0.7 } }),
   vendor: () => ({
@@ -434,7 +437,9 @@ export const mockWindows = {
     const cards = [C('brannoc', 'Brannoc Hale', 4, 5, 0, 'npc:brannoc', 'Oath of Brighthold'), C('seraphine', 'Seraphine', 4, 3, 2, 'npc:seraphine', 'Oath of Brighthold'), C('bramble', 'Bramblebeard', 4, 2, 1, 'npc:bramblebeard', 'Pipsprout Friends'),
       C('gorrath', 'Gorrath', 4, 4, 3, 'boss:gorrath', 'Legion Commanders'), C('varkhul', 'Varkhul', 4, 1, 0, 'boss:varkhul', 'Legion Commanders'), C('nerissa', 'Nerissa', 3, 3, 4, 'boss:nerissa', 'Drowned Choir'),
       C('rimewing', 'Rimewing', 3, 5, 0, 'boss:rimewing'), C('kurai', 'Kurai', 3, 2, 1, 'boss:kurai'), C('merchant', 'Old Tobin', 2, 0, 5, 'npc:merchant', 'Pipsprout Friends'), C('thunderhoof', 'Old Thunderhoof', 2, 1, 2, 'boss:thunderhoof'), C('skarn', 'Skarn', 3, 0, 0, 'boss:skarn', 'Legion Commanders'), C('vesk', 'Vesk', 3, 1, 1, 'boss:vesk', 'Legion Commanders')];
-    return { deck: ['brannoc', 'seraphine', 'gorrath', 'varkhul', 'skarn', null], cards,
+    const choice = new URLSearchParams(location.search).get('choice') ? { pack: 'card_pack_legend', options: [{ id: 'nerissa', name: 'Nerissa', grade: 3, icon: 'boss:nerissa' }, { id: 'kurai', name: 'Kurai', grade: 3, icon: 'boss:kurai' }, { id: 'rimewing', name: 'Rimewing', grade: 3, icon: 'boss:rimewing' }] } : null;
+    return { deck: ['brannoc', 'seraphine', 'gorrath', 'varkhul', 'skarn', null], cards, owned: 12, total: 37, choice,
+      packs: [{ id: 'card_pack', name: 'Card Pack', count: 3 }, { id: 'card_pack_epic', name: 'Epic Card Pack', count: 1 }, { id: 'card_pack_pip', name: 'Pip Card Pack', count: 0 }],
       sets: [{ id: 'oath', name: 'Oath of Brighthold', cards: ['brannoc', 'seraphine'], bonuses: [{ need: 2, text: 'Holy resistance +8%' }, { need: 2, awaken: 8, text: 'Damage +5% vs demons' }] },
              { id: 'legion', name: 'Legion Commanders', cards: ['gorrath', 'varkhul', 'skarn', 'vesk'], bonuses: [{ need: 2, text: 'Fire resistance +8%' }, { need: 4, text: 'Crit rate +4%' }, { need: 4, awaken: 12, text: 'Damage +7%' }] }] };
   },
@@ -481,7 +486,10 @@ export const mockWindows = {
       { id: 'solhaven', name: 'Solhaven', pct: 94, cats: [{ id: 'npcs', label: 'Characters', have: 30, total: 31 }, { id: 'seeds', label: 'Pip Seeds', have: 8, total: 8 }], rewards: [{ pct: 100, name: 'Card Pack', icon: 'item:card_pack', grade: 4 }] },
       { id: 'thornwood', name: 'Thornwood', pct: 31, cats: [], rewards: [] }, { id: 'ashen', name: 'Ashen Ridge', pct: 8, cats: [], rewards: [] }, { id: 'pips', name: 'Pipsprout Hollow', pct: 55, cats: [], rewards: [] }],
     collectibles: [
-      { id: 'seeds', name: 'Pip Seeds', icon: 'item:pip_seed', have: 47, total: 120, tiers: [{ n: 40, name: 'Pip Pet', icon: 'item:pet_charm', grade: 5 }, { n: 60, name: 'Card Pack', icon: 'item:card_pack', grade: 4 }] },
+      { id: 'seeds', name: 'Pip Seeds', icon: 'item:pip_seed', have: 47, total: 120, tiers: [{ n: 5, name: 'Skill Potion', icon: 'item:skill_potion', grade: 4, claimed: true }, { n: 40, name: 'Pip Pet', icon: 'item:pet_charm', grade: 5 }, { n: 60, name: 'Card Pack', icon: 'item:card_pack', grade: 4 }, { n: 120, name: 'Sunbloom Pip Wagon', icon: 'item:mount_whistle', grade: 6 }],
+        items: [['solhaven', 'Fountain Rim', 'Behind the fountain, where the pigeons gather', true], ['solhaven', 'Bell Tower', 'High above the market bell', true], ['solhaven', 'Harbor Crates', 'Stacked with the fish crates at the docks', false], ['solhaven', 'Seraphine’s Garden', 'Among the white lilies', true],
+          ['goldmeadow', 'Scarecrow', 'In the scarecrow’s pocket, Harrowfield Farms', true], ['goldmeadow', 'Old Mill', 'Under the mill wheel', false], ['goldmeadow', 'Wheat Maze', 'At the heart of the wheat maze', false], ['goldmeadow', 'Beehives', 'Near the humming hives', true], ['goldmeadow', 'Windy Hill', 'Where the kites fly', false]]
+          .map(([zone, name, hint, found], i) => ({ id: `seed:${zone}:${i}`, zone, name, hint, found, source: found ? 'Found' : '' })) },
       { id: 'souls', name: 'Island Souls', icon: 'item:island_soul', have: 5, total: 40, tiers: [{ n: 5, name: 'Sail Emblem', icon: 'item:map', grade: 4 }] },
       { id: 'hearts', name: "Giant's Hearts", icon: 'item:giants_heart', have: 3, total: 12, tiers: [{ n: 4, name: 'Crew', icon: 'item:scroll', grade: 4 }] },
       { id: 'art', name: 'Masterpieces', icon: 'item:masterpiece', have: 11, total: 40, tiers: [{ n: 10, name: 'Skill Potion', icon: 'item:skill_potion', grade: 4, claimed: true }, { n: 20, name: 'Card Pack', icon: 'item:card_pack', grade: 4 }] },
@@ -493,7 +501,9 @@ export const mockWindows = {
   rapport: () => ({ npcs: [
     { id: 'seraphine', name: 'Seraphine', title: 'Oracle of the Shards', icon: 'npc:seraphine', stage: 2, points: 3400, max: 6000, daily: { songs: 2, songsMax: 5, emotes: 4, emotesMax: 5 },
       songs: [{ id: 'sunrise', name: 'Song of Sunrise' }, { id: 'valor', name: 'Ballad of Valor' }, { id: 'rest', name: 'Lullaby of Rest', locked: true }], emotes: [{ id: 'bow', name: 'Bow' }, { id: 'heart', name: 'Heart' }, { id: 'cheer', name: 'Cheer' }],
-      gifts: [{ uid: 'g1', name: 'Songbird Music Box', kind: 'gift', grade: 3, icon: 'item:gift:1', count: 2 }, { uid: 'g2', name: 'Starlight Candle', kind: 'gift', grade: 4, icon: 'item:gift:3' }],
+      gifts: [{ uid: 'mat:gift1', id: 'gift1', name: 'Songbird Music Box', kind: 'gift', grade: 3, icon: 'item:gift:1', count: 2 }, { uid: 'mat:gift3', id: 'gift3', name: 'Starlight Candle', kind: 'gift', grade: 4, icon: 'item:gift:3' }],
+      line: 'The Shards hum louder when you are near. I wonder if you hear them too.',
+      likes: { songs: ['sunrise'], emotes: ['bow'], gifts: { gift1: 'love', gift2: 'like', gift3: 'dislike', gift4: 'neutral' } },
       rewards: [{ stage: 1, name: 'Card: Seraphine', icon: 'item:card_pack', grade: 4, claimed: true }, { stage: 2, name: 'Skill Potion', icon: 'item:skill_potion', grade: 4 }, { stage: 3, name: 'Song: Shardlight', icon: 'item:scroll', grade: 5 }, { stage: 5, name: 'Giant\'s Heart', icon: 'item:giants_heart', grade: 6 }] },
     { id: 'brannoc', name: 'Brannoc Hale', title: 'Knight-Commander', icon: 'npc:brannoc', stage: 4, points: 800, max: 9000 },
     { id: 'bramblebeard', name: 'Bramblebeard', title: 'Elder of the Pips', icon: 'npc:bramblebeard', stage: 1, points: 200, max: 3000 },

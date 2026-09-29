@@ -41,6 +41,7 @@ export class CityMode {
       const x = a.x + (n.offset?.[0] || 0), z = a.z + (n.offset?.[1] || 0);
       const u = new Unit({ kind: 'npc', team: 2, name: n.name, x, z, facing: a.facing ?? Math.PI, radius: 0.5, height: 1.85, stats: { hpMax: 1, speed: 2 } });
       u.data.npc = n.npc || null; u.data.look = n.npc ? {} : null; u.data.sex = n.sex || 'm'; u.data.title = n.title; u.data.npcDef = n; u.data.immovable = true;
+      u.data.lod = n.npc === 'brannoc' || n.npc === 'seraphine' ? 'full' : 'crowd';   // townsfolk read fine at crowd detail (~4× fewer triangles)
       if (n.creature) { u.kind = 'npc'; u.type = n.creature; u.data.look = null; u.data.tpl = { model: n.creature }; u.height = 0.7; }
       if (n.noModel) u.data.noModel = true;
       u.untargetable = true;

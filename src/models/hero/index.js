@@ -482,7 +482,8 @@ export function createHero(opts = {}) {
     D.flap += dt * (moving ? 7.5 : 2.3);
     const amp = down ? 0.02 : moving ? 0.34 : 0.1;
     const f = Math.sin(D.flap), fold = (1 - s) * 1.3 + (down ? 0.9 : 0);
-    for (const [wg, sg] of [[D.wingR, 1], [D.wingL, -1]]) {
+    for (let i = 0; i < 2; i++) {
+      const wg = i ? D.wingL : D.wingR, sg = i ? -1 : 1;
       wg.scale.setScalar(Math.max(0.001, 0.25 + 0.75 * s));
       wg.rotation.set(0.12 + fold * 0.3, -sg * (0.3 + fold + (moving ? 0.2 : 0) - f * amp * 0.5), sg * (0.1 + f * amp - fold * 0.4));
     }
@@ -532,4 +533,10 @@ function crowdBudget(parts) {
 
 /** Build caches for a hero kind synchronously (creates and disposes a throwaway hero). */
 export function warmHero(opts) { const h = createHero(opts); h.dispose(); }
+/** Prebuild many kinds without a long stall: one hero per task (e.g. the 16 class defaults on the title screen). */
+export async function warmHeroes(list = defaultKinds(), { gapMs = 16 } = {}) {
+  for (const o of list) { warmHero(o); await new Promise(r => setTimeout(r, gapMs)); }
+}
+/** the 16 default creation-screen heroes (8 classes × 2 sexes, tier 1) */
+export const defaultKinds = (lod = 'full') => Object.keys(CLASSES).flatMap(cls => ['m', 'f'].map(sex => ({ cls, sex, lod, gear: { tier: 1 }, weapon: { tier: 1, hone: 15 } })));
 export { buildBucket };

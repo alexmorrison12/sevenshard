@@ -116,7 +116,17 @@ K.punishing_bolt = (fx, p) => {      // giant lightning from the sky
 const REBOLT = { name: 'rebolt', init(T) { T.dur = 0.5; }, tick(T) { for (let k = 0; k < 3; k++) if (T.once(KEYS[k], 0.1 + k * 0.12)) skyBolt(T.fx, T.pos.x + T.fx.r(-1, 1), T.pos.y, T.pos.z + T.fx.r(-1, 1), T.p.s, T.p.color, { decal: false, shake: 0.12 }); } };
 K.lightning_vortex = {               // holding: a spinning storm of bolts around the caster
   name: 'lightning_vortex', fade: 0.3, group: 'Starcaller',
-  init(T) { const c = ctx(T.fx, T.p, T.v.c = {}, 4); T.v.col = tc(c.tint, 0x9ab8ff, 1.7); T.dur = T.p.dur ?? 2; },
+  init(T) {
+    const fx = T.fx;
+    // the holding skill re-plays this every 0.25 s: extend the caster's running vortex instead of stacking copies
+    const key = T.p.unit ?? T.p.caster ?? null;
+    for (let i = 0; i < fx.tasks.length; i++) {
+      const o = fx.tasks[i];
+      if (o === T || !o.alive || o.stopping || o.recipe !== K.lightning_vortex) continue;
+      if (key ? (o.p.unit ?? o.p.caster) === key : o.pos.distanceToSquared(T.pos) < 4) { o.dur = Math.max(o.dur, o.age + (T.p.dur ?? 0.6)); o.pos.copy(T.pos); T.end(); return; }
+    }
+    const c = ctx(fx, T.p, T.v.c = {}, 4); T.v.col = tc(c.tint, 0x9ab8ff, 1.7); T.dur = T.p.dur ?? 2;
+  },
   tick(T) {
     const fx = T.fx, c = T.v.c, p = T.pos, gy = fx.gy(p.x, p.z, p.y);
     if (T.stopping) return;

@@ -169,7 +169,20 @@ const DELAY_EXPL = { name: 'dExpl', init(T) { T.dur = T.p.delay; }, stop(T) { ex
 K.bullet_impact = (fx, p) => { const c = ctx(fx, p, null, 2.4), s = c.R / 2.4; for (let i = 0; i < 6; i++) { const a = fx.r(0, TAU), r = Math.sqrt(Math.random()) * c.R * 0.7; hit(fx, { pos: vec(c.x + Math.cos(a) * r, c.y + fx.r(0.4, 1.4), c.z + Math.sin(a) * r), dir: c.f, scale: 0.7 * s }); } fx.radial(PHYS.dust, 8, vec(c.x, c.y, c.z), 1, 3, 0.2, 1, s, null, 0.4, 0.2); decal(fx, { pos: vec(c.x, c.y, c.z), radius: c.R * 0.5, kind: 'scorch', dur: 4 }); };
 K.crosshair = (fx, p) => { const c = ctx(fx, p, null, 2.4); fx.at(CROSSHAIR, vec(c.x, c.y + 0.07, c.z), c.R / 2.4, tc(c.tint, 0xff3a2a, 1.4)); fx.telegraph({ shape: 'circle', pos: vec(c.x, c.y, c.z), radius: c.R * 0.5, color: 'red', dur: 0.4, detonate: false, intensity: 0.6 }); };
 K.flare_shot = (fx, p) => { const c = ctx(fx, p, null, 1); GUNNER.muzzle_flash(fx, { ...p, weapon: 'pistol', color: p.color ?? 0xff4a2a }); fx.projectile({ from: vec(c.x + c.f.x * 0.8, c.y + 1.3, c.z + c.f.z * 0.8), dir: vec(c.f.x * 0.4, 1, c.f.z * 0.4), kind: 'bolt', color: tc(c.tint, 0xff4a2a, 2), speed: 18, range: 9, scale: 0.8, impact: false, onHit: q => { fx.at(GEN.bigFlash, q, 0.3, [1, 0.3, 0.2]); fx.sphere(GEN.sparkLong, 30, q, 2, 6, 1, [1, 0.4, 0.2]); } }); };
-K.gun_spin = { ...AWAKEN.awk_bullet_hell, name: 'gun_spin', init(T) { AWAKEN.awk_bullet_hell.init(T); T.dur = 0.9; } };
+// Equilibrium: called every 0.15 s while held — one light volley fanned round the caster (the fan rotates with time)
+K.gun_spin = (fx, p) => {
+  const c = ctx(fx, p, null, 5.5), s = c.s, col = tc(c.tint, 0xffd080, 2.2), g = fx.gy(c.x, c.z, c.y), base = (fx.time * 11) % TAU;
+  for (let i = 0; i < 4; i++) {
+    const a = base + i * TAU / 4 + fx.r(-0.2, 0.2), dx = Math.sin(a), dz = Math.cos(a);
+    const from = vec(c.x + dx * 0.7, g + 1.2, c.z + dz * 0.7), L = c.R * fx.r(0.7, 1);
+    fx.beam({ from, to: vec(from.x + dx * L, g + fx.r(0.5, 1.3), from.z + dz * L), kind: 'tracer', color: col, width: 0.1 * s, speed: 150, length: 3.5, dur: 0.18 });
+    const o = fx.o(s, [1, 0.75, 0.4]); o.rot = fx.r(0, 3); fx.spawn(GEN.starFlash, from.x, from.y, from.z, 0, 0, 0, o);
+    const q = L * fx.r(0.5, 1); fx.spawn(GEN.spark, c.x + dx * q, g + 0.3, c.z + dz * q, dx * 3, fx.r(2, 4), dz * 3, fx.o(s, [1, 0.8, 0.5]));
+  }
+  fx.spawn(PHYS.shell, c.x, g + 1.2, c.z, fx.r(-3, 3), fx.r(2, 5), fx.r(-3, 3), fx.o(s, null));
+  if (Math.random() < 0.5) fx.rings.ground(vec(c.x, g, c.z), 2.6 * s, 0.3, [col[0] * 0.5, col[1] * 0.5, col[2] * 0.5], { ew: 0.12, trail: 0.5, r0: 0.8, flags: 0 });
+};
+K.gun_spin.group = 'Pistoleer';
 K.shotgun_blast = (fx, p) => { const c = ctx(fx, p, null, 5.2), s = c.s; GUNNER.muzzle_flash(fx, { ...p, weapon: 'shotgun' }); const arc = (p.arc ?? 60) > 6.3 ? (p.arc ?? 60) * Math.PI / 180 : p.arc; for (let i = 0; i < fx.n(9); i++) { const a = (Math.random() - 0.5) * arc, d = fx.r(0.55, 1) * c.R; const x = c.x + (c.f.x * Math.cos(a) + c.rt.x * Math.sin(a)) * d, z = c.z + (c.f.z * Math.cos(a) + c.rt.z * Math.sin(a)) * d; hit(fx, { pos: vec(x, c.y + fx.r(0.5, 1.4), z), dir: c.f, scale: 0.55 * s }); } fx.telegraph({ shape: 'cone', pos: vec(c.x, c.y, c.z), dir: c.f, radius: c.R, angle: arc, color: [1, 0.55, 0.15], dur: 0.12, detonate: true, intensity: 0.5 }); };
 K.sniper = GUNNER.sniper_round;
 

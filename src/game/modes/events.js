@@ -248,7 +248,7 @@ class ChaosGateMode {
     for (const [type, n] of W) for (let j = 0; j < n; j++, k++) {
       const p = this.tears[k % this.tears.length];
       const q = nearPoint(L, p, 3);
-      L.after(0.15 * k, () => { if (this.state !== 'over') L.add(mobFrom(type, { x: q.x, z: q.z, ref: this.ref, hpMul: 1.4 + i * 0.35 })); });
+      L.after(0.15 * k, () => { if (this.state !== 'over') L.add(mobFrom(type, { x: q.x, z: q.z, ref: this.ref, hpMul: CHAOS_GATE.waveHp?.[i] ?? 2 })); });
     }
   }
   spawnBoss() {

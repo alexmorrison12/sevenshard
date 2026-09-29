@@ -281,6 +281,35 @@ export const FIELD_SPECIES = {
   },
 };
 
+// ------------------------------------------------------------------------------------------------ Pip-scale thing material
+function windV(amp) {
+  return vs => vs.replace('#include <common>', '#include <common>\nattribute float sway;')
+    .replace('#include <begin_vertex>', `#include <begin_vertex>
+{ vec3 ip = vec3(0.0);
+  #ifdef USE_INSTANCING
+    ip = instanceMatrix[3].xyz;
+  #endif
+  float ph = ip.x * 0.13 + ip.z * 0.17;
+  float w = sin(uTime * 1.3 + ph) * 0.6 + sin(uTime * 2.7 + ph * 2.3 + position.y * 0.4) * 0.4;
+  transformed.xz += uWind * w * sway * ${amp.toFixed(3)}; }`);
+}
+const THINGM = {};
+/** foliage-like material (vertex colours, wind via the sway attribute) that dissolves near the camera and over the hero */
+export function thingMaterial({ near = [4.5, 2.4], amp = 0.08, trans = 0.3 } = {}) {
+  const key = near.join(',') + ':' + amp + ':' + trans;
+  if (THINGM[key]) return THINGM[key];
+  const m = lambert({ vertexColors: true, side: THREE.DoubleSide }, {
+    wrap: 0.55, trans, key: 'fthing-' + key, uniforms: { uPlayerPos: G.uPlayerPos },
+    vertex: vs => cutV(windV(amp)(vs)),
+    fragment: fs => cutF(fs, 0.9, 0.17, 0.3).replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
+{ float cdist = length(vWPos - cameraPosition); float nf = smoothstep(${near[0].toFixed(2)}, ${near[1].toFixed(2)}, cdist);
+  if (nf > 0.01 && bayer4() < nf) discard; }`),
+  });
+  m.userData.shared = true;
+  THINGM[key] = m;
+  return m;
+}
+
 // ------------------------------------------------------------------------------------------------ instanced flora
 const CELL = 48;
 /**
@@ -479,3 +508,18 @@ export function giantFlowerGeo({ kind = 'daisy', h = 3, color = 0xffffff, center
   return b.build();
 }
 export { SLOT, cardUV, canopy, bentPath, MB, lerpC };
+
+/** Pip-scale giant grass clump: long curved blades (h metres) — boundary walls and meadow giants */
+export function bladeClumpGeo(seed = 1, { h = 5, n = 7, color = 0x3a7a22, tip = 0xa8d060, width = 0.35 } = {}) {
+  const rng = new RNG(seed), b = MB(), c0 = linColor(color), c1 = linColor(tip);
+  for (let i = 0; i < n; i++) {
+    const a = rng.range(0, Math.PI * 2), r = rng.range(0, 0.6), L = h * rng.range(0.55, 1.1), lean = rng.range(0.15, 0.5), w = width * rng.range(0.7, 1.2);
+    const g = new THREE.PlaneGeometry(w, L, 1, 6); g.translate(0, L / 2, 0);
+    const p = g.attributes.position;
+    for (let k = 0; k < p.count; k++) { const t = p.getY(k) / L; p.setX(k, p.getX(k) * (1 - t * 0.92)); p.setZ(k, t * t * lean * L); }
+    g.computeVertexNormals();
+    g.rotateY(a); g.translate(Math.cos(a) * r, 0, Math.sin(a) * r);
+    b.add(g, null, (pp) => lerpC(c0, c1, clamp(pp.y / h, 0, 1) ** 1.2), { extra: { sway: pp => clamp(pp.y / h, 0, 1) ** 2 * 0.6 } });
+  }
+  return b.build();
+}

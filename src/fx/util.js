@@ -153,6 +153,20 @@ export function addRange(buf, start, count) {
   r.start = start; r.count = count; R.push(r);
   buf.needsUpdate = true;
 }
+/** Slot allocator for time-limited instanced pools: reuses the LOWEST expired slot, so live instances stay packed at
+ *  the front and the draw covers only [0, highest live slot] — dead instances would still cost vertex work. */
+export class SlotTimes {
+  constructor(n) { this.n = n; this.end = new Float64Array(n); this.head = 0; }
+  /** lowest slot whose end ≤ now; when every slot is busy, overwrite round-robin */
+  take(now) {
+    const e = this.end, n = this.n;
+    for (let i = 0; i < n; i++) if (e[i] <= now) return i;
+    const s = this.head; this.head = (this.head + 1) % n; return s;
+  }
+  /** instances to draw: highest live slot + 1 */
+  count(now) { const e = this.end; let i = this.n - 1; while (i >= 0 && e[i] <= now) i--; return i + 1; }
+  reset() { this.end.fill(0); this.head = 0; }
+}
 /** queue the whole buffer (stays whole even if partial ranges are queued before the next render) */
 export function queueAll(buf) { queueRange(buf, 0, buf.array.length); }
 

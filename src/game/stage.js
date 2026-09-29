@@ -96,10 +96,12 @@ export class MenuStage {
       for (const x of this.models) { const sel = x === m; x.root.position.z += ((sel ? this.at.z + 0.9 : this.at.z) - x.root.position.z) * (1 - Math.exp(-6 * dt)); }
     } else if (this.kind === 'create' && this.heroUnit) {
       const face = this.view === 'face';
-      const target = new THREE.Vector3(this.at.x + 0.3, face ? 1.62 : 0.95, this.at.z);
-      const pos = new THREE.Vector3(this.at.x + 0.6, face ? 1.66 : 1.3, this.at.z + (face ? 1.3 : 6.2));
+      // face view is centred on the hero (the side panels would cover an off-centre face)
+      const target = new THREE.Vector3(this.at.x + (face ? 0 : 0.3), face ? 1.62 : 0.95, this.at.z);
+      const pos = new THREE.Vector3(this.at.x + (face ? 0.15 : 0.6), face ? 1.66 : 1.3, this.at.z + (face ? 1.3 : 6.2));
       c.cam.position.lerp(pos, 1 - Math.exp(-5 * dt)); c.cam.lookAt(target); c.cam.fov = face ? 28 : 32; c.cam.updateProjectionMatrix();
       const u = this.heroUnit;
+      if (face && u.skill) { u.skill.cancel?.('stage'); u.skill = null; }   // a demo mid-swing would leave the hero turned away
       u.pos.x = this.at.x; u.pos.z = this.at.z; u.lift = 0;
       if (!u.skill) u.facing += (Math.PI + (this.spin || 0) + Math.sin(t * 0.4) * 0.2 - u.facing) * (1 - Math.exp(-4 * dt));
       if (!face) { this.demoT -= dt; if (this.demoT <= 0) { this.demo(this.demoIdx++); } }

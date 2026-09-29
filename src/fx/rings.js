@@ -2,7 +2,7 @@
 // read, soft trailing wash, noise break-up) and vertical ring walls (energy curtains that rise and fade as they
 // expand). One instanced draw call per style; fully analytic after spawn.
 import * as THREE from 'three';
-import { PREMUL, GLSL_NOISE, GLSL_GROUND, queueRange } from './util.js';
+import { PREMUL, GLSL_NOISE, GLSL_GROUND, queueRange, SlotTimes } from './util.js';
 
 export const RSTRIDE = 16;
 const RING_VERT = /* glsl */`
@@ -113,11 +113,12 @@ class RingPool {
     });
     this.geo = geo;
     this.mesh = new THREE.Mesh(geo, this.mat); this.mesh.frustumCulled = false; this.mesh.renderOrder = order; this.mesh.name = name;
-    this.head = 0; this.until = -1; this.lo = n; this.hi = -1;
+    this.slots = new SlotTimes(n); this.until = -1; this.lo = n; this.hi = -1;
   }
   spawn(x, y, z, R, dur, ew, col, hOrTrail, ease, r0, flags, delay) {
-    const s = this.head; this.head = (this.head + 1) % this.n;
+    const s = this.slots.take(this.fx.time);
     const d = this.data, b = s * RSTRIDE, t0 = this.fx.time + delay;
+    this.slots.end[s] = t0 + dur;
     d[b] = x; d[b + 1] = y; d[b + 2] = z; d[b + 3] = t0;
     d[b + 4] = R; d[b + 5] = dur; d[b + 6] = ew; d[b + 7] = 1 - this.fx.dimK;
     d[b + 8] = col[0]; d[b + 9] = col[1]; d[b + 10] = col[2]; d[b + 11] = hOrTrail;
@@ -131,9 +132,10 @@ class RingPool {
       queueRange(this.buf, this.lo * RSTRIDE, (this.hi - this.lo + 1) * RSTRIDE);
       this.lo = this.n; this.hi = -1;
     }
+    this.geo.instanceCount = this.slots.count(this.fx.time);
     this.mesh.visible = this.fx.time <= this.until;
   }
-  reset() { for (let i = 0; i < this.n; i++) this.data[i * RSTRIDE + 3] = -1e9; this.lo = 0; this.hi = this.n - 1; this.until = -1; }
+  reset() { for (let i = 0; i < this.n; i++) this.data[i * RSTRIDE + 3] = -1e9; this.lo = 0; this.hi = this.n - 1; this.until = -1; this.slots.reset(); this.geo.instanceCount = 0; }
   dispose() { this.geo.dispose(); this.mat.dispose(); }
 }
 

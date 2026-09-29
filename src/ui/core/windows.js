@@ -112,7 +112,10 @@ export class WindowManager {
   _op(id) { this.ops.set(id, (this.ops.get(id) || 0) + 1); }
   open(id, data) {
     const a = this.alias.get(id);
-    if (a) { const w = this.get(a.to); if (w && a.tab) w.setTab(a.tab); id = a.to; }
+    if (a) { // the alias decides the tab, whatever the data says
+      const w = this.get(a.to); if (w && a.tab) { w.setTab(a.tab); if (data && typeof data === 'object') data = { ...data, tab: a.tab }; }
+      id = a.to;
+    }
     const w = this.get(id);
     if (!w) { console.warn('[ui] unknown window', id); return null; }
     this._op(id);

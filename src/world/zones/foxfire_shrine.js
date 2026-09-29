@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { tick } from '../zone.js';
 import { Ground } from '../ground.js';
 import { NavGrid } from '../nav.js';
-import { Kit, M, box, cyl, faceTo } from '../kit.js';
+import { Kit, M, box, cyl, faceTo, hipRoof, kitMaterial } from '../kit.js';
 import * as S from '../shapes.js';
 import * as P from '../props.js';
 import { Decals } from '../decals.js';
@@ -62,28 +62,29 @@ export async function build(zone, { quality = 1 } = {}) {
   stage(kit, zone, 0, 0, -13.2, 15, 6, 0.42);
   for (const sx of [-1, 1]) foxGuardian(kit, sx * 5.4, 0, -18.4, sx * 0.35, { s: 1.05 });
   // gate avenue climbing in from the south (the last gates stand below the rim on the mountain stair)
-  const gz = [16.5, 19.6, 22.7, 25.8, 28.9, 32.0, 35.1];
+  const gz = [18.0, 21.1, 24.2, 27.3, 30.4, 33.5, 36.6];
   gz.forEach((z, i) => gateArch(kit, 0, H(0, z) - 0.05, z, 0, { w: 4.4, h: 5.1 + (i === 0 ? 0.6 : 0), s: i === 0 ? 1.12 : 1 }));
   for (let i = 0; i < 9; i++) { const z = R + 1 + i * 0.9; kit.add('stone', box(6, 0.5, 1.0, 1), M(0, H(0, z) - 0.2, z), { tint: 0x9a968e, ao: false }); }
   // stone lanterns: along the avenue and around the courtyard
-  for (const z of [14.2, 21, 27.4]) for (const sx of [-1, 1]) stoneLantern(kit, sx * 4.2, H(sx * 4.2, z), z, { s: 0.85 });
+  for (const z of [15.6, 22.6, 28.8]) for (const sx of [-1, 1]) stoneLantern(kit, sx * 4.2, H(sx * 4.2, z), z, { s: 0.85 });
   for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2 + Math.PI / 10; const x = Math.cos(a) * 18.2, z = Math.sin(a) * 18.2 - 1; if (z > 12 && Math.abs(x) < 6) continue; if (Math.hypot(x - POND.x, z - POND.z) < POND.r + 1.5) continue; stoneLantern(kit, x, H(x, z), z, { s: 1.05 }); }
   // west: a bell pavilion
   { const bx = -19, bz = 6, y = H(bx, bz);
     kit.add('stone', box(4.6, 0.5, 4.6, 1), M(bx, y + 0.25, bz), { tint: 0xa8a49c, yGround: y });
     for (const [dx, dz] of [[-1.8, -1.8], [1.8, -1.8], [-1.8, 1.8], [1.8, 1.8]]) kit.add('lacquer', cyl(0.16, 0.18, 3.6, 10, 1), M(bx + dx, y + 2.3, bz + dz), { tint: 0xd8452a });
-    kit.add('slate', (await import('../kit.js')).hipRoof(4.4, 4.4, 1.6, 0.9, 2), M(bx, y + 4.1, bz), { tint: 0x3a3e48, ao: false });
-    kit.add('metal', (() => { const lg = new THREE.LatheGeometry([[0.0, 0], [0.55, 0.02], [0.72, 0.4], [0.62, 1.1], [0.42, 1.55], [0.1, 1.7]].map(([r, h]) => new THREE.Vector2(r, h)), 16); return lg; })(), M(bx, y + 1.9, bz), { tint: 0x6a5a3a });
+    kit.add('slate', hipRoof(4.4, 4.4, 1.6, 0.9, 2), M(bx, y + 4.1, bz), { tint: 0x3a3e48, ao: false });
+    kit.add('metal', new THREE.LatheGeometry([[0.0, 0], [0.55, 0.02], [0.72, 0.4], [0.62, 1.1], [0.42, 1.55], [0.1, 1.7]].map(([r, h]) => new THREE.Vector2(r, h)), 16), M(bx, y + 1.9, bz), { tint: 0x6a5a3a });
     kit.add('timber', box(0.2, 0.2, 2.2, 1), M(bx - 1.2, y + 2.6, bz, 0, 1, 1, 1, 0, 0.05), { ao: false });
     for (const [dx, dz] of [[-1.8, -1.8], [1.8, -1.8], [-1.8, 1.8], [1.8, 1.8]]) kit.block(S.circle(bx + dx, bz + dz, 0.2), 0.25);
     kit.block(S.circle(bx, bz, 0.8), 0.25);
   }
   // east: the moon-viewing pond with its rocks and a stone lantern at the water's edge
-  for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2 + rng.range(-0.15, 0.15), rr = POND.r + rng.range(0.3, 0.9); boulder(kit, POND.x + Math.cos(a) * rr, H(POND.x + Math.cos(a) * rr, POND.z + Math.sin(a) * rr), POND.z + Math.sin(a) * rr, { s: rng.range(0.45, 0.9), seed: i + 40, tint: 0x8a8a90, moss: 0x4a6a2a, flat: 0.6 }); }
+  for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2 + rng.range(-0.15, 0.15), rr = POND.r + rng.range(0.3, 0.9); boulder(kit, POND.x + Math.cos(a) * rr, H(POND.x + Math.cos(a) * rr, POND.z + Math.sin(a) * rr), POND.z + Math.sin(a) * rr, { s: rng.range(0.45, 0.9), seed: i + 40, tint: 0xb8b8c4, moss: 0x5a7a34, flat: 0.6 }); }
   stoneLantern(kit, POND.x - 3.6, H(POND.x - 3.6, POND.z - 4.6), POND.z - 4.6, { s: 1.2 });
   kit.block(S.circle(POND.x, POND.z, POND.r + 0.2), 0.25);
   // paper lanterns strung across the stage front and the avenue head
   paperLanterns(kit, [-7.5, 3.6, -10.2], [7.5, 3.6, -10.2], { sag: 0.6, n: 8 });
+  kit.light(0, 2.6, -11, 0xffb070, 5, 10, 0.15);
   for (const sx of [-1, 1]) { kit.add('lacquer', cyl(0.1, 0.12, 4.2, 8, 1), M(sx * 7.6, 2.1, -10.2), { tint: 0xd8452a }); kit.block(S.circle(sx * 7.6, -10.2, 0.15), 0.25); }
   // a quiet camp for the hunters by the avenue (south-west): mats, a tea set, a lantern
   { const cx = -8.5, cz = 19.5, y = H(cx, cz);
@@ -96,7 +97,7 @@ export async function build(zone, { quality = 1 } = {}) {
   // the crags behind the shrine and around the sides
   const crag = catmull([[-20, 30], [-31, 18], [-34, 0], [-36, -18], [-30, -40], [-12, -46], [12, -46], [30, -40], [36, -18], [34, 0], [31, 18], [20, 30]], 5);
   cliffRing(kit, crag, (x, z) => Math.min(H(x, z), 2), { heightFn: (x, z) => z < -25 ? 16 : 7 + smoothstep(20, -25, z) * 8, thick: 8, seed: 21, tint: 0x6a6c74, strata: 0x4a4c56, top: 0x4a5a2a, inside: [0, -4], closed: false, lean: 0.3, jag: 2.6, step: 1.7 });
-  for (let i = 0; i < 20; i++) { const a = rng.range(0, Math.PI * 2), rr = R + rng.range(-0.5, 3); const x = Math.cos(a) * rr, z = Math.sin(a) * rr; if (z > R - 8 && Math.abs(x) < 9) continue; boulder(kit, x, H(x, z), z, { s: rng.range(0.6, 1.5), seed: rng.int(0, 999), tint: 0x7a7c84, moss: 0x5a6a2a, flat: 0.6 }); }
+  for (let i = 0; i < 20; i++) { const a = rng.range(0, Math.PI * 2), rr = R + rng.range(-0.5, 3); const x = Math.cos(a) * rr, z = Math.sin(a) * rr; if (z > R - 8 && Math.abs(x) < 9) continue; boulder(kit, x, H(x, z), z, { s: rng.range(0.6, 1.5), seed: rng.int(0, 999), tint: 0xa8aab4, moss: 0x5a6a2a, flat: 0.6 }); }
   for (const c of kit.colliders) g.info('ao', S.inflate(c.shape, 0.2), { soft: 1.8, amount: 0.3 });
   await tick();
   await g.build(zone.root);
@@ -123,7 +124,7 @@ export async function build(zone, { quality = 1 } = {}) {
   const grass = new Grass(g, { layer: 'grass', density: quality, tint: [1.2, 0.95, 0.62] });
   zone.root.add(grass.mesh);
   zone.root.add(buildMoon({ x: -40, y: 70, z: -170, r: 24 }));
-  zone.root.add(buildMoonPond({ x: POND.x, z: POND.z, r: POND.r, level: -0.35, moon: [-0.15, -0.3], moonR: 0.26 }));
+  zone.root.add(buildMoonPond({ x: POND.x, z: POND.z, r: POND.r, level: -0.35, moon: [-0.12, -0.34], moonR: 0.15 }));
 
   // ---------------------------------------------------------------- decals
   const dec = new Decals(H);
@@ -138,7 +139,7 @@ export async function build(zone, { quality = 1 } = {}) {
   for (let i = 0; i < 16; i++) {
     const a = i / 16 * Math.PI * 2 + rng.range(-0.2, 0.2), rr = rng.range(7, 19);
     const x = Math.cos(a) * rr, z = Math.sin(a) * rr - 1, y = H(x, z) + rng.range(1.2, 2.8);
-    wisps.push({ x, y, z, size: rng.range(0.22, 0.34), color: rng.chance(0.3) ? 0x9ae8ff : 0x4a9aff, intensity: 1.8, bob: rng.range(0.25, 0.5), orbit: rng.range(0.4, 1.2) });
+    wisps.push({ x, y, z, size: rng.range(0.34, 0.5), color: rng.chance(0.3) ? 0x9ae8ff : 0x4a9aff, intensity: 2.2, bob: rng.range(0.25, 0.5), orbit: rng.range(0.4, 1.2) });
     if (i % 2 === 0) kit.lights.push({ x, y, z, color: 0x5aa8ff, intensity: 3.5, radius: 7, flicker: 0.15 });
   }
   const flames = buildFlames([...kit.flames, ...wisps]); if (flames) zone.root.add(flames);
@@ -147,7 +148,7 @@ export async function build(zone, { quality = 1 } = {}) {
   const foxfire = buildParticles('foxfire', { quality, count: 110 });
   zone.root.add(leaves, foxfire);
   zone.onUpdate((dt, t, focus) => { pool.update(dt, t, focus); leaves.userData.update(focus); foxfire.userData.update(focus); grass.update(focus); });
-  zone.onEnv(env => { pool.scale = 0.6 + env.night * 0.8; });
+  zone.onEnv(env => { pool.scale = 0.6 + env.night * 0.8; kitMaterial('window').emissiveIntensity = 1.6; });
 
   // ---------------------------------------------------------------- nav & anchors
   const nav = new NavGrid(-R - 2, -R - 2, 2 * R + 4, 2 * R + 10, 0.5);
@@ -156,7 +157,7 @@ export async function build(zone, { quality = 1 } = {}) {
   for (const c of kit.colliders) nav.block(c.shape, c.inflate);
   nav.keepConnected([[0, 14]]);
   zone._nav = nav; zone.nav = nav.toContract();
-  zone.anchor('spawn', 0, 13.2, 0);
+  zone.anchor('spawn', 0, 12.4, 0);
   zone.anchor('boss', 0, -5, Math.PI);
   zone.anchor('camp', -8.4, 17.4, faceTo(-8.4, 17.4, 0, 0));
   for (const [name, a] of Object.entries(zone.anchors)) { if (nav.walkable(a.x, a.z)) continue; const p = nav.nearest(a.x, a.z, 5); if (p) { a.x = +p[0].toFixed(2); a.z = +p[1].toFixed(2); } }

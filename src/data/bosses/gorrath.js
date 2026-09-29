@@ -139,7 +139,7 @@ export default {
     } },
     // whirl on those behind him (the tail/axe haft swipe)
     back_swipe: { range: 12, cd: 6, weight: 5, when: B => behind(B, 7).length > 0, async run(B) {
-      act(B, 'turn', 0.7);
+      act(B, 'back_swipe', 1.55);   // model: 1.0 s with the hit at 0.45 → stretched so it lands with the strike at 0.7
       await strike(B, 'cone', { dir: back(B), r: 7, deg: 130, dur: 0.7, coef: 0.7, knock: 'down', kb: 4, fx: 'tail_sweep', fxR: 7, sfx: 'impact_heavy', shake: 0.2 });
       await wait(B, 0.4);
     } },

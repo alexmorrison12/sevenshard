@@ -48,7 +48,9 @@ export class EncounterMode {
     this.introT = o.intro === false ? 0 : 3.2;
     if (this.introT > 0) {
       const b = this.boss.pos;
-      g.cam.cinematic({ pos: [b.x + 6, b.y + this.def.height * 0.9, b.z + 11], look: [b.x, b.y + this.def.height * 0.55, b.z], dur: 0.9, fov: 30 });
+      // frame the boss by its size (a 4 m hound and a 15 m behemoth need very different distances)
+      const hh = this.def.height || 4, k = Math.max(1, hh / 4.2);
+      g.cam.cinematic({ pos: [b.x + 6 * k, b.y + hh * 0.9, b.z + 11 * k], look: [b.x, b.y + hh * 0.55, b.z], dur: 0.9, fov: 30 });
       g.renderer.fx.letterbox = 1;
       g.inputBlocked = true;
       setTimeout(() => this.bosses.forEach(b => b.model?.play?.('intro', { dur: 2.4 })), 200);

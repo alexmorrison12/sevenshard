@@ -29,6 +29,7 @@ import './plugins.js';
 import { TouchControls } from './touch.js';
 import { watchRaid } from './watch.js';
 import { Portrait } from './portrait.js';
+import { warmHeroes } from '../models/hero/index.js';
 import { SocialContext } from './social/context.js';
 import { sunView, rank as sunRank, resetTree as sunReset, sunState, unlocked as sunUnlocked } from './progression/sunheart.js';
 import { SUNHEART_POINTS } from '../data/sunheart.js';
@@ -102,6 +103,8 @@ export class Session {
     const last = this.account.char(this.account.data.lastChar);
     this.ui.screen('title', { server: 'Solmara-1', status: 'Busy', version: 'v1.0 · build ' + (__DEV__ ? 'dev' : 'live'), news: NEWS, continue: last ? { name: last.name, cls: last.cls, level: last.level } : null });
     this.game.audio?.music?.('title');
+    // pre-build the 16 creation heroes while the player reads the title (first builds of plate/long-hair kinds stall)
+    if (!this._warmed) { this._warmed = true; setTimeout(() => { if (this.screen === 'title') warmHeroes(undefined, { gapMs: 120 }).catch(() => {}); else this._warmed = false; }, 3000); }
   }
   charSelect() {
     const A = this.account;

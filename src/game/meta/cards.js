@@ -221,7 +221,7 @@ function clearCard(d) {
   // the time
   const ty = 262 + Math.max(0, 66 - fs) * 0.2;
   const tw = text(x, clock(d.time || 0), X0 - 2, ty + 14, `700 72px ${SANS}`, '#ffffff', { stroke: 6, blur: 18, shadowColor: rgba(a1, 0.7) });
-  text(x, 'CLEAR TIME', X0 + tw + 18, ty - 18, `700 14px ${SANS}`, '#c9b98e', { ls: 3, shadow: false });
+  text(x, d.failed ? 'FIGHT TIME' : 'CLEAR TIME', X0 + tw + 18, ty - 18, `700 14px ${SANS}`, '#c9b98e', { ls: 3, shadow: false });
   const b = d.board;
   if (b?.rank) text(x, `#${int(b.rank)} ${b.label || ''}`.trim(), X0 + tw + 18, ty + 10, `700 22px ${SANS}`, '#ffd680', { stroke: 3 });
   const badges = (d.badges || []).map(s => [s, /first|record|best|beat/i.test(s) ? '#ffcf6a' : /deathless/i.test(s) ? '#86e070' : /trial|premade/i.test(s) ? '#9fb0d0' : a1, /first|record|best/i.test(s)]);
@@ -255,7 +255,10 @@ function honeCard(d) {
   const taps = d.taps || 1;
   const tw = text(x, String(taps), X0 - 2, 300, `700 84px ${SANS}`, '#ffffff', { stroke: 6, blur: 18, shadowColor: 'rgba(255,170,60,.6)' });
   text(x, taps === 1 ? 'TAP' : 'TAPS', X0 + tw + 14, 262, `700 16px ${SANS}`, '#e8c880', { ls: 3, shadow: false });
-  const luckLine = d.guaranteed ? 'Guaranteed by a full Artisan’s Energy bar' : d.luck != null ? `Luckier than ${Math.round(d.luck * 100)}% of Shardbearers` : d.odds != null ? `1-in-${int(Math.max(1, 1 / d.odds))} luck` : '';
+  const luckLine = d.guaranteed ? 'Guaranteed by a full Artisan’s Energy bar'
+    : d.luck != null && d.luck >= 0.5 ? `Luckier than ${Math.round(d.luck * 100)}% of Shardbearers`
+    : d.odds != null && d.odds < 0.5 ? `1-in-${int(Math.max(1, 1 / d.odds))} luck`
+    : taps > 1 ? `Earned the hard way: ${taps - 1} failed tap${taps > 2 ? 's' : ''}` : 'First try!';
   text(x, luckLine, X0 + tw + 14, 294, `700 24px ${SANS}`, '#ffd680', { stroke: 3 });
   // Artisan's Energy bar
   const by = 340, bw = MW;
@@ -382,12 +385,21 @@ function infernoCard(d) {
   statBox(x, 'Run time', clock(d.time || 0).replace(/\.\d$/, ''), X0, 236, bx);
   statBox(x, 'Kills', int(d.kills || 0), X0 + bx + 12, 236, bx);
   statBox(x, d.board?.rank ? 'This week' : 'Best ever', d.board?.rank ? `#${int(d.board.rank)}` : d.best ? `Floor ${d.best}` : '—', X0 + (bx + 12) * 2, 236, bx, '#ffd680');
+  let ny = 392;
   if (d.boons?.length) {
     text(x, 'BOONS', X0, 360, `700 14px ${SANS}`, '#c9b98e', { ls: 3, shadow: false });
-    chips(x, d.boons.slice(0, 10).map(b => [b, '#ffb070']), X0, 374, MW);
-    if (d.boons.length > 4) chips(x, d.boons.slice(4, 10).map(b => [b, '#ffb070']), X0, 414, MW);
+    // two rows of chips: as many as fit on the first, the rest on the second
+    x.font = `700 15px ${SANS}`; let used = 0, n1 = 0;
+    for (const b of d.boons) { const w = x.measureText(b.toUpperCase()).width + b.length * 1.6 + 36; if (used + w > MW) break; used += w; n1++; }
+    chips(x, d.boons.slice(0, n1).map(b => [b, '#ffb070']), X0, 374, MW);
+    if (d.boons.length > n1) chips(x, d.boons.slice(n1, 12).map(b => [b, '#ffb070']), X0, 414, MW);
+    ny = 470;
   }
-  if (d.name) { crest(x, d.cls, X0, 470, 36); text(x, d.name, X0 + 46, 497, `700 26px ${SERIF}`, mixc(clsColor(d.cls), '#ffffff', 0.4), { stroke: 4 }); }
+  if (d.name) {
+    crest(x, d.cls, X0, ny, 38);
+    text(x, d.name, X0 + 48, ny + 26, `700 26px ${SERIF}`, mixc(clsColor(d.cls), '#ffffff', 0.4), { stroke: 4 });
+    if (ny < 470) text(x, `${clsName(d.cls)}${d.best ? ` · best ever: floor ${d.best}` : ''}`, X0 + 49, ny + 50, `600 15px ${SANS}`, '#c8bda4', { ls: 1, shadow: false });
+  }
   footer(x, a1, d.floor ? `How deep can you go? Play free in your browser` : null, d.date);
   return c;
 }

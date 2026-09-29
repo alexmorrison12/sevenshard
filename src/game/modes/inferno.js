@@ -43,6 +43,9 @@ export async function loadInstance(session, id, o = {}) {
   const t0 = performance.now();
   const zone = await buildZone(id, { quality: g.renderer.quality, seed: o.seed, onProgress: f => session.ui.screen('loading', { pct: 5 + f * 85 }) });
   zone.name = o.name || zone.name || ZONES[id]?.name || id; zone.id = id;
+  // leave the previous mode ourselves so an error in its exit() cannot abort the launch
+  try { g.mode?.exit?.(); } catch (e) { console.error('[modes] previous mode exit', e); }
+  g.mode = null;
   g.setZone(zone);
   session.relayLevel?.(g.level);
   session.ui.screen('loading', { pct: 100 });
@@ -208,9 +211,11 @@ export function emitPvp(session, data) {
 }
 /** results screen + music */
 export function showResults(session, data, win = data.kind !== 'fail') {
-  session.ui.screen('results', data);
+  session.ui.screen('results', { ...data, loot: lootGrid(data.loot) });
   session.game.audio?.music?.(win ? 'victory' : 'defeat');
 }
+/** reward rows for the results grid (silver & gold already show on the currency line) */
+export const lootGrid = rows => (rows || []).filter(r => r && !(r.kind === 'currency' && (r.id === 'silver' || r.id === 'gold')));
 /** meter rows → results dps table */
 export const dpsRows = meter => (meter || []).map(m => ({ name: m.name, cls: m.cls, dmg: m.dmg, dps: m.dps, crit: m.critPct, back: m.backPct, counters: m.counters, stagger: m.stagger, deaths: m.deaths, you: !!m.you, support: CLASSES[m.cls]?.role === 'support' }));
 /** pick from [[id, weight], …] */

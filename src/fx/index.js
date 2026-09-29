@@ -65,7 +65,7 @@ export class FX {
     // screen-space feedback the game applies to its camera / renderer (see applyScreen)
     this.screen = { shake: 0, flash: 0, flashCol: new THREE.Color(1, 0.9, 0.7), radial: 0, radialX: 0.5, radialY: 0.5, aberration: 0 };
     this.onShake = null;      // (amount 0..1, pos) — called immediately on big impacts
-    this.lights = null; this._lightT = 0; this._awkT = -1e9;
+    this.lights = null; this._lightT = 0;
     this._o = {};
     // "other players' effects" dimming: the dim of the effect being written right now (1 = full). Set from p.dim by
     // every public entry point, carried by tasks for their whole life (T.dim), read by every buffer writer.
@@ -191,12 +191,11 @@ export class FX {
     if (!r) { this.warnOnce('unknown preset ' + name); return null; }   // null → callers can fall back
     if (p.dim === 0) return NOOP;
     const pd = this.dimK;
-    if (r.group === 'Awakenings') {            // awakening governor: stacked awakenings share one "exposure budget"
+    if (r.awk === undefined) r.awk = typeof r === 'object' && r.group === 'Awakenings' && /^awk_/.test(r.name || '');
+    if (r.awk) {                               // awakening governor: stacked awakenings share one "exposure budget"
       let n = 0;
-      for (let i = 0; i < this.tasks.length; i++) { const t = this.tasks[i]; if (t.alive && !t.stopping && t.recipe.group === 'Awakenings') n++; }
-      if (this.time - this._awkT < 1.2) n++;   // a function-type awakening fired very recently
+      for (let i = 0; i < this.tasks.length; i++) { const t = this.tasks[i]; if (t.alive && !t.stopping && t.recipe.awk) n++; }
       if (n > 0) this.dimK = Math.min(this.dimK, 1 / (1 + 0.8 * n));   // 2nd 0.56, 3rd 0.38, 4th 0.29 (no screen FX)
-      if (typeof r === 'function') this._awkT = this.time;
     }
     this._enter(p);
     try {

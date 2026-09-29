@@ -9,14 +9,14 @@ export const FIELD_BOSS = {
   byZone: { goldmeadow: 'thunderhoof', thornwood: 'thunderhoof', ashen_ridge: 'cinderhorn' },
   fallback: 'thunderhoof',
   helpers: 6, hpScale: 1.15, minIlvl: 1300, maxIlvl: 1520,
-  lines: ['FIELD BOSS UP, everyone to the stones!', 'thunderhoof again lol', 'no one stand in front of it pls', 'antlers first, destruction bombs ready', 'ty for the carry', 'gg, see you next hour'],
+  lines: ['FIELD BOSS UP, everyone to the stones!', 'field boss again lol, who needs the card', 'no one stand in front of it pls', 'break the parts first, destruction bombs ready', 'ty for the carry', 'gg, see you next hour'],
 };
 /** calendar `where` names → field zone ids */
 export const ZONE_BY_NAME = { Goldmeadow: 'goldmeadow', Thornwood: 'thornwood', 'Ashen Ridge': 'ashen_ridge' };
 
 /** Chaos Gate (hourly at :30): a portal at the field's `chaosgate` anchor → a short instanced wave defense. */
 export const CHAOS_GATE = {
-  zone: 'chaos_rift', island: 3, party: 4, minIlvl: 1100, time: 420, boss: 'gatekeeper', bossHp: 0.3, ticket: 0.3,
+  zone: 'chaos_rift', island: 3, party: 4, minIlvl: 1100, time: 420, boss: 'gatekeeper', bossHp: 0.6, waveHp: [2.4, 3, 3.6], ticket: 0.3,
   waves: [
     [['imp', 10], ['hellhound', 3]],
     [['imp', 8], ['hellhound', 4], ['legionnaire', 3], ['abyss_caster', 2]],

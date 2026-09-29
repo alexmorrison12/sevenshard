@@ -8,7 +8,7 @@
 //   props     CPU-posed solid/emissive meshes: spinning glaive, meteor rock, grenade, ice lance, giant light sword, orbs
 import * as THREE from 'three';
 import { G } from '../engine/materials.js';
-import { PREMUL, GLSL_NOISE, GLSL_GROUND, queueRange, queueAll } from './util.js';
+import { PREMUL, GLSL_NOISE, GLSL_GROUND, queueRange, queueAll, SlotTimes } from './util.js';
 
 const DEF_TINT = [1, 0.5, 0.2];
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _s = new THREE.Vector3(), _fwd = new THREE.Vector3(0, 0, -1), _y = new THREE.Vector3(0, 1, 0);
@@ -170,13 +170,13 @@ class MeshPool {
     });
     this.geo = g;
     this.mesh = new THREE.Mesh(g, this.mat); this.mesh.frustumCulled = false; this.mesh.name = name; this.mesh.castShadow = false;
-    this.head = 0; this.until = -1; this.lo = n; this.hi = -1;
-    this.heldFree = [];      // slots reserved by handles (killed via kill())
+    this.slots = new SlotTimes(n); this.until = -1; this.lo = n; this.hi = -1;
   }
   /** mode 0 debris / 1 spike / 2 shard. c: [r,g,b] base colour, gl: [r,g,b] glow colour, fres: fresnel strength */
   spawn(delay, x, y, z, vx, vy, vz, life, rx, ry, rz, spin, scale, mode, grav, c, gl, fres, gy) {
-    const s = this.head; this.head = (this.head + 1) % this.n;
+    const s = this.slots.take(this.fx.time);
     const d = this.data, b = s * MSTRIDE, t0 = this.fx.time + delay;
+    this.slots.end[s] = t0 + life;
     d[b] = x; d[b + 1] = y; d[b + 2] = z; d[b + 3] = t0;
     d[b + 4] = vx; d[b + 5] = vy; d[b + 6] = vz; d[b + 7] = life;
     d[b + 8] = rx; d[b + 9] = ry; d[b + 10] = rz; d[b + 11] = spin;
@@ -188,12 +188,13 @@ class MeshPool {
     if (t0 + life > this.until) this.until = t0 + life;
     return s;
   }
-  kill(slot) { if (slot < 0) return; this.data[slot * MSTRIDE + 15] = this.fx.time; if (slot < this.lo) this.lo = slot; if (slot > this.hi) this.hi = slot; }
+  kill(slot) { if (slot < 0) return; this.data[slot * MSTRIDE + 15] = this.fx.time; this.slots.end[slot] = Math.min(this.slots.end[slot], this.fx.time + 0.35); if (slot < this.lo) this.lo = slot; if (slot > this.hi) this.hi = slot; }
   update() {
     if (this.hi >= this.lo) { queueRange(this.buf, this.lo * MSTRIDE, (this.hi - this.lo + 1) * MSTRIDE); this.lo = this.n; this.hi = -1; }
+    this.geo.instanceCount = this.slots.count(this.fx.time);
     this.mesh.visible = this.fx.time <= this.until + 0.5;
   }
-  reset() { for (let i = 0; i < this.n; i++) { this.data[i * MSTRIDE + 3] = -1e9; this.data[i * MSTRIDE + 15] = 1e9; } this.lo = 0; this.hi = this.n - 1; this.until = -1; }
+  reset() { for (let i = 0; i < this.n; i++) { this.data[i * MSTRIDE + 3] = -1e9; this.data[i * MSTRIDE + 15] = 1e9; } this.lo = 0; this.hi = this.n - 1; this.until = -1; this.slots.reset(); this.geo.instanceCount = 0; }
   dispose() { this.geo.dispose(); this.mat.dispose(); }
 }
 
@@ -353,12 +354,13 @@ class Pillars {
     this.geo = g;
     this.mat = new THREE.ShaderMaterial({ vertexShader: PIL_VERT, fragmentShader: PIL_FRAG, uniforms: { uFxTime: fx.u.uFxTime }, ...PREMUL, side: THREE.DoubleSide, depthTest: true });
     this.mesh = new THREE.Mesh(g, this.mat); this.mesh.frustumCulled = false; this.mesh.renderOrder = 27; this.mesh.name = 'fx-pillars';
-    this.head = 0; this.lo = n; this.hi = -1; this.until = -1;
+    this.slots = new SlotTimes(n); this.lo = n; this.hi = -1; this.until = -1;
   }
   /** style: 0 light, 1 loot, 2 blood/dark, 3 energy, 4 tornado. dur Infinity = until kill(). */
   spawn(x, y, z, R, H, dur, style, c, growT = 0.12, inten = 1, delay = 0) {
-    const s = this.head; this.head = (this.head + 1) % this.n;
+    const s = this.slots.take(this.fx.time);
     const d = this.data, b = s * 16, t0 = this.fx.time + delay, D = isFinite(dur) ? dur : 1e7;
+    this.slots.end[s] = t0 + D;
     d[b] = x; d[b + 1] = y; d[b + 2] = z; d[b + 3] = t0;
     d[b + 4] = R; d[b + 5] = H; d[b + 6] = D; d[b + 7] = style;
     d[b + 8] = c[0]; d[b + 9] = c[1]; d[b + 10] = c[2]; d[b + 11] = growT;
@@ -368,12 +370,13 @@ class Pillars {
     return s;
   }
   move(s, x, y, z) { const b = s * 16; this.data[b] = x; this.data[b + 1] = y; this.data[b + 2] = z; if (s < this.lo) this.lo = s; if (s > this.hi) this.hi = s; }
-  kill(s) { if (s < 0) return; this.data[s * 16 + 12] = this.fx.time; if (s < this.lo) this.lo = s; if (s > this.hi) this.hi = s; }
+  kill(s) { if (s < 0) return; this.data[s * 16 + 12] = this.fx.time; this.slots.end[s] = Math.min(this.slots.end[s], this.fx.time + 0.6); if (s < this.lo) this.lo = s; if (s > this.hi) this.hi = s; }
   update() {
     if (this.hi >= this.lo) { queueRange(this.buf, this.lo * 16, (this.hi - this.lo + 1) * 16); this.lo = this.n; this.hi = -1; }
+    this.geo.instanceCount = this.slots.count(this.fx.time);
     this.mesh.visible = this.fx.time <= this.until + 1;
   }
-  reset() { for (let i = 0; i < this.n; i++) { this.data[i * 16 + 3] = -1e9; this.data[i * 16 + 12] = 1e9; } this.lo = 0; this.hi = this.n - 1; this.until = -1; }
+  reset() { for (let i = 0; i < this.n; i++) { this.data[i * 16 + 3] = -1e9; this.data[i * 16 + 12] = 1e9; } this.lo = 0; this.hi = this.n - 1; this.until = -1; this.slots.reset(); this.geo.instanceCount = 0; }
   dispose() { this.geo.dispose(); this.mat.dispose(); }
 }
 

@@ -23,11 +23,12 @@ import { TouchLayer } from './hud/touch.js';
 
 export { Win, glyph, iconUrl, placeholderIcon, data, MENU };
 
-/** Default window hotkeys (KeyboardEvent.code), matching src/engine/input.js DEFAULT_BINDS. The game owns
- *  QWER ASDF Z X V C G T Space 1-4 Alt; Enter focuses chat, Esc closes / opens the game menu, F12 or Ctrl+Z = photo mode. */
+/** Default window hotkeys (KeyboardEvent.code, or an array of codes). The game owns QWER ASDF Z X V C G T Space 1-4
+ *  Alt and Comma (its song picker); Enter focuses chat, Esc closes / opens the game menu, F12 or Ctrl+Z = photo mode.
+ *  Compass and meter also answer to src/engine/input.js DEFAULT_BINDS (Semicolon, Backquote). */
 export const HOTKEYS = {
   character: 'KeyP', inventory: 'KeyI', skills: 'KeyK', engravings: 'KeyN', map: 'KeyM', guild: 'KeyU', partyfinder: 'KeyO',
-  tome: 'KeyL', quests: 'KeyJ', compass: 'KeyH', meter: 'KeyY', songs: 'KeyB', emotes: 'Period',
+  tome: 'KeyL', quests: 'KeyJ', compass: ['KeyH', 'Semicolon'], meter: ['KeyY', 'Backquote'], songs: 'KeyB', emotes: 'Period',
 };
 
 class UI {
@@ -222,7 +223,7 @@ class UI {
     if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
     if (e.key === 'Enter') { e.preventDefault(); this.chat.focus(); return; }
     if (e.key === '/') { e.preventDefault(); this.chat.focus('/'); return; }
-    for (const id in this.hotkeys) if (this.hotkeys[id] === e.code) {
+    for (const id in this.hotkeys) if ([].concat(this.hotkeys[id]).includes(e.code)) {
       e.preventDefault();
       this._menu(id, { key: true });
       return;

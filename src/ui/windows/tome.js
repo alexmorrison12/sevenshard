@@ -2,15 +2,18 @@
 //
 // tome data: { tab?: 'tome'|'collectibles', selected?,
 //   regions: [{ id, name, pct, cats: [{ id, label, have, total }], rewards: [{ pct, name, icon, grade, count?, claimed }] }],
-//   collectibles: [{ id, name, icon, have, total, tiers: [{ n, name, icon, grade, count?, claimed }] }] }
+//   collectibles: [{ id, name, icon, have, total, tiers: [{ n, name, icon, grade, count?, claimed }],
+//                    items?: [{ id, name, zone, hint, source, found }] }], seedsByZone?: { zone: { name, have, total } } }
+//   Clicking a collectible opens its checklist (items grouped by zone, hints for the ones still missing).
 //   Actions: tome:region { id } · tome:claim { region, pct } · collect:claim { id, n }
 // rapport data: { npcs: [{ id, name, title, icon?, stage (0–5), points, max, daily?: { songs, songsMax, emotes, emotesMax },
-//   songs: [{ id, name, locked? }], emotes: [{ id, name }], gifts: [Item], rewards: [{ stage, name, icon, grade, count?, claimed }] }], selected? }
+//   songs: [{ id, name, locked? }], emotes: [{ id, name }], gifts: [Item], rewards: [{ stage, name, icon, grade, count?, claimed }],
+//   line?: 'their current greeting', likes?: { songs: [id], emotes: [id], gifts: { [giftId]: 'love'|'like'|'neutral'|'dislike' } } }], selected? }
 //   Actions: rapport:select { id } · rapport:song { npc, id } · rapport:emote { npc, id } · rapport:gift { npc, uid } · rapport:claim { npc, stage }
 // bid data: see the Raid Auction section below.
 // quests data (optional; defaults to HudState.quests): { quests: [{ id, title, kind, desc?, giver?, zone?, level?, steps, rewards?: [Item] }], tracked?: [ids] }
 //   Actions: quest:track { id, on } · quest:abandon { id }
-import { h, btn, esc, fmtInt, clear } from '../core/util.js';
+import { h, btn, esc, fmtInt, clear, pretty } from '../core/util.js';
 import { glyph } from '../core/glyphs.js';
 import { iconUrl } from '../core/icon.js';
 import { slot, tabs } from '../core/kit.js';
@@ -66,12 +69,16 @@ export class TomeWin extends Win {
         if (ready) btn('ss-btn ss-btn--sm ss-btn--primary', n, 'Claim', () => this.ui.emit('tome:claim', { region: r.id, pct: w.pct }));
       }
     } else {
+      const sel = this.collSel && (d.collectibles || []).find(c => c.id === this.collSel);
+      if (sel) { this.collDetail(P, sel, d); return; }
       const g = h('div', 'ss-tm-coll ss-scroll', P);
       for (const c of d.collectibles || []) {
         const f = c.total ? c.have / c.total : 0;
         const next = (c.tiers || []).find(t => !t.claimed);
         const ready = next && c.have >= next.n;
-        const e = h('div', 'ss-tm-cc' + (ready ? ' is-ready' : ''), g);
+        const e = h('div', 'ss-tm-cc ss-ptr' + (ready ? ' is-ready' : ''), g);
+        e.addEventListener('click', ev => { if (ev.target.closest('button')) return; this.collSel = c.id; this.render(this.d); });
+        e._tip = { title: c.name, lines: ['Click to see every entry and where to find it.'] };
         e.innerHTML = `<i class="ss-tm-ci" style="background-image:url('${iconUrl(c.icon, 56, { bare: true })}')"></i><b>${esc(c.name)}</b><div class="ss-tm-bar"><u style="transform:scaleX(${f.toFixed(3)})"></u></div><span>${fmtInt(c.have)} / ${fmtInt(c.total)}</span>`;
         if (next) {
           const nx = h('div', 'ss-tm-next', e);
@@ -82,6 +89,37 @@ export class TomeWin extends Win {
       }
       if (!(d.collectibles || []).length) h('div', 'ss-empty', g, 'Nothing collected yet.');
     }
+  }
+  /** One collectible type: reward track + checklist grouped by zone. */
+  collDetail(P, c, d) {
+    const W = h('div', 'ss-tm-cd', P);
+    const hd = h('div', 'ss-tm-cdh', W);
+    const back = btn('ss-btn ss-btn--sm ss-btn--ghost', hd, null, () => { this.collSel = null; this.render(this.d); }, 'Back to all collectibles');
+    back.innerHTML = glyph('left') + '<span>All</span>';
+    const f = c.total ? c.have / c.total : 0;
+    hd.insertAdjacentHTML('beforeend', `<i class="ss-tm-ci" style="background-image:url('${iconUrl(c.icon, 44, { bare: true })}')"></i><div class="ss-tm-cdt"><b>${esc(c.name)}</b><div class="ss-tm-bar"><u style="transform:scaleX(${f.toFixed(3)})"></u></div><span>${fmtInt(c.have)} / ${fmtInt(c.total)} found</span></div>`);
+    const tr = h('div', 'ss-tm-tiers', hd);
+    for (const t of c.tiers || []) {
+      const ready = !t.claimed && c.have >= t.n;
+      const cell = h('div', 'ss-tm-tier' + (t.claimed ? ' is-claimed' : ready ? ' is-ready' : ''), tr);
+      cell.appendChild(slot({ ...t, kind: t.kind || 'material' }, { size: 34 }));
+      if (ready) btn('ss-btn ss-btn--sm ss-btn--primary', cell, 'Claim', () => this.ui.emit('collect:claim', { id: c.id, n: t.n }));
+      else h('span', '', cell, t.claimed ? 'Claimed' : `At ${t.n}`);
+    }
+    const items = c.items || [];
+    const zname = z => d.seedsByZone?.[z]?.name || (d.regions || []).find(r => r.id === z)?.name || (z ? pretty(z) : 'Solmara');
+    const L = h('div', 'ss-tm-items ss-scroll', W);
+    const zones = [...new Set(items.map(i => i.zone || ''))];
+    for (const z of zones) {
+      const zi = items.filter(i => (i.zone || '') === z);
+      if (zones.length > 1) h('div', 'ss-tm-zh', L).innerHTML = `<b>${esc(zname(z))}</b><span>${zi.filter(i => i.found).length} / ${zi.length}</span>`;
+      const grid = h('div', 'ss-tm-ig', L);
+      for (const it of zi) {
+        const r = h('div', 'ss-tm-it' + (it.found ? ' is-found' : ''), grid);
+        r.innerHTML = `<i>${glyph(it.found ? 'check' : 'pin')}</i><div><b>${esc(it.name || '???')}</b><span>${esc(it.found ? (it.source || 'Found') : (it.hint || it.source || 'Somewhere in Solmara'))}</span></div>`;
+      }
+    }
+    if (!items.length) h('div', 'ss-empty', L, 'The checklist appears once you find your first one.');
   }
 }
 
@@ -106,7 +144,7 @@ export class RapportWin extends Win {
     if (!n) { h('div', 'ss-empty', D, 'Befriend the people of Solmara to build rapport.'); return; }
     const f = n.max ? Math.min(1, (n.points || 0) / n.max) : 1;
     h('div', 'ss-rp-hd', D).innerHTML = `<div class="ss-rp-por" style="background-image:url('${iconUrl(n.icon || 'npc:' + n.id, 140)}')"></div>
-      <div class="ss-rp-id"><div class="ss-rp-name">${esc(n.name)}</div><div class="ss-rp-title">${esc(n.title || '')}</div>
+      <div class="ss-rp-id"><div class="ss-rp-name">${esc(n.name)}</div><div class="ss-rp-title">${esc(n.title || '')}</div>${n.line ? `<div class="ss-rp-line">“${esc(n.line)}”</div>` : ''}
       <div class="ss-rp-stage"><b>${STAGES[n.stage || 0]}</b>${(n.stage || 0) < 5 ? `<span>→ ${STAGES[(n.stage || 0) + 1]}</span>` : ''}</div>
       <div class="ss-rp-bar"><u style="transform:scaleX(${f.toFixed(3)})"></u><em>${fmtInt(n.points || 0)} / ${fmtInt(n.max || 0)}</em></div>
       <div class="ss-rp-steps">${STAGES.map((s, i) => `<span class="${i <= (n.stage || 0) ? 'on' : ''}">${glyph('heart')}<small>${s}</small></span>`).join('')}</div></div>`;
@@ -114,11 +152,19 @@ export class RapportWin extends Win {
     const acts = h('div', 'ss-rp-acts', D);
     const sec = (title, sub) => { const s = h('div', 'ss-rp-sec', acts); h('div', 'ss-h', s, title); if (sub) h('span', 'ss-rp-sub', s, sub); return h('div', 'ss-rp-btns', s); };
     const sg = sec('Songs', dl.songsMax ? `${dl.songs || 0}/${dl.songsMax} today` : '');
-    for (const s of n.songs || []) { const b = btn('ss-btn ss-btn--sm', sg, null, () => this.ui.emit('rapport:song', { npc: n.id, id: s.id }), s.name); b.innerHTML = glyph('music') + `<span>${esc(s.name)}</span>`; b.disabled = !!s.locked || (dl.songsMax && dl.songs >= dl.songsMax); }
+    const lk = n.likes || {}, likes = (list, id) => (list || []).includes(id);
+    const likeTag = on => on ? `<em class="ss-rp-like" title="${esc(n.name)} likes this">${glyph('heart')}</em>` : '';
+    for (const s of n.songs || []) { const on = likes(lk.songs, s.id); const b = btn('ss-btn ss-btn--sm' + (on ? ' is-liked' : ''), sg, null, () => this.ui.emit('rapport:song', { npc: n.id, id: s.id }), s.name); b.innerHTML = glyph('music') + `<span>${esc(s.name)}</span>` + likeTag(on); b.disabled = !!s.locked || (dl.songsMax && dl.songs >= dl.songsMax); }
     const em = sec('Emotes', dl.emotesMax ? `${dl.emotes || 0}/${dl.emotesMax} today` : '');
-    for (const s of n.emotes || []) { const b = btn('ss-btn ss-btn--sm', em, null, () => this.ui.emit('rapport:emote', { npc: n.id, id: s.id }), s.name); b.innerHTML = glyph('heart') + `<span>${esc(s.name)}</span>`; b.disabled = dl.emotesMax && dl.emotes >= dl.emotesMax; }
+    for (const s of n.emotes || []) { const on = likes(lk.emotes, s.id); const b = btn('ss-btn ss-btn--sm' + (on ? ' is-liked' : ''), em, null, () => this.ui.emit('rapport:emote', { npc: n.id, id: s.id }), s.name); b.innerHTML = glyph('heart') + `<span>${esc(s.name)}</span>` + likeTag(on); b.disabled = dl.emotesMax && dl.emotes >= dl.emotesMax; }
     const gf = sec('Gifts', 'Click a gift to give it');
-    for (const it of n.gifts || []) gf.appendChild(slot(it, { size: 40, onClick: () => this.ui.emit('rapport:gift', { npc: n.id, uid: it.uid }), hint: 'Click to give' }));
+    const PREF = { love: ['Loves this', '♥♥'], like: ['Likes this', '♥'], dislike: ['Dislikes this', '✕'] };
+    for (const it of n.gifts || []) {
+      const pref = lk.gifts?.[it.id || String(it.uid || '').replace(/^mat:/, '')], P = PREF[pref];
+      const el = slot(it, { size: 40, onClick: () => this.ui.emit('rapport:gift', { npc: n.id, uid: it.uid }), hint: P ? `${P[0]} · click to give` : 'Click to give' });
+      if (P) h('b', `ss-rp-pref is-${pref}`, el, P[1]);
+      gf.appendChild(el);
+    }
     if (!(n.gifts || []).length) h('span', 'ss-dim', gf, 'No gifts in your bags.');
     h('div', 'ss-h', D, 'Stage Rewards');
     const rw = h('div', 'ss-rp-rw', D);

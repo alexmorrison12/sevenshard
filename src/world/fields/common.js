@@ -166,8 +166,17 @@ export function scatter(rng, box, minD, tries, accept = () => true, existing = n
  * and castle courtyards). Shadows are unaffected (the depth pass ignores the patch).
  */
 const FADE = {};
-export function fadeMaterial(name) {
-  if (FADE[name]) return FADE[name];
+/** GLSL: dither-dissolve fragments south of / above the player ('south'), or close to the camera ('near': [far, near] m) */
+export function fadeGLSL(mode, near = [4.5, 2.4]) {
+  if (mode === 'near') return `{ float cdist = length(vWPos - cameraPosition); float nf = smoothstep(${near[0].toFixed(2)}, ${near[1].toFixed(2)}, cdist);
+  if (nf > 0.01 && bayer4() < nf) discard; }`;
+  return `{ vec3 dp = vWPos - uPlayerPos;
+  float fs = smoothstep(1.0, 3.5, dp.z) * smoothstep(0.6, 2.2, dp.y - dp.z * 0.12) * smoothstep(17.0, 10.0, abs(dp.x)) * step(uPlayerPos.y, 900.0);
+  if (fs > 0.01 && bayer4() < 0.92 * fs) discard; }`;
+}
+export function fadeMaterial(name, mode = 'south', near = [4.5, 2.4]) {
+  const key = name + '|' + mode + (mode === 'near' ? near.join(',') : '');
+  if (FADE[key]) return FADE[key];
   const base = kitMaterial(name);
   if (name === 'glow') return base;
   const m = base.clone();
@@ -176,14 +185,11 @@ export function fadeMaterial(name) {
     ob.call(base, sh, r);
     sh.uniforms.uPlayerPos = G.uPlayerPos;
     sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform vec3 uPlayerPos;')
-      .replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
-{ vec3 dp = vWPos - uPlayerPos;
-  float fs = smoothstep(1.0, 3.5, dp.z) * smoothstep(0.6, 2.2, dp.y - dp.z * 0.12) * smoothstep(17.0, 10.0, abs(dp.x)) * step(uPlayerPos.y, 900.0);
-  if (fs > 0.01 && bayer4() < 0.92 * fs) discard; }`);
+      .replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>\n${fadeGLSL(mode, near)}`);
   };
-  m.customProgramCacheKey = () => base.customProgramCacheKey() + '|fadeS';
+  m.customProgramCacheKey = () => base.customProgramCacheKey() + '|fade:' + key;
   m.userData = { ...base.userData, u: bu, shared: true };
-  FADE[name] = m;
+  FADE[key] = m;
   return m;
 }
 
@@ -193,11 +199,11 @@ export function fadeMaterial(name) {
  * animated parts (part(name) → { add(g, m, tint), build() → Mesh }) that are NOT merged (windmill sails, cannons…).
  */
 export class FieldKit extends Kit {
-  constructor(o = {}) { super(o); this.cb = new Map(); this.parts = []; this.fade = !!o.fade; }
+  constructor(o = {}) { super(o); this.cb = new Map(); this.parts = []; this.fade = o.fade === true ? 'south' : (o.fade || null); this.near = o.near || [4.5, 2.4]; }
   add(mat, g, m, opts) {
     if (this.fade && mat !== 'glow') {
       const o = opts || {};
-      const material = fadeMaterial(mat);
+      const material = fadeMaterial(mat, this.fade, this.near);
       return this.addC(material, 'fade-' + mat, g, m, { ...o, cast: o.cast ?? !material.userData.noShadow });
     }
     if (FieldKit.debug) { const p = g.attributes.position.array; let bad = false; for (let i = 0; i < p.length; i++) if (!Number.isFinite(p[i])) { bad = true; break; } if (bad || (m && m.elements.some(v => !Number.isFinite(v)))) console.warn('[fieldkit] NaN geometry', mat, new Error().stack.split('\n').slice(2, 5).join(' | ')); }

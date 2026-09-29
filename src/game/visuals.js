@@ -31,7 +31,14 @@ export class Visuals {
     this.off = [
       level.on('spawn', ({ unit }) => this.attach(unit)),
       level.on('despawn', ({ unit }) => this.detach(unit)),
-      level.on('damage', ev => { if (ev.amount > 0 && !ev.dot) ev.tgt._flash = Math.max(ev.tgt._flash || 0, ev.crit ? 0.5 : 0.35); }),
+      // hit flash: your hits (and hits on you) only — eight raiders flashing a boss would keep it permanently white
+      level.on('damage', ev => {
+        if (!(ev.amount > 0) || ev.dot) return;
+        const me = level.localHero, t = ev.tgt;
+        if (me && ev.src !== me && t !== me && ev.src?.kind === 'hero') return;
+        const k = t.kind === 'boss' ? (ev.crit ? 0.26 : 0.18) : ev.crit ? 0.5 : 0.35;
+        t._flash = Math.max(t._flash || 0, k);
+      }),
       level.on('death', ({ unit }) => { unit.model?.play?.('death', { dur: 1.2 }); }),
       level.on('knock', ({ tgt, knock }) => { if (knock === 'down' || knock === 'up') { tgt.model?.play?.('knockdown', { dur: 0.6 }); tgt._wasDown = true; } else if ((knock === 'push' || knock === 'pull') && tgt.kind !== 'boss' && !tgt.skill) tgt.model?.play?.('knockback', { dur: 0.5 }); }),
       level.on('standUp', ({ unit }) => { unit.model?.play?.('getup', { dur: 0.35 }); unit._wasDown = false; }),

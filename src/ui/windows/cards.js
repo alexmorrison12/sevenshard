@@ -1,10 +1,13 @@
 // Cards: a deck of 6, set bonuses (by count and total awakening), and the collection with awakening (0–5 ★).
 //   data: { deck: [cardId|null ×6], cards: [{ id, name, grade, awaken, count (spare copies), icon, desc?, set? }],
-//           sets: [{ id, name, cards: [ids], bonuses: [{ need, awaken?, text }] }] }
+//           sets: [{ id, name, cards: [ids], bonuses: [{ need, awaken?, text }] }],
+//           packs?: [{ id, name, count }], owned?, total?, choice?: { pack, options: [{ id, name, grade, icon? }] } }
 //   Awakening n → n+1 costs `awakenCost[n]` copies (default [1, 2, 3, 4, 5]).
-// Actions: cards:equip { id, slot } · cards:unequip { slot } · cards:awaken { id }
-import { h, btn, esc, clear } from '../core/util.js';
-import { iconUrl } from '../core/icon.js';
+// Actions: cards:equip { id, slot } · cards:unequip { slot } · cards:awaken { id } · cards:auto {} ·
+//          cards:open { pack } · cards:choose { index } (pick from a pending Legendary Card Selector)
+import { h, btn, esc, clear, fmtInt } from '../core/util.js';
+import { glyph } from '../core/glyphs.js';
+import { iconUrl, itemIcon } from '../core/icon.js';
 import { tabs } from '../core/kit.js';
 import { grade } from '../core/data.js';
 import { draggable } from '../core/drag.js';
@@ -19,6 +22,8 @@ export class CardsWin extends Win {
     this.deck = h('div', 'ss-cd-deck', top);
     this.sets = h('div', 'ss-cd-sets', top);
     this.filter = 'all';
+    this.bar = h('div', 'ss-cd-bar', b);
+    this.choice = h('div', 'ss-cd-choice', b);
     this.tabsWrap = h('div', '', b);
     this.coll = h('div', 'ss-cd-coll ss-scroll', b);
   }
@@ -55,6 +60,31 @@ export class CardsWin extends Win {
       const box = h('div', 'ss-cd-set', this.sets);
       box.innerHTML = `<div class="ss-cd-sh"><b>${esc(s.name)}</b><span>${have}/${s.cards.length} cards · ${aw} awakening</span></div>` +
         (s.bonuses || []).map(b => { const on = have >= b.need && (b.awaken == null || aw >= b.awaken); return `<div class="ss-cd-b${on ? ' is-on' : ''}"><em>${b.need}-set${b.awaken != null ? ` (${b.awaken}★)` : ''}</em>${esc(b.text)}</div>`; }).join('');
+    }
+    // toolbar: collection progress, auto-deck, card packs to open
+    clear(this.bar);
+    h('div', 'ss-cd-own', this.bar).innerHTML = `<span>Collection</span><b>${fmtInt(d.owned ?? cards.length)}</b>${d.total ? `<em>/ ${fmtInt(d.total)}</em>` : ''}`;
+    const auto = btn('ss-btn ss-btn--sm', this.bar, null, () => this.ui.emit('cards:auto', {}), 'Build the best deck automatically');
+    auto.innerHTML = glyph('sparkle') + '<span>Auto-Deck</span>'; auto.disabled = !cards.length;
+    h('i', 'ss-cd-sp', this.bar);
+    for (const p of (d.packs || []).filter(p => p.count > 0)) {
+      const b = btn('ss-btn ss-btn--sm ss-cd-pack', this.bar, null, () => this.ui.emit('cards:open', { pack: p.id }), `Open ${p.name}`);
+      b.innerHTML = `<i style="background-image:url('${itemIcon('item:' + p.id, 22)}')"></i><span>${esc(p.name)}</span><em>×${fmtInt(p.count)}</em><b>Open</b>`;
+      b.disabled = !!d.choice;
+    }
+    // a pending Legendary Card Selector: pick one inline
+    clear(this.choice);
+    this.choice.hidden = !d.choice;
+    if (d.choice) {
+      h('div', 'ss-cd-ch', this.choice).innerHTML = `${glyph('crown')}<b>Card Selector</b><span>Choose one card to keep.</span>`;
+      const row = h('div', 'ss-cd-chrow', this.choice);
+      (d.choice.options || []).forEach((o, i) => {
+        const c = { ...o, icon: o.icon || byId[o.id]?.icon || 'npc:' + o.id, awaken: 0 };
+        const el = this.card(c, 'sm'); el.classList.add('ss-ptr', 'ss-cd-pick');
+        el.addEventListener('click', () => this.ui.emit('cards:choose', { index: i }));
+        el._tip.lines.push(byId[o.id] ? 'You own this card: a pick adds a copy' : 'New card');
+        row.appendChild(el);
+      });
     }
     // collection
     clear(this.tabsWrap);
