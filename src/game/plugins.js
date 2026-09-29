@@ -5,6 +5,7 @@ import './features.js';
 import './social/partyfinder.js';
 import './social/bidding.js';
 import './social/wardrobe.js';
+import './social/services.js';
 import './quests/index.js';
 import './modes/field.js';
 import './modes/prologue.js';

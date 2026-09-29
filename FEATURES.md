@@ -12,8 +12,8 @@ encounters, systems, story, modes, meta.
 | Detailed customization | face/hair/beard/colours/skin/eyes/height/build/war paint, live 3D preview, face camera | ✅ |
 | Class skill preview videos | live 3D skill demos on the creation stage: the preview hero loops its skills with full FX; hover a skill to watch it | ✅ |
 | Powerpass / Knowledge Transfer | "Powerpass" path at creation (Lv 60, Vanguard +10) | ✅ |
-| Roster-wide storage, roster-bound materials | roster wallet + materials + bank | 🟡 systems/ui |
-| Titles, achievements | titles + achievements | 🟡 systems |
+| Roster-wide storage, roster-bound materials | roster-wide wallet and materials; Roster Storage (Petra Coin) holds gear for every character | ✅ |
+| Titles, achievements | titles with stat bonuses, achievements from every activity | ✅ |
 | Wardrobe, avatars, dyes | tailor: 9 dye palettes, wear any armour look you've earned | ✅ |
 | Photo mode | hide HUD (Ctrl+Z), free zoom | ✅ |
 | Character profile with your hero | live 3D portrait in the paper doll, drag to turn | ✅ |
@@ -42,27 +42,27 @@ encounters, systems, story, modes, meta.
 | Lost Ark | SEVENSHARD | Status |
 |---|---|---|
 | Levels 1–60, item level | Lv 1–60, iLvl from 6 gear pieces | ✅ |
-| Honing with falling rates, failure bonus, Artisan's Energy, boosters | exact model incl. Solar Grace/Blessing/Protection | ✅ logic · 🟡 window |
-| Quality (0–100) and quality upgrade | yes | ✅ logic · 🟡 window |
+| Honing with falling rates, failure bonus, Artisan's Energy, boosters | exact model incl. Solar Grace/Blessing/Protection, weekly Honing Support, expected taps | ✅ |
+| Quality (0–100) and quality upgrade | yes | ✅ |
 | Gear sets & successor transfer | Vanguard (1100–1350) → Horned Tyrant legion set (1340–1590) with set bonuses | ✅ logic |
 | Accessories with stats + engravings + negatives | necklace, 2 earrings, 2 rings | ✅ |
-| Ability stone faceting (75% ±10%) | yes, "97 stone" detection + share card | ✅ logic · 🟡 window |
+| Ability stone faceting (75% ±10%) | yes, "97 stone" detection + share card | ✅ |
 | Engravings (5/10/15 nodes, books) | 24 combat + 16 class engravings, books, 5×3 builds | ✅ |
-| Gems (damage / cooldown) | Ruinstone / Swiftstone Lv 1–10, 11 sockets, fusion | 🟡 systems |
-| Cards & card sets | ~32 cards, deck of 6, sets with awakening | 🟡 systems |
+| Gems (damage / cooldown) | Ruinstone / Swiftstone Lv 1–10, 11 sockets, fusion | ✅ |
+| Cards & card sets | ~32 cards, deck of 6, sets with awakening, card packs, Legendary Selector | ✅ |
 | Bracelets | random effect lines | ✅ |
 | Combat stats (crit, spec, swift, dom, endur, expert) | all six | ✅ |
-| Ark Passive (late Lost Ark) | Sunheart Passive: Evolution / Enlightenment / Leap trees, points from clears, Hyper Awakening Technique | ✅ logic · 🟡 window |
+| Ark Passive (late Lost Ark) | Sunheart Passive: Evolution / Enlightenment / Leap trees, points from clears, Hyper Awakening Technique | ✅ |
 
 ## Content
 | Lost Ark | SEVENSHARD | Status |
 |---|---|---|
-| Prologue in a burning castle | The Siege of Brighthold: cannons vs the Ashmaw behemoth, duel with Varkhul | ⬜ story/world-fields |
-| Main story quest, cutscenes, dialogue | MSQ Solhaven → Goldmeadow → Thornwood → Ashen Ridge → first Shard; in-engine cutscenes | ⬜ story |
-| Side quests, hidden stories | yes | ⬜ story |
+| Prologue in a burning castle | The Siege of Brighthold: Brannoc at your side, the rampart cannons vs Ashmaw the siege behemoth, the Shard awakening, the lost duel with Varkhul, escape by ship | ✅ |
+| Main story quest, cutscenes, dialogue | 41 main-story quests: prologue → Solhaven → Goldmeadow → Pipsprout → Thornwood → Ashen Ridge → epilogue; ~20 in-engine cutscenes; painted NPC portraits | ✅ |
+| Side quests, hidden stories | 26 side quests + the 7-step Adventurer's Guide for Powerpass characters | ✅ |
 | Capital city hub | Solhaven: plaza, market, artisan quarter, harbour, Rift Nexus, guild hall | ✅ world |
-| Field zones | Goldmeadow, Thornwood, Ashen Ridge (+ field bosses, elites) | ⬜ world-fields/story |
-| Tortoyk (tiny mokoko land) | Pipsprout Hollow — you shrink to Pip size | ⬜ world-fields/story |
+| Field zones | Goldmeadow, Thornwood, Ashen Ridge: mob packs, named elites, trade nodes, vistas, lore, triports, field boss and chaos gate spots | ✅ |
+| Tortoyk (tiny mokoko land) | Pipsprout Hollow: you shrink to Pip size among giant flowers, acorn houses and 28 Pip Seeds | ✅ |
 | Chaos Dungeons (3 stages, % bar, rest bonus) | Demon Rift I–IV | ✅ |
 | Guardian Raids | Rimewing, Cinderhorn, Sandmaw, Kurai the Pyrefox — scripted mechanics, counters, stagger checks, part breaks, own arenas | ✅ |
 | Abyssal Dungeon | The Sunken Oratory: Nerissa (song channels, bubble prison) and the Deep Oracle (tentacles, submerge adds) | ✅ |
@@ -70,18 +70,18 @@ encounters, systems, story, modes, meta.
 | Trial Guardian / challenge modes | weekly Trial Guardian: 2 of 7 affixes (Volcanic, Frenzied, Mirror Guard, Storm-Warded, Haunted, Glass, Bulwark), synced heroes | ✅ |
 | Hell mode / Cube / Boss rush | Inferno Descent: 100 floors, 7 floor kinds, 21 boons, a boss every 10th floor, checkpoints · Rift Cube: 10 timed rooms, weekly tickets | ✅ |
 | Field bosses, Chaos Gates, Adventure Islands, Procyon's Compass | hourly schedule (UTC), Event Compass with Go; Old Thunderhoof field boss with AI adventurers, chaos gate waves + Gatekeeper, 5 Adventure Island objectives | ✅ |
-| Una's tasks | Wayfarer's Tasks (daily/weekly), reputation | 🟡 systems |
-| Sailing, crew, ship skills, sea events | Dawnrunner, crew, Full Sail/Repair/Cannons/Brace, storms, ghost ships, sea bounties | ⬜ sea |
-| Islands & Island Souls | 8 islands with their own gimmicks | ⬜ sea |
+| Una's tasks | Wayfarer's Tasks (daily/weekly), reputation | ✅ |
+| Sailing, crew, ship skills, sea events | the Dawnrunner: crew skills, Gale gauge, Sunfire barrage, stores, storms, pirates, ghost ship, 10 sea bounties, auto-course from the world map | ✅ |
+| Islands & Island Souls | 8 islands, each with its own activity: casino, singing statues, fort defence, lantern shrine (night only), storm climb, pearl diving, a sleeping giant turtle, the Bellwarden | ✅ |
 | Stronghold | Brightwater Isle: buildings, research, crafting, crew dispatch, garden and pet ranch, steward, ferry | ✅ |
-| Trade skills (6) + Life Energy | foraging, logging, mining, hunting, fishing, archaeology + minigames | 🟡 systems · ⬜ story/fields |
-| Mokoko seeds, collectibles, Adventure Tome | 120 Pip Seeds, Island Souls, Giant's Hearts, Masterpieces, Omnium Stars, Sea Bounties, World Tree Leaves, Vistas; Tome per region | 🟡 systems · ⬜ placement |
-| Rapport, songs, emotes | 8 rapport NPCs, 5 songs (real in-world performances), 20+ emotes | 🟡 systems/audio |
-| Triports, Song of Escape | Songs (,): Hymn of Homeward returns you to Solhaven; rapport songs; triports in fields | ✅ songs · 🟡 story triports |
+| Trade skills (6) + Life Energy | foraging, logging, mining, hunting, fishing, archaeology at trade nodes in every field | ✅ |
+| Mokoko seeds, collectibles, Adventure Tome | 120 Pip Seeds, Island Souls, Giant's Hearts, Masterpieces, Omnium Stars, Sea Bounties, World Tree Leaves, Vistas; Tome per region | ✅ |
+| Rapport, songs, emotes | 8 rapport NPCs, 5 songs (real in-world performances on a song wheel), 20 emotes the town answers | ✅ |
+| Triports, Song of Escape | world-map triport travel between Solhaven and the fields; Hymn of Homeward returns you to Solhaven | ✅ |
 | PvP Proving Grounds 3v3, duels | Deathmatch & Elimination in the Crucible (normalised stats, unstoppable after CC), Elo ranks Bronze → Grandmaster, Proving Tokens, duels from the context menu | ✅ |
-| Guild | AI guilds, donations, bloodstones, research, shop | 🟡 systems |
-| Auction house, crystal exchange, vendors | simulated market with SimPlayer listings, exchange rate | 🟡 systems · ⬜ ui |
-| Mail | mailbox (+ tongue-in-cheek compensation letters) | 🟡 systems |
+| Guild | AI guilds, donations, bloodstones, research, missions, shop | ✅ |
+| Auction house, crystal exchange, vendors | market with AI-player listings and price history, crystal exchange, vendors, stablemaster | ✅ |
+| Mail | mailbox with attachments (+ tongue-in-cheek compensation letters) | ✅ |
 | Party finder, matchmaking | live AI listings (Lost Ark culture notes), apply/create/accept applicants, matchmaking, AI fill | ✅ |
 | Raid auction (bidding) and "More rewards" chests | AI raiders bid gold, pot split among the rest; More Rewards chest after every gate | ✅ |
 
