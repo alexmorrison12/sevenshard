@@ -259,8 +259,8 @@ Pearl, Relic Idol; Glimmer Ore = `gem_ore`), tools tier 1–4 (yield +0/10/20/35
 
 ## `collectibles` (`collectibles.js`, data `src/data/collectibles.js`)
 120 Pip Seeds `seed:<zone>:<n>` (solhaven 16, goldmeadow 24, thornwood 22, ashen_ridge 18, pipsprout 28, islands 12),
-8 Island Souls `soul:<island>` (islands: Lanternfall Isle, Brinehollow, Gilded Atoll, Whistlewind Rock, Ember Reef,
-Mirrorwater Isle, Hushwater Atoll, Skyreach Spire — `ISLANDS[id] = { id, name, focus, gimmick, soul }`), 6 Giant's Hearts,
+8 Island Souls `soul:<island>` (the Glass Sea islands from `src/data/islands.js`: Coinflip Cay, Songstone Isle, Powderkeg Cove,
+Moonveil Atoll, Stormcrown Spire, Hushwater Lagoon, Shellback Isle, Drownbell Shoal; Adventure Islands are `ADVENTURE_LIST`), 6 Giant's Hearts,
 10 Masterpieces, 8 Omnium Stars, 10 Sea Bounties, 6 World Tree Leaves, 12 Vistas — each `{ id, name, zone, hint, source }`.
 Reward tiers per type (skill point potions, card packs, roster xp, pets, mounts, titles; Sunbloom Pip Wagon at 120 seeds).
 | function | returns |
@@ -278,7 +278,7 @@ Regions: `solhaven goldmeadow thornwood ashen_ridge pipsprout glass_sea`; Solhav
 
 ## `rapport` (`rapport.js`, data `src/data/rapport.js`)
 `brannoc seraphine mirelle wren maren tumbleroot` (Solhaven; = `data/npcs.js` `rapport` ids), `bramblebeard`
-(Pipsprout), `morwenna` (Brinehollow). Stages Neutral 0 → Amicable 1,000 → Friendly 3,000 → Trusted 6,000 → Honored
+(Pipsprout), `morwenna` (Drownbell Shoal). Stages Neutral 0 → Amicable 1,000 → Friendly 3,000 → Trusted 6,000 → Honored
 10,000 → Devoted 16,000. 6 songs + 6 emotes per NPC per day; song 40 / emote 15 / gifts 60–600 points × preference
 (love 2, like 1.5, neutral 1, dislike 0.5). Songs: `homeward tides rest valor sunrise` (same ids as features.js).
 | function | returns |

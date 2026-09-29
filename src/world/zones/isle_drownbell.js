@@ -32,6 +32,7 @@ export async function build(zone, o = {}) {
       for (let i = 0; i < 24; i++) dec.add(rng.pick(['puddle', 'moss', 'pebbles', 'cracks']), rng.range(-28, 28), rng.range(-26, 26), { size: rng.range(1, 2.4), alpha: 0.7 });
       P.net(kit, 6, H(6, 34), 34, 0.4); P.fishBasket(kit, 9, H(9, 32), 32, 0.8); P.ropeCoil(kit, 3.5, H(3.5, 36), 36, 1);
       c.anchor('npc:fisher', 7.5, 30.5, Math.PI);
+      c.anchor('npc:witch', -7.5, 31, Math.PI * 0.85);   // Old Morwenna of the Brine (rapport)
       c.anchor('bellpull', bx, bz + 2, Math.PI);
       c.anchor('arena', 0, -4, Math.PI);
       c.anchor('pool', 0, -30, 0); c.anchors.pool.extra = { free: true };

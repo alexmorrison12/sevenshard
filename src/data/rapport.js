@@ -1,5 +1,5 @@
 // Rapport: 8 NPCs you befriend with songs, emotes and gifts. Ids match the `rapport` field of data/npcs.js CITY_NPCS
-// (brannoc, seraphine, mirelle, wren, maren, tumbleroot) plus Bramblebeard (Pipsprout Hollow) and Morwenna (Brinehollow).
+// (brannoc, seraphine, mirelle, wren, maren, tumbleroot) plus Bramblebeard (Pipsprout Hollow) and Morwenna (Drownbell Shoal).
 // Stage rewards: { bundle, collect?: [[type, id]] } — collect entries go through systems/collectibles.collect.
 export const STAGES = [
   { idx: 0, name: 'Neutral', min: 0 }, { idx: 1, name: 'Amicable', min: 1000 }, { idx: 2, name: 'Friendly', min: 3000 },
@@ -60,7 +60,7 @@ export const RAPPORT_NPCS = [
     gifts: { gift1: 'love', gift2: 'like', gift3: 'love', gift4: 'neutral' },
     rewards: [R({ food3: 3 }), R({ cards: { bramblebeard: 1 } }), R({ skill_potion: 1 }, [['leaves', 'leaf:4']]), R({ skill_potion: 1 }), R({ titles: ['twig_bearer'], mounts: ['acorn_cart'] })],
     lines: ['Eh? A big one! Mind the mushrooms.', 'You found a seed? Keep it, keep it. There are more. Probably.', 'In my day we hid seeds from the Legion. Now we hide them from you.', 'Sit, sit. The snails like you.', 'Take my second-best twig. The best one is taken.', 'You are a Pip at heart, big one.'] },
-  { id: 'morwenna', name: 'Old Morwenna of the Brine', title: 'Sea Witch of Brinehollow', zone: 'islands',
+  { id: 'morwenna', name: 'Old Morwenna of the Brine', title: 'Sea Witch of Drownbell', zone: 'islands',
     personality: 'Cryptic, amused and mildly alarming; answers questions with riddles and riddles with tea.',
     songs: { tides: 'love', rest: 'like', sunrise: 'dislike' }, emotes: { think: 'love', bow: 'like', kneel: 'like', cheer: 'dislike' },
     gifts: { gift1: 'dislike', gift2: 'like', gift3: 'neutral', gift4: 'love' },

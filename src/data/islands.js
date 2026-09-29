@@ -126,6 +126,8 @@ export const ISLANDS = [
     npcs: [
       { id: 'bellfisher', name: 'Grizzel Hookhand', title: 'Shoal Fisher', npc: 'fisher', anchor: 'npc:fisher',
         lines: ['Ring that bell three times and the Bellwarden comes up for a look. Then it comes up for a snack.', 'Its shell is the old chapel tower. Crabs will wear anything.'] },
+      { id: 'morwenna', name: 'Old Morwenna of the Brine', title: 'Sea Witch of Drownbell', npc: 'oracle', sex: 'f', anchor: 'npc:witch', rapport: 'morwenna',
+        lines: ['Mm. A Shardbearer. You smell of salt and bad decisions.', 'Sing me something, child. The bell and I have heard every song but yours.', 'Bring me a gift from the deep and I will tell you what the Bellwarden guards.'] },
     ],
   },
 ];

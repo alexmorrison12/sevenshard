@@ -77,6 +77,8 @@ await modeStep('inferno descent', { kind: 'inferno', start: 1, party: 1 }, 8000)
 await modeStep('trial guardian', { kind: 'trial' }, 8000);
 await modeStep('rift cube', { kind: 'cube', party: 1 }, 8000);
 await modeStep('stronghold', { kind: 'stronghold' }, 4000);
+await modeStep('sailing (course to Coinflip Cay)', { kind: 'sail', to: 'coinflip' }, 8000);
+await modeStep('island: Drownbell Shoal', { kind: 'island', island: 'drownbell' }, 5000);
 await step('map travel: Goldmeadow', async () => { await __session.route('map:travel', { id: 'goldmeadow' }); await __e2e.sleep(3000); const r = { zone: __game.zone?.id, mode: __game.mode?.kind }; await __session.returnToHub(); await __e2e.sleep(1500); return r; });
 await step('save persisted', async () => { __session.account.save(true); const raw = JSON.parse(localStorage.getItem('sevenshard.save.v1')); return { chars: raw.chars.length, names: raw.chars.map(c => c.name) }; });
 console.log(`\n${ok} passed, ${bad} failed · ${errs.length} console error(s)`);

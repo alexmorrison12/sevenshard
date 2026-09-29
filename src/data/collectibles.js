@@ -2,23 +2,24 @@
 // a hint. Zones: solhaven, goldmeadow, thornwood, ashen_ridge, pipsprout, islands.
 //   COLLECTIBLES[type] = { id, name, icon, items: [{ id, name, zone, hint, source }], tiers: [{ n, bundle }] }
 //   ISLANDS: the 8 islands of the Glass Sea.   TOME[region]: Adventure Tome entries & completion rewards.
+import { ISLANDS as SEA_ISLANDS, SEA_BOUNTIES } from './islands.js';
 export const ZONES = ['solhaven', 'goldmeadow', 'thornwood', 'ashen_ridge', 'pipsprout', 'islands'];
 export const ZONE_NAMES = { solhaven: 'Solhaven', goldmeadow: 'Goldmeadow', thornwood: 'Thornwood', ashen_ridge: 'Ashen Ridge', pipsprout: 'Pipsprout Hollow', islands: 'The Glass Sea' };
 
 // ------------------------------------------------------------------------------------------------ islands
-export const ISLAND_LIST = [
-  { id: 'lanternfall', name: 'Lanternfall Isle', focus: 'cards', gimmick: 'Every night the islanders release paper lanterns over the bay. Light all twelve shrines before dawn.', soul: 'Light all twelve lantern shrines in one night.' },
-  { id: 'brinehollow', name: 'Brinehollow', focus: null, gimmick: 'A half-sunken fishing village where the sea witch Morwenna trades riddles for secrets.', soul: 'Answer Old Morwenna’s three riddles.' },
-  { id: 'gilded_atoll', name: 'Gilded Atoll', focus: 'gold', gimmick: 'A ring of golden sand that only surfaces for Adventure Island events.', soul: 'A rare find in the Gilded Atoll event chest.' },
-  { id: 'whistlewind', name: 'Whistlewind Rock', focus: 'pips', gimmick: 'Windy cliffs where Pips race kites on the updrafts — and cheat shamelessly.', soul: 'Win the Pip kite race.' },
-  { id: 'ember_reef', name: 'Ember Reef', focus: 'shards', gimmick: 'A volcanic reef of fire crabs; at noon the tide boils.', soul: 'Defeat the Molten Crab Tyrant at high tide.' },
-  { id: 'mirrorwater', name: 'Mirrorwater Isle', focus: 'silver', gimmick: 'A lagoon so still it reflects the Seven Lights that are no longer in the sky.', soul: 'Find the seven reflections of the Lights.' },
-  { id: 'hushwater', name: 'Hushwater Atoll', focus: null, gimmick: 'A silent island where a giant turtle sleeps. Speak, and it wakes up grumpy.', soul: 'Play the Lullaby of Rest to the sleeping turtle.' },
-  { id: 'skyreach', name: 'Skyreach Spire', focus: null, gimmick: 'A needle of rock above the clouds, climbed by rope bridges and bad decisions.', soul: 'Reach the summit without falling once.' },
+// The eight islands of the Glass Sea (src/data/islands.js, the sea owner's content) each hold an Island Soul.
+export const ISLAND_LIST = SEA_ISLANDS.map(i => ({ id: i.id, name: i.name, focus: null, gimmick: i.blurb, soul: i.soul?.desc || `Earn the Soul of ${i.name}.` }));
+/** Adventure Islands: event isles that surface on the calendar, each with a reward focus (instanced by modes/events.js) */
+export const ADVENTURE_LIST = [
+  { id: 'lanternfall', name: 'Lanternfall Isle', focus: 'cards', gimmick: 'Every night the islanders release paper lanterns over the bay. Light the shrines before dawn.' },
+  { id: 'gilded_atoll', name: 'Gilded Atoll', focus: 'gold', gimmick: 'A ring of golden sand that only surfaces for Adventure Island events.' },
+  { id: 'whistlewind', name: 'Whistlewind Rock', focus: 'pips', gimmick: 'Windy cliffs where Pips race kites on the updrafts — and cheat shamelessly.' },
+  { id: 'ember_reef', name: 'Ember Reef', focus: 'shards', gimmick: 'A volcanic reef of fire crabs; at noon the tide boils.' },
+  { id: 'mirrorwater', name: 'Mirrorwater Isle', focus: 'silver', gimmick: 'A lagoon so still it reflects the Seven Lights that are no longer in the sky.' },
 ];
-export const ISLANDS = Object.fromEntries(ISLAND_LIST.map(i => [i.id, i]));
+export const ISLANDS = Object.fromEntries([...ISLAND_LIST, ...ADVENTURE_LIST].map(i => [i.id, i]));
 /** Adventure Island rotation (tasks.js calendar): islands with a reward focus */
-export const ADVENTURE_ISLANDS = ISLAND_LIST.filter(i => i.focus).map(i => i.id);
+export const ADVENTURE_ISLANDS = ADVENTURE_LIST.map(i => i.id);
 
 // ------------------------------------------------------------------------------------------------ pip seeds
 const SPOTS = {
@@ -27,7 +28,7 @@ const SPOTS = {
   thornwood: ['the hollow oak', 'the spider nests', 'the cultist altar', 'the moonlit pool', 'the toadstool ring', 'the fallen giant tree', 'the witch lights', 'the thorn arch', 'the treant grove', 'the abandoned logging camp', 'the owl roost', 'the misty creek'],
   ashen_ridge: ['the demon fortress gate', 'the lava falls', 'the scorched village', 'the obsidian spires', 'the old mine cart track', 'the burned chapel', 'the sulphur vents', 'the broken siege engine', 'the ash dunes', 'the Legion banners'],
   pipsprout: ['the giant red mushroom', 'the dewdrop pond', 'Bramblebeard’s porch', 'the acorn tower', 'the snail stables', 'the dandelion clock', 'the ladybug bridge', 'the thimble well', 'the moss library', 'the berry market', 'the sleepy caterpillar', 'the root tunnels', 'the petal theatre', 'the seed vault door'],
-  islands: ['the Lanternfall shrines', 'the Brinehollow rooftops', 'the Gilded Atoll dunes', 'the Whistlewind kite launch', 'the Ember Reef crab nests', 'the Mirrorwater shallows', 'the Hushwater turtle shell', 'the Skyreach rope bridge'],
+  islands: ['the Gilded Gull casino roof', 'the Coinflip Cay pier', 'the Songstone amphitheatre', 'the Powderkeg cannon battery', 'the Powderkeg smugglers’ cave', 'the Moonveil whale bones', 'the Stormcrown lightning rods', 'the Stormcrown bell tower', 'the Hushwater waterfall', 'the sleeping turtle of Shellback', 'the Shellback seaweed beds', 'the Drownbell graveyard'],
 };
 const WHERE = ['On top of', 'Behind', 'Under', 'Inside', 'At the foot of', 'Beside', 'Above', 'Tucked into'];
 const SEED_COUNTS = { solhaven: 16, goldmeadow: 24, thornwood: 22, ashen_ridge: 18, pipsprout: 28, islands: 12 };
@@ -66,29 +67,18 @@ export const STARS = [
   I('star:3', 'Omnium Star: Thorn Spark', 'thornwood', 'The owls hoard it. Ask nicely.', 'Thornwood'),
   I('star:4', 'Omnium Star: Ember Mote', 'ashen_ridge', 'Glowing in the sulphur vents.', 'Ashen Ridge'),
   I('star:5', 'Omnium Star: Pip Twinkle', 'pipsprout', 'Tumbleroot found it and will not stop talking about it.', 'Rapport: Tumbleroot (Trusted)'),
-  I('star:6', 'Omnium Star: Skyreach Beacon', 'islands', 'At the very top of Skyreach Spire.', 'Skyreach Spire'),
+  I('star:6', 'Omnium Star: Storm Beacon', 'islands', 'Hung beside the Crown Bell at the top of Stormcrown Spire.', 'Stormcrown Spire'),
   I('star:7', 'Omnium Star: Crucible Flame', 'solhaven', 'Awarded to fighters of renown.', 'Proving Grounds vendor'),
-  I('star:8', 'Omnium Star: Hollow Wish', 'islands', 'Hushwater’s turtle dreams of it.', 'Hushwater Atoll'),
+  I('star:8', 'Omnium Star: Hollow Wish', 'islands', 'The sleeping turtle of Shellback Isle dreams of it.', 'Shellback Isle'),
 ];
-export const BOUNTIES = [
-  I('bounty:redgull', 'Bounty: Captain Redgull', 'islands', 'A pirate who robs merchant ships for their biscuits.', 'Sea combat'),
-  I('bounty:brine_maw', 'Bounty: the Brine Maw', 'islands', 'A sea serpent that surfaces in storms.', 'Sea combat (storm)'),
-  I('bounty:kraken_arm', 'Bounty: the Lonely Tentacle', 'islands', 'Only one tentacle was ever seen. Where is the rest?', 'Sea combat'),
-  I('bounty:hollowgale', 'Bounty: Captain Hollowgale', 'islands', 'Commands the Ghost Ship on Thursdays and Sundays.', 'Ghost Ship'),
-  I('bounty:saltfang', 'Bounty: Saltfang the Shark', 'islands', 'Circles Ember Reef when the tide boils.', 'Ember Reef'),
-  I('bounty:twin_sails', 'Bounty: the Twin Sails', 'islands', 'Two smugglers, one ship, zero shame.', 'Sea combat'),
-  I('bounty:mistwraith', 'Bounty: the Mistwraith', 'islands', 'Appears only in fog near Brinehollow.', 'Brinehollow'),
-  I('bounty:ironhull', 'Bounty: the Ironhull', 'islands', 'A Legion warship lost in the Glass Sea.', 'Sea combat'),
-  I('bounty:pearl_thief', 'Bounty: the Pearl Thief', 'islands', 'Steals pearls from fishermen. Very politely.', 'Fishing spots'),
-  I('bounty:stormcaller', 'Bounty: the Stormcaller', 'islands', 'A sea witch rival of Morwenna. Do not tell her.', 'Sea combat (storm)'),
-];
+export const BOUNTIES = SEA_BOUNTIES.map((b, i) => I(b.id, `Sea Bounty: ${b.name}`, 'islands', b.hint || 'Adrift somewhere on the Glass Sea. Watch for glints on the water.', 'Sea Bounty'));
 export const LEAVES = [
   I('leaf:1', 'World Tree Leaf: Dawnleaf', 'goldmeadow', 'Blown onto the scarecrow’s hat.', 'Goldmeadow'),
   I('leaf:2', 'World Tree Leaf: Duskleaf', 'thornwood', 'The treants guard it jealously.', 'Thornwood'),
   I('leaf:3', 'World Tree Leaf: Emberleaf', 'ashen_ridge', 'Somehow unburnt among the ashes.', 'Ashen Ridge'),
   I('leaf:4', 'World Tree Leaf: Dewleaf', 'pipsprout', 'Bramblebeard uses it as an umbrella.', 'Rapport: Bramblebeard (Friendly)'),
   I('leaf:5', 'World Tree Leaf: Tideleaf', 'islands', 'Floating in Mirrorwater’s lagoon.', 'Mirrorwater Isle'),
-  I('leaf:6', 'World Tree Leaf: Skyleaf', 'islands', 'Caught on Skyreach’s highest ledge.', 'Skyreach Spire'),
+  I('leaf:6', 'World Tree Leaf: Skyleaf', 'islands', 'Caught on Stormcrown’s highest ledge.', 'Stormcrown Spire'),
 ];
 export const VISTAS = [
   I('vista:lighthouse', 'Sunset from the Solhaven Lighthouse', 'solhaven', 'Climb the lighthouse at dusk.', 'Solhaven'),
@@ -101,7 +91,8 @@ export const VISTAS = [
   I('vista:fortress', 'The Fortress Walls', 'ashen_ridge', 'Where Varkhul watched the valley burn.', 'Ashen Ridge'),
   I('vista:mushroom', 'The Giant Red Mushroom', 'pipsprout', 'The Pips will pretend they did not see you climb it.', 'Pipsprout Hollow'),
   I('vista:petal', 'The Petal Theatre', 'pipsprout', 'Front row seat, very small chair.', 'Pipsprout Hollow'),
-  I('vista:skyreach', 'Above the Clouds', 'islands', 'The summit of Skyreach Spire.', 'Skyreach Spire'),
+  I('vista:stormcrown', 'Above the Maelstrom', 'islands', 'The summit of Stormcrown Spire, bell ringing.', 'Stormcrown Spire'),
+  ...SEA_ISLANDS.filter(i => i.id !== 'stormcrown').map(i => I(`vista:${i.id}`, `${i.name} Viewpoint`, 'islands', `The viewpoint of ${i.name}.`, i.name)),
   I('vista:lanterns', 'A Thousand Lanterns', 'islands', 'Lanternfall Isle, festival night.', 'Lanternfall Isle'),
 ];
 

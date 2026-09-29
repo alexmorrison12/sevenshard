@@ -42,7 +42,7 @@ export const CARD_LIST = [
   C('hilda', 'Hilda Ironbrand', 3, 'npc', ['wardens'], 'Card packs · honing milestones', 'Master blacksmith of Solhaven. Your +19 failure is not her fault. Ask her.'),
   C('mirelle', 'Captain Mirelle Stormwake', 3, 'npc', ['wardens'], 'Rapport: Mirelle (Friendly) · card packs', 'Harbor master of Solhaven. Calm seas make her nervous.'),
   C('wren', 'Wren Ashdown', 3, 'npc', ['wardens'], 'Rapport: Wren (Friendly) · card packs', 'Bard of the Plaza. Plays you a song, expects one back.'),
-  C('morwenna', 'Old Morwenna of the Brine', 4, 'npc', ['wardens'], 'Rapport: Morwenna (Friendly) · Ghost Ship', 'The sea witch of Brinehollow. Knows your name. Never asked.'),
+  C('morwenna', 'Old Morwenna of the Brine', 4, 'npc', ['wardens'], 'Rapport: Morwenna (Friendly) · Ghost Ship', 'The sea witch of Drownbell Shoal. Knows your name. Never asked.'),
   // loose cards
   C('deep_oracle', 'The Deep Oracle', 4, 'boss', [], 'Abyssal Dungeon: The Sunken Oratory', 'It saw the Sundering coming, and said nothing.'),
   C('ghost_captain', 'Captain Hollowgale', 3, 'boss', [], 'Ghost Ship', 'Died at sea, kept sailing out of spite.'),

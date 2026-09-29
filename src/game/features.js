@@ -99,8 +99,10 @@ class Companions {
     setTimeout(() => {
       me.model?.stop?.();
       if (Math.hypot(me.pos.x - start.x, me.pos.z - start.z) > 1 || me.dead) { s.ui.toast('The song was interrupted.', 'warn'); return; }
-      if (id === 'homeward') { if (g.mode?.kind !== 'city' || g.zone?.id !== 'solhaven') s.returnToHub(); else s.ui.toast('You are already in Solhaven.', 'info'); }
-      if (id === 'tides') { if (LAUNCHERS.sail) s.launch({ kind: 'sail' }); else s.ui.toast('The Dawnrunner waits for you at the harbour.', 'info'); }
+      // on an island, songs are for its people and statues (the pier is the way off); elsewhere they carry you
+      const onIsland = g.mode?.kind === 'island';
+      if (id === 'homeward' && !onIsland) { if (g.mode?.kind !== 'city' || g.zone?.id !== 'solhaven') s.returnToHub(); else s.ui.toast('You are already in Solhaven.', 'info'); }
+      if (id === 'tides' && !onIsland) { if (LAUNCHERS.sail) s.launch({ kind: 'sail' }); else s.ui.toast('The Dawnrunner waits for you at the harbour.', 'info'); }
       if (npc && ['rest', 'valor', 'sunrise'].includes(id)) s.ui.toast(`${npc.name} enjoyed your ${SONGS[id].name}.`, 'success');
     }, Math.min(secs, 8) * 1000);
   }

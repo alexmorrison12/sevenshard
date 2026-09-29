@@ -310,7 +310,7 @@ export class Session {
     h.currencies = { silver: this.account.count('silver'), gold: this.account.count('gold'), crystals: this.account.count('crystals') };
     for (const pl of PLUGINS) if (pl.hud) { try { pl.hud(h); } catch (e) { console.error('[plugin hud]', pl.id, e); } }
     const it = this.findInteractable();
-    h.interact = it ? { key: 'G', label: it.portal ? 'Enter' : it.data?.npcDef?.object ? 'Use' : 'Talk', name: it.name } : null;
+    h.interact = it ? { key: 'G', label: it.label || it.data?.interactLabel || (it.portal ? 'Enter' : it.data?.npcDef?.object ? 'Use' : 'Talk'), name: it.name } : null;
     h.zone = { name: this.game.zone?.name || '', sub: this.game.mode?.kind === 'city' ? 'Valemont' : '' };
     h.minimap = this.minimap();
     return h;
@@ -330,6 +330,7 @@ export class Session {
     for (const [k, a] of Object.entries(z.anchors || {})) if (/^(portal|dock|triport|gate)/.test(k)) markers.push({ x: a.x, z: a.z, kind: k.startsWith('triport') ? 'triport' : 'portal', label: k });
     const m = this.game.mode;
     if (m?.portal) markers.push({ x: m.portal.x, z: m.portal.z, kind: 'portal', label: 'Portal' });
+    try { const extra = m?.minimapMarkers?.(); if (extra?.length) markers.push(...extra); } catch { /* mode markers are optional */ }
     return { canvas: mm.canvas || null, x0: mm.x0 ?? -80, z0: mm.z0 ?? -80, size: mm.size ?? 160, you: { x: me.pos.x, z: me.pos.z, facing: me.facing }, markers };
   }
   refreshChar() {
