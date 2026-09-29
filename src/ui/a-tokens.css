@@ -1,0 +1,116 @@
+/* ================================================================================================================
+   SEVENSHARD UI — a-tokens.css: design tokens, root, virtual-resolution layers, typography helpers.
+   Everything lives under .ss-ui. Layout is authored in a virtual 1600×900 space (touch: 960×540); JS sets `zoom`
+   on .ss-v so text and hairlines are laid out (not bitmap-scaled) at the real resolution → crisp at any size.
+   ================================================================================================================ */
+@property --ss-e { syntax: '<number>'; inherits: false; initial-value: 1; }
+@property --ss-a { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+
+.ss-ui {
+  /* surfaces — dark translucent navy (DESIGN §11: #0b0f1a at 88%) */
+  --ss-bg: rgba(11, 15, 26, .88);
+  --ss-bg-solid: #0b0f1a;
+  --ss-bg-lift: rgba(22, 29, 47, .9);
+  --ss-bg-deep: rgba(5, 7, 13, .94);
+  --ss-bg-well: rgba(3, 5, 10, .55);
+  --ss-panel: linear-gradient(180deg, rgba(27, 35, 57, .93) 0%, rgba(13, 18, 31, .92) 34%, rgba(8, 11, 20, .94) 100%);
+  --ss-hover: rgba(120, 150, 220, .10);
+  --ss-select: rgba(201, 164, 90, .14);
+  /* hairlines */
+  --ss-line: #3a4560;
+  --ss-line-a: rgba(98, 116, 160, .42);
+  --ss-line-soft: rgba(110, 130, 180, .2);
+  --ss-line-hi: rgba(200, 214, 245, .34);
+  /* restrained gold (headers, focus, primary actions) */
+  --ss-gold: #c9a45a;
+  --ss-gold-hi: #f3dca0;
+  --ss-gold-lo: #7d6333;
+  --ss-gold-a: rgba(201, 164, 90, .55);
+  /* text */
+  --ss-text: #e8ebf3;
+  --ss-text-2: #bcc4d6;
+  --ss-dim: #8c95ab;
+  --ss-mute: #5f6880;
+  --ss-good: #86e070;
+  --ss-bad: #ff5d4d;
+  --ss-warn: #ffb43c;
+  --ss-info: #72b6ff;
+  /* resources & combat colours */
+  --ss-hp: #d8363a; --ss-hp-hi: #ff7d6e; --ss-hp-lo: #6e0c12;
+  --ss-mp: #2c7be6; --ss-mp-hi: #86c2ff; --ss-mp-lo: #0b2562;
+  --ss-shield: #f4f6ff;
+  --ss-xp: #e8b24a;
+  --ss-stagger: #a766ff;
+  --ss-destr: #e89a3c;
+  --ss-counter: #52d4ff;
+  /* type */
+  --ss-font: "Segoe UI", Roboto, "Helvetica Neue", system-ui, -apple-system, sans-serif;
+  --ss-cond: "Roboto Condensed", "Arial Narrow", "Avenir Next Condensed", "Segoe UI", "Helvetica Neue", sans-serif;
+  --ss-serif: Georgia, "Times New Roman", "Palatino Linotype", "Book Antiqua", serif;
+  /* text outlines for type drawn straight over the world */
+  --ss-ol: 0 0 1px #000, 0 0 2px rgba(0, 0, 0, .95), 0 1px 2px rgba(0, 0, 0, .9);
+  --ss-ol2: 0 0 1px #000, 0 0 3px #000, 0 0 2px #000, 0 2px 5px rgba(0, 0, 0, .85);
+  --ss-plate: rgba(4, 6, 12, .62);
+  /* shape */
+  --ss-r: 3px;
+  --ss-shadow: 0 12px 30px rgba(0, 0, 0, .55), 0 2px 6px rgba(0, 0, 0, .45);
+  --ss-ease: cubic-bezier(.2, .75, .25, 1);
+  --ss-spring: cubic-bezier(.3, 1.45, .45, 1);
+
+  position: fixed; inset: 0; z-index: 20; overflow: hidden; pointer-events: none;
+  font: 400 13px/1.35 var(--ss-font); color: var(--ss-text);
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility;
+  user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none;
+}
+:where(.ss-ui) *, :where(.ss-ui) *::before, :where(.ss-ui) *::after { box-sizing: border-box; }
+:where(.ss-ui) button { font: inherit; color: inherit; }
+:where(.ss-ui) img { -webkit-user-drag: none; }
+:where(.ss-ui) input, :where(.ss-ui) textarea { user-select: text; -webkit-user-select: text; }
+
+/* virtual space (sized + zoomed by JS) and its stacking layers */
+.ss-v { position: absolute; left: 0; top: 0; pointer-events: none; }
+.ss-layer { position: absolute; inset: 0; pointer-events: none; }
+.ss-l-hud { z-index: 1; } .ss-l-center { z-index: 2; } .ss-l-win { z-index: 3; } .ss-l-screen { z-index: 4; }
+.ss-l-modal { z-index: 5; } .ss-l-top { z-index: 6; }
+:where(.ss-ptr, .ss-ui button, .ss-ui input, .ss-ui select, .ss-ui textarea, .ss-ui a, .ss-ui [role="button"], .ss-ui label) { pointer-events: auto; }
+.ss-ui .ss-hidden { display: none !important; }
+.ss-ui .ss-nopt { pointer-events: none !important; }
+
+/* typography helpers */
+.ss-num { font-variant-numeric: tabular-nums; }
+.ss-cond { font-family: var(--ss-cond); font-stretch: condensed; }
+.ss-serif { font-family: var(--ss-serif); }
+.ss-caps { font-family: var(--ss-serif); font-variant: small-caps; letter-spacing: .08em; }
+.ss-gold { color: var(--ss-gold-hi); }
+.ss-dim { color: var(--ss-dim); }
+.ss-good { color: var(--ss-good); }
+.ss-bad { color: var(--ss-bad); }
+.ss-ol { text-shadow: var(--ss-ol); }
+.ss-gl { width: 1em; height: 1em; flex: none; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; vertical-align: -.14em; }
+
+/* grade colours: .ss-g0 … .ss-g7 set --gc (text/frame) and --ga/--gb/--gd (slot gradient) */
+.ss-g0 { --gc: #e8e8e8; --ga: #1f2126; --gb: #353840; --gd: #6c707a; }
+.ss-g1 { --gc: #8bd96b; --ga: #0f1d0e; --gb: #203c1a; --gd: #4f8a38; }
+.ss-g2 { --gc: #4fa3ff; --ga: #0a1630; --gb: #133061; --gd: #2f6fc4; }
+.ss-g3 { --gc: #b86bff; --ga: #180c2e; --gb: #351d5a; --gd: #7440b8; }
+.ss-g4 { --gc: #ffae3a; --ga: #281705; --gb: #5a370e; --gd: #c07a1f; }
+.ss-g5 { --gc: #ff6a2a; --ga: #290a05; --gb: #5a1b0a; --gd: #c9481a; }
+.ss-g6 { --gc: #e9d2a6; --ga: #262015; --gb: #574830; --gd: #c3aa80; }
+.ss-g7 { --gc: #39e6d8; --ga: #052321; --gb: #0d4a46; --gd: #1fa89c; }
+.ss-gt { color: var(--gc, var(--ss-text)); }
+
+/* focus: visible, gold, never on mouse click */
+:where(.ss-ui) :focus { outline: none; }
+:where(.ss-ui) :focus-visible { outline: 1px solid var(--ss-gold-hi); outline-offset: 2px; }
+
+/* scrollbars */
+.ss-scroll { overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: rgba(140, 158, 200, .35) transparent; }
+.ss-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+.ss-scroll::-webkit-scrollbar-thumb { background: rgba(140, 158, 200, .32); border-radius: 3px; }
+.ss-scroll::-webkit-scrollbar-thumb:hover { background: rgba(170, 188, 230, .5); }
+.ss-scroll::-webkit-scrollbar-track { background: transparent; }
+
+/* reduced motion: kill decoration, keep information (cooldown sweeps carry the .ss-sweep class and keep running) */
+@media (prefers-reduced-motion: reduce) {
+  .ss-ui *:not(.ss-sweep), .ss-ui *::before, .ss-ui *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}

@@ -5,7 +5,7 @@ import * as THREE from 'three';
 const DEG = Math.PI / 180;
 const _v = new THREE.Vector3(), _r = new THREE.Raycaster(), _p = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 
-export const ISO = { fov: 38, pitch: 54 * DEG, yaw: 0, dist: 21, minDist: 13, maxDist: 27 };
+export const ISO = { fov: 38, pitch: 54 * DEG, yaw: 0, dist: 18, minDist: 12, maxDist: 26 };
 
 export class IsoCam {
   constructor(aspect = innerWidth / innerHeight) {
@@ -36,6 +36,7 @@ export class IsoCam {
   }
   endCinematic(dur = 0.8) { if (this.cine) { this.cine.back = true; this.cine.t = 0; this.cine.dur = dur; this.cine.from = this.cam.position.clone(); this.cine.fromLook = this._look.clone(); } }
   update(dt, t = performance.now() / 1000) {
+    if (this.manual) return;                // menu stages drive the camera themselves
     const k = 1 - Math.exp(-this.follow * dt);
     this.focus.lerp(this.target, k);
     this.dist += (this.zoom - this.dist) * (1 - Math.exp(-8 * dt));

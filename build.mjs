@@ -54,8 +54,24 @@ function writePage(js) {
   return doc.length;
 }
 
+// Several owners edit src/ in parallel. A module that is referenced but not written yet is stubbed (empty CommonJS
+// module, so named imports resolve to undefined) instead of failing the whole build; callers degrade gracefully.
+const tolerant = {
+  name: 'tolerant', setup(b) {
+    b.onResolve({ filter: /^\./ }, args => {
+      if (args.namespace === 'stub') return;
+      const p = path.resolve(args.resolveDir, args.path);
+      if (fs.existsSync(p) && fs.statSync(p).isFile() || fs.existsSync(p + '.js') || fs.existsSync(path.join(p, 'index.js'))) return;
+      console.warn(`[build] missing ${args.path} (imported by ${path.relative(process.cwd(), args.importer)}) — stubbed`);
+      return { path: p, namespace: 'stub' };
+    });
+    b.onLoad({ filter: /.*/, namespace: 'stub' }, () => ({ contents: 'module.exports = {};', loader: 'js' }));
+  },
+};
+
 const opts = {
   entryPoints: ['src/main.js'],
+  plugins: [tolerant],
   bundle: true,
   minify: MIN,
   format: 'iife',
@@ -70,7 +86,7 @@ const opts = {
 if (WATCH) {
   const ctx = await esbuild.context({
     ...opts,
-    plugins: [{
+    plugins: [tolerant, {
       name: 'html', setup(b) {
         b.onEnd(r => {
           if (r.errors.length) return;
