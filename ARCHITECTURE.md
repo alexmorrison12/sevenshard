@@ -39,7 +39,7 @@ load time (lazily, cached). Read `DESIGN.md` for the game itself (names, classes
 Every owner writes `src/<area>/README.md` documenting the public API exactly as implemented (the lead integrates from it).
 **Deliver early:** create your entry module with the contract below and a crude-but-working implementation first, so
 integration can start; then raise quality. Keep the contract stable; extend it rather than change it.
-Everdawn (`/Users/alex/Claude/MMOTest/src`, read-only) is a previous game by the same team — its humanoid SDF bodies,
+Everdawn (an earlier browser MMO by the same author) is a previous game by the same team — its humanoid SDF bodies,
 creature toolkit, dragon, FX, audio synth and UI code are proven and may be copied and adapted freely.
 
 ## World conventions

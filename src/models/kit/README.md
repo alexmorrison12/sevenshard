@@ -13,4 +13,4 @@ existing export (other models depend on it). If you need different behaviour, co
 - `parts.js` — reusable rigid parts (horns, claws, teeth, spikes, fins…).
 
 Everdawn's own creatures that used this kit (wolf, boar, bear, spider, kobold, gurgler, critters) and its SDF dragon
-are in `/Users/alex/Claude/MMOTest/src/models/` — read them for worked examples.
+are in Everdawn's `src/models/` (the author's earlier browser MMO) — worked examples of the same approach.
