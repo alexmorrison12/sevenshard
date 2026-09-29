@@ -76,13 +76,13 @@ export const STORY_PORTRAITS = {
   pip_guard: { pip: true, body: '#d8b068', leaf: '#6ac850', hat: 'acorn', prop: 'twig' },
 };
 /** ids whose residents share a portrait (a zone-local id → the portrait above) */
-const SAME = { captain_ashen: 'captain_flint', healer: 'medic', scout: 'scout_ivy', survivor: 'refugee', sergeant: 'guard_ren', gunner: 'gunner_bess' };
+const SAME = { healer: 'medic', scout: 'scout_ivy', survivor: 'refugee', sergeant: 'guard_ren', gunner: 'gunner_bess' };
 
 const cache = new Map();
 /** a painted portrait (data URL) for a story/field NPC id, or null when the UI's icon set already has one */
-export function storyPortrait(id, { zone } = {}) {
+export function storyPortrait(id) {
   if (!id || typeof document === 'undefined') return null;
-  const key = (zone === 'ashen_ridge' && id === 'captain') ? 'captain_flint' : SAME[id] || id;
+  const key = SAME[id] || id;
   const cfg = STORY_PORTRAITS[key];
   if (!cfg) return null;
   if (!STORY_PORTRAITS[id] && hasIcon('npc:' + id)) return null;
@@ -94,7 +94,7 @@ export function storyPortrait(id, { zone } = {}) {
 }
 /** the icon system's square NPC frame around a bust() / pip() painting */
 function paint(id, cfg, size = 150) {
-  const M = size;
+  const M = size * 2;
   const [c, x] = mk(M);
   setK(M / 100);
   const R = rng(hashStr('npc:' + id) ^ 0x5eed);

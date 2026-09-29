@@ -140,7 +140,10 @@ function devUI(game) {
   }
 }
 
+/** WebGL2 is required; say so plainly instead of failing on a black page */
+function webgl2() { try { const gl = document.createElement('canvas').getContext('webgl2'); gl?.getExtension('WEBGL_lose_context')?.loseContext(); return !!gl; } catch { return false; } }
 async function boot() {
+  if (!webgl2()) { bootMsg('SEVENSHARD needs WebGL 2. Please use a current Chrome, Edge, Firefox or Safari, and make sure hardware acceleration is on.'); return; }
   // field zones register themselves one microtask after the bundle evaluates (import cycle with world/index.js)
   await new Promise(r => setTimeout(r, 0));
   if (!q.dev) { const { Session } = await import('./game/session.js'); const s = new Session(); return s.boot(); }

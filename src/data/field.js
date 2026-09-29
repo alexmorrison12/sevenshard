@@ -124,7 +124,7 @@ export const FIELD_NPCS = {
     R('owl_sage', 'Hoot the Owl Sage', 'Scholar (Allegedly)', { npc: 'bard', at: ['npc:owl_sage', 'npc:owl', 'npc:sage', 'npc:trapper', 'poi:owl_roost'], lines: ['Whooo? Me. I’m the sage. It’s on the sign.', 'Wisdom is mostly knowing when to be quiet. Which I rarely am.'] }),
   ],
   ashen_ridge: [
-    R('captain', 'Captain Darra Flint', 'Valemont Vanguard', { npc: 'knight', sex: 'f', at: ['npc:commander', 'npc:captain'], lines: ['We hold this ridge or we hold nothing.', 'The ash gets in everything. My boots. My tea. My soul.'] }),
+    R('captain_flint', 'Captain Darra Flint', 'Valemont Vanguard', { npc: 'knight', sex: 'f', at: ['npc:commander', 'npc:captain'], lines: ['We hold this ridge or we hold nothing.', 'The ash gets in everything. My boots. My tea. My soul.'] }),
     R('quartermaster', 'Quartermaster Pell', 'Vanguard Supplies', { npc: 'merchant', at: ['npc:quartermaster', 'npc:merchant', 'npc:supply'], lines: ['I have eleven crates of bandages and zero crates of patience.', 'Sign here. And here. And here. War is mostly paperwork.'] }),
     R('scout_ivy', 'Scout Ivy', 'Vanguard Pathfinder', { npc: 'villager', sex: 'f', at: ['npc:scout_ivy', 'npc:scout'], lines: ['I’ve counted the demons on the wall. Twice. Stopped counting after that.'] }),
     R('refugee', 'Brighthold Refugee', 'Survivor of Cinderfall', { npc: 'villager', at: ['npc:survivor', 'npc:refugee'], lines: ['I saw Brighthold burn from the hills. I keep seeing it.'] }),

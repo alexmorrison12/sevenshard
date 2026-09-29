@@ -10,7 +10,7 @@ export default {
     { id: 'a1_camp', kind: 'msq', title: 'The Vanguard Camp', level: 40, prereq: ['t7_road'], chapterStart: 'Ashen Ridge', chapterOver: 'Chapter V',
       desc: 'The Vanguard is camped under the Legion fortress. Report in.',
       steps: [
-        { type: 'talk', npc: 'captain', text: 'Report to Captain Darra Flint', lines: [
+        { type: 'talk', npc: 'captain_flint', text: 'Report to Captain Darra Flint', lines: [
           'So you’re the Shardbearer. I expected — no, never mind. Everyone says that, don’t they.',
           'Welcome to the Vanguard. We hold this ridge with pikes, prayers and paperwork. Pell handles the paperwork.',
         ] },
@@ -29,13 +29,13 @@ export default {
     { id: 'a2_ash', kind: 'msq', title: 'Ash and Embers', level: 42, prereq: ['a1_camp'],
       desc: 'Legion rift totems keep pouring demons into the ash dunes.',
       steps: [
-        { type: 'talk', npc: 'captain', text: 'Talk to Captain Flint', lines: [
+        { type: 'talk', npc: 'captain_flint', text: 'Talk to Captain Flint', lines: [
           'Before we march, the dunes need clearing. Imps and hellhounds, pouring out of rift totems the Legion planted in the ash.',
           'Break the totems and the flood stops. Break a few demons on the way. They won’t mind. They’re demons.',
         ] },
         { type: 'kill', family: 'demon', need: 15, text: 'Thin the demons in the ash dunes' },
         { type: 'interact', at: ['poi:totems', 'poi:ash_dunes', 'poi:rift', 'pack:2', 'spawn'], need: 3, spread: 10, name: 'Legion Spawning Totem', label: 'Shatter', dur: 1.8, anim: 'slash_v', sfx: 'impact_heavy', doneSfx: 'explosion', text: 'Shatter the Legion spawning totems', onUse: (Q, o) => Q.spawnNear('imp', 3, o, { spread: 4 }) },
-        { type: 'talk', npc: 'captain', text: 'Report to Captain Flint', lines: [
+        { type: 'talk', npc: 'captain_flint', text: 'Report to Captain Flint', lines: [
           'The ash is settling. First quiet morning this camp’s had in a month.',
           'Don’t tell the soldiers. They’ll want a nap.',
         ] },
