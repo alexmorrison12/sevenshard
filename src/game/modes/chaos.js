@@ -51,7 +51,7 @@ export class ChaosMode {
       const a = k / n * Math.PI * 2 + 0.4, p = { x: Math.cos(a) * 11, z: Math.sin(a) * 11 - 2 };
       const c = new Unit({ kind: 'mob', team: 1, type: 'rift_crystal', name: 'Rift Crystal', x: p.x, z: p.z, radius: 0.9, height: 2.4, stats: { hpMax: Math.round(this.ref.ap * 30), atk: 0, def: 1000, speed: 0, mpMax: 0 } });
       c.data.crystal = true; c.data.immovable = true; c.data.flinch = false; c.data.noModel = false; c.data.corpseTime = 1.5; c.ctrl = null;
-      c.data.tpl = { model: 'pip_seed' };
+      c.data.tpl = { model: 'rift_crystal' };
       L.add(c); this.crystals.push(c);
     }
     this.game.ui?.toast?.('Rift Crystals appeared — shatter them for bonus progress!', 'info');

@@ -20,7 +20,7 @@ export class Task {
     this.dir = new THREE.Vector3(0, 0, -1); this.right = new THREE.Vector3(1, 0, 0);
     this.a = new THREE.Vector3(); this.b = new THREE.Vector3(); this.c = new THREE.Vector3();   // recipe scratch
     this.acc = Object.create(null); this.flags = Object.create(null);
-    this.gen = 0; this.alive = false;
+    this.gen = 0; this.alive = false; this.dim = 1;
     this.slots = [];      // [layer, slot] pairs to release on end (ground layers etc.)
     this.handles = [];    // child handles stopped on stop()
   }
@@ -37,7 +37,7 @@ export class Task {
     for (const k in this.flags) this.flags[k] = 0;
     this.slots.length = 0; this.handles.length = 0;
     this.v = {};           // recipe-owned state
-    this.anchor = -1; this.held = null;
+    this.anchor = -1; this.held = null; this.dim = 1;
     return this;
   }
   get u() { return isFinite(this.dur) ? Math.min(1, this.age / this.dur) : 0; }
@@ -51,7 +51,7 @@ export class Task {
     return out;
   }
   rate(key, perSec) {
-    const n0 = (this.acc[key] || 0) + perSec * this.dt * this.fx.q * this.k;
+    const n0 = (this.acc[key] || 0) + perSec * this.dt * this.fx.q * this.k * this.dim;
     const n = Math.floor(n0); this.acc[key] = n0 - n;
     return n > 300 ? 300 : n;
   }
@@ -76,8 +76,10 @@ export class Task {
     if (!this.alive || this.stopping) return;
     this.stopping = true;
     if (fade != null) this.fadeT = fade;
-    for (const h of this.handles) h.stop?.();
+    const fx = this.fx, pd = fx.dimK; fx.dimK = this.dim;
+    for (let i = 0; i < this.handles.length; i++) this.handles[i].stop?.();
     try { this.recipe.stop?.(this); } catch (e) { console.error('[fx] stop', e); }
+    fx.dimK = pd;
   }
   update(dt) {
     this.dt = dt; this.age += dt;
@@ -100,8 +102,10 @@ export class Task {
   end() {
     if (!this.alive) return;
     this.alive = false;
+    const fx = this.fx, pd = fx.dimK; fx.dimK = this.dim;
     try { this.recipe.end?.(this); } catch (e) { console.error('[fx] end', e); }
-    for (const h of this.handles) h.stop?.(0.1);
+    fx.dimK = pd;
+    for (let i = 0; i < this.handles.length; i++) this.handles[i].stop?.(0.1);
     if (this.held) { for (let i = 0; i < this.held.length; i += 2) this.held[i].killHeld(this.held[i + 1]); this.held.length = 0; }
     for (let i = 0; i < this.slots.length; i += 2) this.slots[i].release(this.slots[i + 1]);
     this.slots.length = 0;
@@ -125,13 +129,18 @@ export class Handle {
     else if (p?.isVector3) P.copy(p);
     else if (Array.isArray(p)) P.set(p[0], p[1], p[2]);
     else if (p) P.set(p.x ?? P.x, p.y ?? P.y, p.z ?? P.z);
-    this.t.recipe.moved?.(this.t);
+    this._cb('moved');
     return this;
   }
-  setDir(d) { if (this.alive) { this.t.fx._dir(d, this.t.dir); this.t.right.set(-this.t.dir.z, 0, this.t.dir.x); this.t.recipe.moved?.(this.t); } return this; }
-  setFill(v) { if (this.alive) this.t.recipe.setFill?.(this.t, v); return this; }
-  detonate() { if (this.alive) this.t.recipe.detonate?.(this.t); return this; }
-  set(k, v) { if (this.alive) { this.t.p[k] = v; this.t.recipe.set?.(this.t, k, v); } return this; }
+  setDir(d) { if (this.alive) { this.t.fx._dir(d, this.t.dir); this.t.right.set(-this.t.dir.z, 0, this.t.dir.x); this._cb('moved'); } return this; }
+  setFill(v) { if (this.alive) this._cb('setFill', v); return this; }
+  detonate() { if (this.alive) this._cb('detonate'); return this; }
+  set(k, v) { if (this.alive) { this.t.p[k] = v; this._cb('set', k, v); } return this; }
+  _cb(name, a, b) {
+    const T = this.t, fn = T.recipe[name]; if (!fn) return;
+    const fx = T.fx, pd = fx.dimK; fx.dimK = T.dim;
+    try { fn(T, a, b); } finally { fx.dimK = pd; }
+  }
 }
 export const NOOP = Object.freeze({ alive: false, pos: new THREE.Vector3(), dir: new THREE.Vector3(0, 0, -1), stop() { return this; }, setPos() { return this; }, setDir() { return this; }, setFill() { return this; }, detonate() { return this; }, set() { return this; } });
 void _v;

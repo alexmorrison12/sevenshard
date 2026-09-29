@@ -12,7 +12,7 @@
 import * as THREE from 'three';
 import { G, FOG_GLSL_PARS } from '../engine/materials.js';
 import { GRID, S, R, WHITE_RAMPS } from './textures.js';
-import { GLSL_GROUND, NO } from './util.js';
+import { GLSL_GROUND, NO, addRange } from './util.js';
 
 export const STRIDE = 28;
 export const F = {
@@ -297,22 +297,23 @@ export class ParticlePool {
     if (this.fullAt >= 0) {
       if (this.uploads > this.fullAt) this.fullAt = -1;
       else {
-        for (const r of this.regions) { this.spawned += r.written; r.written = 0; r.start = r.head; }
+        for (let i = 0; i < this.regions.length; i++) { const r = this.regions[i]; this.spawned += r.written; r.written = 0; r.start = r.head; }
         this.nDirty = 0;
         this.buf.clearUpdateRanges(); this.buf.needsUpdate = true; return;
       }
     }
     let any = false;
-    for (const r of this.regions) {
+    for (let i = 0; i < this.regions.length; i++) {
+      const r = this.regions[i];
       if (r.written <= 0) continue;
       const n = Math.min(r.written, r.n), a = r.start;
-      if (a + n <= r.n) this.buf.addUpdateRange((r.base + a) * STRIDE, n * STRIDE);
-      else { this.buf.addUpdateRange((r.base + a) * STRIDE, (r.n - a) * STRIDE); this.buf.addUpdateRange(r.base * STRIDE, (a + n - r.n) * STRIDE); }
+      if (a + n <= r.n) addRange(this.buf, (r.base + a) * STRIDE, n * STRIDE);
+      else { addRange(this.buf, (r.base + a) * STRIDE, (r.n - a) * STRIDE); addRange(this.buf, r.base * STRIDE, (a + n - r.n) * STRIDE); }
       this.spawned += r.written;
       r.written = 0; r.start = r.head; any = true;
     }
     if (this.nDirty) {
-      for (let i = 0; i < this.nDirty; i++) this.buf.addUpdateRange(this.heldDirty[i] * STRIDE, STRIDE);
+      for (let i = 0; i < this.nDirty; i++) addRange(this.buf, this.heldDirty[i] * STRIDE, STRIDE);
       this.nDirty = 0; any = true;
     }
     if (any) this.buf.needsUpdate = true;
@@ -346,7 +347,7 @@ export class Particles {
     this.mat = mat;
     this.alpha = new ParticlePool('alpha', ringAlpha, heldAlpha, mat, 20);
     this.add = new ParticlePool('add', ring, held, mat, 26);
-    this.pools = { alpha: this.alpha, add: this.add };
+    this.pools = { alpha: this.alpha, add: this.add }; this.poolList = [this.alpha, this.add];
     this.bt = 0;          // back-date seconds for sub-frame emission
     this.tint = null;     // effect-level colour (re-themes particles that allow it)
   }
@@ -386,7 +387,7 @@ export class Particles {
     d[b + 16] = cr * it; d[b + 17] = cg * it; d[b + 18] = cb * it; d[b + 19] = pr.ramp;
     const sp = pr.sprites; d[b + 20] = sp.length === 1 ? sp[0] : sp[(rng() * sp.length) | 0];
     d[b + 21] = pr.add; d[b + 22] = o.anchor ?? -1; d[b + 23] = flags;
-    d[b + 24] = rr(pr.alpha) * (o.alpha ?? 1); d[b + 25] = pr.ease; d[b + 26] = o.yaw ?? 0; d[b + 27] = recolor;
+    d[b + 24] = rr(pr.alpha) * (o.alpha ?? 1) * fx.dimK; d[b + 25] = pr.ease; d[b + 26] = o.yaw ?? 0; d[b + 27] = recolor;
     if (o.held) pool.markHeld(slot);
     else {
       const end = d[b + 3] + life;
@@ -397,7 +398,7 @@ export class Particles {
   }
   flush() {
     const now = this.fx.time;
-    for (const k in this.pools) { const p = this.pools[k]; p.flush(); p.mesh.visible = now <= p.until || p.nFree < p.heldN; }
+    for (let i = 0; i < this.poolList.length; i++) { const p = this.poolList[i]; p.flush(); p.mesh.visible = now <= p.until || p.nFree < p.heldN; }
   }
   reset() { this.alpha.reset(); this.add.reset(); }
   alive() { const now = this.fx.time; return this.add.alive(now) + this.alpha.alive(now); }

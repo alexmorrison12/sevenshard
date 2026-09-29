@@ -1,14 +1,15 @@
 // Results screen (dungeon / raid / guardian clear or wipe): header with rank medallion, clear-time stats,
 // rewards grid with grade frames, DPS meter table, share / retry / continue.
 //   data: { kind: 'clear'|'fail', over?: 'Chaos Dungeon', title, sub?, rank?: 'S'|'A'|'B'|'C'|'D', time, best?,
-//           stats?: [{ label, value }], loot: [Item], currencies?: { silver, gold, xp },
+//           stats?: [{ label, value }], loot: [Item | Row { id, name, count, grade, icon, kind: 'material'|'card'|'gem'|'accessory'|…, item? }],
+//           currencies?: { xp?, rosterXp?, silver?, gold?, …any wallet key (shards, crystals, bloodstone… → icon currency:<id>) },
 //           dps: [{ name, cls, dmg, dps, crit, back, counters, stagger, deaths, you, support }],
 //           retry?: bool, continueLabel? }
 // Actions: results:continue {} · results:retry {} · results:share {} · results:item { uid } (loot slot clicked)
 import { h, btn, esc, fmtInt, fmtShort, fmtClockMs, show } from '../core/util.js';
 import { glyph } from '../core/glyphs.js';
 import { iconUrl, itemIcon } from '../core/icon.js';
-import { cls as clsInfo } from '../core/data.js';
+import { cls as clsInfo, currency, currencyList } from '../core/data.js';
 import { Screen } from './screen.js';
 
 export class ResultsScreen extends Screen {
@@ -58,7 +59,9 @@ export class ResultsScreen extends Screen {
     this.stats.innerHTML = st.map(s => `<div class="ss-rs-stat"><span>${esc(s.label)}</span><b>${esc(s.value)}</b>${s.tag ? `<em>${esc(s.tag)}</em>` : ''}</div>`).join('');
     // loot
     this.grid.textContent = '';
-    (d.loot || []).forEach((it, i) => {
+    (d.loot || []).forEach((row, i) => {
+      // systems rows may carry the full Item (gear, accessories, gems, books) — prefer it for the tooltip
+      const it = row.item ? { ...row.item, count: row.count ?? row.item.count } : row;
       const s = h('div', `ss-slot ss-g${it.grade | 0} ss-ptr ss-rs-item`, this.grid);
       s.style.setProperty('--sz', '56px');
       s.style.animationDelay = (0.25 + i * 0.07) + 's';
@@ -69,8 +72,15 @@ export class ResultsScreen extends Screen {
       s.addEventListener('click', () => this.emit('results:item', { uid: it.uid, id: it.id }));
     });
     if (!(d.loot || []).length) h('div', 'ss-rs-none', this.grid, fail ? 'No rewards this time.' : 'No drops.');
-    const c = d.currencies || {};
-    this.cur.innerHTML = [c.xp ? `<span>${glyph('star')}<b>${fmtInt(c.xp)}</b> XP</span>` : '', c.silver ? `<span><i style="background-image:url('${iconUrl('currency:silver', 18)}')"></i><b>${fmtInt(c.silver)}</b></span>` : '', c.gold ? `<span><i style="background-image:url('${iconUrl('currency:gold', 18)}')"></i><b>${fmtInt(c.gold)}</b></span>` : ''].join('');
+    const c = d.currencies || {}, XP = { xp: 'XP', rosterXp: 'Roster XP', skillPts: 'Skill Points' };
+    this.cur.textContent = '';
+    for (const k of Object.keys(XP)) if (c[k] > 0) h('span', 'ss-rs-c', this.cur).innerHTML = `${glyph('star')}<b>${fmtInt(c[k])}</b> ${XP[k]}`;
+    for (const [k, n] of currencyList(c)) {
+      if (k in XP || !(n > 0)) continue;
+      const C = currency(k), e = h('span', 'ss-rs-c ss-ptr', this.cur);
+      e.innerHTML = `<i style="background-image:url('${iconUrl(C.icon, 18)}')"></i><b>${fmtInt(n)}</b>`;
+      e._tip = { title: C.name, lines: [fmtInt(n)] };
+    }
     // dps meter
     const rows = [...(d.dps || [])].sort((a, b) => (b.dmg || 0) - (a.dmg || 0));
     const total = rows.reduce((a, r) => a + (r.dmg || 0), 0) || 1, top = rows[0]?.dmg || 1;

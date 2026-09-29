@@ -164,16 +164,108 @@ Object.assign(CLASS_OUTFITS, {
   },
 });
 
+// ---------------------------------------------------------------------------------------------
+// NPC outfits: NPC_OUTFITS[npc](sex, v) → gear spec; v (a small integer) varies colours between townsfolk.
+const pick = (arr, v, k = 0) => arr[((v | 0) * 7 + k * 3) % arr.length];
 export const NPC_OUTFITS = {
-  villager: () => preset({ armor: 'cloth', colors: { primary: 0xd8cca8, secondary: 0x8a6a48, trim: 0x8a6a48, pants: 0x6a5238, boots: 0x4a3424 },
-    chest: { type: 'shirt', sleeves: 1.2, neck: 'v' }, belt: { type: 'leather', buckle: 'square' }, legs: { type: 'pants' }, feet: { type: 'shoes', height: 0.3 } }),
+  guard: (sex, v) => preset({ armor: 'mail', tier: 1, colors: { primary: 0x767c86, secondary: 0x24407a, trim: 0xc8a048, pants: 0x3a3a44, boots: 0x3a2a1e, tabard: 0x24407a, emblem: 0xd8b050, belt: 0x4a3020, gloves: 0x4a3424 },
+    chest: { type: 'mail', sleeves: 1.25, neck: 'crew' }, shoulders: { type: 'round', size: 0.92, layers: 1 }, belt: { type: 'leather', buckle: 'square' },
+    legs: { type: 'pants' }, feet: { type: 'boots', height: 0.7, cuff: true }, hands: { type: 'gloves', cuff: 0.3 },
+    tabard: { emblem: 'sun', back: true, top: 'chest', hw: 0.1 }, head: { type: 'helm' } }),
+  knight: (sex, v) => preset({ armor: 'plate', tier: 1, colors: { primary: 0x6e7682, secondary: 0x1e3c7a, trim: 0xc8a048, pants: 0x3a3e46, boots: 0x6e7682, tabard: 0x1e3c7a, cape: 0x1e3c7a, capeInner: 0xd8d0bc, emblem: 0xe0b850, belt: 0x3a2a1c },
+    chest: { type: 'plate', sleeves: 1.3, neck: 'high' }, shoulders: { type: 'round', size: sex === 'f' ? 1.05 : 1.15, layers: 2 },
+    belt: { type: 'plate', buckle: 'plate' }, legs: { type: 'plate', kneepads: true }, feet: { type: 'plate', height: 0.75, cuff: true },
+    hands: { type: 'gauntlets', cuff: 0.45 }, tabard: { emblem: 'shield', back: true, short: true, hw: 0.1 }, cloak: { len: 0.85, trim: true },
+    cuirass: { style: 'plate', neck: 'round', lames: 2, ridge: true }, tassets: { rows: 2 }, greaves: { from: 1.1, to: 1.95 }, vambraces: { from: 1.3, to: 1.92 } }),
+  noble: (sex, v) => {
+    const f = sex === 'f', c = pick([[0x5a1a2a, 0xd8b050], [0x1a3a5a, 0xc8ccd6], [0x24482a, 0xd8b050], [0x3a1a4a, 0xd8b050]], v);
+    return preset({ armor: 'cloth', tier: 1, colors: { primary: c[0], secondary: 0xe8e0d0, trim: c[1], pants: 0x2a2226, boots: 0x2a1e18, coat: c[0], coat2: 0x1e1a1c, shirt: 0xeee6d6, sash: c[0], belt: 0x2a1e18, gem: 0xd04050 },
+      chest: f ? { type: 'robe', sleeves: 1.6, neck: 'v' } : { type: 'leather', sleeves: 1.85, neck: 'high', coat: true },
+      skirt: f ? { len: 1.0, flare: 0.3, hemTrim: true } : null,
+      belt: { type: 'leather', buckle: 'gem' }, legs: { type: 'pants' }, feet: { type: f ? 'shoes' : 'boots', height: f ? 0.3 : 0.7, cuff: !f },
+      cuirass: { style: f ? 'corset' : 'leather', neck: f ? 'v' : 'high', slot: f ? SLOT.CLOTH1 : SLOT.COAT, rimSlot: SLOT.TRIM, armhole: 0.095, rimW: 0.02 },
+      head: f ? { type: 'circlet', gem: true } : null,
+      extras: [{ type: 'collar', h: 0.1, flare: 0.045, open: 0.7, trim: true, slot: SLOT.CLOTH2 }, ...(f ? [] : [{ type: 'coat', len: 0.72, open: 0.4, trim: true, slot: SLOT.COAT }])] });
+  },
+  king: (sex, v) => preset({ armor: 'cloth', tier: 1, colors: { primary: 0x7a1420, secondary: 0xe8d8b0, trim: 0xe0b040, pants: 0x3a1a1e, boots: 0x3a2418, cape: 0x8a1420, capeInner: 0xece4d4, emblem: 0xe0b040, belt: 0xe0b040, gem: 0x3a8aff, sash: 0x7a1420, fur: 0xeee6da },
+    chest: { type: 'robe', sleeves: 1.8, neck: 'high' }, skirt: { len: 1.0, flare: 0.2, hemTrim: true, panel: true }, belt: { type: 'sash', buckle: 'gem' },
+    cuirass: { style: 'cloth', neck: 'high', slot: SLOT.CLOTH1, rimSlot: SLOT.TRIM, armhole: 0.095 },
+    legs: { type: 'pants' }, feet: { type: 'boots', height: 0.6, cuff: true }, cloak: { len: 0.96, trim: true, emblem: 'sun' },
+    shoulders: { type: 'fur', size: 1.05, layers: 1 }, head: { type: 'crown', gem: true } }),
+  oracle: (sex, v) => preset({ armor: 'cloth', tier: 1, colors: { primary: 0xeef0f4, secondary: 0x3a6ac0, trim: 0xc8d8f0, pants: 0xe0e4ec, boots: 0xe8ecf2, cape: 0x3a6ac0, capeInner: 0xeef0f4, sash: 0x3a6ac0, belt: 0x3a6ac0, gem: 0x80d0ff, emblem: 0x9ac8ff, hood: 0xeef0f4 },
+    chest: { type: 'robe', sleeves: sex === 'f' ? 1.2 : 1.9, neck: 'high' }, skirt: { len: 1.0, flare: 0.22, hemTrim: true },
+    cuirass: { style: sex === 'f' ? 'corset' : 'cloth', neck: 'v', slot: SLOT.CLOTH1, rimSlot: SLOT.TRIM, armhole: 0.095 },
+    belt: { type: 'sash', buckle: 'gem' }, legs: { type: 'pants' }, feet: { type: 'shoes', height: 0.3 }, hands: sex === 'f' ? { type: 'gloves', cuff: 0.8 } : null,
+    cloak: { len: 0.6, trim: true, emblem: 'star' }, head: { type: 'circlet', gem: true }, accent: 0x80d0ff,
+    extras: [{ type: 'collar', h: 0.11, flare: 0.045, open: 0.6, trim: true, slot: SLOT.CLOTH2 }] }),
+  merchant: (sex, v) => {
+    const c = pick([0x2a6a4a, 0x8a4a1a, 0x6a2a5a, 0x2a4a7a], v);
+    return preset({ armor: 'cloth', tier: 0, colors: { primary: c, secondary: 0xd8c8a0, trim: 0xc89a48, pants: 0x4a3a2a, boots: 0x3a2a1c, shirt: 0xe8dcc0, sash: 0xb08a3a, belt: 0x4a3020, feather: 0xc83a3a },
+      chest: { type: 'tunic', sleeves: 1.8, neck: 'v', vdepth: 0.08 }, belt: { type: 'leather', buckle: 'square', pouches: 3 }, legs: { type: 'pants' }, feet: { type: 'boots', height: 0.5, cuff: true },
+      skirt: sex === 'f' ? { len: 0.95, flare: 0.25 } : null,
+      extras: [{ type: 'hat', brim: 0.11, feather: true }] });
+  },
+  blacksmith: (sex, v) => preset({ armor: 'leather', tier: 0, colors: { primary: 0x6a625a, secondary: 0x5a3a24, trim: 0x8a8a8a, pants: 0x3a3230, boots: 0x2a2220, tabard: 0x5a3a22, gloves: 0x4a3022, belt: 0x3a2618, shirt: 0x6a625a },
+    chest: { type: 'shirt', sleeves: 0.5, neck: 'v' }, belt: { type: 'leather', buckle: 'square', pouches: 1 }, legs: { type: 'pants' }, feet: { type: 'boots', height: 0.6, cuff: true },
+    hands: { type: 'gloves', cuff: 0.5 }, apron: true }),
+  sailor: (sex, v) => preset({ armor: 'cloth', tier: 0, colors: { primary: pick([0xe8e4dc, 0xc8d4e0, 0xe0d8c0], v), secondary: 0x2a4a7a, trim: 0x2a4a7a, pants: 0x2a3a5a, boots: 0x2a2220, sash: pick([0xb02a2a, 0x2a4a8a, 0xd8a030], v, 1), shirt: 0xe8e4dc, belt: 0x3a2618, hood: pick([0xb02a2a, 0x2a4a8a], v, 2) },
+    chest: { type: 'shirt', sleeves: 1.15, neck: 'v' }, belt: { type: 'sash', buckle: 'none' }, legs: { type: 'pants' }, feet: { type: 'boots', height: 0.45 },
+    head: { type: 'bandana' }, extras: [{ type: 'scarf', len: 0.22, tw: 0.05, w: 0.03 }] }),
+  pirate: (sex, v) => preset({ armor: 'leather', tier: 1, coatLeather: true, colors: { primary: 0x6a1616, secondary: 0x1a1a1a, trim: 0xc89a40, coat: 0x6a1616, coat2: 0x1e1614, pants: 0x2a2220, boots: 0x1e1614, shirt: 0xe8dcc8, sash: 0x2a2a2a, belt: 0x2a1e16, hood: 0x2a2a2a, gloves: 0x2a1e16 },
+    chest: { type: 'leather', sleeves: 1.85, neck: 'v', coat: true }, belt: { type: 'sash', buckle: 'none' },
+    cuirass: { style: 'leather', neck: 'deepv', slot: SLOT.COAT, rimSlot: SLOT.TRIM, rimW: 0.024, armhole: 0.1 },
+    legs: { type: 'leather' }, feet: { type: 'boots', height: 0.85, cuff: true }, hands: { type: 'gloves', cuff: 0.3 }, head: { type: 'bandana' },
+    extras: [{ type: 'coat', len: 0.58, open: 0.5, slit: 0.25, trim: true, slot: SLOT.COAT, tatter: true }, { type: 'bandolier' }] }),
+  bandit: (sex, v) => preset({ armor: 'leather', tier: 0, colors: { primary: 0x4a3a2c, secondary: 0xa01c1c, trim: 0x6a5a48, pants: 0x3a3028, boots: 0x2a221c, hood: pick([0x3a322a, 0x4a2a22, 0x2e2a26], v), sash: 0xa81c1c, belt: 0x2a1e16 },
+    chest: { type: 'leather', sleeves: 0.6, neck: 'crew', straps: true }, belt: { type: 'leather', buckle: 'square', pouches: 2 },
+    legs: { type: 'leather' }, feet: { type: 'boots', height: 0.7, cuff: true }, hands: { type: 'bracers', cuff: 0.4 },
+    shoulders: { type: 'leather', size: 0.9, layers: 1, side: 'L' }, head: { type: 'hood', mask: true },
+    extras: [{ type: 'scarf', len: 0.5, tw: 0.075, w: 0.042 }] }),
+  cultist: (sex, v) => preset({ armor: 'cloth', tier: 1, colors: { primary: 0x1e1a1e, secondary: 0x6a0e14, trim: 0x8a7a5a, pants: 0x1a1618, boots: 0x1a1618, hood: 0x2a2226, sash: 0x6a0e14, belt: 0x3a2a1a, tabard: 0x5a0c12, emblem: 0xb02020 },
+    chest: { type: 'robe', sleeves: 1.9, neck: 'high' }, skirt: { len: 1.0, flare: 0.16 }, belt: { type: 'rope' },
+    legs: { type: 'pants' }, feet: { type: 'boots', height: 0.5 }, head: { type: 'hood', mask: true }, accent: 0xff3020,
+    tabard: { emblem: 'skull', hw: 0.075, tatter: true, top: 'chest', trim: false } }),
+  priest: (sex, v) => preset({ armor: 'cloth', tier: 1, colors: { primary: 0xece6d8, secondary: 0xc89a3a, trim: 0xd8b050, pants: 0xd8d0c0, boots: 0x6a5a48, tabard: 0xc8a040, emblem: 0xf0e0b0, sash: 0xc8a040, belt: 0xc8a040 },
+    chest: { type: 'robe', sleeves: 1.9, neck: 'high' }, skirt: { len: 1.0, flare: 0.14, hemTrim: true }, belt: { type: 'sash', buckle: 'none' },
+    legs: { type: 'pants' }, feet: { type: 'shoes', height: 0.3 }, tabard: { emblem: 'sun', hw: 0.06, top: 'chest', trim: true } }),
+  bard: (sex, v) => {
+    const c = pick([[0x2a7a7a, 0xe08a2a], [0x7a2a6a, 0xe0c040], [0x3a5aa0, 0xe05a3a]], v);
+    return preset({ armor: 'cloth', tier: 1, colors: { primary: c[0], secondary: c[1], trim: 0xe0c060, pants: 0x3a2a3a, boots: 0x5a3a24, cape: c[1], capeInner: c[0], shirt: 0xeee6d4, sash: c[1], belt: 0x5a3a24, feather: c[1] },
+      chest: { type: 'tunic', sleeves: 1.9, neck: 'v', vdepth: 0.09 }, belt: { type: 'leather', buckle: 'square', pouches: 1 }, legs: { type: 'pants' }, feet: { type: 'boots', height: 0.75, cuff: true },
+      skirt: sex === 'f' ? { len: 0.8, flare: 0.3, hemTrim: true } : null,
+      cloak: { len: 0.36, trim: true }, extras: [{ type: 'hat', brim: 0.07, feather: true }] });
+  },
+  farmer: (sex, v) => preset({ armor: 'cloth', tier: 0, colors: { primary: pick([0xd8cca8, 0xa8b890, 0xc8a078], v), secondary: 0x6a5238, trim: 0x8a6a48, pants: pick([0x5a4a38, 0x4a5a6a], v, 1), boots: 0x4a3424, shirt: 0xd8cca8, belt: 0x5a4028, tabard: 0xd8d0b8 },
+    chest: { type: 'shirt', sleeves: 0.9, neck: 'crew' }, belt: { type: 'rope' }, legs: { type: 'pants' }, feet: { type: 'boots', height: 0.45 }, head: { type: 'straw' },
+    ...(sex === 'f' ? { apron: true, skirt: { len: 0.9, flare: 0.25 } } : {}) }),
+  fisher: (sex, v) => preset({ armor: 'cloth', tier: 0, colors: { primary: 0x5a6a5a, secondary: 0x3a4a5a, trim: 0x8a7a5a, pants: 0x3a4250, boots: 0x2a2a2a, shirt: 0xc8c0a8, belt: 0x4a3a2a, hood: pick([0x6a7a5a, 0x8a6a3a, 0x3a4a6a], v), sash: 0x5a6a7a },
+    chest: { type: 'vest', sleeves: 1.0, neck: 'v' }, belt: { type: 'leather', buckle: 'square', pouches: 1 }, legs: { type: 'pants' }, feet: { type: 'boots', height: 0.85 },
+    head: { type: 'cap' } }),
+  villager: (sex, v) => preset({ armor: 'cloth', colors: { primary: pick([0xd8cca8, 0x8aa0b8, 0xb89a78, 0x9ab08a, 0xc88a7a, 0xa89ac0], v), secondary: 0x8a6a48, trim: 0x8a6a48, pants: pick([0x6a5238, 0x4a4a58, 0x5a4a3a], v, 1), boots: 0x4a3424, belt: 0x5a4028 },
+    chest: { type: sex === 'f' ? 'tunic' : 'shirt', sleeves: 1.2, neck: v % 2 ? 'crew' : 'v', vdepth: 0.07 }, belt: { type: 'leather', buckle: 'square' }, legs: { type: 'pants' }, feet: { type: 'shoes', height: 0.3 },
+    skirt: sex === 'f' ? { len: 0.92, flare: 0.22 } : null, apron: sex === 'f' && (v % 2 === 0) }),
+  child: (sex, v) => preset({ armor: 'cloth', colors: { primary: pick([0xc85a4a, 0x4a8ac8, 0x6aa84a, 0xe0b040], v), secondary: 0x8a6a48, trim: 0x8a6a48, pants: 0x5a4a3a, boots: 0x4a3424, shirt: 0xe8dcc0, belt: 0x6a4a30 },
+    chest: { type: 'tunic', sleeves: 1.0, neck: 'crew' }, belt: { type: 'rope' }, legs: { type: 'pants' }, feet: { type: 'shoes', height: 0.3 },
+    skirt: sex === 'f' ? { len: 0.7, flare: 0.3 } : null }),
+};
+
+// Named characters (story NPCs): an NPC outfit + a fixed look (+ optional colour overrides)
+export const NPC_PRESETS = {
+  brannoc: { npc: 'knight', sex: 'm', look: { face: 4, hair: 1, hairColor: 0x8c8882, skin: 2, eyes: 0x5a7a9a, height: 1.05, build: 0.9, beard: 2 },
+    colors: { primary: 0x646c78, boots: 0x646c78, secondary: 0x1a3470, tabard: 0x1a3470, cape: 0x1a3470, capeInner: 0x2a2420, trim: 0xb89040, emblem: 0xe0b850 }, emblem: 'sun' },
+  seraphine: { npc: 'oracle', sex: 'f', look: { face: 5, hair: 0, hairColor: 0xeee8f2, skin: 0, eyes: 0x4ab0f0, height: 0.97, build: 0.15 },
+    colors: { primary: 0xf4f4f8, secondary: 0x2a64c8, cape: 0x2a64c8, capeInner: 0xf4f4f8, sash: 0x2a64c8, trim: 0xcadcf6, gem: 0x6ad0ff } },
 };
 
 /** Resolve { cls, npc, tier, sex, dye } → a fresh gear spec. A spec object may also be passed directly. */
 export function resolveGear(o = {}) {
   let g;
   if (o.spec) g = o.spec;
-  else if (o.npc) g = (NPC_OUTFITS[o.npc] || NPC_OUTFITS.villager)(o.sex || 'm');
+  else if (o.npc) {
+    const pr = NPC_PRESETS[o.npc];
+    g = (NPC_OUTFITS[pr ? pr.npc : o.npc] || NPC_OUTFITS.villager)(o.sex || 'm', o.variant | 0);
+    if (pr) { g.colors = { ...g.colors, ...(pr.colors || {}) }; if (pr.emblem) { if (g.tabard) g.tabard.emblem = pr.emblem; if (g.cloak) g.cloak.emblem = pr.emblem; } }
+  }
   else g = (CLASS_OUTFITS[o.cls] || CLASS_OUTFITS.reaver)(clamp(o.tier ?? 1, 0, 2) | 0, o.sex || 'm');
   g = JSON.parse(JSON.stringify(g));
   if (o.dye) { // [primary, secondary, trim]
@@ -242,7 +334,7 @@ export function buildPalette(g, app) {
   // keep lit albedo below the bloom threshold under the strong sun (HDR pipeline): soft-cap bright colours
   for (let i = 0; i < NSLOT; i++) {
     if (i === SLOT.GEM || i === SLOT.GLOW || i === SLOT.RUNE || i === SLOT.SCLERA) continue;
-    if (i === SLOT.SKIN || i === SLOT.SKIN2) { const c = pal[i].c; for (let k = 0; k < 3; k++) { const v = c[k]; c[k] = v < 0.6 ? v : 0.6 + (v - 0.6) * 0.6; } continue; }
+    if (i === SLOT.SKIN || i === SLOT.SKIN2) { const c = pal[i].c; for (let k = 0; k < 3; k++) { const v = c[k]; c[k] = v < 0.55 ? v : 0.55 + (v - 0.55) * 0.5; } continue; }
     const c = pal[i].c;
     for (let k = 0; k < 3; k++) { const v = c[k]; c[k] = v < 0.34 ? v : 0.34 + (v - 0.34) * 0.32; }
   }

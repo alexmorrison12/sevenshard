@@ -424,7 +424,7 @@ export class Ground {
     d[b + 8] = o.R; d[b + 9] = o.W; d[b + 10] = o.halfA; d[b + 11] = o.n;
     d[b + 12] = o.fill[0]; d[b + 13] = o.fill[1]; d[b + 14] = o.fill[2]; d[b + 15] = 1e9;
     d[b + 16] = o.rim[0]; d[b + 17] = o.rim[1]; d[b + 18] = o.rim[2]; d[b + 19] = -1;
-    d[b + 20] = o.phase; d[b + 21] = o.flags; d[b + 22] = o.seed; d[b + 23] = o.inten;
+    d[b + 20] = o.phase; d[b + 21] = o.flags; d[b + 22] = o.seed; d[b + 23] = o.inten * this.fx.dimK;
     L.touch(s);
   }
   teleSet(s, idx, v) { if (s < 0) return; this.tele.data[s * TSTRIDE + idx] = v; this.tele.touch(s); }
@@ -436,7 +436,7 @@ export class Ground {
     d[b] = o.x; d[b + 1] = o.y; d[b + 2] = o.z; d[b + 3] = o.t0;
     d[b + 4] = o.R; d[b + 5] = o.len; d[b + 6] = o.yaw; d[b + 7] = o.dur;
     d[b + 8] = o.c[0]; d[b + 9] = o.c[1]; d[b + 10] = o.c[2]; d[b + 11] = o.kind;
-    d[b + 12] = o.fin; d[b + 13] = o.seed; d[b + 14] = o.inten; d[b + 15] = o.hot;
+    d[b + 12] = o.fin; d[b + 13] = o.seed; d[b + 14] = o.inten * this.fx.dimK; d[b + 15] = o.hot;
     L.touch(s);
   }
   update(dt) {

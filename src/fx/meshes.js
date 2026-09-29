@@ -182,7 +182,8 @@ class MeshPool {
     d[b + 8] = rx; d[b + 9] = ry; d[b + 10] = rz; d[b + 11] = spin;
     d[b + 12] = scale; d[b + 13] = mode; d[b + 14] = grav; d[b + 15] = 1e9;
     d[b + 16] = c[0]; d[b + 17] = c[1]; d[b + 18] = c[2]; d[b + 19] = gy;
-    d[b + 20] = gl[0]; d[b + 21] = gl[1]; d[b + 22] = gl[2]; d[b + 23] = fres;
+    const dk = this.fx.dimK;
+    d[b + 20] = gl[0] * dk; d[b + 21] = gl[1] * dk; d[b + 22] = gl[2] * dk; d[b + 23] = fres;
     if (s < this.lo) this.lo = s; if (s > this.hi) this.hi = s;
     if (t0 + life > this.until) this.until = t0 + life;
     return s;
@@ -262,7 +263,7 @@ class Bubbles {
     if (i < 0) return;
     const d = this.data, b = i * 12;
     d[b] = x; d[b + 1] = y; d[b + 2] = z; d[b + 3] = R;
-    d[b + 4] = c[0]; d[b + 5] = c[1]; d[b + 6] = c[2]; d[b + 7] = a;
+    d[b + 4] = c[0]; d[b + 5] = c[1]; d[b + 6] = c[2]; d[b + 7] = a * this.fx.dimK;
     d[b + 9] = hit; d[b + 10] = style; d[b + 11] = squash;
   }
   free(i) { if (i < 0) return; this.used[i] = 0; this.data[i * 12 + 7] = 0; while (this.hi > 0 && !this.used[this.hi - 1]) this.hi--; this.geo.instanceCount = this.hi; }
@@ -361,7 +362,7 @@ class Pillars {
     d[b] = x; d[b + 1] = y; d[b + 2] = z; d[b + 3] = t0;
     d[b + 4] = R; d[b + 5] = H; d[b + 6] = D; d[b + 7] = style;
     d[b + 8] = c[0]; d[b + 9] = c[1]; d[b + 10] = c[2]; d[b + 11] = growT;
-    d[b + 12] = 1e9; d[b + 13] = inten; d[b + 14] = Math.random(); d[b + 15] = 0;
+    d[b + 12] = 1e9; d[b + 13] = inten * this.fx.dimK; d[b + 14] = Math.random(); d[b + 15] = 0;
     if (s < this.lo) this.lo = s; if (s > this.hi) this.hi = s;
     if (t0 + D > this.until) this.until = t0 + D;
     return s;
@@ -439,7 +440,7 @@ class Portals {
     const d = this.data, b = i * 16;
     d[b] = x; d[b + 1] = y; d[b + 2] = z; if (d[b + 3] < -1e8) { d[b + 3] = this.fx.time; d[b + 12] = 1e9; }
     d[b + 4] = R; d[b + 5] = yaw; d[b + 6] = flat ? 1 : 0; d[b + 7] = spin;
-    d[b + 8] = c[0]; d[b + 9] = c[1]; d[b + 10] = c[2]; d[b + 11] = a;
+    d[b + 8] = c[0]; d[b + 9] = c[1]; d[b + 10] = c[2]; d[b + 11] = a * this.fx.dimK;
     this.dirty = true;
   }
   kill(i) { if (i < 0) return; this.data[i * 16 + 12] = this.fx.time; this.dirty = true; }
@@ -530,7 +531,7 @@ class Props {
    * Register a posed prop. src: object with { pos: Vector3, dir?: Vector3, alive (bool), scale?, spin? (rad/s),
    * roll?, tint?: [r,g,b], alpha? } read every frame; removed when src.alive becomes false.
    */
-  add(type, src) { this.users[type].push(src); return src; }
+  add(type, src) { if (src.dimK === undefined) src.dimK = this.fx.dimK; this.users[type].push(src); return src; }
   update(dt) {
     for (const type in this.types) {
       const list = this.users[type], mesh = this.types[type];
@@ -550,8 +551,8 @@ class Props {
           if (u.scaleV) _s.copy(u.scaleV); else _s.setScalar(sc);
           _m.compose(u.pos, _q, _s);
           mesh.setMatrixAt(n, _m);
-          const t = u.tint || DEF_TINT;
-          tint.array[n * 4] = t[0]; tint.array[n * 4 + 1] = t[1]; tint.array[n * 4 + 2] = t[2]; tint.array[n * 4 + 3] = u.alpha ?? 1;
+          const t = u.tint || DEF_TINT, dk = u.dimK;
+          tint.array[n * 4] = t[0] * dk; tint.array[n * 4 + 1] = t[1] * dk; tint.array[n * 4 + 2] = t[2] * dk; tint.array[n * 4 + 3] = (u.alpha ?? 1) * dk;
         }
         n++;
       }
@@ -582,6 +583,7 @@ export class Meshes {
 
   // ---- helpers
   debris(x, y, z, n, s = 1, speed = 8, { color = [0.23, 0.2, 0.18], glow = [1.6, 0.45, 0.08], gy = y, up = 1, delay = 0 } = {}) {
+    n = Math.round(n * this.fx.dimK);
     for (let i = 0; i < n; i++) {
       const a = Math.random() * 6.283, u = 0.45 + Math.random() * 0.55 * up, sp = (0.4 + Math.random() * 0.6) * speed * s;
       this.rocks.spawn(delay, x, y, z, Math.cos(a) * sp * (1 - u * 0.5), u * sp * 1.1, Math.sin(a) * sp * (1 - u * 0.5), 2.2 + Math.random(), Math.random() * 6, Math.random() * 6, Math.random() * 6, 4 + Math.random() * 6, (0.5 + Math.random() * 0.9) * s, 0, -16 * Math.max(0.6, s), color, glow, 0, gy);
@@ -609,6 +611,7 @@ export class Meshes {
     }
   }
   shards(x, y, z, n, s = 1, { color = [0.62, 0.85, 1], glow = [0.4, 0.75, 1.5], fres = 0.9, speed = 6, up = 0.6, size = 0.28, life = [0.9, 1.4], dir = null } = {}) {
+    n = Math.round(n * this.fx.dimK);
     for (let i = 0; i < n; i++) {
       let vx, vy, vz;
       const a = Math.random() * 6.283, u = -0.2 + Math.random() * (0.2 + up), sp = (0.5 + Math.random() * 0.5) * speed * s;

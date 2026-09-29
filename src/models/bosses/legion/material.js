@@ -9,7 +9,7 @@
 //   - hit tint (uTint / uTintAmt), dissolve (uDissolve) for corpse clean-up
 // One GL program per variant (opaque / ghost / depth) shared by every boss; uniforms are per instance.
 import * as THREE from 'three';
-import { lambert } from '../../../engine/materials.js';
+import { lambert, G } from '../../../engine/materials.js';
 import { detailTexture } from '../../kit/material.js';
 
 const VERT_PARS = /* glsl */`
@@ -24,8 +24,9 @@ const HIDE_GLSL = /* glsl */`
   if ( hid > 0.5 ) transformed = vec3( 0.0 );
 }
 `;
-const VERT_BODY = /* glsl */`
-vRP = position; vRN = normal; vDtl = dtl; vEmis = aux.x; vExt = ext;
+// vertex displacement shared by the body passes and the ghost depth prepass (they must match exactly, or the
+// translucent ghost pass fails its LessEqual depth test in bands)
+const DISPLACE_GLSL = /* glsl */`
 {
   float gcls = floor( ext.w + 0.5 );
   if ( gcls > 2.5 && gcls < 3.5 ) {
@@ -37,6 +38,10 @@ vRP = position; vRN = normal; vDtl = dtl; vEmis = aux.x; vExt = ext;
   }
   if ( uGhost > 0.001 ) transformed += normal * sin( uTime * 2.7 + position.y * 9.0 / uUnit + position.x * 5.0 / uUnit ) * 0.006 * uUnit * uGhost;
 }
+`;
+const VERT_BODY = /* glsl */`
+vRP = position; vRN = normal; vDtl = dtl; vEmis = aux.x; vExt = ext;
+${DISPLACE_GLSL}
 ${HIDE_GLSL}
 `;
 
@@ -190,10 +195,10 @@ function makePrepass(U) {
   const m = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: true });
   m.customProgramCacheKey = () => 'legion-prepass';
   m.onBeforeCompile = (sh) => {
-    Object.assign(sh.uniforms, { uHide: U.uHide, uGhost: U.uGhost, uUnit: U.uUnit, uTime: { value: 0 } });
+    Object.assign(sh.uniforms, { uHide: U.uHide, uGhost: U.uGhost, uUnit: U.uUnit, uTime: G.uTime });
     sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\nattribute vec4 ext; uniform vec4 uHide; uniform float uGhost; uniform float uUnit;')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\n' + HIDE_GLSL);
+      .replace('#include <common>', '#include <common>\nattribute vec4 ext; attribute vec2 aux; uniform vec4 uHide; uniform float uGhost; uniform float uUnit; uniform float uTime;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\n' + DISPLACE_GLSL + HIDE_GLSL);
   };
   return m;
 }

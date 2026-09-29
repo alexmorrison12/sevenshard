@@ -17,7 +17,7 @@ export function makeBoss(def, o = {}) {
   const u = new Unit({
     kind: 'boss', team: 1, type: def.model || def.id, name: def.name, level: 60, x: o.x ?? 0, z: o.z ?? -10, facing: o.facing ?? 0,
     radius: def.radius, height: def.height, mass: 1e6,
-    stats: { hpMax: Math.round(def.hp * ref.ap * hpScale), atk: def.atk * ref.hp / 0.55, def: 6500, speed: def.speed || 4.5, mpMax: 0, mpRegen: 0, crit: 0.05 },
+    stats: { hpMax: Math.round(def.hp * ref.ap * hpScale), atk: def.atk * ref.hp / 0.55, def: 6500, speed: def.speed ?? 4.5, mpMax: 0, mpRegen: 0, crit: 0.05 },
   });
   u.data.def = def; u.data.bars = def.bars || 100; u.data.barHp = u.hpMax / u.data.bars;
   u.data.title = def.title; u.data.immovable = true; u.data.corpseTime = 1e9;
@@ -25,6 +25,15 @@ export function makeBoss(def, o = {}) {
   u.data.modelOpts = def.modelOpts || {};
   u.ctrl = new BossBrain(u, def, o);
   return u;
+}
+
+/** Break a model part by script name; 'antlers'/'horns' fall back to every breakable whose name shares the stem (antlerL, antlerR). */
+export function breakModelPart(model, part) {
+  if (!model?.breakPart || !part) return;
+  if (model.breakPart(part)) return;
+  const names = Object.keys(model.def?.breakable || model.entry?.def?.breakable || {});
+  const stem = String(part).replace(/s$/, '');
+  for (const n of names) if (n !== part && (n.startsWith(stem) || stem.startsWith(n))) model.breakPart(n);
 }
 
 export class BossBrain {
@@ -94,13 +103,17 @@ export class BossBrain {
   }
   face(t, rate = 1) { const u = this.u; const f = facingOf(t.pos.x - u.pos.x, t.pos.z - u.pos.z); let d = f - u.facing; d = Math.atan2(Math.sin(d), Math.cos(d)); u.facing += Math.sign(d) * Math.min(Math.abs(d), (u.turnRate || 4) * Math.max(rate, 0.016)); }
   async run(m, mech = false) {
+    const token = this.runToken = (this.runToken || 0) + 1;
     this.busy = true;
     const L = this.level, u = this.u;
     try { await m.run(this, this.target); }
     catch (e) { if (e !== CANCEL) console.error('[boss move]', e); }
     finally {
-      this.busy = false; u.data.counterWindow = 0; u.model?.setGlow?.('counter', 0);
-      this.idleT = (m.recover ?? 0.6) * (this.enraged ? 0.5 : 1) * (this.mods.hard ? 0.75 : 1);
+      // an interrupted script finishes a frame later — only the latest run may clear busy/recovery state
+      if (this.runToken === token) {
+        this.busy = false; u.data.counterWindow = 0; u.model?.setGlow?.('counter', 0);
+        this.idleT = (m.recover ?? 0.6) * (this.enraged ? 0.5 : 1) * (this.mods.hard ? 0.75 : 1);
+      }
       if (m.phaseAfter !== undefined) this.phase = m.phaseAfter;
     }
   }
@@ -115,7 +128,9 @@ export class BossBrain {
   }
 
   // ---------------------------------------------------------------- script helpers (await-able)
-  wait(s) { return this.level.wait(s / (this.enraged ? 1.3 : 1) / (this.mods.hard ? 1.12 : 1), this.u); }
+  /** script speed: enrage and hard mode run every wait() faster (telegraphs drawn via strike() match it) */
+  get tempo() { return (this.enraged ? 1.3 : 1) * (this.mods.hard ? 1.12 : 1); }
+  wait(s) { return this.level.wait(s / this.tempo, this.u); }
   /** play a model action; returns { dur, hits } scaled to dur */
   anim(name, dur) {
     const u = this.u, meta = u.model?.meta?.actions?.[name] || this.def.anims?.[name];
@@ -149,7 +164,7 @@ export class BossBrain {
   }
   /** telegraph then hit after dur */
   async strike(shape, o = {}) {
-    const tg = this.tele(shape, o);
+    const tg = this.tele(shape, { ...o, dur: (o.dur ?? 1) / this.tempo });
     await this.wait(o.dur ?? 1);
     tg.alive = false;
     return this.hit(shape, o);
@@ -176,7 +191,7 @@ export class BossBrain {
     await onFail?.();
     return false;
   }
-  destruction(part, amount, onBreak) { this.u.data.destruction = { v: amount, max: amount, part, broken: false, onBreak: src => { this.u.model?.breakPart?.(part); onBreak?.(src); } }; }
+  destruction(part, amount, onBreak) { this.u.data.destruction = { v: amount, max: amount, part, broken: false, onBreak: src => { breakModelPart(this.u.model, part); onBreak?.(src); } }; }
   /** run forward along facing for dist over dur, hitting everything in a rect ahead each tick */
   async charge(dist, dur, hitO = {}) {
     const u = this.u, L = this.level, f = this.fwd, steps = Math.ceil(dur / 0.05), hitSet = new Set();

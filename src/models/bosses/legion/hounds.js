@@ -80,12 +80,12 @@ function makeHound(kind) {
         E('head', H(s * 0.155, -0.05, -0.1), HR([0.088, 0.108, 0.14]), { k: 0.05, ...hh });                          // masseter
         E('head', H(s * 0.12, -0.01, -0.26), HR([0.07, 0.06, 0.1]), { k: 0.05, ...hh });                             // cheekbone
       }
-      S.seg('head', H(0, 0.0, -0.2), H(0, -0.055, -0.64), 0.135 * HS, 0.085 * HS, { k: 0.06, ...hh });              // wedge muzzle (flat top)
+      S.seg('head', H(0, 0.0, -0.2), H(0, -0.055, -0.64), 0.118 * HS, 0.085 * HS, { k: 0.06, ...hh });              // wedge muzzle (flat top)
       E('head', H(0, 0.035, -0.4), HR([0.075, 0.03, 0.18]), { k: 0.04, ...hh });                                     // nasal ridge
-      S.box('head', H(0, -0.03, -0.64), HR([0.066, 0.04, 0.04]), 0.03, { k: 0.03, ...hh, col: 0x0c0808, tag: 'nose' });   // canine nose leather
-      E('head', H(0, -0.11, -0.44), HR([0.125, 0.05, 0.19]), { k: 0.04, ...hh });                                    // upper lip / fang sheath
+      E('head', H(0, -0.03, -0.642), HR([0.062, 0.04, 0.042]), { k: 0.028, ...hh, col: 0x0c0808, tag: 'nose', rot: [-0.35, 0, 0] });   // canine nose leather
+      E('head', H(0, -0.11, -0.44), HR([0.112, 0.05, 0.19]), { k: 0.04, ...hh });                                    // upper lip / fang sheath
       for (const s of [-1, 1]) {
-        E('head', H(s * 0.04, -0.048, -0.676), HR([0.024, 0.01, 0.02]), { group: 1, k: 0.008, sub: true, col: 0x050303, tag: 'nostril', rot: [0, s * 0.7, -s * 0.6] });   // comma slits
+        E('head', H(s * 0.05, -0.045, -0.668), HR([0.022, 0.009, 0.018]), { group: 1, k: 0.008, sub: true, col: 0x050303, tag: 'nostril', rot: [0, s * 1.1, -s * 0.5] });   // side-facing comma slits
         E('head', H(s * 0.11, 0.035, -0.28), HR([0.045, 0.024, 0.035]), { group: 1, k: 0.015, sub: true, col: 0x0a0404, tag: 'socket', rot: [0, 0, s * 0.3] });
       }
       E('head', H(0, -0.16, -0.36), HR([0.1, 0.04, 0.24]), { group: 1, k: 0.02, sub: true, col: c.maw, tag: 'mouth' });
@@ -154,17 +154,19 @@ function makeHound(kind) {
         if (fire) { // ram curl: back, out, down, forward
           const a = new THREE.Vector3(...H(s * 0.12, 0.13, -0.08));
           pts = [];
-          for (let i = 0; i < 18; i++) {
-            const u = i / 17, ang = u * 4.4;
-            const r = 0.3 * (1 - u * 0.45);
-            pts.push(new THREE.Vector3(a.x + s * (0.06 + u * 0.24), a.y + Math.sin(ang) * r * 0.9 - u * 0.06, a.z + 0.05 + (1 - Math.cos(ang)) * r * 0.75 - 0.08 * u));
+          for (let i = 0; i < 26; i++) {   // up and back, down behind the jaw hinge, then forward past the cheek
+            const u = i / 25, ang = u * 5.0;
+            const r = 0.29 * (1 - u * 0.5);
+            pts.push(new THREE.Vector3(a.x + s * (0.05 + u * 0.2 + Math.max(0, u - 0.7) * 0.3), a.y + Math.sin(ang) * r * 0.9 - u * 0.06, a.z + 0.05 + (1 - Math.cos(ang)) * r * 0.75 - 0.08 * u));
           }
         } else pts = bez(H(s * 0.1, 0.13, -0.12), H(s * 0.2, 0.3, 0.2), H(s * 0.24, 0.32, 0.72), 14);
         const N = pts.length;
-        const hr = taper(N, fire ? 0.1 : 0.07, 0.006, 1.1).map((r, i) => (fire ? r * (1 + 0.11 * Math.max(0, Math.sin(i * 2.2)) * (1 - i / N)) : r));   // ram horn growth ridges
+        const ridge = (i) => Math.max(0, Math.sin(i * 1.9));                                     // ram horn growth ridges
+        const hr = taper(N, fire ? 0.105 : 0.07, 0.008, 1.1).map((r, i) => (fire ? r * (1 + 0.14 * ridge(i) * (1 - i / N)) : r));
         acc.add(sweep(pts, hr, { radial: 9, capStart: true }), {
           skin: hb, dtl: DT.horn,
-          color: (p, n, uv) => (!fire && uv[1] > 0.3 && Math.abs(Math.sin(uv[0] * TAU)) < 0.2 ? cS : lerp3(cH, cHT, Math.pow(uv[1], 1.3))),
+          color: (p, n, uv) => (!fire && uv[1] > 0.3 && Math.abs(Math.sin(uv[0] * TAU)) < 0.2 ? cS
+            : fire ? lerp3(lerp3(cH, cHT, Math.pow(uv[1], 0.7)), cH, (1 - ridge(uv[1] * (N - 1))) * 0.35 * (1 - uv[1])) : lerp3(cH, cHT, Math.pow(uv[1], 1.3))),
           emis: (p, uv) => (!fire && uv[1] > 0.3 && Math.abs(Math.sin(uv[0] * TAU)) < 0.2 ? 1.8 : 0),
           ext: (p, uv) => [0.25, 0, 0, !fire && uv[1] > 0.3 && Math.abs(Math.sin(uv[0] * TAU)) < 0.2 ? 4 : 0],
         });

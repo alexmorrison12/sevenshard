@@ -10,14 +10,14 @@ const cw = B => 2 * (B.u.radius + 0.6);
 export default {
   id: 'gatekeeper', model: 'gatekeeper', name: 'The Gatekeeper', title: 'Warden of the Chaos Gate', kind: 'field',
   radius: 1.6, height: 4, hp: 26000, atk: 0.12, bars: 110, speed: 4.4, turnRate: 4, enrage: 540,
-  music: 'boss_gate', arena: 'inferno',
+  music: 'boss', arena: 'inferno',
   anims: { bash: { dur: 1.8, hits: [0.9] }, spin: { dur: 2.8, hits: [0.9, 1.4, 1.9] }, summon: { dur: 2.8, hits: [1.6] } },
   moves: {
     // COUNTER: the shield glows blue as he winds up
     bash: { range: 4, cd: 9, weight: 2.5, async run(B, t) {
       B.turnTo(t); act(B, 'bash', 1.0);
       counter(B, 0.85, 4);
-      await strike(B, 'cone', { r: 5, deg: 90, dur: 1.0, coef: 1.1, knock: 'down', kb: 4, fx: 'impact_heavy', fxR: 3, sfx: 'shield_bash', shake: 0.35 });
+      await strike(B, 'cone', { r: 5, deg: 90, dur: 1.0, coef: 1.1, knock: 'down', kb: 4, fx: 'impact_heavy', fxR: 3, sfx: 'impact_heavy', shake: 0.35 });
       await wait(B, 0.5);
     } },
     spin: { range: 5, cd: 9, weight: 3, async run(B) {

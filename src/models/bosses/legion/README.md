@@ -19,7 +19,7 @@ b.setGlow('counter', 1);  b.breakPart('hornL');  b.setTint(0xffffff, 0.6);  b.di
 ## Exports
 | export | description |
 |---|---|
-| `createBoss(id, opts)` | new instance; geometry is built once per id and cached (first build 120–330 ms warm). `opts.impactFx` (default true): built-in dust/sparks at hit moments, landings and falls. `opts.autoGlow` (default true): actions with a `counter` window show the blue shimmer themselves; `false` = only `setGlow('counter')`. |
+| `createBoss(id, opts)` | new instance; geometry is built once per id and cached (build ≈ 75–120 ms per boss, Gorrath ≈ 190 ms; ≈ 2× that on a cold JIT). `opts.impactFx` (default true): built-in dust/sparks at hit moments, landings and falls. `opts.autoGlow` (default true): actions with a `counter` window show the blue shimmer themselves; `false` = only `setGlow('counter')`. |
 | `BOSSES` | `{ [id]: { name, title, height, radius, walkSpeed, runSpeed, actions: { [name]: { dur, hits, counter?, active?, move?, stretch?, sustain?, hold? } } } }` — pure data (no meshes built). `counter` = the self-driven blue window [t0, t1]; `active` = damage windows; `move` = root travel the encounter should perform `[{ t:[t0,t1], dist (m or 'target'), height? (root arc of B.leap) }]`; `stretch` = the segment that absorbs a longer/shorter `dur`; `sustain` = the loop segment used by `state.groggy`. All times in seconds at the default `dur`. |
 | `preloadBosses(ids?)` | builds and caches geometry; returns `[{ id, ms, tris, verts, bones, … }]`. |
 | `disposeBossCache()` | frees cached geometry (instances created later rebuild it). |
@@ -31,7 +31,7 @@ b.setGlow('counter', 1);  b.breakPart('hornL');  b.setTint(0xffffff, 0.6);  b.di
 | `root` | `THREE.Object3D` — add to the scene; set `position` / `rotation.y` (facing). Model faces −Z. Children: `pivot` (scaled model), two world-space particle pools, weapon trails, horn debris. |
 | `height`, `radius`, `meta` | metres; `meta` = this boss's `BOSSES` entry (`meta.actions[name].dur/hits`). |
 | `sockets` | `Object3D`s: `head, mouth, chest, back, handR, handL, weapon, weaponTip, feet…` + per-boss extras (below), `parts: { hornL, hornR }` (Gorrath). Weapon sockets ride on the weapon, also while it flies or lies on the ground. |
-| `update(dt, state)` | `state = { speed (m/s along facing), turn (rad/s), dead, groggy, enraged, ghost (0..1), combat (default true) }` (other keys ignored). Gait with planted feet (walk → run blend), idle life (breathing, look-around, snorts), springs (capes, tails, chains, tabards, flail), glow smoothing, particles, trails. **`dt = 0` holds the exact pose.** `dead: true` plays `death` and holds; true→false revives (and returns dropped weapons). `groggy: true` plays `groggy` and loops its `sustain` segment until false, then it gets up. `enraged` → persistent enrage glow. `ghost` → spectral form (translucent, no shadow). Actions with a `gait` hint (charges) run the legs even when `speed` is 0. |
+| `update(dt, state)` | `dt` is clamped to [0, 0.1] s. `state = { speed (m/s along facing), turn (rad/s), dead, groggy, enraged, ghost (0..1), combat (default true) }` (other keys ignored). Gait with planted feet (walk → run blend), idle life (breathing, look-around, snorts), springs (capes, tails, chains, tabards, flail), glow smoothing, particles, trails. **`dt = 0` holds the exact pose.** `dead: true` plays `death` and holds; true→false revives (and returns dropped weapons). `groggy: true` plays `groggy` and loops its `sustain` segment until false, then it gets up. `enraged` → persistent enrage glow. `ghost` → spectral form (translucent, no shadow). Actions with a `gait` hint (charges) run the legs even when `speed` is 0. |
 | `play(name, { dur, dist })` | one-shot action → `{ dur, hits }`; `dur` stretches the move (uniformly, or only the `stretch` segment), `hits` scale with it. `play('idle')` cancels. Unknown names and actions of a dead boss return `{ dur: 0, hits: [] }` (e.g. `getup`). `dist` (m): `axe_throw` range (default 15). `loop` is ignored (use `dur`). |
 | `stop(name?)`, `playing(name?)` | fade out actions / query. |
 | `setGlow(kind, v)` | `'counter'` (electric-blue fresnel rim + rising bands; body stays readable), `'enrage'` (hotter emissive shifted to the enrage colour + red rim + more embers), `'ghost'` (spectral blue-violet translucency, wisps). 0..1; combined by max with state flags and action channels (e.g. `triple_sweep` shows its own counter shimmer during its windup). |
@@ -64,11 +64,11 @@ locomotion (speed/turn/patrol), a 1.85 m capsule hero, views `iso` (game camera;
 `gamecine` (the encounter intro camera), `close` (head), `front/side/back/top/orbit`, and a `blood light (raid)` button.
 URL: `?boss=gorrath&act=axe_cleave&loop=1&t=1.2&view=iso|cine|gamecine&light=blood&counter=1&enrage=1&ghost=1&speed=2.6&hero=0&face=180`.
 Automation (`window.__legion`): `set(id)`, `play(name, {loop})`, `pose(name, t, {scale})` → Promise (freeze at t),
-`sheet(name, n, {pitch, face, gap, times})` (contact sheet), `loco(speed, turn)`, `glow(kind, v)`, `state({...})`,
+`sheet(name, n, {pitch, face, gap, times, dur})` (contact sheet; `dur` = review at a game-scaled duration), `loco(speed, turn)`, `glow(kind, v)`, `state({...})`,
 `view(name)`, `stats()`. Solo labs `legion_ashmaw.js` / `legion_gatekeeper.js` load one definition without `index.js`.
 
 ## Bosses
-### Gorrath, the Horned Tyrant (`gorrath`) — height 7 m, radius 2.3 m, walk ≈ 2.6 m/s, run ≈ 9 m/s · 58373 tris
+### Gorrath, the Horned Tyrant (`gorrath`) — height 7 m, radius 2.3 m, walk ≈ 2.6 m/s, run ≈ 9 m/s · 59000 tris
 | action | dur (s) | hits (s) | extra |
 |---|---|---|---|
 | `idle` | 4 | – |  |
@@ -98,7 +98,7 @@ Automation (`window.__legion`): `set(id)`, `play(name, {loop})`, `pose(name, t, 
 | `hit` | 0.6 | – |  |
 | `ghost_transform` | 3.2 | 2.2 |  |
 
-### Skarn, the Cinder Hound (`skarn`) — height 4.1 m, radius 2.2 m, walk ≈ 2.4 m/s, run ≈ 11 m/s · 43219 tris
+### Skarn, the Cinder Hound (`skarn`) — height 4.1 m, radius 2.2 m, walk ≈ 2.4 m/s, run ≈ 11 m/s · 42987 tris
 | action | dur (s) | hits (s) | extra |
 |---|---|---|---|
 | `idle` | 3 | – |  |
@@ -117,7 +117,7 @@ Automation (`window.__legion`): `set(id)`, `play(name, {loop})`, `pose(name, t, 
 | `death` | 3.6 | 1.8 | holds |
 | `hit` | 0.5 | – |  |
 
-### Vesk, the Void Hound (`vesk`) — height 4.1 m, radius 2.2 m, walk ≈ 2.4 m/s, run ≈ 11 m/s · 42102 tris
+### Vesk, the Void Hound (`vesk`) — height 4.1 m, radius 2.2 m, walk ≈ 2.4 m/s, run ≈ 11 m/s · 41614 tris
 | action | dur (s) | hits (s) | extra |
 |---|---|---|---|
 | `idle` | 3 | – |  |
@@ -182,14 +182,16 @@ Automation (`window.__legion`): `set(id)`, `play(name, {loop})`, `pose(name, t, 
 
 ### Boss notes
 - **Gorrath** (`gorrath.js`): bison-humped minotaur demon lord, oxblood-charcoal hide with molten fissures, burning
-  eyes, gold nose-ring (spring), ringed breakable horns with rune bands, layered bronze-rimmed pauldrons with glowing
-  spikes, skull belt, war-cape with the Legion sigil (3 spring chains + body collision), loincloth, cloven hooves, and
-  the double-bitted greataxe (separate mesh; molten edges, runes, flame emitters, 2 speed trails). Sockets: `nose`,
+  eyes under an iron chanfron (war plate down the brow and nose bridge with angry brow wings), heavy tusks, braided
+  beard, gold nose-ring (spring), ringed breakable horns with rune bands, riveted bronze-rimmed pauldrons with
+  glowing-tipped spikes, skull belt, war-cape with the Legion's horned-ring sigil (3 spring chains + body collision),
+  loincloth bearing the same sigil, cloven hooves, and the double-bitted greataxe (separate mesh; molten edges, a
+  horned-ring sigil on each bit, flame emitters, 2 speed trails). Sockets: `nose`,
   `weaponTip2` (second blade), `feetL/feetR`, `parts.hornL/hornR`. `triple_sweep` = Tyrant's Reaping: overhead windup
   with the counter shimmer (0.35–1.8), two sweeps, then a full 360° Reaping Wheel. `rift_carve` raises the axe high and
   charges it (glow) before the slam. `leap` / `kick` / `cast` / `spectral_lunge` / `spawn` / `hit` are extra moves.
 - **Skarn / Vesk** (`hounds.js`): twin demon hounds (shared anatomy). Skarn: charcoal + molten cracks, flame-licked
-  dorsal spikes and particle flame mane, curled ram horns, burning tail tuft. Vesk: leaner, void-black with violet
+  dorsal spikes and particle flame mane, ridged ram horns curling back and forward past the cheeks, burning tail tuft. Vesk: leaner, void-black with violet
   fissures, obsidian spines with violet fire, swept blade horns, scythe-bladed tail. Breath = directed particle jet
   that splashes along the ground (`active` window). Trails on both forepaws and the tail. Sockets: `tail`,
   `feetFL/FR/RL/RR`; `handR/weapon` = right forepaw.

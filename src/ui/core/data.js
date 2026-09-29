@@ -190,6 +190,30 @@ export const CLASSES = {
   },
 };
 export const CLASS_IDS = Object.keys(CLASSES);
+/** Wallet currencies: key → { name, icon }. Any other key falls back to { name: pretty(key), icon: 'currency:<key>' }. */
+export const CURRENCIES = {
+  silver: { name: 'Silver', icon: 'currency:silver' },
+  gold: { name: 'Gold', icon: 'currency:gold' },
+  crystals: { name: 'Crystals', icon: 'currency:crystal' },
+  crystal: { name: 'Crystals', icon: 'currency:crystal' },
+  royal: { name: 'Royal Crystals', icon: 'currency:royal' },
+  shards: { name: 'Sunshards', icon: 'currency:shards' },
+  pirate: { name: 'Pirate Coins', icon: 'currency:pirate' },
+  bloodstone: { name: 'Bloodstones', icon: 'currency:bloodstone' },
+  bloodstones: { name: 'Bloodstones', icon: 'currency:bloodstone' },
+  pvp: { name: 'Proving Tokens', icon: 'currency:pvp' },
+  tokens: { name: 'Glass Sea Tokens', icon: 'currency:token' },
+  token: { name: 'Glass Sea Tokens', icon: 'currency:token' },
+};
+/** Display order for currency lines: these first, the rest in data order. */
+export const CURRENCY_ORDER = ['silver', 'gold', 'crystals', 'royal', 'shards', 'bloodstone', 'pirate', 'pvp', 'tokens'];
+export function currency(id) { return CURRENCIES[id] || { name: pretty(id || 'silver'), icon: 'currency:' + (id || 'silver') }; }
+/** [key, amount] pairs of a currency object in display order (skips null / non-numeric values). */
+export function currencyList(c, keys) {
+  const ks = keys || [...CURRENCY_ORDER.filter(k => k in (c || {})), ...Object.keys(c || {}).filter(k => !CURRENCY_ORDER.includes(k))];
+  return ks.filter(k => typeof c?.[k] === 'number').map(k => [k, c[k]]);
+}
+
 export function cls(id) { return CLASSES[id] || { name: pretty(id || 'Adventurer'), color: '#9fb0d0', color2: '#dfe6f5', role: 'DPS', identity: { kind: 'gauge', name: 'Identity' }, skills: [] }; }
 
 export const SKILL_KEYS = ['Q', 'W', 'E', 'R', 'A', 'S', 'D', 'F'];

@@ -5,9 +5,11 @@
 //     research: [{ id, name, desc, tier, time, cost?: [rows], state: 'locked'|'available'|'active'|'done', left?, total?, req? }],
 //     craft: { slots, queue: [{ id, name, icon, grade, qty, left, total }], recipes: [{ id, name, icon, grade, time, out?, cost: [rows], can }] },
 //     dispatch: { slots, crew: [{ id, name, role, power, busy }], missions: [{ id, name, time, chance, power, rewards: [{ name, icon, grade, count }], can }],
-//                 active: [{ id, name, left, total }] } }
+//                 active: [{ id, name, left, total }] },
+//     garden?: { level, ready: [Row { name, icon, grade, count }] }, ranch?: { level, pets: [id], slots } }   (times in seconds)
 // Actions: sh:upgrade { id } · sh:research { id } · sh:craft { id, qty } · sh:cancel { id } · sh:collect {} ·
-//          sh:dispatch { id } · sh:claim { id }
+//          sh:dispatch { id } · sh:claim { id } · sh:garden {} · sh:ranch {} · sh:recruit { pay: 'contract'|'silver' } ·
+//          sh:rush { kind: 'research'|'craft'|'dispatch', id }  (finish now: 1 crystal per started 10 min)
 import { h, btn, esc, fmtInt, fmtClock, clear } from '../core/util.js';
 import { glyph } from '../core/glyphs.js';
 import { iconUrl, itemIcon } from '../core/icon.js';
@@ -30,6 +32,15 @@ export class StrongholdWin extends Win {
   shown() { clearInterval(this._iv); this._iv = setInterval(() => this.tick(), 1000); }
   hidden() { clearInterval(this._iv); }
   timer(el, left, total) { this.timers.push({ el, left, total }); }
+  /** "Finish now" for a running job: 1 crystal per started 10 minutes. */
+  rushBtn(parent, kind, id, left) {
+    if (!(left > 0)) return null;
+    const n = Math.max(1, Math.ceil(left / 600));
+    const b = btn('ss-btn ss-btn--sm ss-btn--ghost ss-shw-rush', parent, null, () => this.ui.emit('sh:rush', { kind, id }), `Finish now for ${n} crystals`);
+    b.innerHTML = `${glyph('bolt')}<i style="background-image:url('${iconUrl('currency:crystal', 14)}')"></i><b>${fmtInt(n)}</b>`;
+    b._tip = { title: 'Finish now', lines: [`${fmtInt(n)} crystals (1 per started 10 minutes)`] };
+    return b;
+  }
   tick() {
     const el = (performance.now() - this.t0) / 1000;
     for (const t of this.timers) {
@@ -62,6 +73,19 @@ export class StrongholdWin extends Win {
         const u = btn('ss-btn ss-btn--sm ss-btn--primary', n, b.level ? 'Upgrade' : 'Build', () => this.ui.emit('sh:upgrade', { id: b.id }));
         u.disabled = !b.next.can;
       } else if (b.level >= b.max) h('div', 'ss-shw-max', c, 'Max level');
+      // yields: garden harvest, pet ranch forage
+      if (b.id === 'garden' && b.level > 0) {
+        const ready = d.garden?.ready || [], y = h('div', 'ss-shw-yield', c);
+        const rw = h('div', 'ss-shw-rw', y);
+        for (const x of ready.slice(0, 5)) rw.appendChild(slot({ ...x, kind: x.kind || 'material' }, { size: 30 }));
+        if (!ready.length) h('span', 'ss-shw-yt', rw, 'Nothing has grown yet');
+        btn('ss-btn ss-btn--sm', y, 'Harvest', () => this.ui.emit('sh:garden', {})).disabled = !ready.length;
+      }
+      if (b.id === 'ranch' && b.level > 0) {
+        const rc = d.ranch || {}, pets = (rc.pets || []).length, y = h('div', 'ss-shw-yield', c);
+        h('span', 'ss-shw-yt', y, `${pets} / ${rc.slots || 0} pets stationed`);
+        btn('ss-btn ss-btn--sm', y, 'Collect', () => this.ui.emit('sh:ranch', {})).disabled = !pets;
+      }
     }
   }
   research(P, d) {
@@ -72,7 +96,7 @@ export class StrongholdWin extends Win {
       for (const r of (d.research || []).filter(x => (x.tier || 1) === t)) {
         const c = h('div', `ss-shw-r is-${r.state || 'locked'}`, g);
         c.innerHTML = `<div class="ss-shw-rh"><b>${esc(r.name)}</b>${r.state === 'done' ? glyph('check') : r.state === 'locked' ? glyph('lock') : ''}</div><p>${esc(r.desc || '')}</p>`;
-        if (r.state === 'active') { const tm = h('div', 'ss-shw-timer', c); tm.innerHTML = `<span>Researching</span><b class="t"></b><s><i></i></s>`; this.timer(tm, r.left || 0, r.total || r.time); }
+        if (r.state === 'active') { const tm = h('div', 'ss-shw-timer', c); tm.innerHTML = `<span>Researching</span><b class="t"></b><s><i></i></s>`; this.timer(tm, r.left || 0, r.total || r.time); this.rushBtn(c, 'research', r.id, r.left); }
         else if (r.state === 'available') {
           const n = h('div', 'ss-shw-next', c);
           n.innerHTML = `<div class="ss-shw-cost">${(r.cost || []).map(costRow).join('')}${r.time ? `<span class="ss-shc">${glyph('clock')}${fmtClock(r.time)}</span>` : ''}</div>`;
@@ -93,6 +117,7 @@ export class StrongholdWin extends Win {
       if (j) {
         s.appendChild(slot({ ...j, kind: 'battle', count: j.qty }, { size: 44 }));
         const t = h('div', 'ss-shw-timer sm', s); t.innerHTML = `<b class="t"></b><s><i></i></s>`; this.timer(t, j.left, j.total);
+        this.rushBtn(s, 'craft', j.id, j.left);
         const x = btn('ss-close', s, null, () => this.ui.emit('sh:cancel', { id: j.id }), `Cancel ${j.name}`); x.innerHTML = glyph('close');
       } else h('span', '', s, 'Free slot');
     }
@@ -111,7 +136,11 @@ export class StrongholdWin extends Win {
   dispatch(P, d) {
     const dp = d.dispatch || {};
     const top = h('div', 'ss-shw-crew', P);
-    h('div', 'ss-h', top, `Crew · ${(dp.active || []).length}/${dp.slots || 0} missions running`);
+    const ch = h('div', 'ss-shw-crewh', top);
+    h('div', 'ss-h', ch, `Crew · ${(dp.active || []).length}/${dp.slots || 0} missions running`);
+    btn('ss-btn ss-btn--sm', ch, 'Hire · Crew Contract', () => this.ui.emit('sh:recruit', { pay: 'contract' }));
+    const hs = btn('ss-btn ss-btn--sm', ch, null, () => this.ui.emit('sh:recruit', { pay: 'silver' }), 'Hire for 30,000 silver');
+    hs.innerHTML = `Hire · <i class="ss-shw-ci" style="background-image:url('${iconUrl('currency:silver', 14)}')"></i>30,000`;
     const cl = h('div', 'ss-shw-cl', top);
     for (const m of dp.crew || []) { const c = h('div', 'ss-shw-cm' + (m.busy ? ' is-busy' : ''), cl); c.innerHTML = `<i>${glyph('character')}</i><div><b>${esc(m.name)}</b><span>${esc(m.role)} · Power ${m.power}</span></div>${m.busy ? '<em>Away</em>' : ''}`; }
     if ((dp.active || []).length) {
@@ -120,6 +149,7 @@ export class StrongholdWin extends Win {
         const r = h('div', 'ss-shw-act', P);
         r.innerHTML = `<b>${esc(a.name)}</b>`;
         const t = h('div', 'ss-shw-timer', r); t.innerHTML = `<b class="t"></b><s><i></i></s>`; this.timer(t, a.left, a.total);
+        this.rushBtn(r, 'dispatch', a.id, a.left);
         const c = btn('ss-btn ss-btn--sm ss-btn--primary', r, 'Claim', () => this.ui.emit('sh:claim', { id: a.id })); c.disabled = a.left > 0;
       }
     }

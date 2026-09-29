@@ -10,6 +10,7 @@
 import * as THREE from 'three';
 import { Ground } from '../ground.js';
 import { Kit, kitMaterial } from '../kit.js';
+import { G } from '../../engine/materials.js';
 import * as S from '../shapes.js';
 import { RNG, clamp, smoothstep, lerp, catmull } from '../../core/noise.js';
 import { MeshBuilder, linColor } from '../../engine/geom.js';
@@ -158,13 +159,50 @@ export function scatter(rng, box, minD, tries, accept = () => true, existing = n
   return out.slice(n0);
 }
 
+// ------------------------------------------------------------------------------------------------ south-fade materials
+/**
+ * A kit material that also dissolves (dither) wherever it stands SOUTH of the player and above the player's head —
+ * i.e. between the fixed iso camera and the hero. For tall walls and gatehouses the hero walks just north of (fortress
+ * and castle courtyards). Shadows are unaffected (the depth pass ignores the patch).
+ */
+const FADE = {};
+export function fadeMaterial(name) {
+  if (FADE[name]) return FADE[name];
+  const base = kitMaterial(name);
+  if (name === 'glow') return base;
+  const m = base.clone();
+  const ob = base.onBeforeCompile, bu = base.userData.u;
+  m.onBeforeCompile = (sh, r) => {
+    ob.call(base, sh, r);
+    sh.uniforms.uPlayerPos = G.uPlayerPos;
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform vec3 uPlayerPos;')
+      .replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
+{ vec3 dp = vWPos - uPlayerPos;
+  float fs = smoothstep(1.0, 3.5, dp.z) * smoothstep(0.6, 2.2, dp.y - dp.z * 0.12) * smoothstep(17.0, 10.0, abs(dp.x)) * step(uPlayerPos.y, 900.0);
+  if (fs > 0.01 && bayer4() < 0.92 * fs) discard; }`);
+  };
+  m.customProgramCacheKey = () => base.customProgramCacheKey() + '|fadeS';
+  m.userData = { ...base.userData, u: bu, shared: true };
+  FADE[name] = m;
+  return m;
+}
+
 // ------------------------------------------------------------------------------------------------ kit with custom materials
 /**
  * A Kit that also merges geometry drawn with custom materials (addC), chunked the same way, and builds small
  * animated parts (part(name) → { add(g, m, tint), build() → Mesh }) that are NOT merged (windmill sails, cannons…).
  */
 export class FieldKit extends Kit {
-  constructor(o = {}) { super(o); this.cb = new Map(); this.parts = []; }
+  constructor(o = {}) { super(o); this.cb = new Map(); this.parts = []; this.fade = !!o.fade; }
+  add(mat, g, m, opts) {
+    if (this.fade && mat !== 'glow') {
+      const o = opts || {};
+      const material = fadeMaterial(mat);
+      return this.addC(material, 'fade-' + mat, g, m, { ...o, cast: o.cast ?? !material.userData.noShadow });
+    }
+    if (FieldKit.debug) { const p = g.attributes.position.array; let bad = false; for (let i = 0; i < p.length; i++) if (!Number.isFinite(p[i])) { bad = true; break; } if (bad || (m && m.elements.some(v => !Number.isFinite(v)))) console.warn('[fieldkit] NaN geometry', mat, new Error().stack.split('\n').slice(2, 5).join(' | ')); }
+    return super.add(mat, g, m, opts);
+  }
   addC(material, key, g, m, { tint = 0xffffff, ao = true, yGround = null, aoH = 2.5, jitter = 0.06, cast = true, chunkAt = null, extra = null } = {}) {
     const tx = chunkAt ? chunkAt[0] : m ? m.elements[12] : 0, tz = chunkAt ? chunkAt[1] : m ? m.elements[14] : 0;
     const cx = Math.floor(tx / this.chunk), cz = Math.floor(tz / this.chunk);
@@ -237,6 +275,14 @@ export function seedSpots(zoneId, spots, count) {
     out.push({ i: i + 1, name: sp.name, where: WHERE[(i * 3 + Math.floor(i / spots.length) * 5 + zoneId.length) % WHERE.length], x, z });
   }
   return out;
+}
+
+// ------------------------------------------------------------------------------------------------ water env
+/** keep a water plane's own palette under env changes: sky reflection = dimmed fog/hemi mix, sun glint from the env */
+export function waterEnv(w, env, { sky = 0.6, sun = 1 } = {}) {
+  const u = w.userData.u; if (!u) return;
+  u.uSky.value.set(env.fogColor).lerp(new THREE.Color(env.hemiSky), 0.5).multiplyScalar(sky);
+  u.uSunCol.value.set(env.sunColor).multiplyScalar(Math.min(1.2, env.sunIntensity / 3) * sun);
 }
 
 // ------------------------------------------------------------------------------------------------ misc

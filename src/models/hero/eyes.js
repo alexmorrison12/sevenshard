@@ -18,12 +18,12 @@ export function eyePiece(base, d, key) {
   const J = base.JJ.J, s = d.s, H = J.head;
   const hp = (p) => [H[0] + p[0] * s, H[1] + p[1] * s, H[2] + p[2] * s];
   const crowd = base.lod === 'crowd';
-  const segW = crowd ? 10 : 24, segH = crowd ? 7 : 16;
+  const segW = crowd ? 8 : 20, segH = crowd ? 3 : 9;
   const irisR = 0.62, pupilR = 0.23;
   for (const sg of [-1, 1]) {
     const c = hp(eyeCenter(d, sg)), r = d.eye.r * s;
     const bw = [[B.head, 1]];
-    const g = new THREE.SphereGeometry(r, segW, segH);
+    const g = new THREE.SphereGeometry(r, segW, segH, 0, Math.PI * 2, 0, 1.45); // front cap only (the rest sits in the socket)
     g.rotateX(-Math.PI / 2); // +Y pole → −Z (looking forward)
     g.rotateY(-sg * 0.03);   // a hair of outward gaze
     const m = new THREE.Matrix4().makeTranslation(c[0], c[1], c[2]);
@@ -58,9 +58,10 @@ export function eyePiece(base, d, key) {
       const mb = new THREE.Matrix4().compose(new THREE.Vector3(c[0] + dir.x * r * 1.005, c[1] + dir.y * r * 1.005, c[2] + dir.z * r * 1.005), q, new THREE.Vector3(1, 1, 1));
       pb.add(bead, { m: mb, slot: SLOT.SCLERA, bw, mul: [1.25, 1.25, 1.25], emis: 1 });
     }
+    if (crowd) continue; // crowd LOD: no lid shells (blinks are invisible at that distance)
     // upper-lid shell (skin), with a dark lash rim along its edge. Open: edge above the pupil; the bone closes it.
     const lidBone = sg < 0 ? B.lidL : B.lidR;
-    const rl = r * 1.075, rows = crowd ? 3 : 6, cols = crowd ? 8 : 16;
+    const rl = r * 1.075, rows = crowd ? 2 : 4, cols = crowd ? 8 : 14;
     const phiEdge = 0.24, phiTop = 1.35, th0 = 1.2;
     const tilt = -sg * (d.eye.tilt || 0);
     const ct = Math.cos(tilt), st = Math.sin(tilt);

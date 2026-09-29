@@ -8,7 +8,7 @@ import { heal, kill } from '../combat.js';
 import { CUBE, partyHp, bandOf } from '../../data/inferno.js';
 import { weekId } from '../../core/util.js';
 import { RNG } from '../../core/noise.js';
-import { S, spawnLocal, normalChar, showResults, dpsRows, track, mobFrom, RunParty, loadInstance, mergeRows, clearFoes, fmtTime, AUTO, weighted } from './inferno.js';
+import { S, spawnLocal, normalChar, showResults, dpsRows, emitClear, mobFrom, RunParty, loadInstance, clearFoes, fmtTime, AUTO } from './inferno.js';
 import { heroStats } from '../systems/stats.js';
 
 /** weekly free tickets + records: roster.records.cube = { week, best, runs } */
@@ -133,8 +133,7 @@ class CubeMode {
     const rows = n > 0 ? (S.common.grantBundle(A, ch, bundle) || []) : [];
     const cur = { silver: bundle.silver || 0, gold: bundle.gold || 0, xp: 300 * n };
     if (cur.xp) A.addXp(ch, cur.xp);
-    if (n > 0) track(this.s, 'clear', { content: 'cube', id: 'cube', rooms: n, time: this.t });
-    this.s.bus.emit('clear', { content: { kind: 'cube' }, result: { cleared: n >= CUBE.rooms, rooms: n, time: this.t }, tracked: true });
+    emitClear(this.s, { kind: 'cube', rooms: n }, { cleared: n > 0, rooms: n, time: this.t });
     const meter = this.party.meterRows();
     setTimeout(() => showResults(this.s, {
       kind: n > 0 ? 'clear' : 'fail', over: 'Rift Cube', title: n >= CUBE.rooms ? 'The Cube Conquered' : `Room ${n} of ${CUBE.rooms}`,

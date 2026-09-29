@@ -4,7 +4,7 @@
 // Records in roster.records.inferno. Also: the shared instance helpers used by every modes file (pvp, events, trial,
 // cube, stronghold) and the Rift Nexus entries (Inferno Descent, Trial Guardian, Rift Cube).
 import * as THREE from 'three';
-import { registerPlugin, registerContent } from '../registry.js';
+import { registerPlugin, registerContent, PLUGINS } from '../registry.js';
 import { buildZone, ZONES } from '../providers.js';
 import { heroStats, itemLevel } from '../systems/stats.js';
 import * as S from '../systems/index.js';
@@ -194,6 +194,17 @@ export function track(session, event, data) {
   try { notes = S.tasks.track(session.account, session.char, event, data) || []; } catch (e) { console.error('[modes track]', e); }
   notes.forEach((n, i) => setTimeout(() => session.ui.toast(n.text, /title|achievement|board/.test(n.kind) ? 'success' : 'info'), 1200 + i * 700));
   return notes;
+}
+const systemsHooked = () => PLUGINS.some(p => p.id === 'systems');
+/** publish a content clear on the session bus (the systems plugin tracks tasks/boards from it; tracked here if absent) */
+export function emitClear(session, content, result) {
+  session.bus.emit('clear', { content, result });
+  if (!systemsHooked() && result?.cleared) track(session, 'clear', { content: content.kind, id: content.boss || content.island || content.kind, floor: content.floor || result.floor, time: result.time });
+}
+/** publish a Proving Grounds result on the session bus (tracked by the systems plugin) */
+export function emitPvp(session, data) {
+  session.bus.emit('pvp', data);
+  if (!systemsHooked()) track(session, 'pvp', data);
 }
 /** results screen + music */
 export function showResults(session, data, win = data.kind !== 'fail') {
@@ -789,8 +800,7 @@ class InfernoRun {
     if (this.start === 1) for (let m = 10; m <= this.deepest; m += 10) { const t = this.milestones?.[m]; if (t != null && (I.fastest[m] == null || t < I.fastest[m])) I.fastest[m] = Math.round(t); }
     I.last = { floor: this.deepest, start: this.start, time: Math.round(this.t), kills: this.kills, boons: { ...this.boons }, reason, t: Date.now() };
     A.save();
-    if (this.deepest >= 1) track(this.s, 'clear', { content: 'inferno', floor: this.deepest, time: this.t, id: 'inferno' });
-    this.s.bus.emit('clear', { content: { kind: 'inferno', start: this.start }, result: { cleared: this.deepest >= this.start, floor: this.deepest, time: this.t, kills: this.kills }, tracked: true });
+    emitClear(this.s, { kind: 'inferno', start: this.start, floor: this.deepest }, { cleared: this.deepest >= this.start, floor: this.deepest, time: this.t, kills: this.kills });
     return prevBest;
   }
   finish(reason) {

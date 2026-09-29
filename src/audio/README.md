@@ -35,7 +35,7 @@ audio.sfx('slash', { pos: hero.root.position });
 | `audio.engine`, `audio.dispose()` | | internals (lab) / teardown |
 
 Named exports: `createAudio`, `SFX_NAMES`, `LOOP_NAMES`, `TRACK_NAMES`, `STINGER_NAMES`, `SONG_NAMES`, `AMBIENCE_NAMES`.
-Unknown names are ignored (sfx warns once per name).
+Unknown names are ignored with a console warning (once per name for sfx).
 
 ## Music (`audio.music`)
 
@@ -60,7 +60,7 @@ counter-lines and new ostinati, so it never ends and never repeats exactly (no l
 | `pvp` | Tense: A minor, 128 BPM — ticking clock, synth pulse, 3-3-2 spiccato, half-step brass menace, a surge climbing in sequence. |
 | `inferno` | Descent: B minor over a chromatic lament bass, organ, choir, bells; each cycle climbs a semitone while the bass keeps falling. |
 | `cutscene_sad` | The HERO call broken on solo cello, oboe memory with the SHARD motif, violins + choir weeping. |
-| `cutscene_heroic` | The HERO theme reborn in D major: rise → resolve → triumph (tutti, choir, taiko) → Bb–C–D glory. |
+| `cutscene_heroic` | The HERO theme reborn in D major: rise → resolve → march (the call climbing through the orchestra over spiccato + snare) → triumph (tutti, choir, taiko) → Bb–C–D glory. |
 | `victory` | One-shot fanfare (≈8 s): the call in D major → tutti → plagal amen → SHARD glitter. Use `then` to continue. |
 | `defeat` | One-shot (≈8 s): tolling bell, the call falling in minor. |
 
@@ -72,6 +72,8 @@ Aliases (zone / data names): `solhaven`→`city`, `solhaven_night`→`city_night
 `level_up` (3.4 s), `quest_complete` (3.2), `achievement` (3.6), `legendary_drop` (5, the SHARD motif in gold),
 `boss_intro` (4.6: crushing hit → dark swell for the name reveal → lead-in), `raid_clear` (9: the full call in major,
 tutti, Bb–C–D), `wipe` (6.5). The current music dips under them and recovers.
+`boss_intro` holds the next `music()` call: `stinger('boss_intro'); music('boss')` makes the fight music enter exactly
+on the stinger's closing downbeat (≈3.95 s) instead of playing over it.
 
 ## Songs (`audio.song`) — returns seconds
 
@@ -131,7 +133,7 @@ Big sounds duck the music automatically (`duck` in the recipe).
   every ambience bed to a design level (`ambience.js`).
 - Voice limiting: per-name `max` + burst suppression (`burst` starts per `gap` s) + a global 64-voice cap with
   priority stealing. Distance: full volume inside `ref` (≈4 m), ref/(ref+0.8(d−ref)) roll-off, fade to 0 at `range`
-  (45–400 m by sound), distance low-pass, screen-space pan.
+  (28–400 m by sound), distance low-pass, screen-space pan.
 - Ducking: SFX with `duck` dip music (and ambience a little); stingers dip music then restore; own songs dip music.
 
 ## Performance
@@ -141,7 +143,9 @@ Big sounds duck the music automatically (`duck` in the recipe).
 - Lush patches (7-voice supersaw string section, formant choirs, pads, brass/horn sections, tuned percussion, all
   drums/cymbals/booms) are **baked once per session** into looped multi-zone buffers (`music/bake.js`,
   `music/patches.js`); a note is then ≈2 nodes. Common patches bake in the background right after unlock (≈1 s).
-- Instrument buses connect only while they have sounding notes; filter/LFO automation runs at k-rate.
+- Instrument buses connect only while they have sounding notes; filter/LFO automation runs at k-rate; every
+  finished note / SFX voice / ambience event is disconnected from its bus on the next tick (the render graph never
+  grows during a long session).
 - CPU / memory numbers: see the end of this file.
 
 ## Files
@@ -160,3 +164,39 @@ tests; offline render + analysis with spectrogram and WAV export. Headless autom
 `music(name, s, {png, log})`, `cpu(name, s)`, `stems(name, s)`, `autoMix`, `trackGain`, `clashes(name, s)`,
 `roll(name, s)`, `sfxReport(names)`, `calibrate(TARGETS)`, `ambCal(targets)`, `loopSeams()`, `bench(cls, opts, fn)`,
 `spec(kind, name, s)`, `sheet(items)`, `show(dataURL)`.
+
+## Measured (lab, offline renders driven by the real tick; min of 3; M-series Mac under heavy load from other agents)
+
+Audio-thread cost as % of one core, including the shared hall reverb (≈1.5 % whenever anything sounds):
+
+| | % | | % |
+|---|---|---|---|
+| idle engine (nothing playing) | 0.5 | `title` | 4.7 |
+| `city` / `city_night` | 5.1 / 4.0 | `field` / `field_dark` | 5.3 / 3.8 |
+| `dungeon` | 4.6 | `boss` | 4.8 |
+| `raid` / `raid_ghost` | 5.1 / 7.8 | `sea` / `pip` | 4.0 / 3.2 |
+| `stronghold` / `pvp` | 3.4 / 3.9 | `inferno` | 3.4 |
+| `cutscene_sad` / `cutscene_heroic` | 3.3 / 4.4 | `victory` / `defeat` | 4.7 / 3.9 |
+| city music + city ambience | 7.2 | boss + cave ambience + 20 SFX/s | 9.2 |
+| raid ghost phase + 20 SFX/s | 10.5 | 40 SFX/s, nothing else | 10.7 |
+
+- Main thread: the 50 ms tick is typically well under 1 ms (max 5.5 ms observed, when a new track is constructed).
+  Music is scheduled ≥ 1.2 s ahead; ten 400 ms main-thread stalls in 20 s caused no skipped bars (lead stayed ≥ 1.03 s).
+- Real-time run (title → city → combat → level_up → boss_intro + boss → raid → ghost phase → big SFX → songs →
+  victory → city → silence): no dropouts, peak −1.6 dBFS, 0 clipped blocks. First sound 0.76 s after the first
+  `music('title')` (includes baking the title's instruments).
+- Baked sample memory: ≈ 25–35 MB for a typical session, 44 MB if every patch is used (strings, 2 choirs, pads,
+  brass/horn sections, 8 tuned-percussion sets, 20 drum/cymbal/fx banks).
+- Loudness (integrated, music bus at volume 1): calm cues −23…−25 LUFS, exploration −21…−22, action −18…−19
+  (`raid_ghost` −16, it is the extra-intensity layer); stingers −13.5…−17 momentary-max; own songs ≈ −21;
+  ambience kinds −29…−37 (subtle); SFX from −34 (`ui_hover`) to −10 (`awaken`) momentary-max at the listener.
+
+## Known issues / notes
+
+- The first use of a track, stinger or song bakes its instruments (≈0.3–1 s, off the audio thread); the current music
+  keeps playing until it can start. Use `audio.prepare([...])` behind loading screens to avoid even that.
+- Firefox has no `AudioParam.automationRate` (k-rate optimisation silently skipped → somewhat higher CPU); Safari is
+  untested. Chrome is the reference.
+- "Gulls near water" and similar local details are exposed as bed overrides: `ambience('city', { mix: { gulls: 1 } })`.
+- All tuning was done by objective analysis (BS.1770 loudness, spectra, harmonic-clash detection, piano rolls,
+  spectrograms, loop-seam and CPU measurements) — there was no listening pass.

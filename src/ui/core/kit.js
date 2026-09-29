@@ -7,12 +7,12 @@
 //   toggle(parent, label, value, onChange) → input         range(parent, { label, min, max, step, value, fmt, onChange })
 //   select(parent, options, value, onChange) → select      seg(parent, [{ id, label }], value, onChange) → { el, set }
 //   bar(parent, { cls, value, text }) → { el, set(frac, text?) }
-//   money(parent, { silver, gold, crystals })              currency line with icons
+//   money(parent, { silver, gold, crystals, …any wallet key }, { keys? })  currency line with icons (core/data CURRENCIES)
 //   section(parent, title) → body element (gold rule header)
 //   kv(parent, key, value) → row element                   empty(parent, text) → placeholder element
 import { h, btn, esc, fmtInt, fmtShort, clamp } from './util.js';
 import { itemIcon, iconUrl } from './icon.js';
-import { qualityColor } from './data.js';
+import { qualityColor, currency, currencyList } from './data.js';
 
 export function slot(item, o = {}) {
   const size = o.size || 48;
@@ -111,17 +111,18 @@ export function bar(parent, o = {}) {
 }
 export function money(parent, c = {}, o = {}) {
   const el = h('div', 'ss-money' + (o.cls ? ' ' + o.cls : ''), parent);
-  for (const [k, id] of [['silver', 'currency:silver'], ['gold', 'currency:gold'], ['crystals', 'currency:crystal']]) {
-    if (c[k] == null) continue;
-    const s = h('span', 'ss-money-i ss-ptr', el);
-    s.innerHTML = `<i style="background-image:url('${iconUrl(id, 18)}')"></i><b>${fmtInt(c[k])}</b>`;
-    s._tip = { title: { silver: 'Silver', gold: 'Gold', crystals: 'Royal Crystals' }[k], lines: [fmtInt(c[k])] };
+  for (const [k, n] of currencyList(c, o.keys)) {
+    const C = currency(k), s = h('span', 'ss-money-i ss-ptr', el);
+    s.innerHTML = `<i style="background-image:url('${iconUrl(C.icon, 18)}')"></i><b>${fmtInt(n)}</b>`;
+    s._tip = { title: C.name, lines: [fmtInt(n)] };
   }
   return el;
 }
 export function price(parent, cur, amount, afford = true) {
   const el = h('span', 'ss-price' + (afford ? '' : ' is-short'), parent);
-  el.innerHTML = `<i style="background-image:url('${iconUrl('currency:' + (cur === 'crystals' ? 'crystal' : cur || 'silver'), 16)}')"></i><b>${fmtInt(amount)}</b>`;
+  const C = currency(cur || 'silver');
+  el.innerHTML = `<i style="background-image:url('${iconUrl(C.icon, 16)}')"></i><b>${fmtInt(amount)}</b>`;
+  el.title = C.name;
   return el;
 }
 export function section(parent, title, cls = '') {

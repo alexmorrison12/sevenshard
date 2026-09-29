@@ -75,6 +75,47 @@ export const PRESETS = {
     grade: { exposure: 1.04, saturation: 1.06, contrast: 1.14, vignette: 0.46, warm: 0.05, cool: 0.03, lift: [0.02, 0.0, 0.005], gain: [1.03, 0.97, 0.94], bloom: 0.75, bloomRadius: 0.55, bloomThreshold: 0.85 },
     weather: 'embers', night: 0.6,
   },
+  // guardian arenas
+  caldera: {                       // Cinderhorn: red-orange key light against a dark smoky sky, lava bounce from below
+    sunColor: 0xffd0ae, sunIntensity: 3.3, sunDir: n3(-0.48, 0.74, 0.42),
+    hemiSky: 0x6c6c88, hemiGround: 0x4a2418, hemiIntensity: 1.1,
+    fogColor: 0x2a1c1a, fogSunColor: 0x9a4a24, fogDensity: 0.0042, fogHeight: 0.05, fogBase: -3,
+    background: 0x120806,
+    grade: { exposure: 1.12, saturation: 1.0, contrast: 1.14, vignette: 0.4, warm: 0.05, cool: 0.04, lift: [0.015, 0.008, 0.01], gain: [1.02, 0.99, 0.95], bloom: 0.7, bloomRadius: 0.55, bloomThreshold: 0.88 },
+    weather: 'ash', night: 0.55,
+  },
+  desert: {                        // Sandmaw: hot high midday sun, hazy bleached sky, warm sand bounce
+    sunColor: 0xfff0d4, sunIntensity: 3.5, sunDir: n3(-0.32, 0.88, 0.34),
+    hemiSky: 0xc4d4ec, hemiGround: 0xb08a58, hemiIntensity: 1.15,
+    fogColor: 0xe2caa2, fogSunColor: 0xfff0d0, fogDensity: 0.0055, fogHeight: 0.03, fogBase: 0,
+    background: 0xd8c09a,
+    grade: { exposure: 1.0, saturation: 1.04, contrast: 1.07, vignette: 0.3, warm: 0.07, cool: 0.0, lift: [0.02, 0.012, 0.0], gain: [1.02, 1.0, 0.95], bloom: 0.45, bloomRadius: 0.5, bloomThreshold: 0.92 },
+    weather: 'sand', night: 0,
+  },
+  moonlit: {                       // Kurai: cool moonlight, warm lanterns, blue foxfire
+    sunColor: 0xaec4ff, sunIntensity: 1.7, sunDir: n3(0.32, 0.78, -0.5),
+    hemiSky: 0x3c4c7c, hemiGround: 0x2a1e28, hemiIntensity: 0.9,
+    fogColor: 0x1a2236, fogSunColor: 0x5a6c9a, fogDensity: 0.0065, fogHeight: 0.045, fogBase: 0,
+    background: 0x0a0f1e,
+    grade: { exposure: 1.08, saturation: 1.06, contrast: 1.1, vignette: 0.4, warm: 0.07, cool: 0.06, lift: [0.0, 0.008, 0.028], gain: [0.99, 1.0, 1.05], bloom: 0.85, bloomRadius: 0.6, bloomThreshold: 0.82 },
+    weather: 'leaves', night: 1,
+  },
+  drowned: {                       // Sunken Oratory nave: cold teal light falling through the broken vault
+    sunColor: 0xc4f0f4, sunIntensity: 2.3, sunDir: n3(-0.28, 0.9, -0.25),
+    hemiSky: 0x3a8894, hemiGround: 0x0c2a2c, hemiIntensity: 0.95,
+    fogColor: 0x0e3438, fogSunColor: 0x5ab0b8, fogDensity: 0.0105, fogHeight: 0.05, fogBase: -1,
+    background: 0x061418,
+    grade: { exposure: 1.06, saturation: 1.02, contrast: 1.1, vignette: 0.42, warm: 0.0, cool: 0.08, lift: [0.0, 0.018, 0.024], gain: [0.95, 1.0, 1.02], bloom: 0.8, bloomRadius: 0.6, bloomThreshold: 0.82 },
+    weather: 'motes', night: 0.6,
+  },
+  abyss: {                         // the Deep Oracle: deep blue-violet gloom over black water
+    sunColor: 0x9a8cff, sunIntensity: 1.5, sunDir: n3(-0.3, 0.88, 0.3),
+    hemiSky: 0x2e2c6c, hemiGround: 0x06060e, hemiIntensity: 0.8,
+    fogColor: 0x0a0a20, fogSunColor: 0x3a2a7a, fogDensity: 0.012, fogHeight: 0.05, fogBase: -6,
+    background: 0x03030a,
+    grade: { exposure: 1.1, saturation: 1.06, contrast: 1.12, vignette: 0.48, warm: 0.0, cool: 0.1, lift: [0.01, 0.0, 0.03], gain: [0.97, 0.97, 1.05], bloom: 0.95, bloomRadius: 0.62, bloomThreshold: 0.78 },
+    weather: 'plankton', night: 0.9,
+  },
 };
 
 /** Build an env from a preset name plus overrides (grade merged over the preset's grade over GRADE_DEFAULT). */

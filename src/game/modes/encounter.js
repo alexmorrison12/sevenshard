@@ -35,12 +35,15 @@ export class EncounterMode {
     });
     this.boss = this.bosses[0];
     this.def = this.boss.data.def;
-    this.def.onStart?.(this);
+    // every distinct boss def gets onStart; onBossDeath hooks hear every boss death (twin logic lives in one def)
+    this.defs = [...new Set(this.bosses.map(b => b.data.def))];
+    for (const d of this.defs) d.onStart?.(this);
     this.offs = [
       L.on('bossBanner', ({ text, kind }) => g.ui?.banner?.(text, { kind })),
-      L.on('bossEnrage', () => g.ui?.banner?.(`${this.def.name} is enraged!`, { kind: 'warn' })),
-      L.on('death', ({ unit }) => { if (this.bosses.includes(unit)) { this.def.onBossDeath?.(this, unit); if (this.bosses.every(b => b.dead)) this.victory(); } }),
+      L.on('bossEnrage', ({ unit }) => g.ui?.banner?.(`${unit?.name || this.def.name} is enraged!`, { kind: 'warn' })),
+      L.on('death', ({ unit }) => { if (this.bosses.includes(unit)) { for (const d of this.defs) d.onBossDeath?.(this, unit); if (this.bosses.every(b => b.dead)) this.victory(); } }),
     ];
+    this.party.noRevive = !!o.noRevive;
     // intro: camera flies to the boss, title card, roar
     this.introT = o.intro === false ? 0 : 3.2;
     if (this.introT > 0) {
@@ -71,7 +74,9 @@ export class EncounterMode {
       return;
     }
     if (this.state !== 'fight') return;
-    if (this.party.members.every(m => m.kit.u.dead)) this.wipe();
+    // a wipe only ends the run where nobody can revive (legion raids); elsewhere the fallen return from the entrance
+    if (this.o.noRevive && this.party.members.every(m => m.kit.u.dead)) this.wipe();
+    if (g.level.time - this.fightStart > (this.o.timeLimit || 1200)) this.wipe();
     // the local hero revives at the entrance after 6 s (Lost Ark: revive at the gate entrance)
     const me = g.hero?.u;
     if (me?.dead && me.deadT > 6 && !this.o.noRevive) this.party.revive(me);
@@ -103,6 +108,9 @@ export class EncounterMode {
       others: (this.bosses || []).filter(x => x !== b).map(x => ({ name: x.name, hp: x.hp, hpMax: x.hpMax, dead: x.dead })) };
   }
   partyHud() { return this.party?.hud(); }
-  timerHud() { return this.def.enrage && this.state === 'fight' ? { label: 'Enrage', left: Math.max(0, this.def.enrage - (this.boss.ctrl.fightT || 0)) } : null; }
+  timerHud() {
+    const b = (this.bosses || []).find(x => !x.dead) || this.boss, en = b?.data.def.enrage;
+    return en && this.state === 'fight' ? { label: 'Enrage', left: Math.max(0, en - (b.ctrl.fightT || 0)) } : null;
+  }
 }
 export const fmtTime = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}.${String(Math.floor((s % 1) * 10))}`;

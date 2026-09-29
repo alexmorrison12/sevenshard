@@ -220,3 +220,36 @@ export function buildButterflies(spots, { perSpot = 3, colors = [0xffd040, 0xfff
   const m = new THREE.Mesh(g, mat); m.name = 'butterflies';
   return m;
 }
+
+// ------------------------------------------------------------------------------------------------ lava fall
+/** a curtain of molten rock pouring down a cliff: from (x, y1, z) down to y0, width w, facing rot (local +Z) */
+export function buildLavaFall({ x, z, y0, y1, w = 6, rot = 0, curve = 1.2 }) {
+  const hgt = y1 - y0;
+  const g = new THREE.PlaneGeometry(w, hgt, 6, 12);
+  const p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) { const t = (p.getY(i) + hgt / 2) / hgt; p.setZ(i, (1 - t) * (1 - t) * curve + Math.sin(p.getX(i) * 1.3) * 0.15); }
+  g.computeVertexNormals();
+  const mat = new THREE.ShaderMaterial({
+    uniforms: { uTime: G.uTime, uNoise: { value: noiseTex() }, uFogColor: G.uFogColor, uFogSunColor: G.uFogSunColor, uFogDensity: G.uFogDensity, uFogHeight: G.uFogHeight, uFogBase: G.uFogBase, uSunDir: G.uSunDir, uCamPos: G.uCamPos },
+    vertexShader: 'varying vec2 vUv; varying vec3 vW; void main(){ vUv = uv; vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }',
+    fragmentShader: /* glsl */`
+      uniform float uTime; uniform sampler2D uNoise; varying vec2 vUv; varying vec3 vW;
+      ${FOG_GLSL_PARS}
+      void main() {
+        vec2 uv = vec2(vUv.x * 1.6, vUv.y * 2.4 + uTime * 0.35);
+        float a = texture2D(uNoise, uv * 0.35).r, b = texture2D(uNoise, uv * 0.9 + vec2(a * 0.3, 0.0)).g;
+        float crust = smoothstep(0.5, 0.72, a * 0.6 + b * 0.5);
+        float edge = smoothstep(0.0, 0.12, vUv.x) * smoothstep(1.0, 0.88, vUv.x);
+        vec3 hot = vec3(1.0, 0.36, 0.06) * 3.4, core = vec3(1.0, 0.85, 0.45) * 3.0;
+        vec3 col = mix(mix(core, hot, smoothstep(0.2, 0.7, b)), vec3(0.12, 0.05, 0.03), crust * 0.85);
+        col *= 0.75 + 0.25 * sin(uTime * 2.0 + vUv.y * 12.0);
+        col = applyFog(col, vW);
+        if (edge < 0.05) discard;
+        gl_FragColor = vec4(col, 1.0);
+      }`,
+    side: THREE.DoubleSide,
+  });
+  const m = new THREE.Mesh(g, mat);
+  m.position.set(x, (y0 + y1) / 2, z); m.rotation.y = rot; m.name = 'lavafall';
+  return m;
+}

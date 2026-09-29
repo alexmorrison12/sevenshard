@@ -88,12 +88,15 @@ export function eff(u) {
 export function tickStatuses(level, u, dt) {
   const st = u.statuses;
   let dirty = false;
-  for (let i = st.length - 1; i >= 0; i--) {
-    const s = st[i];
+  // walk a snapshot: a DoT tick can kill the unit, and kill() strips statuses from the live list mid-loop
+  const snap = st.length ? st.slice() : st;
+  for (let i = snap.length - 1; i >= 0; i--) {
+    const s = snap[i];
+    if (st.indexOf(s) < 0) continue;
     s.left -= dt;
     if ((s.def.dot || s.def.hot) && !u.dead) {
       s.tick += dt;
-      while (s.tick >= 1) {
+      while (s.tick >= 1 && !u.dead) {
         s.tick -= 1;
         if (s.def.dot) {
           const base = s.power || (s.src ? eff(s.src).atk * 2 : u.hpMax * 0.01);
@@ -101,7 +104,7 @@ export function tickStatuses(level, u, dt) {
         } else heal(level, s.src || u, u, u.hpMax * s.def.hot);
       }
     }
-    if (s.left <= 0) { st.splice(i, 1); if (s.def.cc) u.cc[s.def.cc] = 0; dirty = true; level.emit('status', { tgt: u, id: s.id, on: false, s }); }
+    if (s.left <= 0) { const j = st.indexOf(s); if (j >= 0) st.splice(j, 1); if (s.def.cc) u.cc[s.def.cc] = 0; dirty = true; level.emit('status', { tgt: u, id: s.id, on: false, s }); }
   }
   if (dirty) u._statDirty = true;
   const c = u.cc;

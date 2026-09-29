@@ -264,15 +264,17 @@ function sheet(names, t = 0.3, cols = 4, cw = 400, labelled = true) {
   const g = cv.getContext('2d'); g.font = 'bold 14px system-ui'; g.textBaseline = 'top';
   lab.paused = true;
   names.forEach((name, i) => {
-    const [nm, tt] = name.includes('@') ? [name.split('@')[0], +name.split('@')[1]] : [name, t];
+    // "name@t#dim": time to capture at and an optional other-players dim (0..1)
+    const [base, dimS] = name.split('#'), dim = dimS !== undefined ? +dimS : undefined;
+    const [nm, tt] = base.includes('@') ? [base.split('@')[0], +base.split('@')[1]] : [base, t];
     fx.reset(); boss.root.visible = true; hero.root.visible = true;
     lab.step(2);
-    try { play(nm); } catch (e) { console.error(nm, e); }
+    try { play(nm, dim !== undefined ? { dim } : {}); } catch (e) { console.error(nm, e); }
     const n = Math.round(tt * 60);
     for (let k = 0; k < n; k++) lab.step(1, 1 / 60);
     lab.renderer.render(1 / 60, lab.time);
     g.drawImage(lab.renderer.canvas, (i % cols) * cw, Math.floor(i / cols) * ch, cw, ch);
-    if (labelled) { g.fillStyle = 'rgba(0,0,0,.6)'; g.fillRect((i % cols) * cw, Math.floor(i / cols) * ch, cw, 20); g.fillStyle = '#ffe070'; g.fillText(nm + ' @' + tt + 's', (i % cols) * cw + 6, Math.floor(i / cols) * ch + 3); }
+    if (labelled) { g.fillStyle = 'rgba(0,0,0,.6)'; g.fillRect((i % cols) * cw, Math.floor(i / cols) * ch, cw, 20); g.fillStyle = '#ffe070'; g.fillText(nm + ' @' + tt + 's' + (dim !== undefined ? '  dim ' + dim : ''), (i % cols) * cw + 6, Math.floor(i / cols) * ch + 3); }
   });
   return cv.toDataURL('image/jpeg', 0.85);
 }

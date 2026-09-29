@@ -7,13 +7,13 @@ import { shared, charge, twinHowl, crossfire, onStart, onBossDeath, partMech, HO
 export default {
   id: 'skarn', model: 'skarn', name: 'Skarn', title: 'the Cinder Hound', kind: 'legion', element: 'fire',
   radius: 2.2, height: 4.1, hp: 33000, atk: 0.16, bars: 90, speed: 5.4, turnRate: 4, enrage: 600,
-  music: 'boss_hounds', arena: 'kennels', anims: HOUND_ANIMS,
+  music: 'raid', arena: 'kennels', anims: HOUND_ANIMS,
   moves: {
     ...shared,
     fire_breath: { range: 13, cd: 12, weight: 2, async run(B, t) {
       B.turnTo(t); act(B, 'breath', 1.1);
       const cone = { r: 12, deg: 55 };
-      await strike(B, 'cone', { ...cone, dur: 1.1, color: 'orange', coef: 0.6, fx: 'fire_breath', fxLen: 12, sfx: 'fire_whoosh' });
+      await strike(B, 'cone', { ...cone, dur: 1.1, color: 'orange', coef: 0.6, fx: 'fire_breath', fxLen: 12, sfx: 'fire' });
       const mk = marker(B, 'cone', { ...cone, x: B.u.pos.x, z: B.u.pos.z, dir: fwd(B) });
       try { for (let i = 0; i < 3; i++) { await wait(B, 0.5); B.hit('cone', { ...cone, coef: 0.42 }); } }
       finally { mk.alive = false; }

@@ -9,7 +9,7 @@
  */
 export function simplify(pos, nrm, idx, target, weight = null) {
   const nV = pos.length / 3, nT = idx.length / 3;
-  if (nV <= target) return { pos, nrm, idx };
+  if (nV <= target) { const src = new Int32Array(nV); for (let v = 0; v < nV; v++) src[v] = v; return { pos, nrm, idx, src }; }
   const Q = new Float64Array(nV * 10);
   const tri = new Int32Array(idx);
   const tAlive = new Uint8Array(nT).fill(1);
@@ -135,7 +135,8 @@ export function simplify(pos, nrm, idx, target, weight = null) {
     if (a < 0 || b < 0 || c < 0 || a === b || b === c || a === c) continue;
     I.push(a, b, c);
   }
-  return { pos: P, nrm: N, idx: new Uint32Array(I) };
+  const src = new Int32Array(nv2); for (let v = 0; v < nV; v++) if (alive[v]) src[remap[v]] = v;
+  return { pos: P, nrm: N, idx: new Uint32Array(I), src };
 }
 
 function flipOK(pos, a0, a1, a2, b0, b1, b2) {

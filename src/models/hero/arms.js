@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { PB, tubeGeo, topLit } from './pieces.js';
 import { assemble } from './assemble.js';
+import { decimatePiece } from './body.js';
 import { SLOT, NSLOT, DET } from './palette.js';
 import { linColor } from '../../engine/geom.js';
 import { Simplex } from '../../core/noise.js';
@@ -361,7 +362,11 @@ export function armGeometry(type, o = {}) {
   const pb = new PB(NOBASE);
   const info = fn(pb, tier, o) || {};
   info.kind = type;
-  const piece = pb.build();
+  let piece = pb.build();
+  if (o.lod === 'crowd' && piece.n > 100) { // crowd: thin the weapon out, unless the decimation eats whole parts
+    const d = decimatePiece(piece, Math.round(piece.n * 0.4));
+    if (d.idx.length > piece.idx.length * 0.15) piece = d;
+  }
   const geo = assemble([{ p: piece }], palette(tier, cls, o.colors), { skinned: false });
   geo.computeBoundingSphere();
   const out = { geo, info, tris: geo.index.count / 3 };

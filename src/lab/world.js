@@ -1,12 +1,15 @@
 // World lab: build any zone, walk it with a 1.85 m capsule (WASD / arrows, Shift = run) under the game camera,
 // switch to an overview, toggle nav-grid overlay, anchor labels and lighting variants.
-// URL: ?zone=solhaven&view=iso&env=day&at=spawn|x,z&nav=1&labels=1&q=high
+// URL: ?zone=solhaven&view=iso&env=day&at=spawn|x,z&nav=1&labels=1&q=high&dist=20&boss=<guardian id>&hero=1
+//   boss: places that guardian model at anchors.boss (idle anim) for scale/framing; hero=1: a real hero model instead of the capsule
 // Scripting: window.__lab.world = { zone, capsule, teleport(x, z), setEnv(name), overview(), iso(), build(id) }
 import * as THREE from 'three';
 import { createLab } from './kit.js';
 import { buildZone, ZONES, applyEnv } from '../world/index.js';
 import { lambert } from '../engine/materials.js';
 import { ISO } from '../engine/isocam.js';
+import { createBoss, BOSSES } from '../models/bosses/guardians/index.js';
+import { createHero } from '../models/hero/index.js';
 
 const Q = Object.fromEntries(new URLSearchParams(location.search));
 const lab = createLab({ title: 'World', view: Q.view === 'overview' ? 'orbit' : 'iso', ground: 'none', light: 'day' });
@@ -23,6 +26,26 @@ const nose = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.4, 10), lambert({ col
 nose.rotation.x = -Math.PI / 2; nose.position.set(0, 1.45, -0.42); capsule.add(nose);
 scene.add(capsule);
 let facing = 0;
+let hero = null;
+if (Q.hero === '1') {
+  try {
+    hero = createHero({ cls: Q.cls || 'reaver', sex: Q.sex || 'm', gear: { tier: 1 }, weapon: { tier: 1 } });
+    body.visible = false; nose.visible = false;
+    hero.root.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    capsule.add(hero.root);
+  } catch (e) { console.warn('[lab] hero model unavailable', e); hero = null; }
+}
+let boss = null;
+function placeBoss(zone) {
+  if (boss) { scene.remove(boss.root); boss.dispose?.(); boss = null; }
+  if (!Q.boss || !BOSSES[Q.boss]) return;
+  const a = zone.anchors.boss || { x: 0, z: 0, facing: Math.PI };
+  boss = createBoss(Q.boss);
+  boss.root.position.set(a.x, zone.heightAt(a.x, a.z), a.z);
+  boss.root.rotation.y = a.facing;
+  boss.root.traverse(o => { if (o.isMesh && !o.userData.noShadow) { o.castShadow = true; o.receiveShadow = true; } });
+  scene.add(boss.root);
+}
 
 // ---------------------------------------------------------------- state
 const S = { zone: null, id: Q.zone || 'test', env: Q.env || null, nav: Q.nav === '1', labels: Q.labels !== '0', building: false };
@@ -114,6 +137,7 @@ async function build(id) {
     else { const [x, z2] = Q.at.split(',').map(Number); at = { x, z: z2, facing: 0 }; }
   }
   teleport(at.x, at.z, at.facing);
+  placeBoss(zone);
   setEnv(S.env && zone.envs && zone.envs[S.env] ? S.env : null);
   makeMarkers(); makeNavOverlay();
   const st = zone.stats;
@@ -139,7 +163,8 @@ function overview() {
   camera.position.set(cx, size * 0.95, cz + size * 0.62); controls.target.set(cx, 0, cz - size * 0.04);
   camera.far = 2000; camera.updateProjectionMatrix(); controls.update();
 }
-function isoView() { lab.setView('iso'); iso.snap(capsule.position.clone()); }
+function isoView() { lab.setView('iso'); if (Q.dist) iso.zoom = iso.dist = +Q.dist; iso.snap(capsule.position.clone()); }
+if (Q.dist && lab.view === 'iso') { iso.zoom = iso.dist = +Q.dist; }
 
 // ---------------------------------------------------------------- panel
 lab.panel.label('Zone');
@@ -171,6 +196,8 @@ lab.onFrame((dt, t) => {
     facing = Math.atan2(-mx, -mz);
     capsule.rotation.y = facing;
   }
+  if (hero) hero.update(dt, { speed: (mx || mz) ? (keys.has('shift') ? 14 : 6) : 0, turn: 0 });
+  if (boss) boss.update(dt, { speed: 0, turn: 0 });
   if (z) {
     capsule.position.y = z.heightAt(capsule.position.x, capsule.position.z);
     if (lab.view === 'iso') iso.target.set(capsule.position.x, capsule.position.y, capsule.position.z);
@@ -192,5 +219,5 @@ lab.onFrame((dt, t) => {
   }
 });
 
-window.__lab.world = { capsule, teleport, setEnv, overview, iso: isoView, build, toggleNav, get zone() { return S.zone; }, ready: false, ISO };
+window.__lab.world = { capsule, teleport, setEnv, overview, iso: isoView, build, toggleNav, get zone() { return S.zone; }, get boss() { return boss; }, get hero() { return hero; }, ready: false, ISO };
 build(S.id);

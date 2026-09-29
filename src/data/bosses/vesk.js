@@ -7,7 +7,7 @@ import { shared, charge, twinHowl, crossfire, onStart, onBossDeath, partMech, HO
 export default {
   id: 'vesk', model: 'vesk', name: 'Vesk', title: 'the Void Hound', kind: 'legion', element: 'void',
   radius: 2.2, height: 4.1, hp: 33000, atk: 0.16, bars: 90, speed: 5.6, turnRate: 4.5, enrage: 600,
-  music: 'boss_hounds', arena: 'kennels', anims: HOUND_ANIMS,
+  music: 'raid', arena: 'kennels', anims: HOUND_ANIMS,
   moves: {
     ...shared,
     // COUNTER: blue shimmer during the crouch
@@ -28,7 +28,7 @@ export default {
       B.turnTo(t); act(B, 'breath', 1.0);
       const f = fwd(B), side = B.level.rng() < 0.5 ? 1 : -1;
       const dirs = [-35, 0, 35].map(a => rot(f, side * a * DEG));
-      await strike(B, 'rect', { dir: dirs[0], len: 17, width: 3.6, dur: 1.0, color: 'orange', coef: 0.8, status: [{ id: 'weaken', dur: 5 }], fx: 'dark_breath', fxLen: 17, sfx: 'void_whoosh' });
+      await strike(B, 'rect', { dir: dirs[0], len: 17, width: 3.6, dur: 1.0, color: 'orange', coef: 0.8, status: [{ id: 'weaken', dur: 5 }], fx: 'dark_breath', fxLen: 17, sfx: 'void' });
       await strike(B, 'rect', { dir: dirs[1], len: 17, width: 3.6, dur: 0.45, color: 'orange', coef: 0.8, status: [{ id: 'weaken', dur: 5 }], fx: 'dark_breath', fxLen: 17 });
       await strike(B, 'rect', { dir: dirs[2], len: 17, width: 3.6, dur: 0.45, color: 'orange', coef: 0.8, status: [{ id: 'weaken', dur: 5 }], fx: 'dark_breath', fxLen: 17 });
       await wait(B, 0.5);
@@ -36,13 +36,13 @@ export default {
     // vanish and strike from behind a raider
     shadow_step: { range: 20, cd: 11, weight: 2, async run(B, t) {
       const u = B.u, tgt = t;
-      u.untargetable = true; fx(B, 'dark_burst', u.pos.x, u.pos.z, { r: 2.5, color: 'void' }); sfx(B, 'void_whoosh');
+      u.untargetable = true; fx(B, 'dark_burst', u.pos.x, u.pos.z, { r: 2.5, color: 'void' }); sfx(B, 'void');
       await wait(B, 0.45);
       const d = dirTo(B, tgt.pos), p = onNav(B, { x: tgt.pos.x + d.x * 3.2, z: tgt.pos.z + d.z * 3.2 }, u.radius);
       u.pos.x = p.x; u.pos.z = p.z; u.untargetable = false;
       B.turnTo(tgt); fx(B, 'dark_burst', u.pos.x, u.pos.z, { r: 2.5, color: 'void' });
       act(B, 'bite', 0.7);
-      await strike(B, 'cone', { r: 5.5, deg: 100, dur: 0.7, coef: 1.0, knock: 'push', kb: 3, fx: 'bite', fxR: 3, sfx: 'bite' });
+      await strike(B, 'cone', { r: 5.5, deg: 100, dur: 0.7, coef: 1.0, knock: 'push', kb: 3, fx: 'bite', fxR: 3, sfx: 'claw' });
       await wait(B, 0.4);
     } },
     lunge: { range: 30, cd: 16, weight: 1.5, recover: 1.0, async run(B, t) {

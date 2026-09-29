@@ -2,7 +2,7 @@
 // version. The lead renders the animated key scene behind it (the screen only vignettes the edges).
 //   data: { server: 'Solmara-1', status: 'Good'|'Busy'|'Full'|'Maintenance', version, news: [{ tag, title, date, body }],
 //           continue?: { name, cls, level } }
-// Actions: title:enter · title:together · title:leaderboards · title:settings · title:server · title:news {index}
+// Actions: title:enter · title:together · title:leaderboards · title:watch · title:settings · title:server · title:news {index}
 import { h, btn, esc, setText, show } from '../core/util.js';
 import { Screen } from './screen.js';
 
@@ -10,6 +10,7 @@ const MENU = [
   { id: 'enter', label: 'Enter World', primary: true },
   { id: 'together', label: 'Play Together', sub: 'Host or join a world with friends' },
   { id: 'leaderboards', label: 'Leaderboards', sub: 'Weekly Legion Race' },
+  { id: 'watch', label: 'Watch the Raid', sub: 'Spectate eight AI raiders vs Gorrath' },
   { id: 'settings', label: 'Settings' },
 ];
 const STATUS = { good: '#6fdc5a', busy: '#ffae3a', full: '#ff5d4d', maintenance: '#8c95ab' };

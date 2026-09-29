@@ -72,6 +72,11 @@ const DEFS = {
   dark: () => ({ tex: 'darkstone', params: { emissive: 0xff5a20, emissiveIntensity: 2.2 }, opts: { wrap: 0.3, spec: 0.3, shine: 30 } }),
   darkrock: () => ({ tex: 'rockface', opts: { wrap: 0.25 }, tri: [1 / 7, 0.9] }),
   icecliff: () => ({ tex: 'glacier', opts: { wrap: 0.45, spec: 0.7, shine: 36, rim: 0.35, rimColor: 0xd8f4ff }, tri: [1 / 9, 0.6] }),
+  lacquer: () => ({ tex: 'lacquer', opts: { wrap: 0.4, spec: 0.55, shine: 36, rim: 0.12, rimColor: 0xffd0a0 } }),
+  obsidian: () => ({ tex: null, opts: { wrap: 0.15, spec: 1.6, shine: 90, rim: 0.45, rimColor: 0xff6a30 } }),
+  coral: () => ({ tex: null, opts: { wrap: 0.65, trans: 0.3, rim: 0.3, rimColor: 0xa8fff0 } }),
+  wetstone: () => ({ tex: 'ashlar', opts: { wrap: 0.3, spec: 0.55, shine: 44, rim: 0.12, rimColor: 0x9ff0ff } }),
+  wetrock: () => ({ tex: 'rockface', opts: { wrap: 0.3, spec: 0.5, shine: 40 }, tri: [1 / 7, 0.9] }),
   bone: () => ({ tex: 'bone', opts: { wrap: 0.45, spec: 0.3, shine: 20 } }),
   window: () => ({ tex: 'window', params: { emissive: 0xffb050, emissiveIntensity: 0 }, opts: { wrap: 0.3, spec: 0.9, shine: 70 }, noShadow: true }),
   thatch: () => ({ tex: 'thatch', opts: { wrap: 0.45 } }),
@@ -236,6 +241,7 @@ export class Kit {
    * yGround, aoH, jitter (random brightness), cast (shadow; default: material decides), chunkAt [x,z]
    */
   add(mat, g, m, { tint = 0xffffff, ao = true, yGround = null, aoH = 2.5, jitter = 0.06, cast = null, chunkAt = null } = {}) {
+    if (m && !(Math.abs(m.determinant()) > 1e-12)) { console.warn('[kit] skipped degenerate transform for', mat); return; } // singular → NaN normals → black bloom
     const material = kitMaterial(mat);
     const castS = cast ?? (!material.userData.noShadow && mat !== 'glow');
     const tx = chunkAt ? chunkAt[0] : m ? m.elements[12] : 0, tz = chunkAt ? chunkAt[1] : m ? m.elements[14] : 0;

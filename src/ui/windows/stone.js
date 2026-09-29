@@ -2,7 +2,8 @@
 // chance, which moves −10% after a success and +10% after a failure (clamped 25–75%). The finished stone gets a
 // big "9 / 7 / 2" result with a share button.
 //   data: { stones?: [Item], stone: Item (engr: [{id},{id}], neg: {id}, facets: [[1|0|null ×10] ×3]),
-//           chance: 0..1, cost?: { silver }, currencies?, last?: { line, ok }, lastKey?: any }
+//           chance: 0..1, cost?: { silver }, currencies?, last?: { line, ok }, lastKey?: any,
+//           best?: { label: '9/7', lines: [name], grade, is97 } (your best finished stone, pinned under the list) }
 // Actions: stone:select { uid } · stone:facet { uid, line: 0|1|2 } · stone:share { uid }
 import { h, btn, esc, fmtInt, clear } from '../core/util.js';
 import { glyph } from '../core/glyphs.js';
@@ -30,8 +31,18 @@ export class StoneWin extends Win {
       h('div', 'ss-st-lt', r).innerHTML = `<b style="color:${grade(x.grade).c}">${esc(x.name || 'Ability Stone')}</b><span>${sc.length ? sc.join(' / ') : 'Uncut'}</span>`;
       r.addEventListener('click', () => this.ui.emit('stone:select', { uid: x.uid }));
     }
+    if (d.best?.label) {
+      const b = h('div', 'ss-st-best', this.list);
+      b.innerHTML = `<span>${glyph('crown')}Your best stone</span><b style="color:${grade(d.best.grade ?? 4).c}">${esc(d.best.label)}${d.best.is97 ? ' <em>97</em>' : ''}</b><small>${esc((d.best.lines || []).slice(0, 2).join(' · '))}</small>`;
+    }
     const M = this.main; clear(M);
-    if (!s) { h('div', 'ss-empty', M, 'Choose an ability stone to facet.'); return; }
+    if (!s) {
+      const e = h('div', 'ss-st-empty', M);
+      e.innerHTML = (d.stones || []).length
+        ? `${glyph('gem')}<b>Choose a stone</b><span>Pick an ability stone on the left to facet it.</span>`
+        : `${glyph('gem')}<b>No ability stones</b><span>Ability stones drop from Guardian Raids and Abyssal Dungeons. Facet them here: two engravings to raise, one penalty to keep low.</span>`;
+      return;
+    }
     const lines = [...(s.engr || []).slice(0, 2).map(e => ({ ...e, neg: false })), s.neg ? { ...s.neg, neg: true } : null].filter(Boolean);
     const facets = s.facets || [[], [], []];
     const done = facets.every(l => l.length >= 10 && l.every(v => v === 0 || v === 1));

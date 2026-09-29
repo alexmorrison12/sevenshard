@@ -12,6 +12,8 @@ import { buildThrone, buildKennels } from './zones/throne.js';
 import * as crucible from './zones/crucible.js';
 import * as inferno from './zones/inferno.js';
 import * as stronghold from './zones/stronghold.js';
+import * as cinderforge from './zones/cinderforge.js';
+import * as sunscar from './zones/sunscar.js';
 import './zones/brighthold.js';
 import './zones/goldmeadow.js';
 import './zones/thornwood.js';
@@ -29,6 +31,8 @@ export const ZONES = {
   crucible: { name: 'The Crucible', kind: 'arena', size: 44 },
   inferno: { name: 'Inferno Descent', kind: 'dungeon', size: 50 },
   stronghold: { name: 'Brightwater Isle', kind: 'stronghold', size: 120 },
+  cinderforge: { name: 'Cinderforge', kind: 'arena', size: 64 },
+  sunscar: { name: 'Sunscar Basin', kind: 'arena', size: 76 },
 };
 
 const BUILDERS = {
@@ -41,6 +45,8 @@ const BUILDERS = {
   crucible: crucible.build,
   inferno: inferno.build,
   stronghold: stronghold.build,
+  cinderforge: cinderforge.build,
+  sunscar: sunscar.build,
 };
 /** Register / replace a zone builder at runtime (used as real builders land). */
 export function registerZone(id, def, build) { if (def) ZONES[id] = def; BUILDERS[id] = build; }

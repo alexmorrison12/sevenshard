@@ -62,7 +62,7 @@ async function hornCharge(B, tgt, teleDur) {
 export default {
   id: 'gorrath', model: 'gorrath', name: 'Gorrath', title: 'the Horned Tyrant', kind: 'legion',
   radius: 2.3, height: 7, hp: 90000, atk: 0.13, bars: 185, speed: 4.6, turnRate: 3, enrage: 900,
-  music: 'boss_gorrath', arena: 'throne_of_horns',
+  music: 'raid', arena: 'throne_of_horns',
   // canonical action timings (the live model's metadata wins; this table serves headless runs and stand-ins)
   anims: {
     axe_cleave: { dur: 2.6, hits: [1.45] }, stomp: { dur: 2.0, hits: [1.05] }, axe_sweep: { dur: 2.4, hits: [1.25] },
@@ -308,6 +308,7 @@ export default {
         act(B, 'ghost_form', 1.6);
         await wait(B, 1.6);
         u.data.ghost = 1; u.model?.setGlow?.('ghost', 1);
+        u.data.encounter?.game?.audio?.music?.('raid_ghost');
         smash(B, 'circle', { r: 12, coef: 0.6, knock: 'push', kb: 6, fx: 'dark_burst', fxR: 8, fxColor: GHOST, sfx: 'ghost_wail', shake: 0.6 });
         endFury(B);
         B.phase = 3; u.st.speed *= 1.2; u._statDirty = true;

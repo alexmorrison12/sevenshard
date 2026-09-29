@@ -65,7 +65,7 @@ export class GemsWin extends Win {
       draggable(sl, () => ({ type: 'item', item: g }));
       this.bag.appendChild(sl);
     }
-    if (!gems.length) h('div', 'ss-empty', this.bag, 'No spare gems.');
+    if (!gems.length) h('div', 'ss-empty ss-gm2-none', this.bag, 'No spare gems. Chaos Dungeons and Guardian Raids drop Ruinstones and Swiftstones.');
     // fusion
     this.pick = this.pick.filter(u => gems.find(g => g.uid === u));
     clear(this.fuse);

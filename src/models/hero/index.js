@@ -7,22 +7,22 @@
 //
 // See README.md for the full API (actions, sockets, options). Contract: ARCHITECTURE.md › Heroes.
 import * as THREE from 'three';
-import { getBase, getHead, buildBucket } from './body.js';
+import { getBase, getHead, buildBucket, decimatePiece } from './body.js';
 import { BONES, B, NB, PARENTS } from './rig.js';
 import { assemble } from './assemble.js';
 import { makeUniforms, makeHeroMaterial } from './material.js';
 import { faceTexture, marksTexture } from './face.js';
 import { Animator } from './anim.js';
-import { resolveGear, buildPalette, paintBody } from './gear.js';
+import { resolveGear, buildPalette, paintBody, NPC_PRESETS, NPC_OUTFITS } from './gear.js';
 import { outfitPieces } from './outfit.js';
-import { HAIR_STYLES } from './hair.js';
+import { HAIR_STYLES, BEARD_STYLES, beardPiece } from './hair.js';
 import { lockHairPiece } from './hair2.js';
 import { armGeometry, CLASS_ACCENT } from './arms.js';
 import { MOVE_NAMES } from './moves.js';
 import { FACE_PRESETS } from './head.js';
 import { demonHorns, demonWing, makeAura } from './demon.js';
 
-export { HAIR_STYLES, FACE_PRESETS };
+export { HAIR_STYLES, BEARD_STYLES, FACE_PRESETS, NPC_PRESETS };
 
 // ------------------------------------------------------------------------------------------------
 export const SKIN_TONES = [0xf6dccb, 0xedc7ae, 0xdfb094, 0xc99676, 0xab7859, 0x8a5b40, 0x68432e, 0x4a3021];
@@ -41,6 +41,57 @@ export const CLASSES = {
   demonbound: { name: 'Demonbound', role: 'dps', weapon: 'Demonic Glaive', kind: 'glaive', accent: CLASS_ACCENT.demonbound },
 };
 export const NPCS = ['guard', 'knight', 'noble', 'king', 'oracle', 'merchant', 'blacksmith', 'sailor', 'pirate', 'bandit', 'cultist', 'priest', 'bard', 'farmer', 'fisher', 'villager', 'child'];
+/** named story characters usable as npc ids: npc: 'brannoc' (Commander Brannoc Hale), npc: 'seraphine' */
+export const NPC_NAMED = Object.keys(NPC_PRESETS);
+
+// NPC weapons (sheathed until combat) + the move family they fight with
+const NPC_WEAPONS = {
+  guard: { kind: 'sword', set: [{ arm: 'longsword', hand: 'R', sheath: 'hipL' }] },
+  knight: { kind: 'sword', set: [{ arm: 'longsword', hand: 'R', sheath: 'hipL' }] },
+  bandit: { kind: 'blades', set: [{ arm: 'shortblade', hand: 'R', sheath: 'waistR' }, { arm: 'shortblade', hand: 'L', sheath: 'waistL' }] },
+  pirate: { kind: 'sword', set: [{ arm: 'longsword', hand: 'R', sheath: 'hipL' }, { arm: 'pistol', hand: null, sheath: 'holsterR' }] },
+  cultist: { kind: 'staff', set: [{ arm: 'starstaff', hand: 'R', sheath: 'backStaff', tier: 2 }] },
+  bard: { kind: 'none', set: [{ arm: 'lute', hand: null, sheath: 'backHarp' }] },
+  fisher: { kind: 'none', set: [{ arm: 'rod', hand: null, sheath: 'backStaff' }] },
+};
+// NPC look pools (hair style indices into HAIR_STYLES[sex], beard indices into BEARD_STYLES)
+const NPC_LOOK = {
+  guard: { m: [1, 0, 3], f: [1, 2, 4], beard: [0, 0, 4, 5, 1] },
+  knight: { m: [1, 0, 6], f: [2, 1, 3], beard: [0, 1, 2, 0] },
+  noble: { m: [0, 3, 2], f: [2, 0, 7], beard: [0, 1, 4] },
+  king: { m: [2, 0], f: [2, 0], beard: [2, 3], grey: true, face: [4, 3] },
+  oracle: { m: [2, 3], f: [0, 7, 3], beard: [0] },
+  merchant: { m: [1, 0, 7], f: [2, 4, 1], beard: [4, 1, 2, 0] },
+  blacksmith: { m: [7, 1, 4], f: [1, 2], beard: [2, 3, 5], build: 0.95 },
+  sailor: { m: [1, 3], f: [1, 3], beard: [5, 0, 1] },
+  pirate: { m: [2, 3], f: [0, 3], beard: [1, 5, 4] },
+  bandit: { m: [1], f: [1], beard: [0] },
+  cultist: { m: [1], f: [1], beard: [0] },
+  priest: { m: [7, 1], f: [2, 4], beard: [0, 1, 2], grey: true },
+  bard: { m: [0, 2, 3], f: [0, 3, 5], beard: [1, 0, 4] },
+  farmer: { m: [1, 0, 7], f: [3, 1, 2], beard: [4, 0, 5, 2] },
+  fisher: { m: [1, 7], f: [1, 3], beard: [2, 5, 0] },
+  villager: { m: [0, 1, 2, 3, 7], f: [0, 1, 2, 3, 4, 5], beard: [0, 0, 1, 4, 2, 5] },
+  child: { m: [1, 0], f: [5, 3, 1], beard: [0], face: [2, 5] },
+};
+const NATURAL_HAIR = [0x1c1612, 0x3a2616, 0x6a4424, 0xa87038, 0xe0c080, 0x4a2a1a, 0x8a3a1c];
+const GREY_HAIR = [0x9a968e, 0xc8c4bc, 0x7a7670];
+const NATURAL_EYES = [0x3a6ab0, 0x4a8a5a, 0x6a4a2a, 0x5a5a6a, 0x8a6a3a];
+let NPC_SEQ = 1;
+function npcLook(type, sex, v) {
+  const L = NPC_LOOK[type] || NPC_LOOK.villager;
+  const h = (k) => ((v * 2654435761 + k * 40503) >>> 0) % 997;
+  const pool = sex === 'f' ? L.f : L.m;
+  const look = {
+    face: L.face ? L.face[h(1) % L.face.length] : h(1) % 6,
+    hair: pool[h(2) % pool.length],
+    hairColor: L.grey ? GREY_HAIR[h(3) % GREY_HAIR.length] : NATURAL_HAIR[h(3) % NATURAL_HAIR.length],
+    skin: h(4) % 8, eyes: NATURAL_EYES[h(5) % NATURAL_EYES.length],
+    build: L.build ?? (h(6) % 100) / 100 * 0.8 + 0.1, height: 0.96 + (h(7) % 9) / 100,
+  };
+  if (sex === 'm') look.beard = L.beard[h(8) % L.beard.length];
+  return look;
+}
 
 // class weapon sets: which arm goes in which hand, and where it rides when sheathed
 const WEAPON_SETS = {
@@ -149,12 +200,16 @@ function mountSocket(base, bones, kind) {
 
 // ------------------------------------------------------------------------------------------------
 function normOpts(o = {}) {
-  const cls = o.npc ? null : (CLASSES[o.cls] ? o.cls : (o.cls === null ? null : 'reaver'));
-  const sex = o.sex === 'f' ? 'f' : 'm';
-  const look = { ...defaultLook(cls || 'npc', sex), ...(o.look || {}) };
+  const named = NPC_PRESETS[o.npc] || NPC_PRESETS[o.preset] || null;
+  const npc = named ? (NPC_PRESETS[o.npc] ? o.npc : o.preset) : (o.npc || null);
+  const npcType = named ? named.npc : npc;
+  const cls = npc ? null : (CLASSES[o.cls] ? o.cls : (o.cls === null ? null : 'reaver'));
+  const sex = named ? named.sex : o.sex === 'f' ? 'f' : 'm';
+  const variant = npc ? (o.seed ?? NPC_SEQ++) : 0;
+  const look = { ...defaultLook(cls || 'npc', sex), ...(npc ? npcLook(npcType, sex, variant) : {}), ...(named?.look || {}), ...(o.look || {}) };
   const gear = { tier: 1, dye: null, ...(o.gear || {}) };
   const weapon = { tier: gear.tier ?? 1, hone: 0, ...(o.weapon || {}) };
-  return { cls, sex, look, gear, weapon, npc: o.npc || null, lod: o.lod === 'crowd' ? 'crowd' : 'full', seed: o.seed ?? 1 };
+  return { cls, sex, look, gear, weapon, npc, npcType, variant, child: npcType === 'child', lod: o.lod === 'crowd' ? 'crowd' : 'full', seed: o.seed ?? 1 };
 }
 
 /**
@@ -189,6 +244,7 @@ export function createHero(opts = {}) {
     const rebuildSkeleton = !base || newBase.key !== base.key;
     base = newBase;
     head = getHead(base, (L.face | 0) % 6);
+    const tHead = performance.now();
     if (rebuildSkeleton) {
       const prevState = anim ? { action: anim.action, drawn: anim.drawn, t: anim.t } : null;
       if (mesh) { inner.remove(mesh); mesh.geometry.dispose(); skeleton.dispose(); }
@@ -226,8 +282,9 @@ export function createHero(opts = {}) {
     const skinHex = typeof L.skin === 'number' && L.skin < 16 ? SKIN_TONES[(L.skin | 0) % SKIN_TONES.length] : (L.skin ?? SKIN_TONES[2]);
     { const sk = new THREE.Color(skinHex); U.uInk.value.setRGB(sk.r * 0.07 + 0.006, sk.g * 0.045 + 0.004, sk.b * 0.04 + 0.004);
       U.uLip.value.setRGB(sk.r * (o.sex === 'f' ? 0.95 : 0.9) + 0.05, sk.g * (o.sex === 'f' ? 0.42 : 0.6), sk.b * (o.sex === 'f' ? 0.46 : 0.58)); }
+    const tFace = performance.now();
     // outfit
-    const g = resolveGear({ cls: o.cls, npc: o.npc, tier: o.gear.tier, sex: o.sex, dye: o.gear.dye, spec: o.gear.spec });
+    const g = resolveGear({ cls: o.cls, npc: o.npc, tier: o.gear.tier, sex: o.sex, dye: o.gear.dye, spec: o.gear.spec, variant: o.variant });
     h.gear = g;
     const pieces = { body: base.pieces.body, handL: base.pieces.handL, handR: base.pieces.handR, head: head.piece };
     const paint = paintBody(base, g, pieces);
@@ -243,31 +300,48 @@ export function createHero(opts = {}) {
     let style = styles[(L.hair | 0) % styles.length];
     if (op.hat) style = HAT_SAFE[style] ?? style;
     if (!op.hideHair && style) { const hp = lockHairPiece(base, style, o.sex); if (hp) parts.push({ p: hp }); }
+    if (o.sex === 'm' && L.beard && !g.head?.mask) { const bp = beardPiece(base, BEARD_STYLES[(L.beard | 0) % BEARD_STYLES.length]); if (bp) parts.push({ p: bp }); }
     for (const it of op.list) parts.push(it);
+    // cull body triangles fully hidden under armour shells (cuirass, greaves, vambraces, loose trousers)
+    const covers = op.list.map(it => it.p.cover).filter(Boolean);
+    if (covers.length) {
+      const pc = pieces.body, cov = new Uint8Array(pc.n), keep = new Uint8Array(pc.idx.length / 3);
+      for (let v = 0; v < pc.n; v++) { const x = pc.pos[v * 3], y = pc.pos[v * 3 + 1], z = pc.pos[v * 3 + 2], ch = pc.chain[v]; for (const f of covers) if (f(x, y, z, ch)) { cov[v] = 1; break; } }
+      let kept = 0;
+      for (let t = 0; t < keep.length; t++) { const a = pc.idx[t * 3], b = pc.idx[t * 3 + 1], c = pc.idx[t * 3 + 2]; keep[t] = cov[a] && cov[b] && cov[c] ? 0 : 1; kept += keep[t]; }
+      if (kept < keep.length) parts[0].keepTri = keep;
+    }
+    if (o.lod === 'crowd') crowdBudget(parts);
     const pal = buildPalette(g, { skin: skinHex, hairColor: L.hairColor, eyes: L.eyes ?? 0x3a6ab0 });
+    const tOutfit = performance.now();
     const old = mesh.geometry;
     mesh.geometry = assemble(parts, pal);
     old.dispose();
+    const tAsm = performance.now();
     mesh.geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, base.height * 0.5, 0), base.height * 0.9);
     // rune glow (legion set)
     if (g.runes) U.uRune.value.set(1.0, 0.1, 0.04, 1.6);
     else if (g.accent) { const ac = new THREE.Color(g.accent); U.uRune.value.set(ac.r, ac.g, ac.b, 0.9); }
     else U.uRune.value.set(1, 0.1, 0.04, 0);
     // scale / sizes
-    const hk = Math.max(0.9, Math.min(1.1, L.height ?? 1));
-    inner.scale.setScalar(hk * (1 + demon * 0.18));
-    h.height = base.height * hk; h.radius = base.P.radius * hk;
+    const hk = heightK();
+    inner.scale.setScalar(hk * (1 + sstep(demon) * 0.18));
+    bones[B.head].scale.setScalar(o.child ? 1.3 : 1);   // children: small body, big head
+    h.height = base.height * hk * (o.child ? 1.08 : 1); h.radius = base.P.radius * hk;
     S.overhead.position.set(0, h.height + 0.32, 0);
     buildWeapons();
     // stats
     h.stats.verts = mesh.geometry.attributes.position.count;
     h.stats.tris = mesh.geometry.index.count / 3 + weapons.reduce((a, w) => a + w.tris, 0);
     h.stats.drawCalls = 1 + weapons.length;
+    h.stats.parts = parts.map((pt, i) => ({ tag: pt.p.tag ? pt.p.tag.split('|').slice(1, 3).join('|').slice(0, 48) : ['body', 'head', 'eyes', 'handL', 'handR'][i] || 'hair/beard', tris: pt.keepTri ? pt.keepTri.reduce((a, k) => a + k, 0) : pt.p.idx.length / 3 }));
     h.stats.ms = performance.now() - tb;
+    h.stats.phases = { bodyHead: tHead - tb, faceTex: tFace - tHead, outfit: tOutfit - tFace, assemble: tAsm - tOutfit, weapons: performance.now() - tAsm };
   }
 
+  function heightK() { return Math.max(0.9, Math.min(1.1, o.look.height ?? 1)) * (o.child ? 0.64 : 1); }
   function weaponSet() {
-    if (o.npc) return [];
+    if (o.npc) return NPC_WEAPONS[o.npcType]?.set || [];
     return WEAPON_SETS[o.cls] || WEAPON_SETS.reaver;
   }
   function buildWeapons() {
@@ -275,7 +349,7 @@ export function createHero(opts = {}) {
     weapons.length = 0;
     const tier = Math.max(0, Math.min(2, o.weapon.tier ?? o.gear.tier ?? 1));
     for (const spec of weaponSet()) {
-      const a = armGeometry(spec.arm, { tier, cls: o.cls, lod: o.lod });
+      const a = armGeometry(spec.arm, { tier: spec.tier ?? (o.npc ? Math.min(tier, h.gear?.tier ?? tier) : tier), cls: o.cls, lod: o.lod });
       if (!a) continue;
       const m = new THREE.Mesh(a.geo, matRigid); m.castShadow = true; m.name = 'weapon_' + spec.arm;
       const w = { mesh: m, spec, info: a.info, tris: a.tris };
@@ -300,7 +374,7 @@ export function createHero(opts = {}) {
     anim.grip2 = a.info.grip2 ?? anim.grip2;
   }
   function kindNow() {
-    if (o.npc) return 'none';
+    if (o.npc) return NPC_WEAPONS[o.npcType]?.kind || 'none';
     if (demon > 0.5 && o.cls === 'demonbound') return 'claws';
     if (o.cls === 'pistoleer') return stance;
     return CLASSES[o.cls]?.kind || 'none';
@@ -341,8 +415,7 @@ export function createHero(opts = {}) {
     if (demon !== demonTarget) {
       demon = demonTarget > demon ? Math.min(demonTarget, demon + dt * 2.2) : Math.max(demonTarget, demon - dt * 2.2);
       U.uDemon.value = UW.uDemon.value = demon;
-      const hk = Math.max(0.9, Math.min(1.1, o.look.height ?? 1));
-      inner.scale.setScalar(hk * (1 + sstep(demon) * 0.18));
+      inner.scale.setScalar(heightK() * (1 + sstep(demon) * 0.18));
     }
     const k = kindNow(); if (k !== anim.kind) { anim.kind = k; syncDemonArms(); }
     const P = anim.update(dt, state);
@@ -428,6 +501,31 @@ export function createHero(opts = {}) {
   return h;
 }
 const sstep = (x) => x * x * (3 - 2 * x);
+
+// crowd LOD: squeeze outfit + hair into what is left of a 6k-triangle budget (decimated copies are cached per piece)
+const CROWD_TRIS = 5000;
+const CROWD_DEC = new WeakMap();
+const partTris = (pt) => (pt.keepTri ? pt.keepTri.reduce((a, k) => a + k, 0) : pt.p.idx.length / 3);
+// thin double-sided cloth / strings of small parts do not survive QEM: they are built natively at crowd resolution
+// (everything else is built natively at crowd resolution; only the organic meshes are squeezed with QEM)
+const DECIMATE = /^(hair2|hood2|mask2|beard|cuirass|limbshell|pants)$/;
+const decimatable = (pt) => DECIMATE.test(((pt.p.tag || '').split('|')[1] || '')) || (!pt.p.tag && pt.p.n > 200);
+function crowdBudget(parts) {
+  let fixed = 0, rest = 0;
+  for (let i = 0; i < parts.length; i++) { const t = partTris(parts[i]); if (i < 5 || !decimatable(parts[i])) fixed += t; else rest += t; }
+  const avail = Math.max(700, CROWD_TRIS - fixed);
+  if (rest <= avail) return;
+  const ratio = avail / rest;
+  for (let i = 5; i < parts.length; i++) {
+    if (!decimatable(parts[i])) continue;
+    const p = parts[i].p;
+    const tv = Math.max(8, Math.ceil(p.n * ratio * 0.92 / 8) * 8);
+    if (tv >= p.n) continue;
+    let m = CROWD_DEC.get(p); if (!m) CROWD_DEC.set(p, (m = new Map()));
+    if (!m.has(tv)) { const d = decimatePiece(p, tv); m.set(tv, d.idx.length / 3 < p.idx.length / 3 * ratio * 0.3 ? p : d); } // collapsed too far → keep
+    parts[i] = { ...parts[i], p: m.get(tv) };
+  }
+}
 
 /** Build caches for a hero kind synchronously (creates and disposes a throwaway hero). */
 export function warmHero(opts) { const h = createHero(opts); h.dispose(); }

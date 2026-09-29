@@ -33,7 +33,7 @@ export class Visuals {
       level.on('despawn', ({ unit }) => this.detach(unit)),
       level.on('damage', ev => { if (ev.amount > 0 && !ev.dot) ev.tgt._flash = Math.max(ev.tgt._flash || 0, ev.crit ? 0.5 : 0.35); }),
       level.on('death', ({ unit }) => { unit.model?.play?.('death', { dur: 1.2 }); }),
-      level.on('knock', ({ tgt, knock }) => { if (knock === 'down' || knock === 'up') { tgt.model?.play?.('knockdown', { dur: 0.6 }); tgt._wasDown = true; } }),
+      level.on('knock', ({ tgt, knock }) => { if (knock === 'down' || knock === 'up') { tgt.model?.play?.('knockdown', { dur: 0.6 }); tgt._wasDown = true; } else if ((knock === 'push' || knock === 'pull') && tgt.kind !== 'boss' && !tgt.skill) tgt.model?.play?.('knockback', { dur: 0.5 }); }),
       level.on('standUp', ({ unit }) => { unit.model?.play?.('getup', { dur: 0.35 }); unit._wasDown = false; }),
     ];
     for (const u of level.units) this.attach(u);
@@ -71,7 +71,11 @@ export class Visuals {
         stunned: u.cc.stun > 0 || u.cc.freeze > 0, mounted: !!u.data.mounted, sit: !!u.data.sit, groggy: !!u.data.groggy,
         enraged: !!u.data.enraged, fly: u.data.fly || 0, burrowed: u.data.burrowed || 0, ghost: u.data.ghost || 0,
       });
-      if (u.dead && u.deadT > (u.data.corpseTime ?? 4) - 1 && u.kind !== 'hero') r.position.y -= (u.deadT - (u.data.corpseTime ?? 4) + 1) * 1.2;
+      if (u.dead && u.deadT > (u.data.corpseTime ?? 4) - 1 && u.kind !== 'hero') {
+        // corpses burn away (creature models dissolve) or sink into the ground
+        const k = Math.min(1, u.deadT - (u.data.corpseTime ?? 4) + 1);
+        if (m.setDissolve) m.setDissolve(k); else r.position.y -= k * 1.2;
+      }
     }
   }
   dispose() { for (const f of this.off) f(); for (const u of [...this.models.values()]) this.detach(u); }

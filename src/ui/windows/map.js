@@ -4,7 +4,7 @@
 //           world?: { regions: [{ id, name, x, y (0..1), kind: 'city'|'field'|'forest'|'mountain'|'island'|'stronghold'|'hollow',
 //                                 level?, unlocked?, current?, pct?, triport? }], ship?: { x, y } } }
 // Actions: map:click { x, z } (zone view) · map:travel { id } (world view, triport / sail)
-import { h, esc, clear, rng } from '../core/util.js';
+import { h, esc, clear, rng, pretty } from '../core/util.js';
 import { glyph } from '../core/glyphs.js';
 import { seg } from '../core/kit.js';
 import { Win } from '../core/windows.js';
@@ -28,6 +28,19 @@ const LAND = [ // [cx, cy, rx, ry, seed] (0..1 space)
 ];
 const KG = { city: '#ffd98a', field: '#d8e07a', forest: '#6fbf6a', mountain: '#ff8a5a', island: '#9fe0e8', stronghold: '#8fc8ff', hollow: '#9aff7a' };
 
+/** Marker label: raw anchor ids ('portal:abyss', 'dock:ship') become readable names. */
+export function markerLabel(mk) {
+  const l = String(mk.label || ''), m = /^([a-z]+):([a-z0-9_]+)$/.exec(l);
+  if (!m) return l;
+  const [, k, rest] = m, name = pretty(rest);
+  if (k === 'portal') return `${name} Portal`;
+  if (k === 'dock') return rest === 'ship' ? 'Harbor' : `${name} Dock`;
+  if (k === 'triport') return 'Triport';
+  if (k === 'gate') return `To ${name}`;
+  return name;
+}
+const LABEL_PRI = { quest: 0, objective: 0, questdone: 1, boss: 1, portal: 2, dungeon: 2, triport: 2, vendor: 3, npc: 4, seed: 5, poi: 5, elite: 6 };
+
 export class MapWin extends Win {
   static id = 'map'; static title = 'World Map'; static glyph = 'map'; static width = 960;
   build() {
@@ -41,6 +54,9 @@ export class MapWin extends Win {
     this.cv = h('canvas', 'ss-map-cv', this.frame);
     this.pins = h('div', 'ss-map-pins', this.frame);
     this.legend = h('div', 'ss-map-legend', b);
+    // hover: name of the marker under the pointer (labels that didn't fit are still discoverable)
+    this.cv.addEventListener('pointermove', e => this.hover(e));
+    this.cv.addEventListener('pointerleave', () => { if (this.hov) this.hov.style.display = 'none'; });
     this.cv.addEventListener('click', e => {
       if (this.view !== 'zone') return;
       const m = this.m; if (!m) return;
@@ -76,14 +92,36 @@ export class MapWin extends Win {
     x.drawImage(m.canvas, 0, 0, S, S);
     const k = S / m.size;
     const col = { party: '#5fb2ff', quest: '#ffb43c', questdone: '#ffd35a', npc: '#ffe07a', vendor: '#ffd35a', portal: '#b47aff', dungeon: '#b47aff', boss: '#ff4a3a', elite: '#ff9a3a', seed: '#7aff8a', triport: '#5fe0e8', objective: '#ffcc55', poi: '#e8ecf5' };
-    x.font = '600 12px "Segoe UI", Roboto, sans-serif'; x.textAlign = 'center';
+    const pts = this.pts = [];
     for (const mk of m.markers || []) {
       if (mk.kind === 'mob') continue;
       const X = (mk.x - m.x0) * k, Y = (mk.z - m.z0) * k;
+      if (X < -6 || Y < -6 || X > S + 6 || Y > S + 6) continue;
       x.fillStyle = col[mk.kind] || '#fff'; x.strokeStyle = '#000'; x.lineWidth = 1.5;
       x.beginPath(); x.arc(X, Y, 5, 0, 7); x.fill(); x.stroke();
-      if (mk.label && mk.kind !== 'party') { x.lineWidth = 3; x.strokeText(mk.label, X, Y - 10); x.fillStyle = '#f1f3f8'; x.fillText(mk.label, X, Y - 10); }
+      pts.push({ X, Y, mk, label: mk.kind === 'player' ? '' : markerLabel(mk) });
     }
+    // labels by priority; each tries above / below / right / left of its dot, clamped inside the map, and is
+    // skipped when every spot collides with a label already placed (hover still names it)
+    x.font = '600 12px "Segoe UI", Roboto, sans-serif';
+    const boxes = [];
+    const order = pts.filter(p => p.label && p.mk.kind !== 'party').sort((a, b) => (LABEL_PRI[a.mk.kind] ?? 5) - (LABEL_PRI[b.mk.kind] ?? 5));
+    for (const p of order) {
+      const w = x.measureText(p.label).width + 4;
+      for (const [tx, ty, al] of [[p.X, p.Y - 10, 'center'], [p.X, p.Y + 19, 'center'], [p.X + 9, p.Y + 4, 'left'], [p.X - 9, p.Y + 4, 'right']]) {
+        let l = al === 'center' ? tx - w / 2 : al === 'left' ? tx - 2 : tx - w + 2;
+        const sh = l < 3 ? 3 - l : l + w > S - 3 ? S - 3 - (l + w) : 0;
+        l += sh;
+        const bx = { l, t: ty - 11, r: l + w, b: ty + 3 };
+        if (bx.t < 2 || bx.b > S - 2 || boxes.some(o => bx.r > o.l && bx.l < o.r && bx.b > o.t && bx.t < o.b)) continue;
+        boxes.push(bx); p.placed = true;
+        x.textAlign = al; x.lineWidth = 3; x.strokeStyle = 'rgba(0, 0, 0, .9)'; x.lineJoin = 'round';
+        x.strokeText(p.label, tx + sh, ty); x.fillStyle = p.mk.kind === 'quest' || p.mk.kind === 'objective' ? '#ffd88a' : '#f1f3f8'; x.fillText(p.label, tx + sh, ty);
+        break;
+      }
+    }
+    x.textAlign = 'center';
+    this.hov = h('div', 'ss-map-hov', this.pins); this.hov.style.display = 'none';
     if (m.you) {
       const X = (m.you.x - m.x0) * k, Y = (m.you.z - m.z0) * k;
       x.save(); x.translate(X, Y); x.rotate(-(m.you.facing || 0));
@@ -91,6 +129,17 @@ export class MapWin extends Win {
       x.beginPath(); x.moveTo(0, -11); x.lineTo(8, 8); x.lineTo(0, 4); x.lineTo(-8, 8); x.closePath(); x.fill(); x.stroke();
       x.restore();
     }
+  }
+  hover(e) {
+    if (this.view !== 'zone' || !this.pts || !this.hov) return;
+    const r = this.cv.getBoundingClientRect(), S = 620;
+    const px = (e.clientX - r.left) / r.width * S, py = (e.clientY - r.top) / r.height * S;
+    let best = null, bd = 12 * 12;
+    for (const p of this.pts) { const d = (p.X - px) ** 2 + (p.Y - py) ** 2; if (p.label && d < bd) { bd = d; best = p; } }
+    if (!best) { this.hov.style.display = 'none'; return; }
+    this.hov.textContent = best.label;
+    this.hov.style.display = '';
+    this.hov.style.left = (best.X / S * 100) + '%'; this.hov.style.top = (best.Y / S * 100) + '%';
   }
   drawWorld(w) {
     const W = 900, H = 580, x = this.size(W, H);

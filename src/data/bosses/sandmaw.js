@@ -31,7 +31,7 @@ export default {
   moves: {
     bite: { range: 5, cd: 4, weight: 3, async run(B, t) {
       B.turnTo(t); act(B, 'bite', 0.85);
-      await strike(B, 'cone', { r: 7.5, deg: 70, dur: 0.85, coef: 1.0, knock: 'down', fx: 'bite', fxR: 4, sfx: 'bite', shake: 0.3 });
+      await strike(B, 'cone', { r: 7.5, deg: 70, dur: 0.85, coef: 1.0, knock: 'down', fx: 'bite', fxR: 4, sfx: 'claw', shake: 0.3 });
       await wait(B, 0.5);
     } },
     // COUNTER: it rears back before a deep lunge

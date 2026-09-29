@@ -9,7 +9,7 @@ import { itemLevel } from '../systems/stats.js';
 import { BOSS_DEFS } from '../../data/bosses/index.js';
 import { TRIAL, AFFIXES } from '../../data/inferno.js';
 import { weekId } from '../../core/util.js';
-import { trialOfWeek, S, spawnLocal, normalChar, showResults, dpsRows, track, eruption, mobFrom, fmtTime, loadInstance } from './inferno.js';
+import { trialOfWeek, S, spawnLocal, normalChar, showResults, dpsRows, emitClear, eruption, mobFrom, fmtTime, loadInstance } from './inferno.js';
 
 /** weekly trial state on the character: { week, cleared, best, tries } */
 export function trialState(char, now = Date.now()) {
@@ -99,9 +99,8 @@ function trialDone(session, ctx, r) {
     if (ups?.length) setTimeout(() => session.ui.banner('Level Up', { kind: 'levelup', level: ups[ups.length - 1] }), 900);
     st.cleared = true; st.best = st.best == null ? r.time : Math.min(st.best, r.time);
     A.save();
-    track(session, 'clear', { content: 'guardian', id: ctx.def.id, time: r.time, mode: 'trial' });
   }
-  session.bus.emit('clear', { content: { kind: 'trial', boss: ctx.def.id, affixes: ctx.affixes }, result: r, tracked: true });
+  emitClear(session, { kind: 'guardian', boss: ctx.def.id, trial: true, affixes: ctx.affixes }, r);
   const me = r.meter?.find(x => x.you);
   showResults(session, {
     kind: r.cleared ? 'clear' : 'fail', over: 'Trial Guardian', title: ctx.def.name,

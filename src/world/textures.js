@@ -452,11 +452,142 @@ Surf surf(vec2 uv) {
   s.col = col; s.h = 0.3 + n * 0.2 - wet * 0.1;
   return s;
 }`,
+
+  basalt: /* glsl */`
+Surf surf(vec2 uv) {
+  Surf s = S0();
+  vec2 w = vec2(fbm(uv, 3, 2, 801), fbm(uv, 3, 2, 802)) * 0.18;
+  ivec2 cell; vec2 ctr;
+  vec4 v = pvoroHex(uv * vec2(5.0, 6.0) + w, ivec2(5, 6), 803, 0.5, cell, ctr);
+  vec4 r = h4(cell, 804);
+  float e = v.z + fbm(uv, 48, 2, 805) * 0.025;
+  float top = smoothstep(0.03, 0.1, e);
+  float n = fbm(uv + r.xy, 14, 4, 806);
+  // column tops: charcoal with a faint warm/violet cast; some tops dusted pale with ash
+  vec3 c = mix(vec3(0.19, 0.18, 0.19), vec3(0.34, 0.32, 0.32), r.x) * (0.84 + n * 0.3);
+  float ring = sin(length((uv * vec2(5.0, 6.0) + w) - ctr) * 22.0 + r.y * 6.0) * 0.5 + 0.5;
+  c *= 0.93 + ring * 0.09 * top;
+  float dusted = smoothstep(0.55, 0.85, r.w) * smoothstep(-0.1, 0.4, n);
+  c = mix(c, vec3(0.52, 0.49, 0.47), dusted * 0.55);
+  float ash = smoothstep(0.1, -0.4, n) * 0.5 + (1.0 - top) * 0.25;
+  c = mix(c, vec3(0.38, 0.36, 0.35), ash * 0.5);
+  // molten seams: only a few meandering stretches of joint are open
+  float open = smoothstep(0.32, 0.6, fbm(uv, 2, 3, 807) * 0.8 + fbm(uv, 6, 2, 808) * 0.35);
+  float seam = smoothstep(0.03, 0.0, v.z) * open;
+  c = mix(c * mix(0.4, 1.0, top), vec3(1.0, 0.42, 0.1), seam);
+  s.col = c; s.emit = seam;
+  s.h = top * (0.4 + r.z * 0.4) + (1.0 - top) * 0.05;
+  s.ao = mix(0.5, 1.0, top);
+  return s;
+}`,
+  cinder: /* glsl */`
+Surf surf(vec2 uv) {
+  Surf s = S0();
+  float n = fbm(uv, 4, 5, 811), n2 = fbm(uv, 16, 3, 812);
+  vec3 c = mix(vec3(0.20, 0.19, 0.19), vec3(0.40, 0.38, 0.37), sat(0.5 + n * 0.9));
+  c *= 0.9 + n2 * 0.2;
+  float h = 0.35 + n * 0.15;
+  // pumice & slag pebbles
+  ivec2 cell; vec2 ctr; vec4 v = pvoro(uv * 26.0, ivec2(26), 813, 0.9, cell, ctr);
+  vec4 r = h4(cell, 814);
+  float peb = smoothstep(0.34, 0.24, v.x) * step(r.x, 0.3);
+  c = mix(c, mix(vec3(0.18, 0.16, 0.16), vec3(0.34, 0.30, 0.28), r.y) * (0.8 + 0.4 * sat(1.0 - v.x / 0.34)), peb);
+  h = max(h, peb * 0.6);
+  // crust cracks with a faint glow deep inside
+  ivec2 c2; vec2 t2; vec4 v2 = pvoro(uv * 7.0 + n * 0.4, ivec2(7), 815, 0.9, c2, t2);
+  float crack = smoothstep(0.03, 0.0, v2.z);
+  float hot = crack * smoothstep(0.3, 0.6, fbm(uv, 3, 3, 816));
+  c = mix(c, vec3(0.06, 0.05, 0.05), crack * 0.8);
+  c = mix(c, vec3(1.0, 0.36, 0.08), hot * 0.9);
+  // ember specks
+  float sp = step(0.997, h1(wrapc(ivec2(floor(uv * 256.0)), ivec2(256)), 817));
+  s.col = c + vec3(1.0, 0.4, 0.1) * sp * 0.4; s.emit = max(hot * 0.8, sp * 0.35);
+  s.h = h - crack * 0.2;
+  return s;
+}`,
+  dunes: /* glsl */`
+Surf surf(vec2 uv) {
+  Surf s = S0();
+  vec2 q = uv + vec2(fbm(uv, 2, 3, 821), fbm(uv, 2, 3, 822)) * 0.06;
+  float n = fbm(uv, 3, 4, 823), n2 = fbm(uv, 12, 3, 824);
+  // asymmetric wind ripples: gentle windward slope, steep lee face
+  float ph = fract((q.x * 0.35 + q.y) * 16.0 + n * 0.6);
+  float rip = ph < 0.78 ? ph / 0.78 : 1.0 - (ph - 0.78) / 0.22;
+  float rip2 = fract((q.x * 0.2 + q.y) * 41.0 + n2 * 0.8);
+  vec3 c = mix(vec3(0.74, 0.56, 0.34), vec3(0.93, 0.78, 0.54), sat(0.45 + n * 0.8));
+  c *= 0.9 + rip * 0.14;
+  c *= 1.0 - smoothstep(0.8, 1.0, ph) * 0.18;             // shaded lee faces
+  c *= 0.97 + (rip2 < 0.5 ? rip2 : 1.0 - rip2) * 0.06;
+  float g = h1(wrapc(ivec2(floor(uv * 512.0)), ivec2(512)), 825);
+  c *= 0.95 + g * 0.1;
+  float glint = step(0.996, g);
+  s.col = c + glint * 0.18;
+  s.h = 0.35 + rip * 0.3 + n * 0.1;
+  return s;
+}`,
+  sandstone: /* glsl */`
+Surf surf(vec2 uv) {
+  Surf s = S0();
+  const int ROWS = 4, COLS = 4;
+  float y = uv.y * float(ROWS); int row = int(floor(y));
+  int rw = int(mod(float(row), float(ROWS)));
+  float x = uv.x * float(COLS) + h1(ivec2(rw, 7), 831) * float(COLS);
+  int ci = int(floor(x));
+  int left = ci; for (int k = 0; k < 2; k++) { if (h1(wrapc(ivec2(left, rw), ivec2(COLS, ROWS)), 832) < 0.6) break; left--; }
+  int right = ci + 1; for (int k = 0; k < 2; k++) { if (h1(wrapc(ivec2(right, rw), ivec2(COLS, ROWS)), 832) < 0.6) break; right++; }
+  ivec2 id = wrapc(ivec2(left, rw), ivec2(COLS, ROWS));
+  vec4 r = h4(id, 833);
+  float e = min(min(x - float(left), float(right) - x) / float(COLS), min(y - float(row), float(row + 1) - y) / float(ROWS));
+  float n = fbm(uv + r.xy, 10, 4, 834);
+  e += n * 0.012 + fbm(uv, 60, 2, 835) * 0.004;           // eroded, rounded edges
+  float slab = smoothstep(0.004, 0.03, e);
+  vec3 c = mix(vec3(0.78, 0.60, 0.40), vec3(0.88, 0.74, 0.52), r.x) * (0.9 + n * 0.16);
+  // wind-etched layers and pits
+  c *= 0.95 + sin((uv.y * 30.0 + n * 3.0) * TAU) * 0.03;
+  ivec2 pc; vec2 pt; vec4 pv = pvoro(uv * 40.0, ivec2(40), 836, 0.9, pc, pt);
+  float pit = smoothstep(0.12, 0.05, pv.x) * step(h1(pc, 837), 0.3);
+  c *= 1.0 - pit * 0.25;
+  vec3 sand = vec3(0.86, 0.70, 0.48);
+  c = mix(sand * (0.9 + n * 0.1), c, slab);
+  s.col = c; s.h = slab * (0.55 + n * 0.08) - pit * 0.1 + 0.1;
+  s.ao = mix(0.7, 1.0, slab);
+  return s;
+}`,
+  seastone: /* glsl */`
+Surf surf(vec2 uv) {
+  Surf s = S0();
+  // drowned cathedral floor: diagonal checker of dark/pale stone with algae creeping along the joints
+  vec2 p = uv * 4.0;
+  vec2 d = vec2(p.x + p.y, p.x - p.y) * 0.7071 * 1.4142;
+  ivec2 t = wrapc(ivec2(floor(p)), ivec2(4));
+  vec2 f = fract(p);
+  float e = min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y));
+  float chk = mod(float(t.x + t.y), 2.0);
+  vec4 r = h4(t, 841);
+  float n = fbm(uv, 8, 4, 842);
+  vec3 a = vec3(0.62, 0.66, 0.64), b = vec3(0.24, 0.30, 0.32);
+  vec3 c = mix(a, b, chk) * (0.9 + r.x * 0.12 + n * 0.12);
+  // inlaid diamond in each pale tile
+  float dia = step(abs(f.x - 0.5) + abs(f.y - 0.5), 0.28) * (1.0 - chk);
+  c = mix(c, vec3(0.30, 0.40, 0.44), dia * 0.7);
+  float joint = smoothstep(0.012, 0.03, e + n * 0.01);
+  vec3 algae = mix(vec3(0.10, 0.22, 0.16), vec3(0.22, 0.38, 0.22), sat(0.5 + fbm(uv, 20, 2, 843)));
+  float grow = smoothstep(0.1, 0.0, e) * smoothstep(-0.2, 0.3, fbm(uv, 4, 3, 844)) + smoothstep(0.35, 0.7, fbm(uv, 3, 4, 845)) * 0.6;
+  c = mix(c, algae, sat(grow) * 0.85);
+  c = mix(vec3(0.08, 0.12, 0.12), c, joint);
+  // barnacle clusters
+  ivec2 bc; vec2 bt; vec4 bv = pvoro(uv * 30.0, ivec2(30), 846, 0.9, bc, bt);
+  float bar = smoothstep(0.2, 0.12, bv.x) * step(h1(bc, 847), 0.12);
+  c = mix(c, vec3(0.78, 0.76, 0.70), bar);
+  s.col = c; s.h = joint * (0.5 + n * 0.05) + bar * 0.2 + sat(grow) * 0.08;
+  s.ao = mix(0.6, 1.0, joint);
+  return s;
+}`,
 };
 
 // metres per texture repeat on the ground
-export const LAYER_TILE = { fan: 5.2, grass: 4.5, dirt: 4, cobble: 3.2, flagstone: 4.2, sand: 6, snow: 7, obsidian: 7, ice: 9, rock: 8, marble: 6, moss: 4, void: 8, gravel: 3, bloodstone: 7, mud: 5 };
-const BUMP = { fan: 7, grass: 3, dirt: 5, cobble: 7, flagstone: 5, sand: 3, snow: 2, obsidian: 6, ice: 3, rock: 6, marble: 3, moss: 4, void: 6, gravel: 6, bloodstone: 5, mud: 3 };
+export const LAYER_TILE = { basalt: 5.5, cinder: 4.5, dunes: 7, sandstone: 5, seastone: 4.5, fan: 5.2, grass: 4.5, dirt: 4, cobble: 3.2, flagstone: 4.2, sand: 6, snow: 7, obsidian: 7, ice: 9, rock: 8, marble: 6, moss: 4, void: 8, gravel: 3, bloodstone: 7, mud: 5 };
+const BUMP = { basalt: 7, cinder: 5, dunes: 3, sandstone: 5, seastone: 4, fan: 7, grass: 3, dirt: 5, cobble: 7, flagstone: 5, sand: 3, snow: 2, obsidian: 6, ice: 3, rock: 6, marble: 3, moss: 4, void: 6, gravel: 6, bloodstone: 5, mud: 3 };
 
 let GROUND = null;
 export function groundLayers(size = 512) {
@@ -754,6 +885,18 @@ Surf surf(vec2 uv) {
   s.col = c; s.h = 0.5 + n * 0.25 - fr * 0.3 + band * 0.08;
   return s;
 }`,
+  lacquer: /* glsl */`
+Surf surf(vec2 uv) {
+  Surf s = S0();
+  float g = fbm(vec2(uv.x * 0.4, uv.y * 3.0), 6, 4, 851);
+  float grain = sin((uv.y * 40.0 + g * 5.0) * PI) * 0.5 + 0.5;
+  vec3 c = vec3(0.9) * (0.95 + grain * 0.04);
+  // worn-through spots where the dark wood shows
+  float wear = smoothstep(0.62, 0.72, fbm(uv, 5, 4, 852) + grain * 0.05);
+  c = mix(c, vec3(0.30, 0.16, 0.10), wear * 0.8);
+  s.col = c; s.h = 0.5 - wear * 0.1 + grain * 0.02;
+  return s;
+}`,
   thatch: /* glsl */`
 Surf surf(vec2 uv) {
   Surf s = S0();
@@ -775,7 +918,7 @@ Surf surf(vec2 uv) {
   return s;
 }`,
 };
-const KIT_REPEAT_BUMP = { glacier: 3, bark: 6, ashlar: 4, plaster: 2, tiles: 6, slate: 5, planks: 4, timber: 2, metal: 1.5, gold: 2, cloth: 1.5, rockface: 5, marbleWall: 1, darkstone: 5, bone: 2, window: 3, thatch: 4 };
+const KIT_REPEAT_BUMP = { lacquer: 1.5, glacier: 3, bark: 6, ashlar: 4, plaster: 2, tiles: 6, slate: 5, planks: 4, timber: 2, metal: 1.5, gold: 2, cloth: 1.5, rockface: 5, marbleWall: 1, darkstone: 5, bone: 2, window: 3, thatch: 4 };
 
 const KITCACHE = new Map();
 function dataTex(px, size, srgb, repeat = true) {

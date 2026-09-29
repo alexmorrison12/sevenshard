@@ -280,8 +280,9 @@ export const mockScreens = {
       { uid: 'l7', name: 'Engraving Recipe: Grudge', grade: 5, count: 1, kind: 'book', icon: 'item:book:grudge' },
       { uid: 'l8', name: 'Primal Choker of Solmara', grade: 7, count: 1, kind: 'accessory', slot: 'necklace', icon: 'item:necklace', iLvl: 1600, quality: 100 },
       { uid: 'l9', name: 'Pip Seed', grade: 6, count: 1, kind: 'collectible', icon: 'item:pip_seed' },
+      { id: 'card:rimewing', name: 'Rimewing', grade: 4, count: 1, kind: 'card', icon: 'boss:rimewing' },
     ],
-    currencies: { xp: 128400, silver: 42500, gold: 120 },
+    currencies: { xp: 128400, silver: 42500, gold: 120, shards: 3200, bloodstone: 40 },
     dps: [
       { name: 'Ashveil', cls: 'reaver', dmg: 812e6, dps: 2.6e6, crit: 0.62, back: 0.08, counters: 3, you: true },
       { name: 'Kestrel', cls: 'pistoleer', dmg: 745e6, dps: 2.39e6, crit: 0.55, back: 0.41, counters: 1, deaths: 1 },
@@ -340,6 +341,9 @@ export const mockWindows = {
       { id: 'solar_blessing', name: 'Solar Blessing', icon: 'item:solar_blessing', grade: 3, have: 17, max: 6, add: 0.0167 },
       { id: 'solar_protection', name: 'Solar Protection', icon: 'item:solar_protection', grade: 4, have: 5, max: 2, add: 0.05 },
     ],
+    support: { name: "Artisan's Week", desc: "Artisan's Energy from failed attempts ×1.5.", ends: Date.now() + 3.3 * 86400e3 },
+    expected: { taps: 6.4, p90: 13 }, stats: { taps: 124, wins: 38 },
+    transfer: { ok: false, msg: 'Reach +12 to reforge into the Horned Tyrant set (iLvl 1,400).' },
   }),
   nexus: () => ({
     iLvl: 1415.83, selected: 'raid:gorrath',

@@ -13,6 +13,8 @@ import '../world/zones/thornwood.js';
 import '../world/zones/ashen_ridge.js';
 import '../world/zones/pipsprout.js';
 import { lambert } from '../engine/materials.js';
+import { FieldKit } from '../world/fields/common.js';
+if (new URLSearchParams(location.search).get('debug')) FieldKit.debug = true;
 import { ISO } from '../engine/isocam.js';
 
 const Q = Object.fromEntries(new URLSearchParams(location.search));

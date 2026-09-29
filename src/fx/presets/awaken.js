@@ -97,7 +97,7 @@ K.awk_radiant_sword = {
     T.v.tele = fx.telegraph({ shape: 'circle', pos: T.v.g, radius: c.R, color: 'yellow', intensity: 0.45, fill: false });
     T.v.trail = fx.ribbons.trail({ attach: T.v.sword.pos, color: [2.4, 2.1, 1.4], width: 2.6 * c.s, life: 0.35, kind: 'energy' });
     T.dur = 2.6;
-    lightPillar(fx, x, y, z, 0.7 * c.s, 24, [0.9, 0.75, 0.4], 0.8, 0);
+    lightPillar(fx, x, y, z, 0.55 * c.s, 16, [0.9, 0.75, 0.4], 0.8, 0);
   },
   tick(T, dt) {
     const fx = T.fx, v = T.v, c = v.c, g = v.g, s = c.s;
@@ -118,7 +118,7 @@ K.awk_radiant_sword = {
       shockwave(fx, { pos: g, radius: c.R * 1.1, color: [1.6, 1.5, 1.2], dur: 0.5, wall: false, dust: false, delay: 0.06 });
       decal(fx, { pos: g, radius: c.R * 0.9, kind: 'sun', dur: 4, color: [v.col[0] * 0.5, v.col[1] * 0.5, v.col[2] * 0.5] });
       decal(fx, { pos: g, radius: 2.4 * s, kind: 'crater', dur: 7, color: [1.6, 1.3, 0.6] });
-      lightPillar(fx, g.x, g.y, g.z, 1.3 * s, 26, [1.4, 1.2, 0.75], 1.2, 0);
+      lightPillar(fx, g.x, g.y, g.z, 1.0 * s, 15, [1.15, 1.0, 0.62], 1.2, 0);
       fx.sphere(HOLY.spark, 80, up, 6, 18, s, v.col);
       fx.sphere(FEATHER, 40, _b.set(g.x, g.y + 3, g.z), 2, 6, s, null, UP, 1.3);
       fx.radial(HOLY.mote, 60, g, 3, 9, 0.5, 3, s, v.col, 0.5, 0.2);

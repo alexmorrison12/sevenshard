@@ -6,7 +6,7 @@ import { fwd, rnd, tele, wait, strike, smash, act, marker, onNav, scaleHp, fx, s
 export default {
   id: 'ashmaw', model: 'ashmaw', name: 'Ashmaw', title: 'the Siege Behemoth', kind: 'field',
   radius: 6, height: 15, hp: 30000, atk: 0.1, bars: 100, speed: 1.6, turnRate: 1.2, enrage: 600,
-  music: 'boss_siege', arena: 'test',
+  music: 'boss', arena: 'test',
   anims: { slam_wall: { dur: 4.2, hits: [2.3] }, roar: { dur: 4.0, hits: [1.4] }, breath: { dur: 5.0, hits: [1.8, 2.6, 3.4] } },
   moves: {
     slam: { range: 12, cd: 7, weight: 3, recover: 1.2, async run(B, t) {
@@ -17,7 +17,7 @@ export default {
     breath: { range: 22, cd: 12, weight: 2, recover: 1.0, async run(B, t) {
       B.turnTo(t); act(B, 'breath', 1.8);
       const cone = { r: 20, deg: 50 };
-      await strike(B, 'cone', { ...cone, dur: 1.8, color: 'orange', coef: 0.7, fx: 'fire_breath', fxLen: 20, sfx: 'fire_whoosh' });
+      await strike(B, 'cone', { ...cone, dur: 1.8, color: 'orange', coef: 0.7, fx: 'fire_breath', fxLen: 20, sfx: 'fire' });
       const mk = marker(B, 'cone', { ...cone, x: B.u.pos.x, z: B.u.pos.z, dir: fwd(B) });
       try { for (let i = 0; i < 2; i++) { await wait(B, 0.8); B.hit('cone', { ...cone, coef: 0.5 }); } }
       finally { mk.alive = false; }

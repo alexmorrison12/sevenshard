@@ -37,7 +37,7 @@ export class Party {
   }
   /** Fill up to n members with SimPlayers, preferring supports when the party has none. */
   fill(n, at, ilvl = 1415, seed = Date.now()) {
-    const needSupports = n >= 8 ? 2 : 1;
+    const needSupports = n >= 8 ? 2 : n >= 3 ? 1 : 0;
     let supports = this.members.filter(m => CLASSES[m.kit.char.cls]?.role === 'support').length;
     let i = 0;
     const available = Object.keys(CLASSES);
@@ -78,7 +78,10 @@ export class Party {
   unbind() { for (const f of this.offs || []) f(); }
   onDeath(u) {
     const m = this.members.find(x => x.kit.u === u); if (!m) return;
-    if (m.ai) this.level.after(9, () => this.revive(u));        // AI allies revive themselves at the entrance
+    if (!m.ai) return;
+    // AI allies revive themselves at the entrance; in legion raids (no revives) they have one feather per gate
+    if (!this.noRevive) this.level.after(9, () => this.revive(u));
+    else if (!m.feathered) { m.feathered = true; this.level.after(4 + Math.random() * 5, () => { if (u.dead) { this.revive(u, { x: u.pos.x, z: u.pos.z }); this.level.emit('fx', { unit: u, preset: 'heal_burst', x: u.pos.x, z: u.pos.z }); } }); }
   }
   revive(u, at) {
     if (!u.dead) return;

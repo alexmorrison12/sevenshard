@@ -43,12 +43,12 @@ void main() {
   vec3 Cb = C / max(pk, 1e-3) * min(pk, 1.25);
   vec3 rgb = (Cb * (edge * 1.15 + wash * 0.35) + C * pow(max(edge, 0.0), 4.0) * 0.35) * life;
   float a = (flags & 1) != 0 ? press * 0.35 * life : 0.0;
-  gl_FragColor = vec4(rgb, a);
+  gl_FragColor = vec4(rgb, a) * (1.0 - vR1.w);
 }`;
 const WALL_VERT = /* glsl */`
 attribute vec4 r0; attribute vec4 r1; attribute vec4 r2; attribute vec4 r3;
 uniform float uFxTime;
-varying vec2 vUv; varying float vT; varying vec4 vR2; varying vec4 vR3; varying float vRad;
+varying vec2 vUv; varying float vT; varying vec4 vR2; varying vec4 vR3; varying float vRad; varying float vDim;
 ${GLSL_GROUND}
 void main() {
   float age = uFxTime - r0.w, dur = max(r1.y, 1e-3), T = age / dur;
@@ -60,12 +60,12 @@ void main() {
   float h = H * (0.35 + 0.65 * smoothstep(0.0, 0.25, T)) * (1.0 - 0.4 * T);
   vec2 xz = r0.xz + vec2(cos(a), sin(a)) * rad * (1.0 + v * 0.08 * r1.z);
   float y = groundH(r0.xz, r0.y) + v * h;
-  vUv = vec2(position.x, v); vT = T; vR2 = r2; vR3 = r3; vRad = rad;
+  vUv = vec2(position.x, v); vT = T; vR2 = r2; vR3 = r3; vRad = rad; vDim = 1.0 - r1.w;
   gl_Position = projectionMatrix * viewMatrix * vec4(xz.x, y, xz.y, 1.0);
 }`;
 const WALL_FRAG = /* glsl */`
 uniform float uFxTime;
-varying vec2 vUv; varying float vT; varying vec4 vR2; varying vec4 vR3; varying float vRad;
+varying vec2 vUv; varying float vT; varying vec4 vR2; varying vec4 vR3; varying float vRad; varying float vDim;
 ${GLSL_NOISE}
 void main() {
   float v = vUv.y, T = vT;
@@ -78,7 +78,7 @@ void main() {
   float a = body * (0.3 + 0.7 * streak) * life;
   float pk = max(max(C.r, C.g), C.b);
   vec3 Cb = C / max(pk, 1e-3) * min(pk, 1.2);
-  gl_FragColor = vec4(Cb * a + Cb * pow(max(body, 0.0), 6.0) * streak * life * 0.3, 0.0);
+  gl_FragColor = vec4(Cb * a + Cb * pow(max(body, 0.0), 6.0) * streak * life * 0.3, 0.0) * vDim;
 }`;
 
 function annulusGeo(seg, rows) {
@@ -119,7 +119,7 @@ class RingPool {
     const s = this.head; this.head = (this.head + 1) % this.n;
     const d = this.data, b = s * RSTRIDE, t0 = this.fx.time + delay;
     d[b] = x; d[b + 1] = y; d[b + 2] = z; d[b + 3] = t0;
-    d[b + 4] = R; d[b + 5] = dur; d[b + 6] = ew; d[b + 7] = 0;
+    d[b + 4] = R; d[b + 5] = dur; d[b + 6] = ew; d[b + 7] = 1 - this.fx.dimK;
     d[b + 8] = col[0]; d[b + 9] = col[1]; d[b + 10] = col[2]; d[b + 11] = hOrTrail;
     d[b + 12] = ease; d[b + 13] = r0; d[b + 14] = Math.random(); d[b + 15] = flags;
     if (s < this.lo) this.lo = s; if (s > this.hi) this.hi = s;

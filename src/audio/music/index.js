@@ -66,8 +66,9 @@ export const SONGS = {
 };
 
 // patches baked in the background right after unlock (most tracks use them)
-const WARM_ZONES = ['strings', 'choir_ah', 'horns', 'brass', 'timpani', 'celesta'];
-const WARM_HITS = ['taiko_big', 'taiko_mid', 'taiko_small', 'crash', 'swell', 'boom'];
+// (everything the title needs is in here, so the first impression starts as soon as possible)
+const WARM_ZONES = ['strings', 'choir_ah', 'choir_oo', 'horns', 'brass', 'timpani', 'celesta'];
+const WARM_HITS = ['taiko_big', 'taiko_mid', 'taiko_small', 'crash', 'swell', 'boom', 'riser', 'anvil'];
 
 export class MusicEngine {
   constructor(a) {

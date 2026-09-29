@@ -191,8 +191,8 @@ export function beardPiece(base, style) {
     if (style === 'chops') { for (const sg of [-1, 1]) sd.ell(hp([sg * 0.07, 0.03, -0.045]), sc([0.022, 0.05, 0.035]), { k }); must(); }
     if (style === 'full' || style === 'braided') {
       // jaw-hugging mass + chin mass hanging down
-      sd.ell(hp([0, jy - 0.005, jz - 0.012]), sc([d.jaw.h[0] + 0.022, d.jaw.h[1] + 0.03, d.jaw.h[2] + 0.02]), { k: 0.02 * s, tag: 0 });
-      for (const sg of [-1, 1]) sd.ell(hp([sg * 0.07, 0.035, -0.035]), sc([0.022, 0.045, 0.04]), { k: 0.02 * s, tag: 0 });
+      sd.ell(hp([0, jy - 0.012, jz - 0.012]), sc([d.jaw.h[0] + 0.02, d.jaw.h[1] + 0.024, d.jaw.h[2] + 0.018]), { k: 0.02 * s, tag: 0 });
+      for (const sg of [-1, 1]) sd.ell(hp([sg * 0.068, 0.016, -0.036]), sc([0.021, 0.036, 0.036]), { k: 0.02 * s, tag: 0 });
       sd.ell(onChest(hp([0, jy - 0.07 * big, -0.09 - 0.01 * big]), 0.045 * big * s), sc([0.06 * big, 0.08 * big, 0.045 * big]), { k: 0.03 * s, tag: 1 });
       if (dwarf) sd.ell(onChest(hp([0, jy - 0.15 * big, -0.1]), 0.04 * big * s), sc([0.07 * big, 0.07 * big, 0.04 * big]), { k: 0.03 * s, tag: 1 });
       must();
@@ -209,7 +209,7 @@ export function beardPiece(base, style) {
         }
       }
       // carve the mouth opening a little
-      sd.ell(hp([0, d.mouthY - 0.004, -0.112]), sc([0.022, 0.009, 0.02]), { op: SUB, k: 0.006 * s });
+      sd.ell(hp([0, d.mouthY - 0.006, -0.112]), sc([0.017, 0.006, 0.02]), { op: SUB, k: 0.006 * s });
     }
     sd.build();
     const bg = (d0, x, y, z) => (d0 > 0.01 ? d0 : d0 + 0.0016 * s * (Math.abs(Math.sin((x - H[0]) / s * 160 + (y - H[1]) / s * 25)) - 0.5));

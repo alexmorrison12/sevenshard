@@ -14,9 +14,9 @@ import { cutF, cutV } from './kit.js';
 export function buildFlames(list) {
   if (!list.length) return null;
   const n = list.length;
-  const corner = [], center = [], size = [], phase = [], color = [], idx = [];
+  const corner = [], center = [], size = [], phase = [], color = [], idx = [], bob = [];
   list.forEach((f, i) => {
-    for (const [cx, cy] of [[-1, -0.6], [1, -0.6], [1, 1.6], [-1, 1.6]]) { corner.push(cx, cy); center.push(f.x, f.y, f.z); size.push(f.size); phase.push(i * 1.618 % 1); color.push(...linColor(f.color ?? 0xffa040)); }
+    for (const [cx, cy] of [[-1, -0.6], [1, -0.6], [1, 1.6], [-1, 1.6]]) { corner.push(cx, cy); center.push(f.x, f.y, f.z); size.push(f.size); phase.push(i * 1.618 % 1); color.push(...linColor(f.color ?? 0xffa040).map(v => v * (f.intensity ?? 1))); bob.push(f.bob ?? 0, f.orbit ?? 0); }
     const b = i * 4; idx.push(b, b + 1, b + 2, b, b + 2, b + 3);
   });
   const g = new THREE.BufferGeometry();
@@ -25,18 +25,21 @@ export function buildFlames(list) {
   g.setAttribute('size', new THREE.Float32BufferAttribute(size, 1));
   g.setAttribute('phase', new THREE.Float32BufferAttribute(phase, 1));
   g.setAttribute('fcol', new THREE.Float32BufferAttribute(color, 3));
+  g.setAttribute('fbob', new THREE.Float32BufferAttribute(bob, 2));
   g.setIndex(idx);
   g.computeBoundingSphere();
+  if (g.boundingSphere) g.boundingSphere.radius += Math.max(0, ...list.map(f => (f.bob ?? 0) + (f.orbit ?? 0)));
   const mat = new THREE.ShaderMaterial({
     uniforms: { uTime: G.uTime, uNoise: { value: noiseTex() } },
     vertexShader: /* glsl */`
-      attribute vec2 corner; attribute float size; attribute float phase; attribute vec3 fcol;
+      attribute vec2 corner; attribute float size; attribute float phase; attribute vec3 fcol; attribute vec2 fbob;
       uniform float uTime; varying vec2 vC; varying float vPh; varying vec3 vCol;
       void main() {
         vec3 right = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
         vec3 up = vec3(0.0, 1.0, 0.0);
         float s = size * (0.92 + 0.12 * sin(uTime * 13.0 + phase * 40.0));
-        vec3 p = position + right * corner.x * s + up * corner.y * s;
+        vec3 c0 = position + vec3(cos(uTime * 0.55 + phase * 23.0) * fbob.y, sin(uTime * 1.7 + phase * 40.0) * fbob.x, sin(uTime * 0.47 + phase * 17.0) * fbob.y);
+        vec3 p = c0 + right * corner.x * s + up * corner.y * s;
         vC = corner; vPh = phase; vCol = fcol;
         gl_Position = projectionMatrix * viewMatrix * vec4(p, 1.0);
       }`,
@@ -104,8 +107,13 @@ const KINDS = {
   ash: { color: [0.3, 0.28, 0.28], size: 0.06, vel: [0.25, -0.5, 0.12], swirl: 0.6, count: 500, add: false, box: [40, 14, 34] },
   motes: { color: [2.2, 0.8, 3.0], size: 0.06, vel: [0.05, 0.45, 0.05], swirl: 0.8, count: 300, add: true, box: [38, 9, 32] },
   fireflies: { color: [2.4, 3.0, 0.8], size: 0.06, vel: [0.1, 0.12, 0.1], swirl: 1.2, count: 90, add: true, box: [34, 4, 28] },
+  leaves: { color: [0.9, 0.18, 0.05], color2: [1.0, 0.55, 0.08], size: 0.2, vel: [0.35, -0.55, 0.15], swirl: 1.4, count: 160, add: false, box: [38, 12, 32], shape: 1, flutter: 1 },
+  sand: { color: [0.95, 0.78, 0.52], size: 0.05, vel: [3.2, 0.05, 0.9], swirl: 0.25, count: 700, add: false, box: [42, 2.2, 34], alpha: 0.55 },
+  bubbles: { color: [0.8, 1.3, 1.4], size: 0.09, vel: [0.04, 0.7, 0.03], swirl: 0.25, count: 160, add: true, box: [36, 9, 30], shape: 2 },
+  plankton: { color: [0.3, 1.8, 1.5], color2: [0.9, 0.6, 2.2], size: 0.05, vel: [0.06, 0.08, 0.05], swirl: 0.9, count: 380, add: true, box: [40, 7, 34] },
+  foxfire: { color: [0.35, 1.2, 3.2], color2: [0.6, 2.2, 3.0], size: 0.08, vel: [0.05, 0.35, 0.05], swirl: 1.1, count: 120, add: true, box: [36, 6, 30] },
 };
-export function buildParticles(kind, { count = null, quality = 1, color = null, yBase = 0 } = {}) {
+export function buildParticles(kind, { count = null, quality = 1, color = null, color2 = null, yBase = 0 } = {}) {
   const K = KINDS[kind]; if (!K) return null;
   const n = Math.round((count ?? K.count) * quality);
   const seed = new Float32Array(n * 4);
@@ -117,12 +125,13 @@ export function buildParticles(kind, { count = null, quality = 1, color = null, 
   const u = {
     uTime: G.uTime, uFocus: { value: new THREE.Vector3() }, uBox: { value: new THREE.Vector3(...K.box) }, uVel: { value: new THREE.Vector3(...K.vel) },
     uSwirl: { value: K.swirl }, uSize: { value: K.size }, uCol: { value: new THREE.Vector3(...(color || K.color)) }, uScale: { value: 900 }, uYBase: { value: yBase },
+    uCol2: { value: new THREE.Vector3(...(color2 || K.color2 || color || K.color)) }, uShape: { value: K.shape ?? 0 }, uFlutter: { value: K.flutter ?? 0 }, uAlpha: { value: K.alpha ?? 1 },
   };
   const mat = new THREE.ShaderMaterial({
     uniforms: u,
     vertexShader: /* glsl */`
-      attribute vec4 seed; uniform float uTime; uniform vec3 uFocus; uniform vec3 uBox; uniform vec3 uVel; uniform float uSwirl; uniform float uSize; uniform float uScale; uniform float uYBase;
-      varying float vA; varying float vTw;
+      attribute vec4 seed; uniform float uTime; uniform vec3 uFocus; uniform vec3 uBox; uniform vec3 uVel; uniform float uSwirl; uniform float uSize; uniform float uScale; uniform float uYBase; uniform float uFlutter;
+      varying float vA; varying float vTw; varying float vS; varying float vRot;
       void main() {
         vec3 p = seed.xyz * uBox + uVel * uTime * (0.6 + seed.w * 0.8);
         p.x += sin(uTime * 0.7 + seed.w * 30.0) * uSwirl; p.z += cos(uTime * 0.6 + seed.x * 30.0) * uSwirl;
@@ -135,11 +144,21 @@ export function buildParticles(kind, { count = null, quality = 1, color = null, 
         vec2 dxz = (w.xz - uFocus.xz) / (uBox.xz * 0.5);
         vA *= smoothstep(1.0, 0.75, max(abs(dxz.x), abs(dxz.y)));
         vTw = 0.6 + 0.4 * sin(uTime * (2.0 + seed.w * 4.0) + seed.y * 20.0);
-        gl_PointSize = uSize * uScale / -mv.z * (0.6 + seed.w * 0.8);
+        vS = seed.z; vRot = uTime * (1.5 + seed.x * 3.0) + seed.y * 6.2832;
+        gl_PointSize = uSize * uScale / -mv.z * (0.6 + seed.w * 0.8) * (1.0 - uFlutter * 0.45 * abs(sin(uTime * (2.0 + seed.y * 3.0) + seed.x * 9.0)));
       }`,
     fragmentShader: /* glsl */`
-      uniform vec3 uCol; varying float vA; varying float vTw;
-      void main() { vec2 c = gl_PointCoord - 0.5; float d = length(c); float a = smoothstep(0.5, 0.1, d) * vA; if (a < 0.01) discard; gl_FragColor = vec4(uCol * vTw, a); }`,
+      uniform vec3 uCol; uniform vec3 uCol2; uniform float uShape; uniform float uAlpha; varying float vA; varying float vTw; varying float vS; varying float vRot;
+      void main() {
+        vec2 c = gl_PointCoord - 0.5; float d = length(c);
+        float a;
+        if (uShape > 1.5) a = smoothstep(0.5, 0.42, d) * smoothstep(0.24, 0.36, d) + smoothstep(0.2, 0.0, length(c - vec2(-0.14, -0.14))) * 0.5;   // bubble ring + highlight
+        else if (uShape > 0.5) { vec2 q = vec2(cos(vRot) * c.x - sin(vRot) * c.y, sin(vRot) * c.x + cos(vRot) * c.y); a = smoothstep(0.5, 0.4, length(q * vec2(1.0, 2.2))); }  // tumbling leaf
+        else a = smoothstep(0.5, 0.1, d);
+        a *= vA * uAlpha;
+        if (a < 0.01) discard;
+        gl_FragColor = vec4(mix(uCol, uCol2, vS) * vTw, a);
+      }`,
     transparent: true, depthWrite: false, blending: K.add ? THREE.AdditiveBlending : THREE.NormalBlending,
   });
   const pts = new THREE.Points(g, mat); pts.frustumCulled = false; pts.renderOrder = 9; pts.name = 'particles:' + kind;

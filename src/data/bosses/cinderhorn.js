@@ -59,7 +59,7 @@ export default {
       B.turnTo(t); act(B, 'lava_spit', 0.85);
       const pts = someHeroes(B, 3).map(h => ({ x: h.pos.x, z: h.pos.z }));
       for (const p of pts) fx(B, 'lava_spit', B.u.pos.x, B.u.pos.z, { dir: { x: p.x - B.u.pos.x, z: p.z - B.u.pos.z } });
-      await volley(B, pts.map(p => ['circle', { x: p.x, z: p.z, r: 3 }]), 1.4, { coef: 0.9, color: 'orange', fx: 'fire_burst', fxR: 3, sfx: 'lava_splash' });
+      await volley(B, pts.map(p => ['circle', { x: p.x, z: p.z, r: 3 }]), 1.4, { coef: 0.9, color: 'orange', fx: 'fire_burst', fxR: 3, sfx: 'fire_burst' });
       for (const p of pts) pool(B, { x: p.x, z: p.z, r: lavaR(B), dur: 7, tick: 0.5, coef: 0.15, kind: 'lava' });
       await wait(B, 0.5);
     } },

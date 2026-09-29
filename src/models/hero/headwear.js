@@ -29,7 +29,7 @@ export function maskPiece(base, sp = {}) {
     const feats = [];
     for (let i = 0; i < 4; i++) { const y0 = bridgeY - 0.03 - i * 0.028; feats.push({ fn: (x, y, z, db) => Math.max(Math.abs(y - y0 + Math.abs(x - H[0]) * 0.15) - 0.0022, -(db - 0.008)), op: 'sub', k: 0.003, mul: 0.75 }); }
     const lo = [H[0] - 0.14, J.neck[1] - 0.08, H[2] - 0.16], hi = [H[0] + 0.14, bridgeY + 0.03, H[2] + 0.1];
-    const pc = shellMesh(base, { sdf, clip, t: 0.011, rimW: 0.012, rimH: 0.003, bevel: 0.003, features: feats, bbox: [lo, hi], cell: base.L?.ring < 1 ? 0.009 : 0.0034, target: base.L?.ring < 1 ? 160 : 800, slot: SLOT.HOOD, rimSlot: sp.trim ? SLOT.TRIM : SLOT.HOOD, weights: () => [[B.head, 1]], tin: 0.0015 });
+    const pc = shellMesh(base, { sdf, clip, t: 0.011, rimW: 0.012, rimH: 0.003, bevel: 0.003, features: feats, bbox: [lo, hi], cell: base.L?.ring < 1 ? 0.009 : 0.0046, target: base.L?.ring < 1 ? 160 : 560, slot: SLOT.HOOD, rimSlot: sp.trim ? SLOT.TRIM : SLOT.HOOD, weights: () => [[B.head, 1]], tin: 0.0015 });
     const pb = new PB(base); pb.ao = false;
     // knot + tails at the back of the head
     const kz = H[2] + 0.1 * s, ky = bridgeY - 0.02;
@@ -69,7 +69,7 @@ export function hood2Piece(base, sp = {}) {
       feats.push({ fn: (x, y, z, db) => { const ang = Math.atan2(x - cc[0], z - cc[2]); let da = Math.abs(((ang - a + Math.PI * 3) % (Math.PI * 2)) - Math.PI); return Math.max(da * 0.12 - 0.003, -(db - 0.01), y - cc[1] - 0.05); }, op: 'sub', k: 0.004, mul: 0.72 });
     }
     const lo = [H[0] - 0.36, J.chest[1], H[2] - 0.22], hi = [H[0] + 0.36, H[1] + 0.34 * s, H[2] + 0.3 * s];
-    const pc = shellMesh(base, { sdf, clip, t: 0.016, rimW: 0.018, rimH: 0.004, bevel: 0.004, features: feats, bbox: [lo, hi], cell: base.L?.ring < 1 ? 0.013 : 0.0055, target: base.L?.ring < 1 ? 300 : 1300, slot: SLOT.HOOD, rimSlot: sp.trim ? SLOT.TRIM : SLOT.HOOD, tin: 0.002,
+    const pc = shellMesh(base, { sdf, clip, t: 0.016, rimW: 0.018, rimH: 0.004, bevel: 0.004, features: feats, bbox: [lo, hi], cell: base.L?.ring < 1 ? 0.013 : 0.0072, target: base.L?.ring < 1 ? 300 : 1000, slot: SLOT.HOOD, rimSlot: sp.trim ? SLOT.TRIM : SLOT.HOOD, tin: 0.002,
       weights: (x, y, z) => y > J.neck[1] + 0.02 ? [[B.head, 1]] : null });
     return pc;
   });

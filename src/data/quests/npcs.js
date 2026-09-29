@@ -74,11 +74,11 @@ export const PLACEMENTS = [
   { id: 'fisher_barty', zone: 'solhaven', at: 'fish:1', off: [-2.8, -3.6], face: -Math.PI / 2, when: Q => Q.isDone('c1_harbour') },
   { id: 'fisher_nessa', zone: 'solhaven', at: 'fish:1', off: [-2.8, 3.6], face: -Math.PI / 2, when: Q => Q.isDone('c1_harbour') },
   // Goldmeadow: Sprig and Seraphine follow the story around the farm
-  { id: 'sprig', zone: 'goldmeadow', at: ['poi:windmill', 'npc:miller', 'spawn'], off: [2.2, 3], face: Math.PI, when: Q => Q.isActive('g6_pip') && Q.stepOf('g6_pip') >= 1 },
-  { id: 'sprig', zone: 'goldmeadow', at: ['npc:farmer_hale', 'poi:farm', 'spawn'], off: [1.4, 3.6], face: Math.PI, when: Q => Q.isActive('g7_seeds') },
-  { id: 'sprig', zone: 'goldmeadow', at: ['gate:pipsprout', 'poi:mushroom_ring', 'poi:pip_ring', 'poi:hermit', 'spawn'], off: [1.8, 1.8], face: Math.PI, when: Q => Q.isActive('g8_hollow') },
-  { id: 'seraphine', zone: 'goldmeadow', at: ['npc:farmer_hale', 'poi:farm', 'spawn'], off: [3.2, 2.2], face: Math.PI, when: Q => has(Q, 'g7_seeds') && !Q.isDone('g8_hollow') },
-  { id: 'rusk', zone: 'goldmeadow', at: ['poi:bandit_camp', 'elite:1', 'spawn'], off: [0, -1.5], face: 0, when: Q => Q.isActive('g4_gentleman') && Q.stepOf('g4_gentleman') >= 2 },
+  { id: 'sprig', zone: 'goldmeadow', at: ['poi:windmill', 'npc:miller', 'spawn'], off: [2.2, 2.6], face: Math.PI, when: Q => Q.isActive('g6_pip') && Q.stepOf('g6_pip') >= 1 },
+  { id: 'sprig', zone: 'goldmeadow', at: ['npc:farmer_hale', 'poi:hale_farm', 'spawn'], off: [1.4, 3.2], face: Math.PI, when: Q => Q.isActive('g7_seeds') },
+  { id: 'sprig', zone: 'goldmeadow', at: ['gate:pipsprout', 'poi:mushroom_ring', 'poi:hermit_hut', 'npc:hermit', 'spawn'], off: [2.4, 2.4], face: Math.PI, when: Q => Q.isActive('g8_hollow') },
+  { id: 'seraphine', zone: 'goldmeadow', at: ['npc:farmer_hale', 'poi:hale_farm', 'spawn'], off: [3.2, 2.2], face: Math.PI, when: Q => has(Q, 'g7_seeds') && !Q.isDone('g8_hollow') },
+  { id: 'rusk', zone: 'goldmeadow', at: ['poi:bandit_camp', 'elite:3', 'spawn'], off: [0, -1.5], face: 0, when: Q => Q.isActive('g4_gentleman') && Q.stepOf('g4_gentleman') >= 3 },
   // Pipsprout: Sprig came home with you
   { id: 'sprig', zone: 'pipsprout', at: ['npc:bramblebeard', 'spawn'], off: [2.2, 1.4], face: Math.PI, when: Q => Q.isDone('g8_hollow') },
   // Thornwood: the Thornking in his grove; Brannoc arrives with the Vanguard at the eastern road

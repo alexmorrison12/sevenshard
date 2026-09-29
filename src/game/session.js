@@ -65,7 +65,14 @@ export class Session {
     window.__session = this; window.__game = this.game;
     this.game.hooks.frame.push(dt => this.tick(dt));
   }
-  applyVolumes() { const s = this.account.settings; this.game.audio?.setVolumes?.({ master: s.master, music: s.music, sfx: s.sfx, ambience: s.ambience }); }
+  applyVolumes() { const s = this.account.settings; this.game.audio?.setVolumes?.({ master: s.master, music: s.music, sfx: s.sfx, ambience: s.ambience }); this.applyPrefs(); }
+  /** gameplay presentation prefs: damage numbers, camera shake, other players' effects */
+  applyPrefs() {
+    const s = this.account.settings, g = this.game;
+    g.showNumbers = s.numbers !== false;
+    if (g.cam) g.cam.shakeScale = s.shake ?? 1;
+    g.othersFx = s.othersFx ?? 0.35;
+  }
   get L() { return this.game.level; }
 
   // ---------------------------------------------------------------- boot & menus
@@ -558,14 +565,16 @@ export class Session {
   }
   openSettings() {
     const s = this.account.settings;
-    this.ui.open('settings', { values: { quality: this.game.renderer.quality, master: s.master, music: s.music, sfx: s.sfx, ambience: s.ambience, moveButton: s.moveButton, damageNumbers: s.numbers, cameraShake: s.shake }, keybinds: Object.entries(this.game.input.binds).map(([action, key]) => ({ action, keys: [key] })) });
+    this.ui.open('settings', { values: { quality: this.game.renderer.quality, master: s.master, music: s.music, sfx: s.sfx, ambience: s.ambience, moveButton: s.moveButton, damageNumbers: s.numbers, cameraShake: s.shake, othersFx: s.othersFx ?? 0.35 }, keybinds: Object.entries(this.game.input.binds).map(([action, key]) => ({ action, keys: [key] })) });
   }
   setting(key, v) {
     const s = this.account.settings;
     if (key === 'quality') { s.quality = v; s.qualityChosen = true; this.game.renderer.setQuality(v); }
     else if (['master', 'music', 'sfx', 'ambience'].includes(key)) { s[key] = v; this.applyVolumes(); }
     else if (key === 'moveButton') { s.moveButton = v; this.game.player?.setMoveButton(v); }
-    else if (key === 'cameraShake') { s.shake = v; }
+    else if (key === 'cameraShake') { s.shake = v; this.applyPrefs(); }
+    else if (key === 'damageNumbers') { s.numbers = v; this.applyPrefs(); }
+    else if (key === 'othersFx') { s.othersFx = v; this.applyPrefs(); }
     else s[key] = v;
     this.account.save();
   }

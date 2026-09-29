@@ -5,7 +5,7 @@
 export default {
   id: 'prologue', name: 'Prologue · The Siege of Brighthold', zone: 'brighthold', levels: [1, 5],
   quests: [
-    { id: 'p1_fire', kind: 'msq', title: 'Fire Over Brighthold', level: 1, chapterStart: 'The Siege of Brighthold', chapterOver: 'Prologue',
+    { id: 'p1_fire', kind: 'msq', title: 'Fire Over Brighthold', level: 1, when: Q => Q.g.mode?.kind === 'prologue',
       desc: 'Brighthold is burning. Find Commander Brannoc.',
       steps: [
         { type: 'talk', npc: 'brannoc', text: 'Talk to Commander Brannoc', lines: [
@@ -49,7 +49,7 @@ export default {
         { type: 'use', what: 'awakening', need: 1, text: 'Unleash your Awakening (V) on Ashmaw' },
         { type: 'signal', id: 'ashmaw_down', need: 1, text: 'Bring down Ashmaw' },
       ],
-      rewards: { xp: 1.0 } },
+      rewards: { xpFlat: 0, items: { hp_potion: 5 } } },
 
     { id: 'p5_ravager', kind: 'msq', title: 'The Ravager', level: 5, prereq: ['p4_shardfire'],
       desc: 'The Legion’s general has come for the Shard himself.',

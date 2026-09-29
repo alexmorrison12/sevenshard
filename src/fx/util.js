@@ -142,6 +142,17 @@ export function queueRange(buf, start, count) {
   }
   buf.needsUpdate = true;
 }
+/** Add one more upload range (several per buffer per frame). Range objects are pooled per buffer and reused once three
+ *  has uploaded and cleared the list — no per-frame allocation. */
+export function addRange(buf, start, count) {
+  const R = buf.updateRanges, P = buf._fxPool || (buf._fxPool = []);
+  if (R.length === 0) buf._fxN = 0;
+  let r = P[buf._fxN];
+  if (!r) { r = { start: 0, count: 0 }; P.push(r); }
+  buf._fxN++;
+  r.start = start; r.count = count; R.push(r);
+  buf.needsUpdate = true;
+}
 /** queue the whole buffer (stays whole even if partial ranges are queued before the next render) */
 export function queueAll(buf) { queueRange(buf, 0, buf.array.length); }
 

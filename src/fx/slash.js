@@ -53,6 +53,7 @@ void main() {
   float u = vUv.x, v = vUv.y, T = vT;
   float sweep = max(vX.x, 0.01);
   int flags = int(vX.w + 0.5);
+  float dimK = flags >= 16 ? float(flags >> 4) / 63.0 : 1.0;
   float head = clamp(T / sweep, 0.0, 1.0) * 1.12;
   float hs = 0.05 + 0.06 * (1.0 - head);
   float uu = u + (vUv.y - 1.0) * 0.1;                  // slanted front: the blade edge leads the sweep
@@ -79,7 +80,7 @@ void main() {
   vec3 Cb = C / max(pk, 1e-3) * min(pk, 1.2);           // body colour capped so the tone map keeps it saturated
   if ((flags & 2) != 0) {             // dark slash: black body occludes, coloured rim burns
     float dk = body * (0.55 + 0.45 * streak) * mask * (1.0 - smoothstep(0.7, 1.0, T));
-    gl_FragColor = vec4(C * (core * 1.4 + band * 0.7 + streak * body * 0.25) * mask + C * headGlow * 1.6 * reveal, dk * 0.85);
+    gl_FragColor = vec4(C * (core * 1.4 + band * 0.7 + streak * body * 0.25) * mask + C * headGlow * 1.6 * reveal, dk * 0.85) * dimK;
     return;
   }
   vec3 rgb = Cb * (body * (0.35 + 0.8 * streak)) * mask * fadeT
@@ -87,7 +88,7 @@ void main() {
            + mix(vec3(1.0), Cb, 0.25) * core * mask * 1.25 * fadeT
            + mix(vec3(1.0), Cb, 0.4) * headGlow * reveal * ends * 1.4 * (1.0 - T);
   float a = body * 0.2 * mask * fadeT;                  // slight darkening under the body: contrast on bright ground
-  gl_FragColor = vec4(rgb, a);
+  gl_FragColor = vec4(rgb, a) * dimK;
 }`;
 
 function stripGeo(nu, nv) {
@@ -130,7 +131,8 @@ export class Slashes {
     d[b + 8] = B.x; d[b + 9] = B.y; d[b + 10] = B.z; d[b + 11] = arc;
     d[b + 12] = col[0]; d[b + 13] = col[1]; d[b + 14] = col[2]; d[b + 15] = dur;
     d[b + 16] = vel ? vel.x : 0; d[b + 17] = vel ? vel.y : 0; d[b + 18] = vel ? vel.z : 0; d[b + 19] = W;
-    d[b + 20] = sweep; d[b + 21] = grow; d[b + 22] = Math.random(); d[b + 23] = flags;
+    const dk = this.fx.dimK;   // other players' effects: dim level packed above the flag bits (0 = full)
+    d[b + 20] = sweep; d[b + 21] = grow; d[b + 22] = Math.random(); d[b + 23] = dk < 1 ? flags | (Math.max(1, Math.min(62, Math.round(dk * 63))) << 4) : flags;
     if (s < this.lo) this.lo = s; if (s > this.hi) this.hi = s;
     if (t0 + dur > this.until) this.until = t0 + dur;
     return s;

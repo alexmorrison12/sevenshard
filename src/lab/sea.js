@@ -11,6 +11,14 @@ import { Ocean } from '../world/sea/ocean.js';
 import { ShipRig } from '../world/sea/shiprig.js';
 import { buildZone, ZONES } from '../world/index.js';
 import '../world/zones/glass_sea.js';
+import '../world/zones/isle_coinflip.js';
+import '../world/zones/isle_songstone.js';
+import '../world/zones/isle_powderkeg.js';
+import '../world/zones/isle_moonveil.js';
+import '../world/zones/isle_stormcrown.js';
+import '../world/zones/isle_hushwater.js';
+import '../world/zones/isle_shellback.js';
+import '../world/zones/isle_drownbell.js';
 
 const Q = Object.fromEntries(new URLSearchParams(location.search));
 const num = (k, d) => (Q[k] != null ? +Q[k] : d);

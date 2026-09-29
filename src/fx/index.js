@@ -65,8 +65,11 @@ export class FX {
     // screen-space feedback the game applies to its camera / renderer (see applyScreen)
     this.screen = { shake: 0, flash: 0, flashCol: new THREE.Color(1, 0.9, 0.7), radial: 0, radialX: 0.5, radialY: 0.5, aberration: 0 };
     this.onShake = null;      // (amount 0..1, pos) — called immediately on big impacts
-    this.lights = null; this._lightT = 0;
+    this.lights = null; this._lightT = 0; this._awkT = -1e9;
     this._o = {};
+    // "other players' effects" dimming: the dim of the effect being written right now (1 = full). Set from p.dim by
+    // every public entry point, carried by tasks for their whole life (T.dim), read by every buffer writer.
+    this.dimK = 1;
     this.initMs = performance.now() - t0;
   }
 
@@ -93,8 +96,10 @@ export class FX {
     let w = 0;
     for (let i = 0; i < T.length; i++) {
       const task = T[i];
+      this.dimK = task.dim;
       if (task.update(dt)) T[w++] = task; else this.taskPool.push(task);
     }
+    this.dimK = 1;
     T.length = w;
     this.ribbons.update(dt);
     this.meshes.update(dt);
@@ -143,11 +148,11 @@ export class FX {
 
   // ================================================================== public primitives
   /** Mesh slash arc. { pos (feet or pivot), dir, radius, arc (rad), color, width, dur, style, height, tilt, cw, speed, intensity, glow, sparks } */
-  slash(p = {}) { prims.slash(this, p); return NOOP; }
+  slash(p = {}) { return this._inert(prims.slash, p); }
   /** Particle explosion. { pos, color, count, speed, size, life, kind, dir, spread, up, flash } */
-  burst(p = {}) { prims.burst(this, p); return NOOP; }
+  burst(p = {}) { return this._inert(prims.burst, p); }
   /** Expanding shockwave. { pos, radius, color, dur, width, wall, height, dust, delay } */
-  shockwave(p = {}) { prims.shockwave(this, p); return NOOP; }
+  shockwave(p = {}) { return this._inert(prims.shockwave, p); }
   /** { from, dir | to, speed, kind, color, size, range, arc, homing, onHit, impact, delay } → handle (.pos, .stop()) */
   projectile(p = {}) { return this.task(prims.PROJECTILE, p); }
   /** { from, to, color, width, dur, kind: 'glow'|'energy'|'holy'|'helix'|'wave'|'chain'|'tracer'|'lightning' } → handle */
@@ -165,17 +170,17 @@ export class FX {
   /** Ground warning shape. See README. → handle (.stop() cancel, .setFill(v), .detonate()) */
   telegraph(p = {}) { return this.task(prims.TELEGRAPH, p); }
   /** Damage number. value: number | string. o: { style, scale, crit, tag } */
-  number(pos, value, o = {}) { this.numbers.spawn(v3(pos, _v), value, o); }
+  number(pos, value, o = {}) { this.numbers.spawn(v3(pos, _v), value, o); return NOOP; }
   /** Impact spark/flash at a hit point. { pos, dir, crit, element, scale, back } */
-  hit(p = {}) { prims.hit(this, p); return NOOP; }
+  hit(p = {}) { return this._inert(prims.hit, p); }
   /** Death puff. { pos, kind: 'mob'|'demon'|'beast'|'boss'|'player'|'undead', color, scale } */
-  death(p = {}) { return prims.death(this, p); }
+  death(p = {}) { if (p.dim === 0) return NOOP; const pd = this._enter(p); try { return prims.death(this, p) || NOOP; } finally { this.dimK = pd; } }
   /** Swirling portal. { pos, color, dir, radius, flat } → handle */
   portal(p = {}) { return this.task(prims.PORTAL, p); }
   /** Loot beam by grade (0-7 or name). { pos, grade } → handle */
   lootBeam(p = {}) { return this.task(prims.LOOT, p); }
   /** Pickup sparkle. { pos, kind: 'gold'|'silver'|'item'|'hp'|'mp'|'seed'|'shard'|'xp', to } */
-  pickup(p = {}) { prims.pickup(this, p); return NOOP; }
+  pickup(p = {}) { return this._inert(prims.pickup, p); }
   /** Blue counter-window shimmer on a boss. { attach | pos, dur, height, scale } → handle */
   counterWindow(p = {}) { return this.task(prims.COUNTER, p); }
   /** Camera-following weather. kind: 'snow'|'ash'|'rain'|'embers'|'fireflies'|'dust'|'leaves'|'petals' → handle */
@@ -184,15 +189,45 @@ export class FX {
   play(name, p = {}) {
     const r = PRESETS[name];
     if (!r) { this.warnOnce('unknown preset ' + name); return null; }   // null → callers can fall back
-    if (typeof r === 'function') { r(this, p); return NOOP; }
-    return this.task(r, p);
+    if (p.dim === 0) return NOOP;
+    const pd = this.dimK;
+    if (r.group === 'Awakenings') {            // awakening governor: stacked awakenings share one "exposure budget"
+      let n = 0;
+      for (let i = 0; i < this.tasks.length; i++) { const t = this.tasks[i]; if (t.alive && !t.stopping && t.recipe.group === 'Awakenings') n++; }
+      if (this.time - this._awkT < 1.2) n++;   // a function-type awakening fired very recently
+      if (n > 0) this.dimK = Math.min(this.dimK, 1 / (1 + 0.8 * n));   // 2nd 0.56, 3rd 0.38, 4th 0.29 (no screen FX)
+      if (typeof r === 'function') this._awkT = this.time;
+    }
+    this._enter(p);
+    try {
+      if (typeof r === 'function') { r(this, p); return NOOP; }
+      return this.task(r, p);
+    } finally { this.dimK = pd; }
+  }
+  /** Enter the dim context of params p (nested calls only ever dim further). Returns the previous value. */
+  _enter(p) {
+    const prev = this.dimK, d = p && p.dim;
+    if (typeof d === 'number' && d < this.dimK) this.dimK = d > 0 ? d : 0;
+    return prev;
+  }
+  _inert(fn, p) {
+    if (p.dim === 0) return NOOP;
+    const pd = this._enter(p);
+    try { fn(this, p); } finally { this.dimK = pd; }
+    return NOOP;
   }
   get PRESETS() { return PRESETS; }
   has(name) { return !!PRESETS[name]; }
 
   // ================================================================== internals shared with prims / presets
   task(recipe, p) {
+    if (p.dim === 0) return NOOP;
+    const pd = this._enter(p);
+    try { return this._task(recipe, p); } finally { this.dimK = pd; }
+  }
+  _task(recipe, p) {
     const T = (this.taskPool.pop() || new Task(this)).init(recipe, p);
+    T.dim = this.dimK;
     if (p.pos !== undefined && !p.pos?.isObject3D) v3(p.pos, T.pos);
     else if (p.pos?.isObject3D) p.pos.getWorldPosition(T.pos);
     else if (p.from !== undefined) v3(p.from, T.pos);
@@ -224,7 +259,7 @@ export class FX {
     return o;
   }
   spawn(pr, x, y, z, vx, vy, vz, o) { return this.ps.spawn(pr, x, y, z, vx, vy, vz, o); }
-  n(count) { return Math.max(count > 0 ? 1 : 0, Math.round(count * this.q)); }
+  n(count) { return Math.max(count > 0 ? 1 : 0, Math.round(count * this.q * this.dimK)); }
   r(a, b) { return a + (b - a) * Math.random(); }
   rdir(out, dir = null, ang = Math.PI) {
     const cosA = Math.cos(ang), z = cosA + (1 - cosA) * Math.random(), t = Math.random() * Math.PI * 2, s = Math.sqrt(Math.max(0, 1 - z * z));
@@ -257,19 +292,22 @@ export class FX {
     return this.ps.spawn(pr, p.x + dx, p.y + dy, p.z + dz, 0, 0, 0, o);
   }
   shake(a, pos) {
+    if (this.dimK < 1) return;
     this.screen.shake = Math.min(1, Math.max(this.screen.shake, a));
     this.screen.shakeQueued = Math.min(1, (this.screen.shakeQueued || 0) + a);
     if (this.onShake) { try { this.onShake(a, pos); } catch (e) { /* ignore */ } }
   }
   flash(a, c = null) {       // brief full-screen flash (whitened colour, capped so the frame never washes out)
+    if (this.dimK < 1) return;
     const s = this.screen; s.flash = Math.min(0.35, Math.max(s.flash, a));
     if (c) { const k = col(c, 1, _tmpC), m = Math.max(k[0], k[1], k[2], 1e-3); s.flashCol.setRGB(0.55 + 0.45 * k[0] / m, 0.55 + 0.45 * k[1] / m, 0.55 + 0.45 * k[2] / m); } else s.flashCol.setRGB(1, 0.92, 0.75);
   }
   radialBlur(a, pos) {
+    if (this.dimK < 1) return;
     const s = this.screen; s.radial = Math.min(1, Math.max(s.radial, a));
     if (pos && this.camera) { _v.copy(pos).project(this.camera); s.radialX = _v.x * 0.5 + 0.5; s.radialY = _v.y * 0.5 + 0.5; } else { s.radialX = 0.5; s.radialY = 0.5; }
   }
-  aberr(a) { this.screen.aberration = Math.min(1, Math.max(this.screen.aberration, a)); }
+  aberr(a) { if (this.dimK < 1) return; this.screen.aberration = Math.min(1, Math.max(this.screen.aberration, a)); }
   warnOnce(msg) { if (!_warned.has(msg)) { _warned.add(msg); console.warn('[fx] ' + msg); } }
 
   // ================================================================== bookkeeping

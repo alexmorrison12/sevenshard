@@ -15,7 +15,7 @@ export const MOBS = {
       { id: 'sweep', range: 2.4, cd: 5, windup: 0.8, dur: 1.4, anim: 'attack_big', hit: { ...circle(2.8), coef: 1.8, knock: 'push', kb: 2 }, tele: true }] },
   brute: { name: 'Abyssal Brute', model: 'brute', radius: 1.0, height: 3.0, hp: 260, atk: 0.06, speed: 3.6, aggro: 18, mass: 5, xp: 40, elite: true, superArmor: 1,
     attacks: [{ id: 'smash', range: 3.2, cd: 3.2, windup: 0.9, dur: 1.7, anim: 'attack_big', hit: { ...circle(3.2), coef: 1.4, knock: 'down', off: 2 }, tele: true },
-      { id: 'swing', range: 3, cd: 2, windup: 0.6, dur: 1.2, anim: 'attack', hit: { ...cone(3.4, 140), coef: 1, knock: 'push', kb: 2.5 } }] },
+      { id: 'swing', range: 3, cd: 2, windup: 0.6, dur: 1.2, anim: 'attack2', hit: { ...cone(3.4, 140), coef: 1, knock: 'push', kb: 2.5 } }] },
   abyss_caster: { name: 'Abyss Invoker', model: 'abyss_caster', radius: 0.5, height: 2.0, hp: 30, atk: 0.028, speed: 3.6, aggro: 20, mass: 1, xp: 8, ranged: 9,
     attacks: [{ id: 'bolt', range: 11, cd: 2.6, windup: 0.6, dur: 1.1, anim: 'cast', proj: { speed: 13, range: 13, radius: 0.5, kind: 'dark_orb', color: 'purple', hit: { coef: 1.1 } } },
       { id: 'hex', range: 12, cd: 7, windup: 1.1, dur: 1.5, anim: 'cast', atTarget: true, hit: { ...circle(2.4), coef: 1.8 }, tele: true }] },

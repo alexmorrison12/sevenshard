@@ -115,9 +115,9 @@ export class Ground {
     return this.inf[(j * this.px + i) * 4 + c];
   }
   /** Polar paving: concentric courses around (x, z) out to r. layer must be one of this.layers. */
-  plaza(x, z, r, { layer = 'flagstone', tile = 1.4, rings = [], spokes = 0, border = 0.0 } = {}) {
+  plaza(x, z, r, { layer = 'flagstone', tile = 1.4, rings = [], spokes = 0, border = 0.0, keep = false } = {}) {
     if (this.plazas.length >= 4) return;
-    this.plazas.push({ x, z, r, layer, tile, rings, spokes, border });
+    this.plazas.push({ x, z, r, layer, tile, rings, spokes, border, keep });
   }
 
   // ---------------- build ----------------
@@ -155,7 +155,7 @@ export class Ground {
       const P = this.plazas[i];
       if (!P) { pz.push(new THREE.Vector4(0, 0, -1, 1)); pp.push(new THREE.Vector4(0, 0, 0, 0)); pr.push(new THREE.Vector4(0, 0, 0, 0)); continue; }
       pz.push(new THREE.Vector4(P.x, P.z, P.r, P.tile));
-      pp.push(new THREE.Vector4(this.layers.indexOf(P.layer), P.spokes, P.border, 0));
+      pp.push(new THREE.Vector4(this.layers.indexOf(P.layer), P.spokes, P.border, P.keep ? 1 : 0)); // w = 1: keep painted weights (half-buried plaza)
       const R = P.rings.concat([0, 0, 0, 0]).slice(0, 4);
       pr.push(new THREE.Vector4(...R));
     }
@@ -208,8 +208,10 @@ if (pl >= 0) {
   float n = max(6.0, floor(circ / (PZ.w * 1.6) + 0.5));
   puv = vec2((pa / TAU + 0.5) * n, v);
   int L = int(PP.x + 0.5);
-  for (int i = 0; i < 12; i++) W[i] = (i == L) ? 1.0 : W[i] * smoothstep(PZ.z - 1.2, PZ.z, pr);
+  if (PP.w < 0.5) for (int i = 0; i < 12; i++) W[i] = (i == L) ? 1.0 : W[i] * smoothstep(PZ.z - 1.2, PZ.z, pr);
 }
+float gPlazaW = 1.0;
+if (pl >= 0 && PP.w > 0.5) { int L2 = int(PP.x + 0.5); for (int i = 0; i < 12; i++) if (i == L2) gPlazaW = W[i]; }
 float vk = texture2D(uNoise, wxz / 29.0).a * 7.0 + texture2D(uNoise, wxz / 11.0).b * 1.5;
 float vIa = floor(vk), vIf = fract(vk);
 vec3 acc = vec3(0.0); vec3 nacc = vec3(0.0); float aoAcc = 0.0; float emAcc = 0.0; float wsum = 0.0;
@@ -239,22 +241,23 @@ acc /= max(wsum, 1e-4); nacc /= max(wsum, 1e-4); aoAcc /= max(wsum, 1e-4); emAcc
 vec3 col = acc;
 // plaza decoration: inlay rings, spokes, outer border course
 if (pl >= 0) {
+  float dk = smoothstep(0.35, 0.8, gPlazaW);   // decoration only where the paving shows
   for (int k = 0; k < 4; k++) {
     float rr = PR[k]; if (rr <= 0.0) continue;
     float ring = smoothstep(0.34, 0.26, abs(pr - rr));
     float trim = smoothstep(0.05, 0.0, abs(abs(pr - rr) - 0.32));
-    col = mix(col, col * vec3(0.62, 0.66, 0.78), ring * 0.8);
-    col = mix(col, vec3(0.86, 0.68, 0.36), trim * 0.9);
+    col = mix(col, col * vec3(0.62, 0.66, 0.78), ring * 0.8 * dk);
+    col = mix(col, vec3(0.86, 0.68, 0.36), trim * 0.9 * dk);
   }
   if (PP.y > 0.0) {
     float sp = abs(fract(pa / TAU * PP.y + 0.5) - 0.5) * TAU / PP.y * pr;
     float spoke = smoothstep(0.22, 0.15, sp) * step(PR.x + 0.4, pr);
-    col = mix(col, col * vec3(0.7, 0.72, 0.82), spoke * 0.75);
+    col = mix(col, col * vec3(0.7, 0.72, 0.82), spoke * 0.75 * dk);
   }
   if (PP.z > 0.0) {
     float bd = PZ.z - pr;
-    col = mix(col, col * 0.8, smoothstep(PP.z, PP.z - 0.1, bd) * 0.6);
-    col = mix(col, vec3(0.3, 0.27, 0.23), smoothstep(0.08, 0.0, abs(bd - PP.z)) * 0.8);
+    col = mix(col, col * 0.8, smoothstep(PP.z, PP.z - 0.1, bd) * 0.6 * dk);
+    col = mix(col, vec3(0.3, 0.27, 0.23), smoothstep(0.08, 0.0, abs(bd - PP.z)) * 0.8 * dk);
   }
 }
 // macro variation (warm/cool, light/dark) at two scales

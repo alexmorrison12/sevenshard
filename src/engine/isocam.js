@@ -23,7 +23,7 @@ export class IsoCam {
   }
   snap(p) { this.target.copy(p); this.focus.copy(p); this.apply(0); }
   /** trauma 0..1 (0.15 light hit, 0.4 heavy, 0.8 awakening/boss slam) */
-  shake(amount) { this.trauma = Math.min(1, this.trauma + amount); }
+  shake(amount) { this.trauma = Math.min(1, this.trauma + amount * (this.shakeScale ?? 1)); }
   push(dx, dz, amount = 0.3) { this.kick.x += dx * amount; this.kick.z += dz * amount; }
   zoomBy(d) { this.zoom = THREE.MathUtils.clamp(this.zoom + d, this.minDist, this.maxDist); }
   /**

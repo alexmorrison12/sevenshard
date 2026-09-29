@@ -209,7 +209,15 @@ export function chainFrame(base, chain, at) {
 // ------------------------------------------------------------------------------------------------
 // Generic ring piece (cached)
 const CACHE = new Map();
-export function cached(key, fn) { if (CACHE.has(key)) return CACHE.get(key); const v = fn(); CACHE.set(key, v); return v; }
+export const PIECE_MS = new Map(); // build timings (ms) per cache key, for perf checks
+export function cached(key, fn) {
+  if (CACHE.has(key)) return CACHE.get(key);
+  const t0 = performance.now();
+  const v = fn();
+  PIECE_MS.set(key, performance.now() - t0);
+  if (v && typeof v === 'object' && !Array.isArray(v) && v.idx) v.tag = key;
+  CACHE.set(key, v); return v;
+}
 
 /** ring around a chain at coordinate `at` (torso: y metres; arm/leg: 0..3) */
 export function ringPiece(base, chain, at, o) {
@@ -258,17 +266,17 @@ export function pauldronPiece(base, side, sp) {
       prof.push(new THREE.Vector2(R * 0.9, H * 0.42)); // step
       prof.push(new THREE.Vector2(R * 0.84, H * 0.47));
     }
-    const N = 6;
+    const N = base.lod === 'crowd' ? 3 : 5;
     for (let i = 0; i <= N; i++) { const a = i / N * Math.PI / 2; const t = tiers ? 0.84 : 1.02; prof.push(new THREE.Vector2(Math.max(0.001, Math.cos(a) * R * t), (tiers ? H * 0.47 : H * 0.12) + Math.sin(a) * H * (tiers ? 0.53 : 0.88))); }
-    const dome = new THREE.LatheGeometry(prof, base.L?.ring < 1 ? 12 : 22);
+    const dome = new THREE.LatheGeometry(prof, base.L?.ring < 1 ? 7 : 15);
     pb.add(dome, { m: Mo, slot: main, bw, mulFn: lit(), rune: 0 });
     // rim trim
     if (sp.rim !== false && kind !== 'fur') {
-      const tor = new THREE.TorusGeometry(R * 1.09, 0.009 * size + (sp.tier >= 1 ? 0.003 : 0), 5, base.L?.ring < 1 ? 12 : 24);
+      const tor = new THREE.TorusGeometry(R * 1.09, 0.009 * size + (sp.tier >= 1 ? 0.003 : 0), 4, base.L?.ring < 1 ? 10 : 15);
       const mt = new THREE.Matrix4().multiplyMatrices(Mo, new THREE.Matrix4().makeRotationX(Math.PI / 2).setPosition(0, -0.02, 0));
       pb.add(tor, { m: mt, slot: sp.runes ? SLOT.RUNE : sp.tier >= 1 ? SLOT.TRIM : SLOT.ARMOR2, bw, mul: [1.05, 1.05, 1.05], emis: sp.glowTrim && !sp.runes ? 0.35 : 0, rune: sp.runes ? 1 : 0 });
-      if (tiers) {
-        const t2 = new THREE.TorusGeometry(R * 0.88, 0.006 * size, 4, base.L?.ring < 1 ? 10 : 20);
+      if (tiers && base.lod !== 'crowd') {
+        const t2 = new THREE.TorusGeometry(R * 0.88, 0.006 * size, 3, base.L?.ring < 1 ? 8 : 12);
         pb.add(t2, { m: new THREE.Matrix4().multiplyMatrices(Mo, new THREE.Matrix4().makeRotationX(Math.PI / 2).setPosition(0, H * 0.43, 0)), slot: sp.tier >= 1 ? SLOT.TRIM : SLOT.ARMOR2, bw, mul: [0.95, 0.95, 0.95] });
       }
     }
@@ -279,11 +287,11 @@ export function pauldronPiece(base, side, sp) {
       pb.add(ridge, { m: mr, slot: sp.runes ? SLOT.RUNE : SLOT.TRIM, bw, mulFn: lit(0.3, 0.95), rune: sp.runes ? 1 : 0 });
     }
     // stacked lames down the outer arm
-    const lames = kind === 'fur' ? 0 : (sp.layers ?? 1);
+    const lames = kind === 'fur' || base.lod === 'crowd' ? 0 : (sp.layers ?? 1);
     for (let i = 0; i < lames; i++) {
       const r0 = P.uarmR[0] + 0.026 + 0.014 * (lames - i) * size, y0 = S[1] - 0.045 - i * 0.05 * size;
       const pr = [new THREE.Vector2(r0 + 0.014, y0 - 0.048), new THREE.Vector2(r0 + 0.03, y0 - 0.046), new THREE.Vector2(r0 + 0.024, y0 - 0.014), new THREE.Vector2(r0 + 0.012, y0 + 0.014)];
-      const lame = new THREE.LatheGeometry(pr.map(v => new THREE.Vector2(v.x, v.y - y0)), base.L?.ring < 1 ? 8 : 14, sg > 0 ? -Math.PI * 0.64 : Math.PI * 0.36, Math.PI * 1.28);
+      const lame = new THREE.LatheGeometry(pr.map(v => new THREE.Vector2(v.x, v.y - y0)), base.L?.ring < 1 ? 6 : 10, sg > 0 ? -Math.PI * 0.64 : Math.PI * 0.36, Math.PI * 1.28);
       const ml = new THREE.Matrix4().makeTranslation(S[0] + sg * 0.012, y0, S[2]);
       pb.add(lame, { m: new THREE.Matrix4().multiplyMatrices(X, ml), slot: i % 2 ? SLOT.ARMOR2 : main, bw: [[bone, 1]], mulFn: lit(0.3, 0.78) });
       if (sp.tier >= 1 && kind === 'plate') {
@@ -516,7 +524,7 @@ export function capePiece(base, sp) {
     const fn = base.chainSDF.torsoLegs;
     const top = J.cape0[1], len = (top - 0.12) * (sp.len ?? 0.85);
     const hw0 = (P.shX + P.delt[0] * 0.3) * 0.95, hw1 = hw0 * (sp.flare ?? 1.35);
-    const cols = 9, rows = 12;
+    const cols = base.lod === 'crowd' ? 5 : 9, rows = base.lod === 'crowd' ? 6 : 12;
     const Z = [];
     const capeY = [J.cape0[1], J.cape1[1], J.cape2[1], J.cape3[1]];
     let running = new Float32Array(cols + 1).fill(-1);
@@ -618,7 +626,7 @@ export function skirtPiece(base, sp) {
     const fn = base.chainSDF.torsoLegs;
     const y0 = J.spine[1] + (sp.top ?? -0.02), legTop = J.thighL[1];
     const hem = lerp(legTop, 0.06, sp.len ?? 1);
-    const rows = sp.rows || 9, n = sp.n || 22;
+    const rows = sp.rows || (base.lod === 'crowd' ? 5 : 9), n = sp.n || (base.lod === 'crowd' ? 12 : 22);
     const ring = [];
     let prevR = null;
     for (let r = 0; r <= rows; r++) {
@@ -725,7 +733,7 @@ export function panelPiece(base, sp) {
     const top = sp.top ?? (J.chest[1] + 0.1), bot = sp.bottom ?? (J.shinL[1] + 0.08);
     const hw = sp.hw ?? P.core[1] * 0.75;
     const lowQ = base.L?.ring < 1;
-    const cols = lowQ ? 6 : 12, rows = lowQ ? 8 : 18;
+    const cols = lowQ ? 6 : 10, rows = lowQ ? 8 : 12;
     const hy = J.hips[1] - 0.04, ky = J.shinL[1];
     const flapW = (face, y, u) => {
       if (y > hy) return 'auto';
@@ -840,7 +848,7 @@ export function copPiece(base, side, where, sp) {
     const H = R * 0.55;
     const prof = [new THREE.Vector2(R * 0.92, -0.008)];
     for (let i = 0; i <= 5; i++) { const a = i / 5 * Math.PI / 2; prof.push(new THREE.Vector2(Math.max(0.001, Math.cos(a) * R), Math.sin(a) * H)); }
-    const g = new THREE.LatheGeometry(prof, 12);
+    const g = new THREE.LatheGeometry(prof, 10);
     const m = axisMatrix(C, out, [1, 0, 0]);
     pb.add(g, { m, slot: sp.slot ?? SLOT.ARMOR1, bw, mulFn: (p, n) => { const f = 0.85 + 0.25 * Math.max(0, n.y) ; return [f, f, f]; } });
     if (sp.spike) {
@@ -848,7 +856,7 @@ export function copPiece(base, side, where, sp) {
       pb.add(cone, { m: new THREE.Matrix4().multiplyMatrices(m, new THREE.Matrix4().makeTranslation(0, H * 0.8, 0)), slot: SLOT.METAL, bw });
     }
     if (sp.rim) {
-      const tor = new THREE.TorusGeometry(R * 0.95, 0.006, 5, 14);
+      const tor = new THREE.TorusGeometry(R * 0.95, 0.006, 3, 10);
       pb.add(tor, { m: new THREE.Matrix4().multiplyMatrices(m, new THREE.Matrix4().makeRotationX(Math.PI / 2)), slot: SLOT.TRIM, bw });
     }
     return pb.build();
@@ -863,9 +871,9 @@ export function cuffPiece(base, chain, at, sp) {
     const w = sp.w ?? 0.07, fl = sp.flare ?? 0.03, t = sp.t ?? 0.01;
     // profile along axis: bottom tight, top flared (toward the proximal end = -axis)
     const prof = [[fl * 0.5, -w / 2], [t * 0.4 + fl, -w / 2 - t * 0.4], [t + fl, -w / 2], [t, w / 2], [0, w / 2]];
-    ringSweep(pb, { ...f, n: 14, off: sp.off ?? 0.006, profile: prof, slot: sp.slot ?? SLOT.ARMOR1, rMax: 0.2, emis: sp.emis || 0,
+    ringSweep(pb, { ...f, n: 12, off: sp.off ?? 0.006, profile: prof, slot: sp.slot ?? SLOT.ARMOR1, rMax: 0.2, emis: sp.emis || 0,
       mulFn: (j, k, m) => { const q = k === 2 || k === 3 ? 1.12 : 0.95; return [m[0] * q, m[1] * q, m[2] * q]; } });
-    if (sp.trim) ringSweep(pb, { ...f, C: f.C.map((v, i) => v - f.axis[i] / Math.hypot(...f.axis) * (w / 2)), n: 14, off: (sp.off ?? 0.006) + fl + t * 0.5, profile: PROFILES.tube(0.012), slot: SLOT.TRIM, rMax: 0.2, emis: sp.glowTrim ? 0.4 : 0 });
+    if (sp.trim) ringSweep(pb, { ...f, C: f.C.map((v, i) => v - f.axis[i] / Math.hypot(...f.axis) * (w / 2)), n: 12, off: (sp.off ?? 0.006) + fl + t * 0.5, profile: PROFILES.tube(0.012), slot: SLOT.TRIM, rMax: 0.2, emis: sp.glowTrim ? 0.4 : 0 });
     return pb.build();
   });
 }
@@ -879,7 +887,7 @@ export function beltPiece(base, sp) {
     const y = J.spine[1] + (sp.dy ?? -0.035);
     const w = (sp.w ?? 0.055) * Math.max(0.85, base.scale);
     const f = chainFrame(base, 'torso', y);
-    const { rs, dirs } = ringSweep(pb, { ...f, n: 28, off: sp.off ?? 0.012, profile: PROFILES.band(w, 0.012), slot: sp.slot ?? SLOT.BELT, rMax: 0.42, stitch: sp.type === 'leather',
+    const { rs, dirs } = ringSweep(pb, { ...f, n: base.lod === 'crowd' ? 14 : 28, off: sp.off ?? 0.012, profile: PROFILES.band(w, 0.012), slot: sp.slot ?? SLOT.BELT, rMax: 0.42, stitch: sp.type === 'leather' && base.lod !== 'crowd',
       mulFn: (j, k, m) => (k === 0 || k === 5) ? [m[0] * 0.7, m[1] * 0.7, m[2] * 0.7] : m });
     const frontR = rs[0] + (sp.off ?? 0.012) + 0.014;
     const bc = [0, y, f.C[2] - frontR];
@@ -898,8 +906,8 @@ export function beltPiece(base, sp) {
       }
     }
     for (let i = 0; i < (sp.pouches || 0); i++) {
-      const j = Math.round(28 * (i % 2 === 0 ? 0.3 : 0.7) + (i >> 1) * 3);
-      const d = dirs[j % 28], r = rs[j % 28] + 0.03;
+      const nn = dirs.length, j = Math.round(nn * (i % 2 === 0 ? 0.3 : 0.7) + (i >> 1) * 3 * nn / 28);
+      const d = dirs[j % nn], r = rs[j % nn] + 0.03;
       const pouch = new THREE.BoxGeometry(0.06, 0.07, 0.035, 1, 1, 1);
       rounden(pouch, 0.012);
       const m = new THREE.Matrix4().makeRotationY(Math.atan2(d.x, d.z)).setPosition(d.x * r, y - 0.03, f.C[2] + d.z * r);
@@ -919,7 +927,7 @@ export function strapPiece(base, sp = {}) {
     let dx = hp[0] - sh[0], dy = hp[1] - sh[1]; const l = Math.hypot(dx, dy); dx /= l; dy /= l;
     const axis = [dy, -dx, 0]; // perpendicular to the strap direction within XY (plane contains Z)
     const C = [(sh[0] + hp[0]) / 2, (sh[1] + hp[1]) / 2, J.spine[2]];
-    ringSweep(pb, { sdf: base.chainSDF.torso, C, axis, front: [0, 0, -1], n: 32, off: sp.off ?? 0.014, profile: PROFILES.band(0.04 * base.scale, 0.011), slot: SLOT.BELT, rMax: 0.5, stitch: true, smooth: 3 });
+    ringSweep(pb, { sdf: base.chainSDF.torso, C, axis, front: [0, 0, -1], n: base.lod === 'crowd' ? 14 : 32, off: sp.off ?? 0.014, profile: PROFILES.band(0.04 * base.scale, 0.011), slot: SLOT.BELT, rMax: 0.5, stitch: base.lod !== 'crowd', smooth: 3 });
     // buckle on the chest
     const bpos = [C[0] - dx * 0.05, C[1] - dy * 0.05 + 0.05, 0];
     const rr = marchIn((x, y, z) => base.chainSDF.torso.eval(x, y, z), bpos[0], bpos[1], J.spine[2], 0, 0, -1, 0.5);

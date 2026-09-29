@@ -4,8 +4,10 @@
 // Automation: window.__hero = { lab, heroes, hero, set(opts), play(name, o), at(name, u), stats() }
 import * as THREE from 'three';
 import { createLab } from './kit.js';
-import { createHero, CLASSES, NPCS, HAIR_STYLES, SKIN_TONES, HAIR_COLORS, EYE_COLORS, MARK_COLORS, FACE_PRESETS } from '../models/hero/index.js';
+import { createHero, CLASSES, NPCS, NPC_NAMED, HAIR_STYLES, SKIN_TONES, HAIR_COLORS, EYE_COLORS, MARK_COLORS, FACE_PRESETS } from '../models/hero/index.js';
 import { MOVE_NAMES } from '../models/hero/moves.js';
+import { PIECE_MS } from '../models/hero/pieces.js';
+window.__pieceMs = PIECE_MS;
 
 const Q = Object.fromEntries(new URLSearchParams(location.search));
 const lab = createLab({ title: 'Heroes', view: Q.view || 'iso', ground: 'stone', light: Q.light || 'day' });
@@ -50,7 +52,8 @@ function rebuild() {
   } else if (state.mode === 'tiers') {
     for (let t = 0; t < 3; t++) { spawn({ ...base, cls: state.cls, sex: 'm', gear: { tier: t }, weapon: { tier: t, hone: t === 2 ? 20 : 0 } }, (t - 2.5) * 1.8, 0); spawn({ ...base, cls: state.cls, sex: 'f', gear: { tier: t }, weapon: { tier: t, hone: t === 2 ? 20 : 0 } }, (t + 0.5) * 1.8, 0); }
   } else if (state.mode === 'npcs') {
-    NPCS.forEach((n, i) => spawn({ npc: n, sex: i % 3 === 1 ? 'f' : 'm', look: { hair: i % 8, face: i % 6, skin: i % 8 }, lod: state.lod }, ((i % 9) - 4) * 1.5, Math.floor(i / 9) * 2.2 - 1));
+    const list = [...NPCS, ...NPC_NAMED];
+    list.forEach((n, i) => spawn({ npc: n, sex: state.sex === 'f' ? (i % 3 === 2 ? 'm' : 'f') : (i % 3 === 1 ? 'f' : 'm'), lod: state.lod, seed: i + 1 }, ((i % 10) - 4.5) * 1.5, Math.floor(i / 10) * 2.4 - 1.2));
   } else if (state.mode === 'crowd') {
     const cls = Object.keys(CLASSES);
     for (let i = 0; i < 40; i++) spawn({ cls: cls[i % 8], sex: i % 2 ? 'f' : 'm', lod: 'crowd', gear: { tier: i % 3 }, look: { hair: i % 8, face: i % 6, skin: (i * 3) % 8 } }, ((i % 10) - 4.5) * 1.5, Math.floor(i / 10) * 2 - 3);
@@ -71,7 +74,7 @@ const P = lab.panel;
 P.label('Hero');
 P.select('mode', ['single', 'lineup', 'lineup2', 'tiers', 'npcs', 'crowd'], state.mode, v => { state.mode = v; rebuild(); });
 P.select('class', Object.keys(CLASSES), state.cls, v => { state.cls = v; state.npc = null; state.look = {}; rebuild(); });
-P.select('npc', ['-', ...NPCS], state.npc || '-', v => { state.npc = v === '-' ? null : v; rebuild(); });
+P.select('npc', ['-', ...NPCS, ...NPC_NAMED], state.npc || '-', v => { state.npc = v === '-' ? null : v; rebuild(); });
 P.buttons(['m', 'f'], v => { state.sex = v; state.look = {}; rebuild(); });
 P.buttons(['tier 0', 'tier 1', 'tier 2'], v => { state.tier = +v.slice(5); state.wtier = state.tier; for (const h of heroes) h.setGear({ tier: state.tier }); showStats(); });
 P.slider('hone', 0, 25, state.hone, v => { state.hone = Math.round(v); for (const h of heroes) h.setWeapon({ hone: state.hone }); }, 1);
@@ -160,6 +163,7 @@ window.__hero = {
   cam: setCam,
   stats() { return heroes.map(h => ({ ms: +h._ms.toFixed(1), tris: h.stats.tris, draws: h.stats.drawCalls, height: +h.height.toFixed(3) })); },
 };
+window.__mk = (o, x = 0, z = 0) => spawn(o, x, z);
 if (Q.nopanel) lab.panel.hide();
 // creation-screen lights (key + rim point lights, as in MenuStage.preview)
 if (Q.studio) { const key = new THREE.PointLight(0xffe8c8, 25, 12); key.position.set(2.2, 2.6, 3); const rim = new THREE.PointLight(0x8ab4ff, 30, 12); rim.position.set(-2.5, 2.4, -2); lab.scene.add(key, rim); }

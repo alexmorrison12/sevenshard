@@ -44,7 +44,7 @@ export async function buildIsle(zone, id, spec = {}, opts = {}) {
   const quality = opts.quality ?? 1;
   const rng = new RNG(id.length * 977 + 13);
   const R = spec.half ?? Math.min(110, Math.ceil(T.radius));
-  const Hfn = spec.heightFn || ((x, z) => T.height(x, z));
+  const Hfn = spec.heightFn ? (x, z) => spec.heightFn(x, z, zone) : (x, z) => T.height(x, z);
   zone.bounds = { x0: -R + 6, z0: -R + 6, x1: R - 6, z1: R - 6 };
   // ---------------------------------------------------------------- ground
   const g = zone.ground = new Ground({ x0: -R, z0: -R, w: R * 2, d: R * 2, res: 1, paintRes: 0.5, layers: spec.layers || ISLE_LAYERS, base: 'sand', seed: id.length * 3 + 1 });
@@ -64,11 +64,10 @@ export async function buildIsle(zone, id, spec = {}, opts = {}) {
   spec.decorate?.(ctx);
   // pier deck (walkable) from the landmark spot
   const pier = spots.pier;
-  const P = spec.pier || { x: pier ? pier[0] : 0, z0: pier ? pier[2] - 14 : 50, len: 14, w: 4.2, y: pier ? pier[1] : 0.6 };
   if (pier) {
-    const len = spec.pierLen ?? (pier[2] - (spec.pierShore ?? findShore(T, pier[0], pier[2])));
-    zone.deck(S.rect(pier[0], pier[2] - len / 2, P.w ?? 4.2, len + 0.4), (P.y ?? pier[1]) + 0.11);
-    ctx.pierX = pier[0]; ctx.pierZ = pier[2]; ctx.pierLen = len; ctx.pierY = (P.y ?? pier[1]) + 0.11;
+    const len = pier[3] ?? 14, w = pier[4] ?? 4;
+    zone.deck(S.rect(pier[0], pier[2] - len / 2, w, len + 0.2), pier[1] + 0.11);
+    ctx.pierX = pier[0]; ctx.pierZ = pier[2]; ctx.pierLen = len; ctx.pierY = pier[1] + 0.11; ctx.pierW = w;
   }
   for (const c of kit.colliders) g.info('ao', S.inflate(c.shape, 0.25), { soft: 2, amount: 0.3 });
   await tick();
@@ -101,7 +100,7 @@ export async function buildIsle(zone, id, spec = {}, opts = {}) {
   const nav = new NavGrid(-R, -R, R * 2, R * 2, 0.5);
   const slopeOk = (x, z) => { const e = 0.6, dx = Hfn(x + e, z) - Hfn(x - e, z), dz = Hfn(x, z + e) - Hfn(x, z - e); return Math.hypot(dx, dz) / (2 * e) < (spec.maxSlope ?? 0.95); };
   nav.walk({ sd: (x, z) => (Hfn(x, z) > (spec.wade ?? -0.45) && slopeOk(x, z)) ? -1 : 1, box: [-R, -R, R, R] });
-  if (pier) nav.walk(S.rect(ctx.pierX, ctx.pierZ - ctx.pierLen / 2, 3.4, ctx.pierLen + 0.6));
+  if (pier) nav.walk(S.rect(ctx.pierX, ctx.pierZ - ctx.pierLen / 2 + 0.3, ctx.pierW - 0.8, ctx.pierLen + 1.2));
   spec.nav?.(nav, ctx);
   for (const c of kit.colliders) nav.block(c.shape, c.inflate);
   for (const c of flora.colliders) nav.block(c.shape, c.inflate);
@@ -134,4 +133,3 @@ export async function buildIsle(zone, id, spec = {}, opts = {}) {
   });
   return ctx;
 }
-function findShore(T, x, zEnd) { for (let z = zEnd; z > zEnd - 40; z -= 0.5) if (T.height(x, z) > 0.2) return z; return zEnd - 14; }

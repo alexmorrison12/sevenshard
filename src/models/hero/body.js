@@ -42,8 +42,8 @@ const RAW = { m: HERO_M, f: HERO_F };
 
 // LOD mesh budgets (vertex targets before assembly)
 export const LOD = {
-  full: { body: 3600, head: 2600, hand: 420, hBody: 0.019, hHead: 0.0046, hHand: 0.0066, ring: 1, hair: 1 },
-  crowd: { body: 1150, head: 380, hand: 90, hBody: 0.03, hHead: 0.011, hHand: 0.011, ring: 0.5, hair: 0.4 },
+  full: { body: 2600, head: 2000, hand: 340, hBody: 0.019, hHead: 0.0046, hHand: 0.0066, ring: 1, hair: 1 },
+  crowd: { body: 950, head: 320, hand: 90, hBody: 0.03, hHead: 0.011, hHand: 0.011, ring: 0.5, hair: 0.4 },
 };
 
 // ------------------------------------------------------------------------------------------------
@@ -309,6 +309,25 @@ export function makePiece(n, nIdx) {
 }
 
 /** concatenate pieces (same attribute layout) */
+/** QEM-decimate a finished piece to ~targetVerts, carrying every per-vertex attribute over from the survivors */
+export function decimatePiece(p, targetVerts) {
+  if (!p || p.n <= targetVerts) return p;
+  const m = simplify(p.pos, p.nrm, p.idx, targetVerts);
+  const n = m.pos.length / 3, src = m.src;
+  const pc = makePiece(n, m.idx.length);
+  pc.pos.set(m.pos); pc.nrm.set(m.nrm); pc.idx.set(m.idx);
+  for (let v = 0; v < n; v++) {
+    const s = src[v];
+    for (let k = 0; k < 4; k++) { pc.bi[v * 4 + k] = p.bi[s * 4 + k]; pc.bw[v * 4 + k] = p.bw[s * 4 + k]; }
+    pc.slot[v] = p.slot[s]; pc.mul[v * 3] = p.mul[s * 3]; pc.mul[v * 3 + 1] = p.mul[s * 3 + 1]; pc.mul[v * 3 + 2] = p.mul[s * 3 + 2];
+  }
+  for (const key of ['emis', 'rune', 'cast', 'coord', 'ang', 'chain']) if (p[key]) { const A = new p[key].constructor(n); for (let v = 0; v < n; v++) A[v] = p[key][src[v]]; pc[key] = A; }
+  if (p.face) { pc.face = new Float32Array(n * 2); for (let v = 0; v < n; v++) { pc.face[v * 2] = p.face[src[v] * 2]; pc.face[v * 2 + 1] = p.face[src[v] * 2 + 1]; } }
+  if (p.det) { pc.det = new Float32Array(n * 4); for (let v = 0; v < n; v++) for (let k = 0; k < 4; k++) pc.det[v * 4 + k] = p.det[src[v] * 4 + k]; }
+  pc.tag = p.tag;
+  return pc;
+}
+
 export function mergePieces(list) {
   list = list.filter(Boolean);
   if (list.length === 1) return list[0];

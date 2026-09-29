@@ -17,7 +17,7 @@ const side = B => (B.def.id === 'skarn' ? -1 : 1);
 export const shared = {
   bite: { range: 3.5, cd: 3.5, weight: 3, async run(B, t) {
     B.turnTo(t); act(B, 'bite', 0.65);
-    await strike(B, 'cone', { r: 5, deg: 70, dur: 0.65, coef: 0.8, fx: 'bite', fxR: 3, sfx: 'bite' });
+    await strike(B, 'cone', { r: 5, deg: 70, dur: 0.65, coef: 0.8, fx: 'bite', fxR: 3, sfx: 'claw' });
     await wait(B, 0.4);
   } },
   claw: { range: 4, cd: 5, weight: 2, async run(B, t) {

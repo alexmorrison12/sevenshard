@@ -17,13 +17,13 @@ async function tentacles(B, prey, dur, coef = 1.0) {
     lines.push(['rect', { x: o.x, z: o.z, dir: d, len: 14, width: 3, fx: 'tentacle_slam', fxR: 3, off: 0 }]);
   }
   if (!lines.length) return;
-  await volley(B, lines, dur, { coef, knock: 'down', color: 'orange', sfx: 'tentacle_slam', shake: 0.3 });
+  await volley(B, lines, dur, { coef, knock: 'down', color: 'orange', sfx: 'wave_splash', shake: 0.3 });
 }
 
 export default {
   id: 'deep_oracle', model: 'deep_oracle', name: 'The Deep Oracle', title: 'Eye Beneath the Oratory', kind: 'abyss',
   radius: 3.5, height: 8, hp: 54000, atk: 0.16, bars: 190, speed: 0.001, turnRate: 2.4, enrage: 660,
-  music: 'boss_deep', arena: 'frostmere',
+  music: 'boss', arena: 'frostmere',
   anims: {
     tentacle_slam: { dur: 1.8, hits: [1.0] }, tentacle_sweep: { dur: 2.2, hits: [1.1] }, gaze: { dur: 3.6, hits: [1.4] },
     grasp: { dur: 2.0, hits: [1.2] }, submerge: { dur: 2.4, hits: [1.4] }, emerge: { dur: 2.2, hits: [0.6] }, roar: { dur: 2.4, hits: [1.0] },
@@ -56,13 +56,13 @@ export default {
     grasp: { range: 30, cd: 14, weight: 2.5, async run(B, t) {
       B.turnTo(t); act(B, 'grasp', 1.3);
       counter(B, 1.1, 4.5);
-      await strike(B, 'circle', { x: t.pos.x, z: t.pos.z, r: 3.5, dur: 1.3, color: 'red', coef: 1.3, status: [{ id: 'stun', dur: 1.5 }], fx: 'tentacle_slam', fxR: 3.5, sfx: 'tentacle_slam' });
+      await strike(B, 'circle', { x: t.pos.x, z: t.pos.z, r: 3.5, dur: 1.3, color: 'red', coef: 1.3, status: [{ id: 'stun', dur: 1.5 }], fx: 'tentacle_slam', fxR: 3.5, sfx: 'wave_splash' });
       await wait(B, 0.5);
     } },
     ink: { range: 40, cd: 13, weight: 2, async run(B) {
       act(B, 'roar', 0.9);
       const pts = someHeroes(B, 3).map(h => ({ x: h.pos.x, z: h.pos.z }));
-      await volley(B, pts.map(p => ['circle', { x: p.x, z: p.z, r: 3 }]), 1.2, { coef: 0.7, color: 'orange', status: [{ id: 'weaken', dur: 5 }], fx: 'dark_burst', fxR: 3, fxColor: INK, sfx: 'splash' });
+      await volley(B, pts.map(p => ['circle', { x: p.x, z: p.z, r: 3 }]), 1.2, { coef: 0.7, color: 'orange', status: [{ id: 'weaken', dur: 5 }], fx: 'dark_burst', fxR: 3, fxColor: INK, sfx: 'wave_splash' });
       for (const p of pts) pool(B, { x: p.x, z: p.z, r: 3, dur: 7, tick: 0.5, coef: 0.08, kind: 'void', status: [{ id: 'slow', dur: 1 }] });
       await wait(B, 0.4);
     } },
@@ -117,7 +117,7 @@ async function submerge(B, n) {
       smash(B, 'all', { coef: 0.7 * Math.min(4, alive.length), knock: 'down', fx: 'fear_howl', fxR: 16, fxColor: INK, sfx: 'boss_roar', shake: 0.6 });
       B.banner(`The Oracle feeds on ${alive.length} of the drowned!`, 'fail');
     } else B.banner('The drowned are laid to rest — the Oracle rises weakened!', 'good');
-    await strike(B, 'circle', { r: 7, dur: 0.9, color: 'orange', coef: 1.0, knock: 'up', fx: 'tentacle_slam', fxR: 6, sfx: 'wave_crash', shake: 0.5 });
+    await strike(B, 'circle', { r: 7, dur: 0.9, color: 'orange', coef: 1.0, knock: 'up', fx: 'tentacle_slam', fxR: 6, sfx: 'wave_splash', shake: 0.5 });
     if (!alive.length) B.interrupt(4);
     B.phase = Math.max(B.phase, 1);
   } finally { u.untargetable = false; u.data.burrowed = 0; clearAdds(B, x => spawned.includes(x)); B.flags.inMech = false; }

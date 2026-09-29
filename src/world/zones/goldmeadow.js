@@ -19,7 +19,7 @@ import { paintMinimap } from '../minimap.js';
 import { buildWater } from '../water.js';
 import { boulder } from '../cliffs.js';
 import { blob } from '../../engine/geom.js';
-import { FieldGround, DistGrid, FieldKit, Anchors, snapAnchors, seedSpots, spline, along, paintPath, pieces, scatter, bump, ramp, faceTo, S, RNG, clamp, smoothstep, lerp } from '../fields/common.js';
+import { FieldGround, DistGrid, FieldKit, Anchors, snapAnchors, seedSpots, spline, along, paintPath, pieces, scatter, bump, ramp, faceTo, waterEnv, S, RNG, clamp, smoothstep, lerp } from '../fields/common.js';
 import { FieldGrass, FieldFlora, sunflowerGeo, reedGeo, tallGrassGeo, mushroomGeo } from '../fields/flora.js';
 import { Mist, buildSmoke, buildDrifters, buildButterflies } from '../fields/fx.js';
 import * as F from '../fields/props.js';
@@ -434,7 +434,7 @@ export async function build(zone, { quality = 1 } = {}) {
     if (focus) wheat.mesh.visible = FIELDS.some(f => f.kind !== 'stubble' && fieldRect(f).sd(focus.x, focus.z) < 30);
     wmill.spin.rotation.z = -t * 0.45; wheelMesh.rotation.z = t * 0.6;
   });
-  zone.onEnv(env => { pool.scale = 0.45 + env.night * 1.6; kitMaterial('window').emissiveIntensity = env.night * 1.8; river.userData.setEnv?.(env); });
+  zone.onEnv(env => { pool.scale = 0.45 + env.night * 1.6; kitMaterial('window').emissiveIntensity = env.night * 1.8; waterEnv(river, env, { sky: 0.75 }); });
   zone.objects = { windmillSails: wmill.sails, waterwheel: wheelG };
 
   // ---------------------------------------------------------------- nav

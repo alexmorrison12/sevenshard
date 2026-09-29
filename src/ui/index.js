@@ -49,7 +49,7 @@ class UI {
 
     this.hud = new Hud(this, this.layers.hud);
     this.chat = this.hud.chat;
-    this.banners = new Banners(this.layers.center);
+    this.banners = new Banners(this.layers.center, { warn: this.hud.warnSlot });
     this.screenToasts = new Toasts(this.layers.top); // used while a full screen hides the HUD
     this.screenToasts.el.classList.add('ss-toasts--screen');
     this.windows = new WindowManager(this, this.layers.win);

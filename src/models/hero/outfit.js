@@ -10,19 +10,21 @@ import { headbandPiece, hatPiece, tailsPiece, scarfPiece, collarPiece, coatTails
 export function outfitPieces(base, g) {
   const L = [];
   const J = base.JJ.J;
+  const crowd = base.lod === 'crowd';
   const add = (p, extra = {}) => { if (p && p.n) L.push({ p, ...extra }); };
+  const addD = (p) => { if (!crowd) add(p); }; // fine detail (rims, cops, cuffs, trims) skipped at crowd LOD
   const chest = g.chest || { type: 'shirt', sleeves: 1 };
   const ct = chest.type, tier = g.tier || 0;
   const legScale = base.JJ.legLen / 0.87;
   const sl = chest.sleeves ?? 1;
   if (sl > 0.25 && sl < 1.93 && !(g.hands && sl > 2 - (g.hands.cuff ?? 0.3))) {
     for (const s of ['L', 'R']) {
-      if (ct === 'plate') add(ringPiece(base, 'arm' + s, sl, { profile: 'lip', w: 0.03, t: 0.022, slot: SLOT.TRIM, off: 0.012 }));
-      else if (ct === 'leather' || ct === 'mail') add(ringPiece(base, 'arm' + s, sl, { profile: 'band', w: 0.028, t: 0.012, slot: SLOT.ARMOR2, off: 0.008, stitch: true }));
-      else add(ringPiece(base, 'arm' + s, sl, { profile: 'tube', w: 0.018, slot: tier >= 1 ? SLOT.CLOTH2 : SLOT.CLOTH1, off: 0.006 }));
+      if (ct === 'plate') addD(ringPiece(base, 'arm' + s, sl, { profile: 'lip', w: 0.03, t: 0.022, slot: SLOT.TRIM, off: 0.012 }));
+      else if (ct === 'leather' || ct === 'mail') addD(ringPiece(base, 'arm' + s, sl, { profile: 'band', w: 0.028, t: 0.012, slot: SLOT.ARMOR2, off: 0.008, stitch: true }));
+      else addD(ringPiece(base, 'arm' + s, sl, { profile: 'tube', w: 0.018, slot: tier >= 1 ? SLOT.CLOTH2 : SLOT.CLOTH1, off: 0.006 }));
     }
   }
-  if (ct === 'robe' && sl >= 1.9) for (const s of ['L', 'R']) add(cuffPiece(base, 'arm' + s, 1.72, { w: 0.13, flare: 0.045, t: 0.008, slot: SLOT.CLOTH1, off: 0.012, trim: tier >= 1 }));
+  if (ct === 'robe' && sl >= 1.9) for (const s of ['L', 'R']) addD(cuffPiece(base, 'arm' + s, 1.72, { w: 0.13, flare: 0.045, t: 0.008, slot: SLOT.CLOTH1, off: 0.012, trim: tier >= 1 }));
   if (chest.neck === 'high') {
     if (ct === 'plate') add(ringPiece(base, 'torso', J.neck[1] + 0.012, { profile: 'band', w: 0.05, t: 0.02, slot: SLOT.TRIM, off: 0.012, rMax: 0.3 }));
     else add(ringPiece(base, 'torso', J.neck[1] + 0.01, { profile: 'flare', w: 0.06, t: 0.008, flare: 0.02, slot: ct === 'robe' ? SLOT.CLOTH2 : SLOT.ARMOR2, off: 0.01, rMax: 0.3 }));
@@ -37,7 +39,7 @@ export function outfitPieces(base, g) {
   if (g.cuisses) for (const s of ['L', 'R']) add(limbShellPiece(base, 'leg' + s, g.cuisses.from ?? 0.25, g.cuisses.to ?? 0.9, { front: true, backCut: -0.02, runes: !!g.runes }));
   if (g.vambraces) for (const s of ['L', 'R']) add(limbShellPiece(base, 'arm' + s, g.vambraces.from ?? 1.25, g.vambraces.to ?? 1.9, { runes: !!g.runes, t: 0.012, target: 380 }));
   if (ct === 'plate' || g.legs?.type === 'plate') {
-    add(limbPlatesPiece(base, { arms: ct === 'plate' ? [0.45, 1.3] : [], legs: g.legs?.type === 'plate' ? [0.13, 0.72, 1.3] : [] }));
+    addD(limbPlatesPiece(base, { arms: ct === 'plate' ? (g.vambraces ? [0.45] : [0.45, 1.3]) : [], legs: g.legs?.type === 'plate' ? (g.greaves ? [0.13, 0.72] : [0.13, 0.72, 1.3]) : [] }));
   }
   if (ct === 'robe' && g.skirt?.panel) add(panelPiece(base, { top: J.neck[1] - 0.02, bottom: J.spine[1] - 0.01, hw: 0.05 * base.scale, slot: SLOT.CLOTH2, trim: true, front: true }));
   if (g.belt) {
@@ -49,16 +51,16 @@ export function outfitPieces(base, g) {
   if (g.feet) {
     const bt = 2 - (g.feet.height ?? 0.4) * 0.95;
     for (const s of ['L', 'R']) {
-      if (g.feet.cuff) add(cuffPiece(base, 'leg' + s, bt + 0.04, { w: 0.08, flare: g.feet.type === 'plate' ? 0.03 : 0.025, t: 0.01, slot: SLOT.BOOT, off: 0.01, trim: g.feet.type === 'plate' && tier >= 1 }));
-      else add(ringPiece(base, 'leg' + s, bt, { profile: 'tube', w: 0.016, slot: SLOT.BOOT, off: 0.01 }));
-      if (g.feet.type === 'plate') add(copPiece(base, s, 'toe', { slot: SLOT.BOOT, size: 1 }));
+      if (g.feet.cuff) addD(cuffPiece(base, 'leg' + s, bt + 0.04, { w: 0.08, flare: g.feet.type === 'plate' ? 0.03 : 0.025, t: 0.01, slot: SLOT.BOOT, off: 0.01, trim: g.feet.type === 'plate' && tier >= 1 }));
+      else addD(ringPiece(base, 'leg' + s, bt, { profile: 'tube', w: 0.016, slot: SLOT.BOOT, off: 0.01 }));
+      if (g.feet.type === 'plate') addD(copPiece(base, s, 'toe', { slot: SLOT.BOOT, size: 1 }));
     }
   }
   if (g.hands) {
     const gc = 2 - (g.hands.cuff ?? 0.3);
     for (const s of ['L', 'R']) {
-      if (g.hands.type === 'gauntlets') add(cuffPiece(base, 'arm' + s, gc + 0.04, { w: 0.1, flare: 0.04, t: 0.012, slot: SLOT.GLOVE, off: 0.012, trim: tier >= 1, glowTrim: g.hands.glowTrim }));
-      else if (g.hands.type === 'gloves') add(cuffPiece(base, 'arm' + s, gc + 0.03, { w: 0.07, flare: 0.02, t: 0.008, slot: SLOT.GLOVE, off: 0.006 }));
+      if (g.hands.type === 'gauntlets') addD(cuffPiece(base, 'arm' + s, gc + 0.04, { w: 0.1, flare: 0.04, t: 0.012, slot: SLOT.GLOVE, off: 0.012, trim: tier >= 1, glowTrim: g.hands.glowTrim }));
+      else if (g.hands.type === 'gloves') addD(cuffPiece(base, 'arm' + s, gc + 0.03, { w: 0.07, flare: 0.02, t: 0.008, slot: SLOT.GLOVE, off: 0.006 }));
       else add(ringPiece(base, 'arm' + s, g.hands.type === 'bracers' ? 1.6 : gc + 0.02, { profile: 'band', w: g.hands.type === 'bracers' ? 0.12 : 0.03, t: 0.01, slot: g.hands.type === 'bracers' ? SLOT.LEATHER : SLOT.LINEN, off: 0.007, stitch: true }));
     }
   }
@@ -66,8 +68,8 @@ export function outfitPieces(base, g) {
     if (g.shoulders.side && g.shoulders.side !== s) continue;
     add(pauldronPiece(base, s, { ...g.shoulders, tier, runes: !!g.runes }));
   }
-  if (g.legs?.kneepads) for (const s of ['L', 'R']) add(copPiece(base, s, 'knee', { slot: SLOT.ARMOR1, size: g.legs.type === 'plate' ? 1.15 : 1, rim: g.legs.type === 'plate' && tier >= 1, spike: tier >= 2 }));
-  if (ct === 'plate' && tier >= 1) for (const s of ['L', 'R']) add(copPiece(base, s, 'elbow', { slot: SLOT.ARMOR1, size: 1.1, rim: true }));
+  if (g.legs?.kneepads) for (const s of ['L', 'R']) addD(copPiece(base, s, 'knee', { slot: SLOT.ARMOR1, size: g.legs.type === 'plate' ? 1.15 : 1, rim: g.legs.type === 'plate' && tier >= 1, spike: tier >= 2 }));
+  if (ct === 'plate' && tier >= 1) for (const s of ['L', 'R']) addD(copPiece(base, s, 'elbow', { slot: SLOT.ARMOR1, size: 1.1, rim: true }));
   let hideHair = false;
   const ht = g.head?.type;
   if (ht === 'hood') { add(hood2Piece(base, { trim: tier >= 1 })); hideHair = true; }
@@ -97,7 +99,7 @@ export function outfitPieces(base, g) {
       case 'bandolier': add(bandolierPiece(base, o)); break;
       case 'chains': add(chainsPiece(base, o)); break;
       case 'gauntlets': for (const s of ['L', 'R']) add(gauntletPiece(base, s, o)); break;
-      case 'hipchain': add(hipChainPiece(base, o)); break;
+      case 'hipchain': addD(hipChainPiece(base, o)); break;
     }
   }
   return { list: L, hideHair, hat: (g.extras || []).some(e => e.type === 'hat') };

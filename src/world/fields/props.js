@@ -559,7 +559,7 @@ export function ruinTower(kit, x, y, z, { r = 2.6, h = 7, tint = 0xb0a690, seed 
     const a = i / N * TAU, hh = h * (0.45 + 0.55 * Math.abs(Math.sin(i * 0.9 + seed))) * rng.range(0.8, 1);
     const cx = x + Math.cos(a) * r, cz = z + Math.sin(a) * r;
     kit.add(mat, box(r * TAU / N + 0.12, hh, 0.9, 1.5), M(cx, y + hh / 2 - 0.3, cz, -a + Math.PI / 2), { tint: new THREE.Color(tint).lerp(new THREE.Color(0x201a18), scorch * rng.range(0.3, 0.8)).getHex(), yGround: y, aoH: 3, chunkAt: [x, z] });
-    if (rng.chance(0.4)) kit.add('paint', blob(0.4, 0, null, [1.4, 0.4, 1]), M(cx, y + hh - 0.25, cz), { tint: moss, ao: false, cast: false, chunkAt: [x, z] });
+    if (rng.chance(0.3)) kit.add('rock', blob(0.36, 1, d => 1 + Math.sin(d.x * 7 + d.z * 5) * 0.12, [1.3, 0.26, 0.9]), M(cx, y + hh - 0.32, cz), { tint: new THREE.Color(moss).multiplyScalar(0.75).getHex(), ao: false, cast: false, chunkAt: [x, z] });
   }
   for (let i = 0; i < 7; i++) { const a = rng.range(0, TAU), d = r + rng.range(0.6, 2.5); boulder(kit, x + Math.cos(a) * d, y - 0.1, z + Math.sin(a) * d, { s: rng.range(0.25, 0.5), seed: seed + i, tint, block: false }); }
   // door gap facing south
@@ -574,7 +574,7 @@ export function ruinWall(kit, ax, az, bx, bz, H, { h = 4, t = 1.0, tint = 0xb4aa
     const hole = window && i % 3 === 1 && hh > 2.6;
     if (hole) { kit.add(mat, box(len / n + 0.05, 0.9, t, 1.5), M(px, y + 0.15, pz, ang), { tint, yGround: y, chunkAt: [px, pz] }); kit.add(mat, box(len / n + 0.05, hh - 2.4, t, 1.5), M(px, y + 2.4 + (hh - 2.4) / 2, pz, ang), { tint, ao: false, chunkAt: [px, pz] }); }
     else kit.add(mat, box(len / n + 0.05, hh, t, 1.5), M(px, y + hh / 2 - 0.3, pz, ang), { tint, yGround: y, aoH: 3, chunkAt: [px, pz] });
-    if (rng.chance(0.55)) kit.add('paint', blob(0.45, 0, null, [1.5, 0.35, 1.1]), M(px, y + hh - 0.3, pz, ang), { tint: moss, ao: false, cast: false, chunkAt: [px, pz] });
+    if (rng.chance(0.3)) kit.add('rock', blob(0.4, 1, d => 1 + Math.sin(d.x * 7 + d.z * 5) * 0.12, [1.4, 0.24, 1.0]), M(px + rng.range(-0.2, 0.2), y + hh - 0.36, pz, ang), { tint: new THREE.Color(moss).multiplyScalar(0.75).getHex(), ao: false, cast: false, chunkAt: [px, pz] });
     if (rng.chance(0.3)) boulder(kit, px + Math.sin(ang) * rng.range(1, 2), y - 0.1, pz + Math.cos(ang) * rng.range(1, 2), { s: rng.range(0.25, 0.45), seed: seed * 11 + i, tint, block: false });
   }
   kit.block(S.line([[ax, az], [bx, bz]], t), 0.3);
@@ -598,6 +598,39 @@ export function gravestone(kit, x, y, z, rot = 0, { tint = 0x9a948a, kind = 0, l
   const F = new Frame(x, y, z, rot);
   if (kind === 0) { kit.add('stone', box(0.6, 0.9, 0.16, 1), F.at(0, 0.4, 0, 0, 1, 1, 1, lean), { tint }); kit.add('stone', cyl(0.3, 0.3, 0.16, 10, 1, false), F.at(0, 0.85, 0, 0, 1, 1, 1, Math.PI / 2 + lean), { tint }); }
   else { kit.add('stone', box(0.14, 1.1, 0.14, 1), F.at(0, 0.5, 0, 0, 1, 1, 1, lean), { tint }); kit.add('stone', box(0.6, 0.14, 0.14, 1), F.at(0, 0.78, 0, 0, 1, 1, 1, lean), { tint }); }
-  kit.add('paint', box(0.7, 0.04, 1.4, 1), F.at(0, 0.02, 0.7), { tint: 0x4a5a2a, ao: false, cast: false });
+  kit.add('rock', blob(0.5, 1, null, [0.75, 0.16, 1.4]), F.at(0, 0.0, 0.75), { tint: 0x5a4e3e, ao: false, cast: false });
   kit.block(S.circle(x, z, 0.35), 0.2);
 }
+
+// ------------------------------------------------------------------------------------------------ siege
+/** field cannon on a wooden carriage, barrel along local -Z (the direction it fires); returns the muzzle point */
+export function cannon(kit, x, y, z, rot = 0, { s = 1, balls = true } = {}) {
+  const F = new Frame(x, y, z, rot);
+  kit.add('planks', box(1.1 * s, 0.5 * s, 2.2 * s, 1), F.at(0, 0.55 * s, 0.2 * s), { tint: 0x6a4a30 });
+  for (const sd of [-1, 1]) {
+    kit.add('planks', box(0.14 * s, 0.7 * s, 2.0 * s, 1), F.at(sd * 0.5 * s, 0.85 * s, 0.1 * s, 0, 1, 1, 1, -0.12), { tint: 0x5a3c26, ao: false });
+    for (const wz of [-0.6, 0.8]) { kit.add('timber', cyl(0.42 * s, 0.42 * s, 0.14 * s, 12, 1), F.at(sd * 0.66 * s, 0.42 * s, wz * s, 0, 1, 1, 1, 0, Math.PI / 2), { tint: 0x4a3222, ao: false }); kit.add('metal', cyl(0.44 * s, 0.44 * s, 0.05 * s, 12, 1, true), F.at(sd * 0.73 * s, 0.42 * s, wz * s, 0, 1, 1, 1, 0, Math.PI / 2), { tint: 0x2a2624, ao: false }); }
+  }
+  const bar = new THREE.LatheGeometry([[0.0, -1.3], [0.3, -1.3], [0.34, -1.1], [0.3, -0.9], [0.26, 0.4], [0.3, 0.9], [0.22, 1.05], [0.0, 1.1]].map(([r, h]) => new THREE.Vector2(r * s, h * s)), 14);
+  kit.add('metal', bar, F.at(0, 1.2 * s, -0.1 * s, 0, 1, 1, 1, -Math.PI / 2 + 0.12), { tint: 0x34302e, ao: false });
+  kit.add('paint', cyl(0.2 * s, 0.2 * s, 0.02, 10, 1), F.at(0, 1.2 * s + Math.sin(0.12) * 1.3 * s, -1.4 * s, 0, 1, 1, 1, -Math.PI / 2 + 0.12), { tint: 0x0a0808, ao: false, cast: false });
+  if (balls) for (let i = 0; i < 4; i++) kit.add('metal', sphere(0.16 * s, 8, 6), F.at(0.9 * s + (i % 2) * 0.3 * s, 0.16 * s + (i > 1 ? 0.26 : 0) * s, 1.1 * s + (i % 2) * 0.1, 0), { tint: 0x2a2826, ao: false });
+  kit.block(S.rect(x, z, 1.6 * s, 2.6 * s, rot), 0.25);
+  const [mx, mz] = F.world(0, -1.5 * s);
+  return { x: mx, y: y + 1.3 * s, z: mz };
+}
+/** a street barricade: overturned cart, crates, planks and a row of stakes; blocks along a→b except gaps */
+export function barricade(kit, ax, az, bx, bz, H, { seed = 1, gaps = [] } = {}) {
+  const r = new RNG(seed), L = Math.hypot(bx - ax, bz - az), ang = Math.atan2(-(bz - az), bx - ax), n = Math.max(1, Math.round(L / 1.6));
+  for (let i = 0; i < n; i++) {
+    const t = (i + 0.5) / n, x = ax + (bx - ax) * t, z = az + (bz - az) * t;
+    if (gaps.some(([gx, gz, gr]) => Math.hypot(x - gx, z - gz) < gr)) continue;
+    const y = H(x, z), k = r.next();
+    if (k < 0.35) crateP(kit, x, y, z, ang + r.range(-0.3, 0.3), r);
+    else if (k < 0.6) { kit.add('planks', box(1.6, 0.9, 0.12, 1), M(x, y + 0.5, z, ang, 1, 1, 1, r.range(-0.4, 0.4), r.range(-0.2, 0.2)), { tint: 0x7a5a3a }); }
+    else if (k < 0.8) P.barrel(kit, x, y, z, 0.95, r.range(0, 6), { block: false });
+    else for (let s2 = -1; s2 <= 1; s2 += 2) kit.add('timber', cyl(0.08, 0.1, 2.0, 5, 1), M(x + Math.cos(ang) * s2 * 0.4, y + 0.7, z - Math.sin(ang) * s2 * 0.4, ang, 1, 1, 1, 0.7 * s2, 0), { tint: 0x5a4028 });
+    kit.block(S.circle(x, z, 0.8), 0.3);
+  }
+}
+function crateP(kit, x, y, z, rot, r) { P.crate(kit, x, y, z, 0.85, rot, { block: false }); if (r.chance(0.5)) P.crate(kit, x + 0.1, y + 0.85, z, 0.7, rot + 0.4, { block: false }); }

@@ -113,7 +113,9 @@ export const gatekeeper = {
     E('head', [0, 1.73, -0.2], [0.1, 0.1, 0.05], { ...hm, k: 0.02 });                                                  // face plate
     K('head', [0, 1.88, -0.22], [0, 1.88, 0.05], 0.02, 0.02, { ...hm, k: 0.015 });                                    // crest ridge
     for (const s of [-1, 1]) S.box('head', [s * 0.045, 1.76, -0.245], [0.035, 0.008, 0.04], 0.004, { group: 2, k: 0.005, sub: true, col: 0x041004, tag: 'slit', rot: [0, 0, s * 0.25] });
-    S.box('head', [0, 1.66, -0.245], [0.05, 0.014, 0.04], 0.005, { group: 2, k: 0.005, sub: true, col: 0x041004, tag: 'slit' });  // breath slot
+    for (const s of [-1, 1]) S.box('head', [s * 0.052, 1.786, -0.238], [0.05, 0.011, 0.022], 0.005, { ...hm, k: 0.008, rot: [0.2, 0, s * 0.32] });   // angry brow bars over the slits
+    K('head', [0, 1.815, -0.232], [0, 1.625, -0.246], 0.013, 0.015, { ...hm, k: 0.01 });                                                       // nasal bar
+    for (const yy of [1.672, 1.64]) for (const s of [-1, 1]) for (const xx of [0.036, 0.066]) E('head', [s * xx, yy, -0.25], [0.0105, 0.0105, 0.03], { group: 2, k: 0.004, sub: true, col: 0x050505, tag: 'hole' });  // breath holes
   },
 
   paint(v, X) {
@@ -129,6 +131,7 @@ export const gatekeeper = {
     }
     if (v.t('leather') > 0.3) X[0] = 0.08;
     if (v.t('slit') > 0.3) { v.mix(C.glowD, 0.9); v.emis = 1.8; X[3] = 1; X[2] = 0; }
+    if (v.t('hole') > 0.3) { v.mix(0x060806, 0.85); X[0] = 0.05; X[2] = 0; }
   },
 
   parts(acc, S, R, out) {

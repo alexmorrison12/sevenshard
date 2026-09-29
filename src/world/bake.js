@@ -86,6 +86,32 @@ vec4 pvoro(vec2 p, ivec2 per, int seed, float jit, out ivec2 cell, out vec2 ctr)
   cell = mc; ctr = p + mr;
   return vec4(sqrt(f1), sqrt(f2), bd, h1(mc, seed + 7));
 }
+// staggered periodic voronoi: odd rows shifted by half a cell → hexagonal cells (per.y must be even)
+vec4 pvoroHex(vec2 p, ivec2 per, int seed, float jit, out ivec2 cell, out vec2 ctr) {
+  vec2 ip = floor(p), fp = fract(p);
+  float f1 = 8.0, f2 = 8.0; vec2 mr = vec2(0); ivec2 mc = ivec2(0);
+  for (int j = -1; j <= 1; j++) for (int i = -2; i <= 2; i++) {
+    ivec2 g = ivec2(i, j);
+    ivec2 raw = ivec2(ip) + g;
+    ivec2 c = wrapc(raw, per);
+    float sh = mod(float(c.y), 2.0) * 0.5;
+    vec2 o = vec2(0.5 + sh, 0.5) + (h2(c, seed) - 0.5) * jit;
+    vec2 r = vec2(g) + o - fp;
+    float d = dot(r, r);
+    if (d < f1) { f2 = f1; f1 = d; mr = r; mc = c; } else if (d < f2) f2 = d;
+  }
+  float bd = 8.0;
+  for (int j = -2; j <= 2; j++) for (int i = -2; i <= 2; i++) {
+    ivec2 g = ivec2(i, j);
+    ivec2 c = wrapc(ivec2(ip) + g, per);
+    float sh = mod(float(c.y), 2.0) * 0.5;
+    vec2 o = vec2(0.5 + sh, 0.5) + (h2(c, seed) - 0.5) * jit;
+    vec2 r = vec2(g) + o - fp;
+    if (dot(mr - r, mr - r) > 0.00001) bd = min(bd, dot(0.5 * (mr + r), normalize(r - mr)));
+  }
+  cell = mc; ctr = p + mr;
+  return vec4(sqrt(f1), sqrt(f2), bd, h1(mc, seed + 7));
+}
 float sdSeg(vec2 p, vec2 a, vec2 b) { vec2 pa = p - a, ba = b - a; float h = sat(dot(pa, ba) / dot(ba, ba)); return length(pa - ba * h); }
 vec2 wd(vec2 d) { return d - floor(d + 0.5); }
 vec2 rot(vec2 p, float a) { float c = cos(a), s = sin(a); return vec2(c * p.x - s * p.y, s * p.x + c * p.y); }

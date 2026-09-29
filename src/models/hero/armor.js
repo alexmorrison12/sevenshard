@@ -7,7 +7,7 @@ import { surfaceNets, refineVerts, sdfAO, smin, smax } from './sdf.js';
 import { simplify } from './simplify.js';
 import { makePiece, weightsAt } from './body.js';
 import { PB, cached, tubeGeo, topLit } from './pieces.js';
-import { B } from './rig.js';
+import { B, CH_TORSO, CH_ARM_L, CH_ARM_R, CH_LEG_L, CH_LEG_R } from './rig.js';
 import { SLOT } from './palette.js';
 import { clamp, lerp, smoothstep, Simplex } from '../../core/noise.js';
 
@@ -33,8 +33,8 @@ function shell(base, o) {
   const T = o.t ?? 0.018, RW = o.rimW ?? 0.022, RH = o.rimH ?? 0.007, BV = o.bevel ?? 0.006;
   const feats = o.features || [];
   const TIN = o.tin ?? 0.003;
-  const field = (x, y, z) => {
-    const db = f.eval(x, y, z);
+  const mk = (ev) => (x, y, z) => {
+    const db = ev(x, y, z);
     const c = o.clip(x, y, z);
     const rim = smoothstep(-RW, -RW * 0.25, c);
     const Tt = o.tFn ? o.tFn(x, y, z) : T;
@@ -46,19 +46,27 @@ function shell(base, o) {
     }
     return d;
   };
-  const near = (cx, cy, cz, R) => field;
-  let m = surfaceNets(field, o.bbox[0], o.bbox[1], o.cell ?? 0.0075, { refine: -1 });
+  const field = mk((x, y, z) => f.eval(x, y, z));
+  // local evaluators (only the SDF primitives near each block) make the meshing several times faster
+  const near = f.near ? (cx, cy, cz, R) => mk(f.near(cx, cy, cz, R + 0.03)) : null;
+  let m = surfaceNets(field, o.bbox[0], o.bbox[1], o.cell ?? 0.0075, { refine: -1, near });
   if (!m.pos.length) return null;
-  if (m.pos.length / 3 > o.target) m = simplify(m.pos, m.nrm, m.idx, o.target);
-  refineVerts(field, m.pos, m.nrm, o.cell ?? 0.0075, 1);
-  // cull the hidden inner surface (keep it near the edges where the thickness shows)
+  // cull the hidden inner surface first (keep it near the edges where the thickness shows), compact, then decimate:
+  // the open sheet simplifies far better (and faster) than the thin hollow shell
   {
     const nv = m.pos.length / 3, inner = new Uint8Array(nv);
     for (let v = 0; v < nv; v++) { const x = m.pos[v * 3], y = m.pos[v * 3 + 1], z = m.pos[v * 3 + 2]; inner[v] = f.eval(x, y, z) < TIN + 0.005 && o.clip(x, y, z) < -0.022 ? 1 : 0; }
     const keep = [];
     for (let t = 0; t < m.idx.length; t += 3) { const a = m.idx[t], b = m.idx[t + 1], c = m.idx[t + 2]; if (!(inner[a] && inner[b] && inner[c])) keep.push(a, b, c); }
-    m.idx = new Uint32Array(keep);
+    const remap = new Int32Array(nv).fill(-1); let k = 0;
+    for (const v of keep) if (remap[v] < 0) remap[v] = k++;
+    const P = new Float32Array(k * 3), N = new Float32Array(k * 3);
+    for (let v = 0; v < nv; v++) if (remap[v] >= 0) { const r = remap[v] * 3; P[r] = m.pos[v * 3]; P[r + 1] = m.pos[v * 3 + 1]; P[r + 2] = m.pos[v * 3 + 2]; N[r] = m.nrm[v * 3]; N[r + 1] = m.nrm[v * 3 + 1]; N[r + 2] = m.nrm[v * 3 + 2]; }
+    m = { pos: P, nrm: N, idx: Uint32Array.from(keep, v => remap[v]) };
   }
+  if (!m.idx.length) return null;
+  if (m.pos.length / 3 > o.target) m = simplify(m.pos, m.nrm, m.idx, o.target);
+  refineVerts(field, m.pos, m.nrm, o.cell ?? 0.0075, 1);
   const n = m.pos.length / 3;
   const pc = makePiece(n, m.idx.length);
   pc.pos.set(m.pos); pc.nrm.set(m.nrm); pc.idx.set(m.idx);
@@ -177,8 +185,10 @@ export function cuirassPiece(base, sp = {}) {
       feats.push({ fn: (xx, yy, z) => Math.hypot(xx - x, yy - y, z - (rz - T - 0.002)) - 0.0055, op: 'add', k: 0.002, slot: SLOT.TRIM });
     }
     const bb = [[-0.36, waist - 0.05, -0.3], [0.36, neckY + 0.05, 0.3]];
-    const pc = shell(base, { sdf: tor, clip, t: T, rimW: sp.rimW ?? 0.022, rimH: sp.rimH ?? (sp.style === 'leather' ? 0.004 : 0.008), bevel: 0.006, features: feats, bbox: bb, cell: base.L?.ring < 1 ? 0.014 : 0.0072, target: base.L?.ring < 1 ? 600 : 2300,
+    const pc = shell(base, { sdf: tor, clip, t: T, rimW: sp.rimW ?? 0.022, rimH: sp.rimH ?? (sp.style === 'leather' ? 0.004 : 0.008), bevel: 0.006, features: feats, bbox: bb, cell: base.L?.ring < 1 ? 0.016 : 0.0092, target: base.L?.ring < 1 ? 240 : 1300,
       slot: sp.slot ?? (sp.style === 'gi' || sp.style === 'cloth' ? SLOT.CLOTH1 : SLOT.ARMOR1), rimSlot: sp.runes ? SLOT.RUNE : (sp.rimSlot ?? SLOT.TRIM), rune: sp.runes, runeRim: sp.runes });
+    // body surface hidden under the shell (with a margin for animation): culled from the body mesh
+    if (pc) pc.cover = (x, y, z, ch) => ch === CH_TORSO && clip(x, y, z) < -0.04;
     return pc;
   });
 }
@@ -203,7 +213,7 @@ export function tassetsPiece(base, sp = {}) {
       const thigh = sgSide > 0 ? B.thighR : B.thighL;
       for (let r = 0; r < rows; r++) {
         const yt = y0 - r * (h - over), yb = yt - h;
-        const n = 10, prof = [];
+        const n = base.lod === 'crowd' ? 5 : 10, prof = [];
         const ids = [[], []];
         for (let j = 0; j <= n; j++) {
           const a = lerp(a0, a1, j / n), dx = Math.sin(a), dz = -Math.cos(a);
@@ -220,7 +230,7 @@ export function tassetsPiece(base, sp = {}) {
         // trim along the bottom edge (a tube following the lower row)
         const pts = [], rad = [];
         for (let j = 0; j <= n; j++) { const i = ids[1][j]; pts.push(new THREE.Vector3(pb.P[i * 3], pb.P[i * 3 + 1] + 0.003, pb.P[i * 3 + 2])); rad.push(0.0055); }
-        pb.add(tubeGeo(pts, rad, 5), { slot: sp.runes ? SLOT.RUNE : SLOT.TRIM, bw: [[B.hips, 0.35], [thigh, 0.65]], mulFn: topLit(0.3, 0.95), rune: sp.runes ? 1 : 0 });
+        if (base.lod !== 'crowd') pb.add(tubeGeo(pts, rad, 5), { slot: sp.runes ? SLOT.RUNE : SLOT.TRIM, bw: [[B.hips, 0.35], [thigh, 0.65]], mulFn: topLit(0.3, 0.95), rune: sp.runes ? 1 : 0 });
         if (sp.spikes && r === 0) {
           const mid = ids[0][n >> 1];
           const c = new THREE.Vector3(pb.P[mid * 3], pb.P[mid * 3 + 1] - h * 0.4, pb.P[mid * 3 + 2]);
@@ -265,8 +275,11 @@ export function limbShellPiece(base, chain, a0, a1, sp = {}) {
     if (sp.ridge) feats.push({ fn: (x, y, z, db) => { const t = clamp((x - A[0]) * ax[0] + (y - A[1]) * ax[1] + (z - A[2]) * ax[2], 0, L); const px = A[0] + ax[0] * t, py = A[1] + ax[1] * t, pz = A[2] + ax[2] * t; const rz = z - pz, rx = x - px; return Math.abs(rx) - 0.006 + Math.max(0, rz + 0.02) * 2 + Math.max(0, -db + 0.0) ; }, op: 'add', k: 0.006, slot: SLOT.TRIM });
     const lo = [Math.min(A[0], Bp[0]) - 0.14, Math.min(A[1], Bp[1]) - 0.1, Math.min(A[2], Bp[2]) - 0.14], hi = [Math.max(A[0], Bp[0]) + 0.14, Math.max(A[1], Bp[1]) + 0.1, Math.max(A[2], Bp[2]) + 0.14];
     const tFn = sp.flare ? (x, y, z) => { const t = clamp(((x - A[0]) * ax[0] + (y - A[1]) * ax[1] + (z - A[2]) * ax[2]) / L, 0, 1); return (sp.t ?? 0.014) + sp.flare * t * t; } : null;
-    return shell(base, { sdf, clip, t: sp.t ?? 0.014, tFn, rimW: 0.016, rimH: 0.006, bevel: 0.005, features: feats, bbox: [lo, hi], cell: base.L?.ring < 1 ? 0.013 : 0.0068, target: base.L?.ring < 1 ? 160 : (sp.target ?? 500),
+    const pc = shell(base, { sdf, clip, t: sp.t ?? 0.014, tFn, rimW: 0.016, rimH: 0.006, bevel: 0.005, features: feats, bbox: [lo, hi], cell: base.L?.ring < 1 ? 0.014 : 0.0088, target: base.L?.ring < 1 ? 70 : (sp.target ?? 170),
       slot: sp.slot ?? SLOT.ARMOR1, rimSlot: sp.runes ? SLOT.RUNE : SLOT.TRIM, rune: sp.runes, runeRim: sp.runes });
+    const chId = { armL: CH_ARM_L, armR: CH_ARM_R, legL: CH_LEG_L, legR: CH_LEG_R }[chain];
+    if (pc) pc.cover = (x, y, z, ch) => ch === chId && clip(x, y, z) < -0.035;
+    return pc;
   });
 }
 
@@ -286,11 +299,14 @@ export function pantsPiece(base, sp = {}) {
       const folds = [];
       for (let i = 0; i < 5; i++) { const y0 = lerp(yTop - 0.1, yBot + 0.04, i / 4); folds.push({ fn: (x, y, z, db) => Math.max(Math.abs(y - y0 - Math.sin(x * 40 + i) * 0.012) - 0.003, -(db - 0.012)), op: 'sub', k: 0.004, mul: 0.78 }); }
       const lo = [Math.min(H[0], A[0]) - 0.16, yBot - 0.04, Math.min(H[2], A[2]) - 0.18], hi = [Math.max(H[0], A[0]) + 0.16, yTop + 0.04, Math.max(H[2], A[2]) + 0.18];
-      out.push(shellLeg(base, { sdf, clip, tFn, features: folds, bbox: [lo, hi], s }));
+      const pc = shellLeg(base, { sdf, clip, tFn, features: folds, bbox: [lo, hi], s });
+      const chId = s === 'L' ? CH_LEG_L : CH_LEG_R;
+      if (pc) pc.cover = (x, y, z, ch) => ch === chId && Math.max(y - yTop, yBot - y) < -0.04;
+      out.push(pc);
     }
     return out;
   });
 }
 function shellLeg(base, o) {
-  return shell(base, { sdf: o.sdf, clip: o.clip, t: 0.02, tFn: o.tFn, rimW: 0.02, rimH: 0.003, bevel: 0.006, features: o.features, bbox: o.bbox, cell: base.L?.ring < 1 ? 0.014 : 0.008, target: base.L?.ring < 1 ? 220 : 700, slot: SLOT.PANTS, rimSlot: SLOT.PANTS });
+  return shell(base, { sdf: o.sdf, clip: o.clip, t: 0.02, tFn: o.tFn, rimW: 0.02, rimH: 0.003, bevel: 0.006, features: o.features, bbox: o.bbox, cell: base.L?.ring < 1 ? 0.014 : 0.0098, target: base.L?.ring < 1 ? 220 : 600, slot: SLOT.PANTS, rimSlot: SLOT.PANTS });
 }

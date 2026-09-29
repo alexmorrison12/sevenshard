@@ -99,6 +99,13 @@ export class Level extends Emitter {
       if (!tg.alive || tg.safe || tg.team === team) continue;
       if (inShape(tg, tg.x, tg.z, tg.dx || 0, tg.dz || -1, probe)) { const left = tg.dur - tg.t; if (soon < 0 || left < soon) soon = left; }
     }
+    // lingering hostile ground zones (lava pools, ink, quicksand…) count as danger at their next tick
+    for (const zn of this.zones) {
+      if (!zn.alive || zn.safe || !(zn.hit || zn.onTick)) continue;
+      const zt = zn.team ?? zn.src?.team; if (zt === team) continue;
+      const dx = x - zn.x, dz = z - zn.z, rr = (zn.r || 0) + r;
+      if (dx * dx + dz * dz <= rr * rr) { const left = Math.max(0, (zn.next ?? 0) - zn.t); if (soon < 0 || left < soon) soon = left; }
+    }
     return soon;
   }
 

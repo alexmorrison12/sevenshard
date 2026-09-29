@@ -36,7 +36,7 @@ function clearClones(B) { for (const c of liveClones(B)) popClone(B, c); }
 async function scatter(B, n, r, cloneHp) {
   const u = B.u, c = center(B);
   u.untargetable = true;
-  fx(B, 'dark_burst', u.pos.x, u.pos.z, { r: 3, color: FOX }); sfx(B, 'void_whoosh');
+  fx(B, 'dark_burst', u.pos.x, u.pos.z, { r: 3, color: FOX }); sfx(B, 'void');
   act(B, 'clone', 0.5);
   await wait(B, 0.6);
   const a0 = rnd(B, 0, Math.PI * 2), spots = [];
@@ -93,7 +93,7 @@ export default {
     breath: { range: 12, cd: 12, weight: 2, async run(B, t) {
       B.turnTo(t); act(B, 'foxfire_breath', 1.05);
       const cone = { r: 11, deg: 50 };
-      await strike(B, 'cone', { ...cone, dur: 1.05, color: 'orange', coef: 0.45, fx: 'fire_breath', fxLen: 11, fxColor: FOX, sfx: 'fire_whoosh' });
+      await strike(B, 'cone', { ...cone, dur: 1.05, color: 'orange', coef: 0.45, fx: 'fire_breath', fxLen: 11, fxColor: FOX, sfx: 'fire' });
       const mk = marker(B, 'cone', { ...cone, x: B.u.pos.x, z: B.u.pos.z, dir: fwd(B) });
       try { for (let i = 0; i < 4; i++) { await wait(B, 0.4); B.hit('cone', { ...cone, coef: 0.3 }); } }
       finally { mk.alive = false; }

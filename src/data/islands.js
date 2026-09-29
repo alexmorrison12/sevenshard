@@ -54,7 +54,7 @@ export const ISLANDS = [
     blurb: 'A smugglers’ cove behind an old stone bastion. The Blackgull pirates want it back, and they come in waves.',
     soul: { id: 'soul:powderkeg', name: 'Soul of Gunsmoke', desc: 'Still warm. Smells faintly of victory.' },
     seeds: ['seed:islands:4', 'seed:islands:5'], vista: 'vista:powderkeg',
-    dock: { x: -6, z: 60, facing: 0 },
+    dock: { x: -6, z: 48, facing: 0 },
     npcs: [
       { id: 'gunnery', name: 'Gunner Hettie Flint', title: 'Master of the Bastion', npc: 'guard', sex: 'f', anchor: 'npc:gunner',
         lines: ['Man the cannons, Shardbearer! Sink the ships before they land their boats.', 'Three waves, and the Blackgulls will think twice about this cove.'] },

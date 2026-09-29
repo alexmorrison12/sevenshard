@@ -21,7 +21,7 @@ async function fireWave(B, dir, t0 = 1.35) {
 export default {
   id: 'varkhul', model: 'varkhul', name: 'Varkhul', title: 'the Ravager', kind: 'field',
   radius: 1.3, height: 3.5, hp: 30000, atk: 0.12, bars: 120, speed: 5.2, turnRate: 5, enrage: 600,
-  music: 'boss_varkhul', arena: 'inferno',
+  music: 'boss', arena: 'inferno',
   anims: {
     slash_combo: { dur: 2.6, hits: [0.55, 1.15, 1.9] }, overhead: { dur: 2.2, hits: [1.2] }, fire_wave: { dur: 2.6, hits: [1.35] },
     leap: { dur: 2.6, hits: [1.6] }, summon: { dur: 3.0, hits: [1.8] }, roar: { dur: 2.4, hits: [0.9] },

@@ -2,7 +2,8 @@
 // the new value and the full values object (the game persists and applies them). UI-owned settings (uiScale,
 // touch layout) are also applied immediately by the UI itself.
 //   data: { values: { quality, renderScale, shadows, bloom, fps, master, music, sfx, ambience, moveButton,
-//                     damageNumbers, cameraShake, telegraphs, quickCast, uiScale, chatOpacity, touch }, keybinds: [{ action, keys: [] }] }
+//                     damageNumbers, cameraShake, othersFx (0 | 0.35 | 1), telegraphs, quickCast, uiScale, chatOpacity, touch },
+//           keybinds: [{ action, keys: [] }] }
 // Actions: settings:change { key, value, values } · settings:rebind { action } · settings:reset {}
 import { h, btn, clear, esc } from '../core/util.js';
 import { tabs, toggle, range, seg, select } from '../core/kit.js';
@@ -11,7 +12,7 @@ import { Win } from '../core/windows.js';
 export const DEFAULT_SETTINGS = {
   quality: 'high', renderScale: 1, shadows: true, bloom: true, fps: 'vsync',
   master: 0.8, music: 0.6, sfx: 0.8, ambience: 0.5, mute: false,
-  moveButton: 'right', damageNumbers: true, cameraShake: 1, telegraphs: true, quickCast: false, autoLoot: true,
+  moveButton: 'right', damageNumbers: true, cameraShake: 1, othersFx: 0.35, telegraphs: true, quickCast: false, autoLoot: true,
   uiScale: 1, chatOpacity: 0.5, buffTimers: true, touch: false,
 };
 export const DEFAULT_KEYBINDS = [
@@ -22,6 +23,7 @@ export const DEFAULT_KEYBINDS = [
   { action: 'Engravings', keys: ['N'] }, { action: 'World Map', keys: ['M'] }, { action: 'Guild', keys: ['U'] }, { action: 'Party Finder', keys: ['O'] },
   { action: 'Chat', keys: ['Enter'] }, { action: 'Hide HUD (photo mode)', keys: ['Ctrl', 'Z'] }, { action: 'Game Menu / Close', keys: ['Esc'] },
 ];
+const OTHERS_FX = [{ id: 'off', label: 'Off', v: 0 }, { id: 'low', label: 'Low', v: 0.35 }, { id: 'full', label: 'Full', v: 1 }];
 const TABS = [{ id: 'graphics', label: 'Graphics' }, { id: 'audio', label: 'Audio' }, { id: 'gameplay', label: 'Gameplay' }, { id: 'interface', label: 'Interface' }, { id: 'keys', label: 'Keybinds' }];
 
 export class SettingsWin extends Win {
@@ -74,6 +76,10 @@ export class SettingsWin extends Win {
       head('Combat');
       toggle(row('Damage Numbers'), null, v.damageNumbers, x => this.set('damageNumbers', x));
       range(row('Camera Shake'), { min: 0, max: 1, step: 0.05, value: v.cameraShake, fmt: x => x === 0 ? 'Off' : pct(x), onChange: x => this.set('cameraShake', x) });
+      { // other players' skill effects: Off / Low / Full → 0 / 0.35 / 1
+        const cur = v.othersFx ?? 0.35, near = OTHERS_FX.reduce((a, b) => Math.abs(b.v - cur) < Math.abs(a.v - cur) ? b : a);
+        seg(row("Other Players' Effects", 'Skill effects cast by party members and other players'), OTHERS_FX, near.id, id => this.set('othersFx', OTHERS_FX.find(o => o.id === id).v));
+      }
       toggle(row('Enemy Telegraphs', 'Show danger zones on the ground'), null, v.telegraphs, x => this.set('telegraphs', x));
     } else if (this.tab === 'interface') {
       head('Interface');

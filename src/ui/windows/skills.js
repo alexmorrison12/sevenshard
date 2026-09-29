@@ -4,12 +4,15 @@
 //           selected? }
 // Actions: skills:level { id, delta } · skills:tripod { id, tier, index } · skills:assign { id, key, slot } ·
 //          skills:reset { id } · skills:select { id }
-import { h, btn, esc, fmtInt, clear } from '../core/util.js';
+import { h, btn, esc, fmtInt, clear, pretty } from '../core/util.js';
 import { glyph } from '../core/glyphs.js';
 import { iconUrl } from '../core/icon.js';
 import { SKILL_KEYS, SKILL_TYPES, STAGGER } from '../core/data.js';
 import { draggable } from '../core/drag.js';
 import { Win } from '../core/windows.js';
+
+/** Tripod display name; raw ids ('quick_prep') become 'Quick Prep'. */
+const tripodName = t => { const n = t.name || t.id || ''; return /^[a-z0-9_]+$/.test(n) ? pretty(n) : n; };
 
 const UNLOCK = [4, 7, 10];
 
@@ -94,12 +97,13 @@ export class SkillsWin extends Win {
       lab.innerHTML = `<b>${['I', 'II', 'III'][i]}</b><span>${open ? `Tier ${i + 1}` : `Lv ${UNLOCK[i]}`}</span>`;
       const opts = h('div', 'ss-skw-topts', row);
       (tier || []).forEach((t, j) => {
-        const o = btn('ss-skw-trip' + (t.picked ? ' is-on' : ''), opts, null, () => { if (open) this.ui.emit('skills:tripod', { id: s.id, tier: i, index: j }); }, t.name);
+        const name = tripodName(t);
+        const o = btn('ss-skw-trip' + (t.picked ? ' is-on' : ''), opts, null, () => { if (open) this.ui.emit('skills:tripod', { id: s.id, tier: i, index: j }); }, name);
         o.disabled = !open;
         o.setAttribute('aria-pressed', !!t.picked);
-        o.innerHTML = `<i style="background-image:url('${iconUrl(t.icon || 'tripod:' + t.id, 30)}')"></i><div><b>${esc(t.name)}</b><span>${esc(t.desc || '')}</span></div>`;
+        o.innerHTML = `<i style="background-image:url('${iconUrl(t.icon || 'tripod:' + t.id, 30)}')"></i><div><b>${esc(name)}</b><span>${esc(t.desc || '')}</span></div>`;
       });
-      if (!open) h('div', 'ss-skw-lockmsg', row, `Reach skill level ${UNLOCK[i]} to unlock`);
+      if (!open) h('div', 'ss-skw-lockmsg', row).innerHTML = `${glyph('lock')}<span>Reach skill level ${UNLOCK[i]} to unlock</span>`;
     });
     const ft = h('div', 'ss-skw-dft', D);
     const r = btn('ss-btn ss-btn--sm ss-btn--ghost', ft, null, () => this.ui.emit('skills:reset', { id: s.id }), 'Reset skill');

@@ -7,6 +7,8 @@
 @property --ss-a { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
 
 .ss-ui {
+  /* neutral grade frame; .ss-g0 … .ss-g7 on a slot (or on a row around it) override these */
+  --gc: #6c707a; --ga: #1a1c22; --gb: #2b2e36; --gd: #454954;
   /* surfaces — dark translucent navy (DESIGN §11: #0b0f1a at 88%) */
   --ss-bg: rgba(11, 15, 26, .88);
   --ss-bg-solid: #0b0f1a;

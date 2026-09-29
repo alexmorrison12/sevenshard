@@ -29,7 +29,7 @@ export class AllyAI {
   constructor(kit, persona = 'veteran') {
     this.kit = kit; this.u = kit.u; this.p = PERSONAS[persona] || PERSONAS.veteran; this.personaId = persona;
     this.aim = { x: this.u.pos.x, z: this.u.pos.z };
-    this.reactT = 0; this.dodgeTo = null; this.holding = null; this.holdT = 0; this.think = Math.random() * 0.3; this.slotOrder = [0, 1, 2, 3, 4, 5, 6, 7];
+    this.reactT = 0; this.dodgeTo = null; this.dodgeSpot = null; this.dodgeT = 0; this.holding = null; this.holdT = 0; this.think = Math.random() * 0.3; this.slotOrder = [0, 1, 2, 3, 4, 5, 6, 7];
     this.u.ctrl = this;
     this.support = kit.cls.role === 'support';
     this.melee = !['pistoleer', 'starcaller', 'songweaver'].includes(kit.cls.id);
@@ -47,17 +47,20 @@ export class AllyAI {
     const target = this.pickTarget(L);
     if (target) { this.aim.x = target.pos.x; this.aim.z = target.pos.z; }
     // dodge
+    // dodge: start early enough to walk out (reaction + escape distance / speed); dash when walking is too slow
     const danger = L.danger(u.pos.x, u.pos.z, u.radius + 0.3, u.team);
-    if (danger >= 0 && danger < 0.25 + this.p.react + (1 - this.p.skill) * 0.6) {
-      if (Math.random() < this.p.skill * dt * 20 || danger < 0.3) {
-        const spot = this.safeSpot(L, target);
-        if (spot) {
-          const d = Math.hypot(spot.x - u.pos.x, spot.z - u.pos.z);
-          if (danger < 0.55 && d > 2 && kit.dashCd <= 0 && Math.random() < this.p.skill) { kit.dash(spot); return; }
+    if (danger >= 0 && danger < 3) {
+      const spot = this.dodgeSpot && this.dodgeT > L.time ? this.dodgeSpot : (this.dodgeSpot = this.safeSpot(L, target));
+      if (spot && this.dodgeT <= L.time) this.dodgeT = L.time + 0.25;
+      if (spot) {
+        const d = Math.hypot(spot.x - u.pos.x, spot.z - u.pos.z), spd = Math.max(2, (u.st.speed || 5) * (eff(u).moveSpd || 1));
+        const walk = d / spd, need = this.p.react + walk + 0.12;
+        if (danger < need && (Math.random() < this.p.skill * dt * 25 || danger < this.p.react + 0.3)) {
+          if (danger < walk + 0.15 && d > 1.5 && kit.dashCd <= 0 && Math.random() < 0.35 + this.p.skill * 0.65) { kit.dash(spot); return; }
           this.moveTo(spot.x, spot.z); return;
         }
       }
-    }
+    } else this.dodgeSpot = null;
     if (u.skill) return;
     this.think -= dt; if (this.think > 0) { this.position(L, target, dt); return; }
     this.think = 0.1 + this.p.react * 0.3;

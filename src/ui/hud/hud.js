@@ -20,6 +20,7 @@ export class Hud {
     this.target = new TargetFrame(ui, top);
     this.progress = new Progress(top);
     this.timer = new Timer(top);
+    this.warnSlot = h('div', 'ss-bn-slot ss-bn-warn ss-bn-inline', top); // mechanic callouts (ui.banner kind 'warn')
     this.toasts = new Toasts(top);
     this.party = new PartyFrames(ui, el);
     const right = h('div', 'ss-right', el);

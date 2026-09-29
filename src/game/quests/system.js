@@ -21,6 +21,7 @@ import * as COLL from '../systems/collectibles.js';
 
 const FIELD_NPC_BY_ID = {}; for (const [zone, list] of Object.entries(FIELD_NPCS)) for (const n of list) FIELD_NPC_BY_ID[n.id] = { ...n, zone };
 const ZONE_NAME = id => FIELDS[id]?.name || ZONES[id]?.name || ({ solhaven: 'Solhaven', brighthold: 'Brighthold' })[id] || id;
+const OPEN_KINDS = new Set(['city', 'field', 'pipsprout', 'prologue', 'island']);
 const KIND_LABEL = { msq: 'Main Story', side: 'Side Quest', guide: 'Adventurer’s Guide', event: 'Event', daily: 'Daily' };
 const CLASS_NAME = { reaver: 'Reaver', oathkeeper: 'Oathkeeper', stormfist: 'Stormfist', pistoleer: 'Pistoleer', starcaller: 'Starcaller', songweaver: 'Songweaver', bladedancer: 'Bladedancer', demonbound: 'Demonbound' };
 
@@ -29,7 +30,7 @@ export class QuestSystem {
     this.s = session;
     this.markers = new QuestMarkers(session.game);
     this.world = new QuestWorld(this);
-    this.declined = new Set(); this.dirty = true; this.t = 0; this.busy = false; this.channel = null; this.pendingCut = null;
+    this.declined = new Set(); this.dirty = true; this.t = 0; this.busy = false; this.channel = null; this.pendingCut = null; this.pending = [];
     this.lastLevel = null; this.lastChar = null; this.boundLevel = null; this.offLevel = [];
     const on = (ev, fn) => session.bus.on(ev, d => { try { fn(d); } catch (e) { console.error('[quests]', ev, e); } });
     on('kill', d => this.onKill(d));
@@ -77,25 +78,39 @@ export class QuestSystem {
     const c = this.char, st = this.st; if (!c || !st) return;
     if (st.v === 1) return;
     st.v = 1;
-    const story = !c.powerpass && c.zone !== 'prologue';
+    // characters that will not play the prologue (Powerpass, or story characters made before it existed) skip it
+    const skip = c.powerpass || c.zone !== 'prologue';
     const prologue = QUEST_LIST.filter(q => q.chapter === 'prologue').map(q => q.id);
-    if (story && !prologue.some(id => st.done.includes(id) || st.active.some(e => e.id === id))) {
+    if (skip && !prologue.some(id => st.done.includes(id) || st.active.some(e => e.id === id))) {
       for (const id of prologue) if (!st.done.includes(id)) st.done.push(id);
       c.flags ||= {}; c.flags.welcomed = true;
     }
     this.save();
   }
-  autoAccept() {
-    for (const q of QUEST_LIST) if (q.auto && this.available(q) === true) this.accept(q.id, { auto: true });
+  /** quests only start (and chapter cards only show) in the open world, never over content, cutscenes or boss intros */
+  openWorld() {
+    const g = this.g; if (!g.level || !g.hero || this.s.screen !== 'game') return false;
+    if (g.inputBlocked || g.cam?.cine || cutsceneActive() || this.s.ui?.npc?.active) return false;
+    const k = g.mode?.kind, zk = ZONES[g.zone?.id]?.kind || g.zone?.kind;
+    return OPEN_KINDS.has(k) || ['city', 'field', 'island'].includes(zk);
   }
+  autoAccept() {
+    if (!this.openWorld()) return false;
+    for (const q of QUEST_LIST) if (q.auto && this.available(q) === true) this.accept(q.id, { auto: true });
+    return true;
+  }
+  /** Powerpass characters play the story at their own pace: its quests arrive quietly and never take the tracker */
+  optional(q) { return !!this.char?.powerpass && q.kind === 'msq'; }
   // ---------------------------------------------------------------- lifecycle
   accept(id, o = {}) {
     const q = this.def(id), st = this.st; if (!q || !st || this.isActive(id) || this.isDone(id)) return false;
     const e = { id, step: 0, n: 0, t: Date.now() };
     st.active.push(e);
-    if (!st.tracked || q.kind === 'msq' || !this.isActive(st.tracked)) st.tracked = id;
+    const quiet = o.silent || this.optional(q);
+    if (this.optional(q)) { if (!st.tracked || !this.isActive(st.tracked)) st.tracked = id; }
+    else if (!st.tracked || q.kind === 'msq' || !this.isActive(st.tracked) || (q.kind === 'guide' && this.char.powerpass)) st.tracked = id;
     this.s.bus.emit('quest', { id, state: 'accepted' });
-    if (!o.silent) {
+    if (!quiet) {
       if (q.chapterStart) this.g.ui?.banner?.(q.chapterStart, { kind: 'zone', sub: q.chapterOver || KIND_LABEL[q.kind], dur: 3.6 });
       else if (q.kind === 'msq' || !o.auto) this.g.ui?.toast?.(`${KIND_LABEL[q.kind] || 'Quest'} accepted: ${q.title}`, 'success');
       else this.g.ui?.toast?.(`New ${KIND_LABEL[q.kind] || 'quest'}: ${q.title}`, 'info');
@@ -105,6 +120,9 @@ export class QuestSystem {
     this.dirty = true; this.save();
     return true;
   }
+  /** run a notification now if the player is in the open world, else when they get back there */
+  note(fn) { if (this.openWorld()) { try { fn(); } catch (e) { console.error('[quests note]', e); } } else this.pending.push(fn); }
+  flushNotes() { const list = this.pending.splice(0); for (const fn of list) { try { fn(); } catch (e) { console.error('[quests note]', e); } } }
   abandon(id) {
     const q = this.def(id); if (!q || q.kind === 'msq') return false;
     this.st.active = this.st.active.filter(e => e.id !== id);
@@ -118,6 +136,7 @@ export class QuestSystem {
     if (s.type === 'level' && (this.char.level || 1) >= s.need) queueMicrotask(() => this.progressEntry(e, s.need));
     if (s.type === 'zone' && this.zoneId === s.zone) queueMicrotask(() => this.progressEntry(e, 1));
     if (s.type === 'reach' && s.mountedHint) this.g.ui?.toast?.(s.mountedHint, 'info');
+    if (s.init) { let v = 0; try { v = +s.init(this) || 0; } catch { v = 0; } if (v > 0) queueMicrotask(() => this.progressEntry(e, Math.min(this.need(s), v))); }
     try { s.onEnter?.(this, e); } catch (err) { console.error('[quest onEnter]', e.id, err); }
     void q;
   }
@@ -146,9 +165,11 @@ export class QuestSystem {
     if (!st.done.includes(id)) st.done.push(id);
     if (st.tracked === id) st.tracked = null;
     const rows = this.grant(q, choice);
-    this.g.ui?.banner?.(q.title, { kind: 'quest', sub: q.kind === 'msq' ? 'Main Story Complete' : q.kind === 'guide' ? 'Guide Complete' : 'Quest Complete' });
-    this.g.audio?.stinger?.('quest_complete');
-    for (const r of rows) this.g.ui?.hud?.loot?.(r);
+    this.note(() => {
+      this.g.ui?.banner?.(q.title, { kind: 'quest', sub: q.kind === 'msq' ? 'Main Story Complete' : q.kind === 'guide' ? 'Guide Complete' : 'Quest Complete' });
+      this.g.audio?.stinger?.('quest_complete');
+      for (const r of rows) this.g.ui?.hud?.loot?.(r);
+    });
     try { q.onComplete?.(this); } catch (err) { console.error('[quest onComplete]', id, err); }
     this.s.bus.emit('quest', { id, state: 'done' });
     this.dirty = true; this.save();
@@ -220,12 +241,12 @@ export class QuestSystem {
     this.s.refreshChar?.();
     const me = this.me; if (me) { me.hp = me.hpMax; me.mp = me.mpMax; }
     this.lastLevel = lv;
-    setTimeout(() => {
+    setTimeout(() => this.note(() => {
       this.g.ui?.banner?.('Level Up', { kind: 'levelup', level: lv, sub: `You reached level ${lv}` });
       this.g.audio?.stinger?.('level_up');
-      if (me) { try { this.g.fx?.play?.('level_up', { pos: me.pos, x: me.pos.x, z: me.pos.z, unit: me.model?.root }); } catch { /* */ } }
+      const u = this.me; if (u) { try { this.g.fx?.play?.('level_up', { pos: u.pos, x: u.pos.x, z: u.pos.z, unit: u.model?.root }); } catch { /* */ } }
       this.g.ui?.toast?.(`+${6 * n} skill points — spend them in Skills (K).`, 'success');
-    }, 400);
+    }), 400);
     this.s.bus.emit('levelup', { level: lv });
   }
   // ---------------------------------------------------------------- events
@@ -308,9 +329,10 @@ export class QuestSystem {
     if (this.lastChar !== c) { this.lastChar = c; this.lastLevel = c.level; this.declined.clear(); this.migrate(); this.dirty = true; }
     this.t += dt;
     this.bindLevel();
-    if (this.nextAccept != null) { this.nextAccept -= dt; if (this.nextAccept <= 0) { this.nextAccept = null; this.autoAccept(); } }
+    if (this.nextAccept != null) { this.nextAccept -= dt; if (this.nextAccept <= 0 && this.autoAccept()) this.nextAccept = null; }
     this.acceptT = (this.acceptT || 0) - dt;
     if (this.acceptT <= 0) { this.acceptT = 1; this.autoAccept(); }
+    if (this.pending.length && this.openWorld()) this.flushNotes();
     // reach steps & reach-while-mounted
     this.reachT = (this.reachT || 0) - dt;
     if (this.reachT <= 0 && this.me) {
@@ -654,6 +676,12 @@ export class QuestSystem {
     return out;
   }
   sfx(name, vol = 1) { try { this.g.audio?.sfx?.(name, { vol }); } catch { /* */ } }
+  /** how many lore books of a zone this roster has read */
+  loreRead(zone) {
+    const F = FIELDS[zone] || {}, r = this.A.roster, region = F.tome || zone;
+    const read = new Set([...(r.tome?.[region]?.lore || []), ...(r.flags?.lore || [])]);
+    return [...read].filter(id => (F.lore || []).includes(id) || id.startsWith(`lore:${zone}:`)).length;
+  }
   /** record an Adventure Tome entry (systems collectibles when present, else directly on the roster) */
   tome(region, kind, id) {
     try { const r = COLL.tomeRecord?.(this.A, region, kind, id, this.char); if (r && r.ok !== false) { if (r.isNew) this.g.ui?.toast?.('Adventure Tome updated.', 'success'); return r; } } catch (e) { /* fall through */ }

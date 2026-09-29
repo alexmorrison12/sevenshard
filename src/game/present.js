@@ -26,11 +26,11 @@ export class Presenter {
     on('shield', ev => { if (this.isLocal(ev.tgt)) this.num(ev.tgt, ev.amount, 'shield'); });
     on('fx', ev => this.onFx(ev));
     on('sfx', ev => this.sfx(ev.name, ev.pos || ev.unit?.pos));
-    on('shake', ev => { if (this.near(ev.unit, 18)) this.g.cam.shake(ev.v * (this.isLocal(ev.unit) ? 1 : 0.5)); });
+    on('shake', ev => { if (this.near(ev.unit, 18) && this.dimOf(ev.unit) === 1) this.g.cam.shake(ev.v * (this.isLocal(ev.unit) || ev.unit?.kind !== 'hero' ? 1 : 0.5)); });
     on('telegraph', tg => this.onTelegraph(tg));
     on('telegraphEnd', tg => { const h = this.telegraphFx.get(tg); h?.stop?.(); this.telegraphFx.delete(tg); });
     on('projectile', p => this.onProjectile(p));
-    on('projectileEnd', p => { const h = this.projFx.get(p); h?.stop?.(); this.projFx.delete(p); if (p.kind !== 'grenade') this.call('hit', { pos: _pos(p), dir: { x: p.dx, z: p.dz }, element: p.hit?.elem }); });
+    on('projectileEnd', p => { const h = this.projFx.get(p); h?.stop?.(); this.projFx.delete(p); const dim = this.dimOf(p.src); if (p.kind !== 'grenade' && dim > 0) this.call('hit', { pos: _pos(p), dir: { x: p.dx, z: p.dz }, element: p.hit?.elem, dim }); });
     on('zone', z => this.onZone(z));
     on('zoneEnd', z => { const h = this.zoneFx.get(z); h?.stop?.(); this.zoneFx.delete(z); });
     on('death', ({ unit }) => this.onDeath(unit));
@@ -46,10 +46,16 @@ export class Presenter {
   }
   unbind() { for (const f of this.offs || []) f(); this.offs = []; }
   isLocal(u) { return u && u === this.g.hero?.u; }
+  /** Lost Ark's "other players' effects": FX from other heroes are dimmed (no screen flashes), so an 8-player raid stays readable */
+  dimOf(u) { return u && u.kind === 'hero' && !this.isLocal(u) ? (this.g.othersFx ?? 0.35) : 1; }
   near(u, r) { const h = this.g.hero?.u; if (!u || !h) return true; return Math.hypot(u.pos.x - h.pos.x, u.pos.z - h.pos.z) < r; }
+  /** Call the FX module; the FXLite fallback only runs when the module lacks `fn` or it threw
+   *  (many FX methods return nothing — falling back on `undefined` drew every number and hit twice). */
   call(fn, ...a) {
     const fx = this.fx;
-    try { const h = fx?.[fn]?.(...a); if (h !== undefined && h !== null) return h; } catch (e) { if (!this._warned?.[fn]) { (this._warned ||= {})[fn] = 1; console.warn('[fx]', fn, e); } }
+    if (typeof fx?.[fn] === 'function') {
+      try { return fx[fn](...a); } catch (e) { if (!this._warned?.[fn]) { (this._warned ||= {})[fn] = 1; console.warn('[fx]', fn, e); } }
+    }
     const lite = this.liteFx(); return lite[fn]?.(...a);
   }
   sfx(name, pos, o = {}) {
@@ -64,7 +70,7 @@ export class Presenter {
     const { src, tgt } = ev;
     if (ev.immune) { if (this.isLocal(src)) this.num(tgt, 'IMMUNE', 'miss'); return; }
     const local = this.isLocal(src), victim = this.isLocal(tgt);
-    if (local || victim || (src && src.team === 0 && this.g.showAllNumbers)) {
+    if (this.g.showNumbers !== false && (local || victim || (src && src.team === 0 && this.g.showAllNumbers))) {
       let style = ev.dot ? 'dot' : 'normal';
       const boss = tgt.kind === 'boss' || tgt.data.elite;
       if (local && boss && ev.back) style = 'back';
@@ -76,7 +82,8 @@ export class Presenter {
     if (!ev.dot && (local || victim || this.near(tgt, 14))) {
       _v.set(tgt.pos.x, tgt.pos.y + tgt.height * 0.55, tgt.pos.z);
       const dir = src ? { x: tgt.pos.x - src.pos.x, z: tgt.pos.z - src.pos.z } : { x: 0, z: 1 };
-      this.call('hit', { pos: _v.clone(), dir, crit: ev.crit, element: ev.elem || 'phys' });
+      const dim = this.dimOf(src);
+      if (dim > 0) this.call('hit', { pos: _v.clone(), dir, crit: ev.crit, element: ev.elem || 'phys', dim });
       if (local) this.sfx(ev.crit ? 'crit' : (src.cls === 'pistoleer' ? 'impact' : 'impact'), tgt.pos, { gap: 30 });
       if (victim) { this.sfx('impact_heavy', tgt.pos); this.g.renderer.fx.hurt = Math.max(this.g.renderer.fx.hurt, Math.min(0.5, ev.amount / tgt.hpMax * 2)); }
     }
@@ -94,13 +101,16 @@ export class Presenter {
     const color = p.color || ev.color;
     const r = (p.r || ev.r || 3) * scale;
     const name = ev.preset;
+    const dim = this.dimOf(u);
+    if (dim <= 0) return null;
     switch (name) {
-      case 'slash': return this.call('slash', { pos: { x: pos.x, y: pos.y + (p.vertical ? 1.2 : 1.0), z: pos.z }, dir, radius: r, arc: p.arc || 140, color, width: p.big ? 1.6 : 1, dur: p.big ? 0.32 : 0.22, style: p.vertical ? 'vertical' : p.spin ? 'spin' : 'sword', flip: p.flip });
-      case 'shockwave': return this.call('shockwave', { pos, radius: r, color, dur: 0.45 });
-      case 'burst': return this.call('burst', { pos, color, count: 24, speed: 6, size: 0.3, life: 0.5, kind: 'spark' });
+      case 'slash': return this.call('slash', { pos: { x: pos.x, y: pos.y + (p.vertical ? 1.2 : 1.0), z: pos.z }, dir, radius: r, arc: p.arc || 140, color, width: p.big ? 1.6 : 1, dur: p.big ? 0.32 : 0.22, style: p.vertical ? 'vertical' : p.spin ? 'spin' : 'sword', flip: p.flip, dim });
+      case 'shockwave': return this.call('shockwave', { pos, radius: r, color, dur: 0.45, dim });
+      case 'burst': return this.call('burst', { pos, color, count: Math.round(24 * dim), speed: 6, size: 0.3, life: 0.5, kind: 'spark', dim });
       default: {
-        const h = this.fx?.play ? safe(() => this.fx.play(name, { pos, dir, r, radius: r, len: (p.len || 0) * scale, width: p.width, color, x: pos.x, z: pos.z, dur: p.dur, follow: p.follow ? u?.model?.root : null, unit: u?.model?.root, big: p.big })) : null;
+        const h = this.fx?.play ? safe(() => this.fx.play(name, { pos, dir, r, radius: r, len: (p.len || 0) * scale, width: p.width, color, x: pos.x, z: pos.z, dur: p.dur, follow: p.follow ? u?.model?.root : null, unit: u?.model?.root, big: p.big, dim })) : null;
         if (h) return h;
+        if (dim < 1) return null;   // the lite fallback can't dim; skip it for other players
         return this.liteFx().play(name, { pos, dir, r, color, x: pos.x, z: pos.z });
       }
     }
@@ -111,13 +121,15 @@ export class Presenter {
     if (h) this.telegraphFx.set(tg, h);
   }
   onProjectile(p) {
-    const h = this.call('projectile', { from: { x: p.x, y: p.y, z: p.z }, dir: { x: p.dx, y: 0, z: p.dz }, speed: p.speed, kind: p.kind || 'bolt', color: p.color || 'orange', size: p.radius, range: p.range, arc: p.arc });
+    const dim = this.dimOf(p.src); if (dim <= 0) return;
+    const h = this.call('projectile', { from: { x: p.x, y: p.y, z: p.z }, dir: { x: p.dx, y: 0, z: p.dz }, speed: p.speed, kind: p.kind || 'bolt', color: p.color || 'orange', size: p.radius, range: p.range, arc: p.arc, dim });
     if (h) this.projFx.set(p, h);
   }
   onZone(z) {
-    const h = this.fx?.play ? safe(() => this.fx.play(`zone_${z.kind || 'generic'}`, { pos: { x: z.x, y: 0, z: z.z }, r: z.r, radius: z.r, dur: z.dur, color: z.color, x: z.x, z: z.z })) : null;
+    const dim = this.dimOf(z.src); if (dim <= 0) return;
+    const h = this.fx?.play ? safe(() => this.fx.play(`zone_${z.kind || 'generic'}`, { pos: { x: z.x, y: 0, z: z.z }, r: z.r, radius: z.r, dur: z.dur, color: z.color, x: z.x, z: z.z, dim })) : null;
     if (h) { this.zoneFx.set(z, h); return; }
-    const d = this.call('decal', { pos: { x: z.x, y: 0, z: z.z }, radius: z.r, kind: z.kind || 'rune', dur: z.dur });
+    const d = this.call('decal', { pos: { x: z.x, y: 0, z: z.z }, radius: z.r, kind: z.kind || 'rune', dur: z.dur, dim });
     if (d) this.zoneFx.set(z, d);
   }
   update(dt) {

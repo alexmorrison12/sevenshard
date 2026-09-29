@@ -17,6 +17,7 @@ import { boulder, spike, crystal } from '../cliffs.js';
 import { circle, rect } from '../shapes.js';
 import { bakeSet } from '../bake.js';
 import { SOLHAVEN_OFFSET } from '../../data/islands.js';
+import { BASTION } from './isles.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const TAU = Math.PI * 2;
@@ -318,7 +319,7 @@ export function buildLandmarks(id, ctx) {
 
 // ---------------------------------------------------------------- Coinflip Cay: the Gilded Gull casino
 BUILD.coinflip = ({ kit, flags, palms, flora, ox, oz, H, W, lod, spots, rng }) => {
-  const cx = -18, cz = -8, cy = H(cx, cz), full = lod === 'full';
+  const cx = -18, cz = -11, cy = H(cx, cz), full = lod === 'full';
   const [X, Z] = W(cx, cz);
   const F = new Frame(X, cy, Z, 0);
   // the pavilion: marble drum, gold-ribbed dome, lantern cupola, arched loggia
@@ -355,9 +356,8 @@ BUILD.coinflip = ({ kit, flags, palms, flora, ox, oz, H, W, lod, spots, rng }) =
     for (const s of [-1, 1]) kit.add('gold', box(3.4, 0.12, 1.1, 1), G2.at(s * 1.9, 3.8, 0.2, 0, 1, 1, 1, 0, s * 0.45), { tint: 0xffe070, ao: false });
     kit.block(circle(a, b, 1.9), 0.3); spots.gull = [a, gy, b]; }
   // boardwalk: pier (south) → casino
-  const pier = BUILD.pier(kit, W, H, 4, 46, 14, 4.2);
+  const pier = BUILD.pier(kit, W, H, 4, 60, 60, 4.2);
   spots.pier = pier;
-  for (let i = 0; i < 7; i++) { const t = i / 6, x = lerp(4, cx + 2, t), z = lerp(44, cz + 11, t); const [a, b] = W(x, z); kit.add('planks', box(3.4, 0.2, 5.4, 1.5), M(a, H(x, z) + 0.12, b, Math.atan2(4 - cx - 2, 44 - cz - 11)), { tint: 0xc09a6a, ao: false }); }
   // beach umbrellas & deck chairs
   for (let i = 0; i < 6; i++) { const x = -34 + i * 6 + rng.range(-1, 1), z = 34 + rng.range(-2, 2); const [a, b] = W(x, z); const y = H(x, z); kit.add('timber', cyl(0.05, 0.05, 2.4, 6, 1), M(a, y + 1.2, b), { ao: false }); kit.add('cloth', cone(1.3, 0.55, 8), M(a, y + 2.5, b), { tint: i % 2 ? 0xe04a5a : 0x3ab0d8, ao: false }); }
   palmRing(palms, H, ox, oz, [[-38, 20], [-44, 4], [-40, -18], [-30, -34], [-12, -40], [6, -44], [30, -22], [32, 18], [14, 30], [-24, 28], [-8, 34], [26, 34], [36, -8]], rng, 1.05);
@@ -366,11 +366,16 @@ BUILD.coinflip = ({ kit, flags, palms, flora, ox, oz, H, W, lod, spots, rng }) =
 };
 
 /** a timber pier from the shore to (x, zEnd) (local), deck at y; returns the end spot (world) */
-BUILD.pier = (kit, W, H, x, z0, len, w = 4, deckY = 0.6) => {
-  const [a, b] = W(x, z0 + len);
+/** a timber pier whose sea end is at (x, zEnd) (local), running north until it reaches dry land (auto length) */
+BUILD.pier = (kit, W, H, x, zEnd, maxLen = 60, w = 4, deckY = 0.6) => {
+  let len = 6;
+  while (len < maxLen && H(x, zEnd - len) < deckY - 0.1) len += 0.5;
+  len += 1.5;
+  const [a, b] = W(x, zEnd);
   Bd.pier(kit, a, b, 0, len, w, deckY, { posts: 3 });
-  const [ea, eb] = W(x, z0 + len);
-  return [ea, deckY, eb];
+  // lanterns on posts at the pier head
+  for (const s of [-1, 1]) { kit.add('timber', cyl(0.12, 0.14, 2.6, 6, 1), M(a + s * (w / 2 - 0.2), deckY + 1.3, b - 0.6), { tint: 0x6a4a30, ao: false }); kit.glow(box(0.26, 0.34, 0.26, 1), M(a + s * (w / 2 - 0.2), deckY + 2.5, b - 0.6), 0xffc070, 2.6); kit.light(a + s * (w / 2 - 0.2), deckY + 2.4, b - 0.6, 0xffc070, 4, 8, 0.1); }
+  return [a, deckY, b, len, w];
 };
 
 // ---------------------------------------------------------------- Songstone Isle: the five Cantors
@@ -414,31 +419,36 @@ BUILD.songstone = ({ kit, flags, palms, flora, ox, oz, H, W, lod, spots, rng }) 
     for (let k = 0; k < 7; k++) kit.add('metal', box(0.02, 4.4, 0.02, 1), F.at(-1.1 + k * 0.37, 2.7, 0), { tint: 0xd8c890, ao: false });
     spots['harp' + i] = [a, y, b];
   }
-  spots.pier = BUILD.pier(kit, W, H, 6, 42, 14, 4.2);
+  spots.pier = BUILD.pier(kit, W, H, 6, 56, 60, 4.2);
   if (flora) { for (let i = 0; i < (full ? 26 : 14); i++) { const x = rng.range(-44, 44), z = rng.range(-50, 38), y = H(x, z); if (y < 1.4 || Math.hypot(x, z - cz) < 27) continue; flora.tree(rng.chance(0.5) ? 'cypress' : 'broadleaf', ox + x, y - 0.1, oz + z, { s: rng.range(0.8, 1.1), variant: i % 3, block: full }); } }
 };
 
 // ---------------------------------------------------------------- Powderkeg Cove: the bastion
+export const GUNS = [[-14, -36, 0.5], [-7, -40, 0.22], [0, -42.5, 0], [7, -40, -0.22], [14, -36, -0.5], [-17, -28, 0.9], [17, -28, -0.9]];
 BUILD.powderkeg = ({ kit, flags, palms, flora, ox, oz, H, W, lod, spots, rng }) => {
-  const by = H(0, -31);
-  // star-shaped bastion walls around the yard, facing the open sea (north)
-  const pts = [[-20, -22], [-22, -36], [-10, -44], [0, -48], [10, -44], [22, -36], [20, -22]];
-  for (let i = 0; i < pts.length - 1; i++) { const [a1, b1] = W(...pts[i]), [a2, b2] = W(...pts[i + 1]); P.wall(kit, a1, b1, a2, b2, (x, z) => by, { h: 4.5, t: 2, buttress: 0 }); }
-  for (const [x, z] of [[-22, -36], [22, -36], [0, -48]]) { const [a, b] = W(x, z); P.tower(kit, a, by, b, { r: 3, h: 8, roofH: 0.01, roof: 0x5a4a3a, windows: false, flags, flag: 0x1a1a1a }); }
-  // cannons along the parapet
-  const guns = [[-16, -40], [-8, -45], [8, -45], [16, -40], [-19, -30], [19, -30]];
-  guns.forEach(([x, z], i) => { const [a, b] = W(x, z); cannon(kit, a, by + 4.6, b, Math.atan2(x, -(z + 20)) * 0 + (x < 0 ? 0.35 : -0.35), 1.2); spots['gun' + i] = [a, by + 4.6, b]; });
-  // powder magazine, flag
-  { const [a, b] = W(0, -30); Bd.townhouse(kit, a, by, b, 0, { w: 8, d: 6, floors: 1, roof: 0x6a3a2a, seed: 5, noDoor: false, chimney: false }); spots.yard = [a, by, b + 6]; }
-  if (flags) { const [a, b] = W(8, -26); P.flagPole(kit, flags, a, by, b, { h: 11, color: 0xe8e0d0 }); }
+  const by = 7.4;
+  // the bastion: low gun parapet facing the open sea (north), tall walls on the flanks
+  const pts = BASTION;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const [a1, b1] = W(...pts[i]), [a2, b2] = W(...pts[i + 1]);
+    const north = i >= 1 && i <= 4;
+    P.wall(kit, a1, b1, a2, b2, (x, z) => Math.min(by, H(x - ox, z - oz)), { h: north ? 1.4 : 4.2, t: 1.8, crenel: !north, buttress: 0 });
+  }
+  for (const [x, z] of [[-21, -35], [21, -35]]) { const [a, b] = W(x, z); P.tower(kit, a, H(x, z) - 0.5, b, { r: 3.2, h: 9, roofH: 5, roof: 0x5a3a2a, windows: false, flags, flag: 0x1a1a1a }); }
+  // gun emplacements on the yard, muzzles over the parapet
+  GUNS.forEach(([x, z, r], i) => { const [a, b] = W(x, z); kit.add('stone', box(2.6, 0.5, 2.8, 1), M(a, by + 0.25, b, r), { tint: 0xb8b0a0 }); cannon(kit, a, by + 0.5, b, r, 1.25); spots['gun' + i] = [a, by + 0.5, b, r]; });
+  // the powder magazine (defend it!), a flag, shot pyramids
+  { const [a, b] = W(0, -31); Bd.townhouse(kit, a, by, b, 0, { w: 7, d: 5.5, floors: 1, roof: 0x6a3a2a, seed: 5, noDoor: false, chimney: false }); spots.magazine = [a, by, b + 3.4]; }
+  if (flags) { const [a, b] = W(9, -27); P.flagPole(kit, flags, a, by, b, { h: 11, color: 0xe8e0d0 }); }
+  for (const [x, z] of [[-10, -30], [10, -30], [-4, -36]]) { const [a, b] = W(x, z); for (let k = 0; k < 6; k++) kit.add('metal', sphere(0.2, 8, 6), M(a + (k % 3) * 0.42 - 0.42 + (k > 2 ? 0.21 : 0), by + 0.2 + (k > 2 ? 0.34 : 0), b + (k > 2 ? 0 : 0.1)), { tint: 0x2a2a2e, ao: false }); }
+  for (let i = 0; i < 6; i++) { const x = rng.range(-16, 16), z = rng.range(-36, -25); if (Math.hypot(x, z + 31) < 5) continue; const [a, b] = W(x, z); P.barrel(kit, a, by, b, 1, rng.range(0, 6), { block: lod === 'full' }); }
   // the smugglers' village around the cove
   const houses = [[-30, 10, 1.2], [-26, 26, 1.0], [30, 10, -1.2], [26, 26, -1.0], [-14, -6, 0.2], [14, -6, -0.2]];
   houses.forEach(([x, z, r], i) => { const [a, b] = W(x, z); Bd.townhouse(kit, a, H(x, z), b, r + Math.PI, { w: 6, d: 6, floors: 1 + (i % 2), roof: [0xb4523a, 0x8a5a3a, 0x3d62a8][i % 3], seed: 40 + i, timber: i % 2 === 0 }); });
-  for (let i = 0; i < 8; i++) { const x = rng.range(-24, 24), z = rng.range(-12, 30); const y = H(x, z); if (y < 0.6) continue; const [a, b] = W(x, z); P.barrel(kit, a, y, b, 1, rng.range(0, 6), { block: lod === 'full' }); }
-  spots.pier = BUILD.pier(kit, W, H, -6, 28, 20, 4.2, 0.7);
+  for (let i = 0; i < 8; i++) { const x = rng.range(-24, 24), z = rng.range(-12, 30); const y = H(x, z); if (y < 0.6 || Math.abs(x) < 6) continue; const [a, b] = W(x, z); P.barrel(kit, a, y, b, 1, rng.range(0, 6), { block: lod === 'full' }); }
+  spots.pier = BUILD.pier(kit, W, H, -6, 48, 60, 4.2, 0.7);
   palmRing(palms, H, ox, oz, [[-40, -2], [40, -2], [-44, 20], [44, 20], [-36, 36], [36, 36]], rng);
 };
-
 // ---------------------------------------------------------------- Moonveil Atoll: the lantern shrine
 export const LANTERNS = [0, 1, 2, 3, 4].map(i => ({ a: -Math.PI / 2 + i * TAU / 5 + 0.3, r: 38 }));
 BUILD.moonveil = ({ kit, flags, palms, flora, ox, oz, H, W, lod, spots, rng, night }) => {
@@ -451,12 +461,12 @@ BUILD.moonveil = ({ kit, flags, palms, flora, ox, oz, H, W, lod, spots, rng, nig
   kit.glow(cyl(1.9, 1.9, 0.1, 20, 1), M(a, y + 0.92, b), 0x9ad0ff, night ? 2.4 : 0.6);
   spots.shrine = [a, y, b];
   // bridge from the south ring to the islet
-  for (let i = 0; i < 6; i++) { const [c, d] = W(0, 6 + i * 3.4); kit.add('planks', box(3, 0.25, 3.2, 1.5), M(c, 0.5, d), { tint: 0x9a8a78, ao: false }); kit.add('timber', cyl(0.14, 0.14, 2.2, 6, 1), M(c + 1.5, -0.3, d), { ao: false }); kit.add('timber', cyl(0.14, 0.14, 2.2, 6, 1), M(c - 1.5, -0.3, d), { ao: false }); }
+  for (let i = 0; i < 6; i++) { const z = 7 + i * 3.2, [c, d] = W(0, z), y = H(0, z); kit.add('planks', box(3, 0.2, 3.0, 1.5), M(c, y + 0.1, d), { tint: 0x9a8a78, ao: false }); for (const s of [-1, 1]) kit.add('stone', cyl(0.18, 0.22, 1.1, 6, 1), M(c + s * 1.7, y + 0.5, d), { tint: 0xb0b8c4, ao: false }); }
   // the five lantern posts around the ring
   LANTERNS.forEach((L, i) => { const x = Math.cos(L.a) * L.r, z = -2 + Math.sin(L.a) * L.r, [c, d] = W(x, z); const f = lanternPost(kit, c, H(x, z), d, { h: 2.8, color: 0x7ad8ff, lit: false, s: 1.2 }); spots['lantern' + i] = f; });
   // the wreck of the ghost galleon on the east reef
   { const [c, d] = W(44, -24); Bd.ship(kit, flags, c, -1.6, d, 0.9, { len: 20, beam: 6, masts: 2, hull: 0x3a3a44, stripe: 0x2a2a30, sail: 0x9aa4b0, seed: 9 }); spots.wreck = [c, 0, d]; }
-  spots.pier = BUILD.pier(kit, W, H, 0, 44, 12, 4, 0.6);
+  spots.pier = BUILD.pier(kit, W, H, 0, 56, 60, 4, 0.6);
   palmRing(palms, H, ox, oz, [[-36, 14], [36, 12], [-20, -38], [22, -38], [-40, -14], [40, -12]], rng, 0.9);
 };
 
@@ -474,12 +484,13 @@ BUILD.stormcrown = ({ kit, flags, palms, flora, ox, oz, H, W, lod, spots, rng })
   const layers = 14;
   for (let i = 0; i < layers; i++) {
     const t = i / layers, t2 = (i + 1) / layers;
-    const r0 = lerp(S.r0 - 1.5, S.r1 - 1.2, t), r1 = lerp(S.r0 - 1.5, S.r1 - 1.2, t2), y0 = lerp(0, S.h1 + 3, t), y1 = lerp(0, S.h1 + 3, t2);
+    const r0 = lerp(S.r0 - 1.5, S.r1 - 1.2, t), r1 = lerp(S.r0 - 1.5, S.r1 - 1.2, t2), y0 = lerp(0, S.h1, t), y1 = lerp(0, S.h1, t2);
     const g = new THREE.CylinderGeometry(r1, r0, y1 - y0 + 0.4, 18, 2);
     const p = g.attributes.position;
     for (let k = 0; k < p.count; k++) { const x = p.getX(k), y = p.getY(k), z = p.getZ(k), a = Math.atan2(z, x); const j = 1 + nz.noise2(a * 2 + i, y * 0.3 + i * 0.7) * 0.16; p.setXYZ(k, x * j, y, z * j); }
     g.computeVertexNormals();
-    kit.add('rock', g, M(cx, (y0 + y1) / 2, cz, i * 0.7), { tint: i % 2 ? 0x3e3a44 : 0x46424c, yGround: 0, aoH: 30, chunkAt: [cx, cz] });
+    kit.add('rock', g, M(cx, (y0 + y1) / 2, cz, i * 0.7), { tint: i % 2 ? 0x7c7684 : 0x8a8492, yGround: 0, aoH: 30, chunkAt: [cx, cz] });
+    if (i % 3 === 1) kit.glow(new THREE.TorusGeometry((r0 + r1) / 2 + 0.05, 0.05, 4, 30), M(cx, (y0 + y1) / 2 + 0.6, cz, i, 1, 1, 1, Math.PI / 2 + Math.sin(i) * 0.08), 0x8ad8ff, 1.6);
   }
   // the ledge: planked segments bolted to the rock, with posts and a rope rail
   const N = Math.round(S.turns * 26);
@@ -487,24 +498,25 @@ BUILD.stormcrown = ({ kit, flags, palms, flora, ox, oz, H, W, lod, spots, rng })
     const p0 = spirePath(i / N), p1 = spirePath((i + 1) / N), mx = (p0.x + p1.x) / 2, mz = (p0.z + p1.z) / 2, my = (p0.y + p1.y) / 2;
     const len = Math.hypot(p1.x - p0.x, p1.z - p0.z), rot = Math.atan2(p1.x - p0.x, p1.z - p0.z) + Math.PI / 2;
     const [a, b] = W(mx, mz);
-    kit.add('planks', box(S.width, 0.3, len + 0.3, 1.5), M(a, my - 0.15, b, rot + Math.PI / 2, 1, 1, 1, 0, Math.atan2(p1.y - p0.y, len)), { tint: 0x8a6a4a, ao: false, chunkAt: [cx, cz] });
+    kit.add('planks', box(S.width, 0.3, len + 0.3, 1.5), M(a, my - 0.15, b, rot + Math.PI / 2, 1, 1, 1, 0, Math.atan2(p1.y - p0.y, len)), { tint: 0xb89068, ao: false, chunkAt: [cx, cz] });
     if (i % 3 === 0) { const ox2 = Math.cos(p0.a) * (S.width / 2 + 0.1), oz2 = Math.sin(p0.a) * (S.width / 2 + 0.1); const [c, d] = W(p0.x + ox2, p0.z + oz2); kit.add('timber', cyl(0.1, 0.12, 1.4, 6, 1), M(c, p0.y + 0.5, d), { ao: false, chunkAt: [cx, cz] }); }
   }
   // lightning rods and the Crown Bell at the top
-  const top = spirePath(1);
-  const [ta, tb] = W(top.x * 0.2, -6 + (top.z + 6) * 0.2);
-  kit.add('stone', cyl(3.2, 3.8, 1, 12, 1), M(ta, S.h1 + 2.6, tb), { tint: 0x3a3640 });
-  for (let i = 0; i < 4; i++) { const a = i / 4 * TAU; kit.add('metal', cyl(0.1, 0.14, 5.5, 6, 1), M(ta + Math.cos(a) * 2.6, S.h1 + 5.8, tb + Math.sin(a) * 2.6, 0, 1, 1, 1, Math.cos(a) * 0.2, -Math.sin(a) * 0.2), { tint: 0x7a7a88, ao: false }); }
+  const [ta, tb] = W(0, -6);
+  kit.add('stone', cyl(4.4, 4.8, 1, 16, 1), M(ta, S.h1 - 0.2, tb), { tint: 0x3a3640 });
+  kit.add('stone', new THREE.TorusGeometry(4.4, 0.18, 5, 32).rotateX(Math.PI / 2), M(ta, S.h1 + 0.35, tb), { tint: 0x8a8494, ao: false });
+  for (let i = 0; i < 4; i++) { const a = i / 4 * TAU + 0.4; kit.add('metal', cyl(0.12, 0.16, 8, 6, 1), M(ta + Math.cos(a) * 3.6, S.h1 + 4.3, tb + Math.sin(a) * 3.6), { tint: 0x7a7a88, ao: false }); kit.add('metal', tube([V(ta + Math.cos(a) * 3.6, S.h1 + 8.2, tb + Math.sin(a) * 3.6), V(ta + Math.cos(a) * 1.2, S.h1 + 9.4, tb + Math.sin(a) * 1.2)], [0.08, 0.08], 5, false), null, { tint: 0x7a7a88, ao: false, chunkAt: [ta, tb] }); }
   const crown = new THREE.TorusGeometry(2.4, 0.18, 6, 24); crown.rotateX(Math.PI / 2);
-  kit.add('gold', crown, M(ta, S.h1 + 8.2, tb), { tint: 0xe8c060, ao: false });
-  for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; kit.add('gold', cone(0.3, 1.2, 5), M(ta + Math.cos(a) * 2.4, S.h1 + 8.8, tb + Math.sin(a) * 2.4), { tint: 0xffd060, ao: false }); }
-  bell(kit, ta, S.h1 + 8.0, tb, 1.3, 0x8a9aa0);
-  kit.glow(sphere(0.4, 8, 6), M(ta, S.h1 + 11.5, tb), 0x9ad8ff, 3.5);
+  kit.add('gold', crown, M(ta, S.h1 + 9.4, tb), { tint: 0xe8c060, ao: false });
+  for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; kit.add('gold', cone(0.3, 1.2, 5), M(ta + Math.cos(a) * 2.4, S.h1 + 10, tb + Math.sin(a) * 2.4), { tint: 0xffd060, ao: false }); }
+  bell(kit, ta, S.h1 + 9.2, tb, 1.5, 0x8a9aa0);
+  kit.glow(sphere(0.4, 8, 6), M(ta, S.h1 + 12.4, tb), 0x9ad8ff, 3.5);
   kit.light(ta, S.h1 + 10, tb, 0x9ad8ff, 12, 30, 0.2);
-  spots.bell = [ta, S.h1 + 2.6, tb]; spots.base = W(...[spirePath(0).x, spirePath(0).z]);
+  kit.block(circle(ta, tb, 1.4), 0.3);
+  spots.bell = [ta, S.h1 + 0.3, tb]; spots.base = W(spirePath(0).x, spirePath(0).z);
   // shattered rocks around the base, lightning-scorched
   for (let i = 0; i < 18; i++) { const a = rng.range(0, TAU), r = rng.range(S.r0 + 1, 32), x = Math.cos(a) * r, z = -6 + Math.sin(a) * r, y = H(x, z); if (y < 0.3 || z > 20) continue; const [c, d] = W(x, z); boulder(kit, c, y - 0.3, d, { s: rng.range(0.8, 2.2), seed: 60 + i, tint: 0x4a464e, flat: 0.7, block: lod === 'full' }); }
-  spots.pier = BUILD.pier(kit, W, H, 2, 36, 16, 4, 0.8);
+  spots.pier = BUILD.pier(kit, W, H, 2, 52, 60, 4, 0.8);
 };
 
 // ---------------------------------------------------------------- Hushwater Lagoon
@@ -514,39 +526,61 @@ BUILD.hushwater = ({ kit, flags, palms, flora, ox, oz, H, W, lod, spots, rng, ni
   boulder(kit, a, y - 0.4, b, { s: 2.6, seed: 5, tint: 0x6a7a80, moss: 0x3a7a5a, flat: 0.55, block: lod === 'full' });
   crystal(kit, a + 1.5, y + 0.6, b - 1.2, { s: 0.9, color: 0x60f0e0, intensity: 2.2, n: 4, seed: 3, light: true, block: false });
   spots.mermaid = [a, y + 1.4, b];
-  for (let i = 0; i < 8; i++) { const [c, d] = W(0, 16 - i * 2.6); kit.add('planks', box(2.6, 0.22, 2.8, 1.5), M(c, 0.45, d), { tint: 0xb0906a, ao: false }); if (i % 2 === 0) for (const s of [-1, 1]) kit.add('timber', cyl(0.12, 0.12, 2.2, 6, 1), M(c + s * 1.3, -0.4, d), { ao: false }); }
-  spots.jetty = W(0, -2);
-  const beds = [[-12, -6], [12, -2], [-8, -18], [10, -18], [0, -24]];
-  beds.forEach(([x, z], i) => { const [c, d] = W(x, z); kit.add('stone', cyl(1.2, 1.4, 0.3, 10, 1), M(c, -1.4, d), { tint: 0xd8e0e0, ao: false }); spots['bed' + i] = [c, 0, d]; });
+  for (let i = 0; i < 8; i++) { const [c, d] = W(0, 14 - i * 2.6); kit.add('planks', box(2.6, 0.22, 2.8, 1.5), M(c, 0.45, d), { tint: 0xb0906a, ao: false }); if (i % 2 === 0) for (const s of [-1, 1]) kit.add('timber', cyl(0.12, 0.12, 2.2, 6, 1), M(c + s * 1.3, -0.4, d), { ao: false }); }
+  spots.jetty = W(0, -3.5); spots.jettyDeck = [W(0, 5)[0], 0.56, W(0, 5)[1], 20.8, 2.6];
+  const beds = [[-11, 7], [-5, 11.5], [7, 10], [12, 5], [-14, 2]];
+  beds.forEach(([x, z], i) => { const [c, d] = W(x, z); for (let k = 0; k < 5; k++) kit.add('stone', sphere(rng.range(0.25, 0.45), 8, 6), M(c + rng.range(-0.8, 0.8), H(x, z) + 0.05, d + rng.range(-0.8, 0.8), 0, 1, 0.5, 1), { tint: 0xe8e0e8, ao: false }); spots['bed' + i] = [c, H(x, z), d]; });
   // cliff waterfall on the north rim
   { const [c, d] = W(-4, -30); kit.glow(box(3, 9, 0.4, 1), M(c, 3.8, d), 0xbfefff, 0.9); spots.falls = [c, 0, d]; }
-  spots.pier = BUILD.pier(kit, W, H, -4, 42, 16, 4.2, 0.7);
+  spots.pier = BUILD.pier(kit, W, H, -4, 58, 60, 4.2, 0.7);
   palmRing(palms, H, ox, oz, [[-8, 26], [8, 26], [-20, 20], [20, 20], [-30, 10], [30, 10]], rng, 0.95);
   if (flora) for (let i = 0; i < (lod === 'full' ? 30 : 16); i++) { const ang = rng.range(0, TAU), r = rng.range(30, 40), x = Math.cos(ang) * r, z = -4 + Math.sin(ang) * r, h = H(x, z); if (h < 2.5 || z > 18) continue; flora.tree(rng.chance(0.4) ? 'bush' : 'broadleaf', ox + x, h - 0.1, oz + z, { s: rng.range(0.7, 1.0), variant: i % 3, block: lod === 'full' }); }
 };
 
 // ---------------------------------------------------------------- Shellback Isle: Grandmother Shellback
-BUILD.shellback = ({ kit, flags, palms, flora, ox, oz, H, W, lod, spots, rng }) => {
-  // the head: a huge sculpted turtle head resting on the water to the north, eyes closed
-  const [hx, hz] = W(0, -52);
-  const skin = 0x6a8a5a, skinD = 0x4a6a44;
-  const head = blob(1, 2, d => 1 + Math.max(0, -d.z) * 0.18 - Math.max(0, d.y) * 0.08, [7, 5.5, 9]);
-  kit.add('paint', head, M(hx, 2.2, hz), { tint: (p, n) => { const k = 0.8 + 0.2 * n.y; const c = lc(p.y < 1.5 ? skinD : skin); return [c[0] * k, c[1] * k, c[2] * k]; }, chunkAt: [hx, hz] });
-  kit.add('paint', blob(1, 1, null, [5.5, 3.2, 6]), M(hx, 1.2, hz + 8), { tint: skinD, chunkAt: [hx, hz] });           // neck
-  for (const s of [-1, 1]) {
-    kit.add('paint', blob(1, 1, null, [1.6, 0.35, 1.2]), M(hx + s * 5.3, 4.2, hz - 3.5, s * 0.5, 1, 1, 1, 0, s * 0.4), { tint: 0x3a4a34, ao: false, chunkAt: [hx, hz] });   // closed eyelid
-    kit.add('paint', blob(1, 1, null, [4, 1.2, 7]), M(hx + s * 38, 0.3, hz + 20 + (s > 0 ? 8 : 0), s * 0.6), { tint: skin, chunkAt: [hx + s * 30, hz + 20] });              // front flippers
-    kit.add('paint', blob(1, 1, null, [3, 1, 5]), M(hx + s * 34, 0.2, hz + 88, -s * 0.5), { tint: skin, chunkAt: [hx + s * 30, hz + 88] });                                  // back flippers
+/** Grandmother Shellback's head, neck and flippers (sculpted blobs, vertex-painted); head centre (hx, hz) faces north */
+export function turtleParts(kit, hx, hz, { y = 1.2, s = 1 } = {}) {
+  const skin = lc(0x6f8f5c), skinD = lc(0x445c3c), skinL = lc(0x9ab27a), beak = lc(0x3a3a2e);
+  const paint = (base) => (p, n) => { const k = 0.72 + 0.28 * Math.max(0, n.y) + (Math.sin(p.x * 3.1) * Math.sin(p.z * 2.7)) * 0.05; return [base[0] * k, base[1] * k, base[2] * k]; };
+  const at = (x, yy, z, ry = 0, sx = 1, sy = 1, sz = 1, rx = 0, rz = 0) => M(hx + x * s, y + yy * s, hz + z * s, ry, sx * s, sy * s, sz * s, rx, rz);
+  // neck (three soft folds) sliding under the shell
+  for (let i = 0; i < 3; i++) kit.add('paint', blob(1, 1, null, [5.2 - i * 0.3, 3.2 - i * 0.2, 3.4]), at(0, -0.4 - i * 0.2, 7 + i * 3.2), { tint: paint(i % 2 ? skin : skinD), chunkAt: [hx, hz] });
+  // skull: long, low, a little wider at the cheeks
+  kit.add('paint', blob(1, 2, d => 1 + Math.max(0, -d.z) * 0.1 - Math.max(0, d.y) * 0.12 + Math.abs(d.x) * 0.06, [5.6, 4.0, 8.2]), at(0, 0.6, 0), { tint: paint(skin), chunkAt: [hx, hz] });
+  // pale throat & jaw
+  kit.add('paint', blob(1, 1, null, [4.8, 1.8, 6.4]), at(0, -1.6, -1.2), { tint: paint(skinL), chunkAt: [hx, hz] });
+  // beak: a dark hooked ridge at the front
+  kit.add('paint', blob(1, 1, d => 1 + Math.max(0, -d.y) * 0.3, [2.4, 2.1, 2.2]), at(0, -0.2, -7.4, 0, 1, 1, 1, 0.25), { tint: paint(beak), chunkAt: [hx, hz] });
+  kit.add('paint', box(5.6, 0.35, 0.5, 1), at(0, -1.25, -5.6, 0, 1, 1, 1, 0.1), { tint: beak, ao: false, chunkAt: [hx, hz] });     // the mouth line
+  for (const sx of [-1, 1]) {
+    kit.add('paint', sphere(0.28, 8, 6), at(sx * 0.9, 0.6, -8.6), { tint: 0x1a1a14, ao: false, chunkAt: [hx, hz] });                                              // nostrils
+    kit.add('paint', blob(1, 1, null, [1.7, 1.1, 1.3]), at(sx * 3.9, 2.4, -2.8, sx * 0.4), { tint: paint(skinD), chunkAt: [hx, hz] });                          // brow
+    kit.add('paint', blob(1, 1, null, [1.5, 0.28, 1.0]), at(sx * 4.3, 2.0, -3.2, sx * 0.4, 1, 1, 1, 0, sx * 0.3), { tint: 0x2a3424, ao: false, chunkAt: [hx, hz] }); // closed lid
+    for (let k = 0; k < 3; k++) kit.add('paint', box(1.6, 0.12, 0.2, 1), at(sx * (4.4 + k * 0.1), 1.6 - k * 0.3, -2.2 - k * 0.25, sx * 0.5), { tint: 0x3a4a30, ao: false, chunkAt: [hx, hz] }); // wrinkles
   }
-  kit.add('paint', box(9, 0.5, 0.6, 1), M(hx, 1.6, hz - 8.2), { tint: 0x2a3a26, ao: false, chunkAt: [hx, hz] });           // mouth line
-  spots.head = [hx, 2, hz]; spots.mouth = [hx, 0.8, hz - 10];
+  // scale plates on the crown of the head
+  for (let i = 0; i < 9; i++) { const a = i / 9 * Math.PI * 2; kit.add('paint', blob(1, 0, null, [1.2, 0.3, 1.1]), at(Math.cos(a) * 1.9, 4.3 - Math.abs(Math.sin(a)) * 0.4, -1 + Math.sin(a) * 2.2), { tint: paint(skinD), ao: false, chunkAt: [hx, hz] }); }
+}
+function flipper(kit, x, y, z, ry, len, s = 1) {
+  const skin = lc(0x6f8f5c), dark = lc(0x445c3c);
+  const g = blob(1, 2, d => 1 - Math.max(0, d.z) * 0.35, [len * 0.32, 0.5, len * 0.5]);
+  kit.add('paint', g, M(x, y, z, ry, s, s, s, 0, 0.12), { tint: (p, n) => { const k = 0.75 + 0.25 * Math.max(0, n.y); const c = Math.sin(p.x * 2.4 + p.z * 1.7) > 0.6 ? dark : skin; return [c[0] * k, c[1] * k, c[2] * k]; }, chunkAt: [x, z] });
+}
+BUILD.shellback = ({ kit, flags, palms, flora, ox, oz, H, W, lod, spots, rng }) => {
+  // the head rests on the north beach, eyes closed; flippers splay out into the shallows
+  const [hx, hz] = W(0, -50);
+  turtleParts(kit, hx, hz, { y: 1.4, s: 1 });
+  flipper(kit, ...W(-40, -26), 0.3, -Math.PI * 0.3, 16); flipper(kit, ...W(40, -26), 0.3, Math.PI * 0.3, 16);
+  flipper(kit, ...W(-32, 38), 0.2, -Math.PI * 0.75, 11); flipper(kit, ...W(32, 38), 0.2, Math.PI * 0.75, 11);
+  { const [tx, tz] = W(0, 50); kit.add('paint', blob(1, 1, null, [2.2, 1.2, 5]), M(tx, 0.3, tz, 0.1), { tint: 0x6f8f5c, chunkAt: [tx, tz] }); }
+  spots.head = [hx, 2, hz]; spots.mouth = [hx, 0.8, hz - 8];
   // the Pip market on the ridge: little stalls, lanterns, bunting
   const cols = [0xe05a5a, 0x5ab0e0, 0xf0c040, 0x7ad070, 0xc07ae0];
   for (let i = 0; i < 5; i++) { const a = i / 5 * TAU + 0.3, x = Math.cos(a) * 8, z = -2 + Math.sin(a) * 8, [c, d] = W(x, z); P.stall(kit, c, H(x, z), d, Math.atan2(x, z + 2) + Math.PI, { color: cols[i], goods: ['fruit', 'cloth', 'fish', 'pots', 'potions'][i], seed: 90 + i, w: 2.4 }); spots['stall' + i] = [c, H(x, z), d]; }
   { const [c, d] = W(0, -2); P.lanternString(kit, [c - 7, H(-7, -2) + 3.5, d], [c + 7, H(7, -2) + 3.5, d], { sag: 0.8 }); spots.market = [c, H(0, -2), d]; }
-  spots.pier = BUILD.pier(kit, W, H, 8, 48, 14, 4.2, 0.6);
-  // moss trees and mushrooms growing on the shell
-  if (flora) for (let i = 0; i < (lod === 'full' ? 34 : 18); i++) { const a = rng.range(0, TAU), r = rng.range(14, 36), x = Math.cos(a) * r, z = Math.sin(a) * r, y = H(x, z); if (y < 3) continue; flora.tree(rng.chance(0.35) ? 'blossom' : rng.chance(0.5) ? 'bush' : 'broadleaf', ox + x, y - 0.1, oz + z, { s: rng.range(0.55, 0.85), variant: i % 3, block: lod === 'full' }); }
+  spots.pier = BUILD.pier(kit, W, H, 8, 62, 60, 4.2, 0.6);
+  // moss trees and blossoms growing on the shell
+  if (flora) for (let i = 0; i < (lod === 'full' ? 34 : 18); i++) { const a = rng.range(0, TAU), r = rng.range(14, 36), x = Math.cos(a) * r, z = Math.sin(a) * r, y = H(x, z); if (y < 3 || z < -40) continue; flora.tree(rng.chance(0.35) ? 'blossom' : rng.chance(0.5) ? 'bush' : 'broadleaf', ox + x, y - 0.1, oz + z, { s: rng.range(0.55, 0.85), variant: i % 3, block: lod === 'full' }); }
 };
 
 // ---------------------------------------------------------------- Drownbell Shoal: the drowned chapel
@@ -574,7 +608,7 @@ BUILD.drownbell = ({ kit, flags, palms, flora, ox, oz, H, W, lod, spots, rng }) 
   // the arena (flat sand) centre and the pool where the Bellwarden surfaces
   spots.arena = W(0, -6); spots.pool = W(0, -30);
   for (let i = 0; i < 10; i++) { const x = rng.range(-30, 30), z = rng.range(-20, 26), y = H(x, z); if (y < -0.2 || Math.hypot(x, z + 6) < 15) continue; const [c, d] = W(x, z); boulder(kit, c, y - 0.2, d, { s: rng.range(0.4, 1.1), seed: 30 + i, tint: 0x8a9080, moss: 0x5a7a4a, flat: 0.6, block: lod === 'full' }); }
-  spots.pier = BUILD.pier(kit, W, H, 0, 44, 12, 4, 0.6);
+  spots.pier = BUILD.pier(kit, W, H, 0, 56, 60, 4, 0.6);
   palmRing(palms, H, ox, oz, [[-30, 20], [30, 18], [-8, 34], [10, 36]], rng, 0.8);
 };
 
@@ -586,7 +620,7 @@ BUILD.brightwater = ({ kit, flags, palms, flora, ox, oz, H, W, lod, spots, rng }
   { const [c, d] = W(18, -14), yy = H(18, -14); kit.add('stone', cyl(2.2, 3, 10, 12, 2), M(c, yy + 5, d), { tint: 0xe8e0d0 }); kit.add('roof', cone(3, 3.5, 12), M(c, yy + 11.7, d), { tint: Bd.ROOF.red, ao: false });
     for (let i = 0; i < 4; i++) kit.add('cloth', box(1.4, 8, 0.1, 1), M(c, yy + 9, d + 3.2, 0, 1, 1, 1, 0, i * Math.PI / 2 + 0.3), { tint: 0xf2eadc, ao: false }); }
   if (flags) P.flagPole(kit, flags, ...[W(4, 10)[0], H(4, 10), W(4, 10)[1]], { h: 10, color: 0x2a5aa8 });
-  spots.pier = BUILD.pier(kit, W, H, 4, 22, 12, 4, 0.7);
+  spots.pier = BUILD.pier(kit, W, H, 4, 34, 60, 4, 0.7);
   if (flora) for (let i = 0; i < 20; i++) { const x = rng.range(-38, 38), z = rng.range(-30, 26), yy = H(x, z); if (yy < 1.6 || Math.hypot(x + 6, z + 8) < 10) continue; flora.tree(rng.chance(0.3) ? 'blossom' : 'broadleaf', ox + x, yy - 0.1, oz + z, { s: rng.range(0.8, 1.1), variant: i % 3, block: false }); }
 };
 
@@ -604,7 +638,7 @@ BUILD.pipsprout = ({ kit, flags, palms, flora, ox, oz, H, W, lod, spots, rng }) 
   const caps = [0xd8483a, 0xe8883a, 0xc86ad0, 0x5a9ae0, 0xf0c040];
   for (let i = 0; i < 16; i++) { const a = rng.range(0, TAU), r = Math.sqrt(rng.next()) * 44, x = Math.cos(a) * r, z = Math.sin(a) * r * 0.8, y = H(x, z); if (y < 1.2) continue; const [c, d] = W(x, z); mushroom(kit, c, y - 0.2, d, rng.range(0.8, 1.9), rng.pick(caps), 70 + i); }
   for (let i = 0; i < 24; i++) { const x = rng.range(-46, 46), z = rng.range(-36, 30), y = H(x, z); if (y < 1.2) continue; const [c, d] = W(x, z); kit.add('paint', cyl(0.12, 0.16, 4, 6, 1), M(c, y + 2, d), { tint: 0x3e7a28 }); kit.add('paint', blob(1.2, 1, null, [1, 0.35, 1]), M(c, y + 4.1, d), { tint: rng.pick([0xff8ab0, 0xf4d040, 0xffffff, 0xa070e0]), ao: false }); }
-  spots.pier = BUILD.pier(kit, W, H, 4, 30, 12, 4, 0.7);
+  spots.pier = BUILD.pier(kit, W, H, 4, 42, 60, 4, 0.7);
   if (flora) for (let i = 0; i < 16; i++) { const x = rng.range(-46, 46), z = rng.range(-36, 30), y = H(x, z); if (y < 1.4) continue; flora.tree('bush', ox + x, y - 0.1, oz + z, { s: rng.range(0.8, 1.4), variant: i % 3, block: false }); }
 };
 export { BUILD as LANDMARK_BUILDERS };

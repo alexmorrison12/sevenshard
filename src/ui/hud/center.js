@@ -16,10 +16,11 @@ const MAJOR = new Set(['zone', 'boss', 'levelup', 'quest', 'clear', 'defeat', 'g
 const DUR = { zone: 3.6, boss: 4.2, warn: 3, counter: 1.3, stagger: 1.8, levelup: 3.4, quest: 3.2, clear: 4, defeat: 4, gate: 3, info: 2.8, success: 2.6, fail: 2.6 };
 
 export class Banners {
-  constructor(layer) {
+  /** o.warn: an element to host mechanic callouts (the HUD's top stack, just under the boss bar, above the toasts) */
+  constructor(layer, o = {}) {
     this.el = h('div', 'ss-banners', layer);
     this.main = h('div', 'ss-bn-slot ss-bn-main', this.el);
-    this.warn = h('div', 'ss-bn-slot ss-bn-warn', this.el);
+    this.warn = o.warn || h('div', 'ss-bn-slot ss-bn-warn', this.el);
     this.pop = h('div', 'ss-bn-slot ss-bn-pop', this.el);
     this.queue = []; this.busy = false;
   }

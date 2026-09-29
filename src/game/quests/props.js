@@ -66,6 +66,16 @@ const RECIPES = {
   lore() {
     return { body: [{ g: new THREE.BoxGeometry(0.46, 0.06, 0.34), c: 0x6a2a2a, m: T(0, 0, 0) }], glow: [{ g: new THREE.BoxGeometry(0.42, 0.05, 0.3), c: 0xfff4d8, m: T(0, 0.05, 0) }], spark: 0xffd88a, sparkY: 1.75, floatBook: true };
   },
+  cannon() {
+    const body = [];
+    body.push({ g: new THREE.CylinderGeometry(0.26, 0.34, 2.2, 14), c: 0x2e3036, m: T(0, 1.0, -0.2, Math.PI / 2 - 0.18, 0, 0) });
+    body.push({ g: new THREE.TorusGeometry(0.33, 0.06, 6, 14), c: 0xb08a3a, m: T(0, 1.13, -1.2, Math.PI / 2 - 0.18, 0, 0) });
+    body.push({ g: new THREE.BoxGeometry(0.9, 0.5, 1.6), c: 0x5a3a22, m: T(0, 0.45, 0.1) });
+    for (const sx of [-1, 1]) { body.push({ g: new THREE.CylinderGeometry(0.42, 0.42, 0.14, 14), c: 0x4a3020, m: T(sx * 0.55, 0.42, 0.5, 0, 0, Math.PI / 2) }); body.push({ g: new THREE.CylinderGeometry(0.42, 0.42, 0.14, 14), c: 0x4a3020, m: T(sx * 0.55, 0.42, -0.35, 0, 0, Math.PI / 2) }); }
+    const balls = new THREE.SphereGeometry(0.16, 8, 6);
+    for (let i = 0; i < 4; i++) body.push({ g: balls, c: 0x1e1e22, m: T(0.9 + (i % 2) * 0.3, 0.16 + (i > 1 ? 0.26 : 0), 0.6 + (i % 2) * 0.1) });
+    return { body, glow: [], spark: 0xffb050, sparkY: 2.0 };
+  },
   vista() {
     const body = [], leg = new THREE.CylinderGeometry(0.025, 0.025, 1.1, 5);
     for (let i = 0; i < 3; i++) { const a = i / 3 * Math.PI * 2; body.push({ g: leg, c: 0x5a4028, m: T(Math.cos(a) * 0.18, 0.52, Math.sin(a) * 0.18, Math.sin(a) * 0.3, 0, -Math.cos(a) * 0.3) }); }

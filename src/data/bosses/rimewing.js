@@ -16,7 +16,7 @@ export default {
   moves: {
     bite: { range: 4, cd: 3.5, weight: 3, async run(B, t) {
       B.turnTo(t); act(B, 'bite', 0.62);
-      await strike(B, 'cone', { r: 5.5, deg: 80, dur: 0.62, coef: 0.6, fx: 'bite', fxR: 3.5, sfx: 'bite' });
+      await strike(B, 'cone', { r: 5.5, deg: 80, dur: 0.62, coef: 0.6, fx: 'bite', fxR: 3.5, sfx: 'claw' });
       await wait(B, 0.5);
     } },
     // COUNTER: the model's claw wind-up carries the blue window

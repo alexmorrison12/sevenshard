@@ -215,8 +215,14 @@
 .ss-skw-trip.is-on b { color: var(--trc); }
 .ss-skw-trip.is-on i { box-shadow: 0 0 0 1px var(--trc), 0 0 8px var(--trc); }
 .ss-skw-trip:disabled { cursor: default; }
-.ss-skw-tier.is-locked .ss-skw-topts { filter: grayscale(1) brightness(.55); }
-.ss-skw-lockmsg { position: absolute; left: 52px; right: 0; top: 50%; transform: translateY(-50%); text-align: center; font: 600 11.5px/1 var(--ss-font); letter-spacing: .06em; color: var(--ss-text-2); text-shadow: 0 1px 4px #000; pointer-events: none; }
+.ss-skw-tier.is-locked .ss-skw-topts { filter: grayscale(1) brightness(.42); opacity: .8; }
+.ss-skw-lockmsg { /* solid pill centred over the dimmed options, so it never collides with tripod names */
+  position: absolute; left: calc(52px + (100% - 52px) / 2); top: 50%; transform: translate(-50%, -50%);
+  display: inline-flex; align-items: center; gap: 7px; padding: 7px 14px; white-space: nowrap;
+  font: 600 11px/1 var(--ss-font); letter-spacing: .05em; color: var(--ss-text);
+  background: rgba(5, 7, 13, .92); border: 1px solid var(--ss-line-soft); border-radius: 2px; box-shadow: 0 4px 14px rgba(0, 0, 0, .55); pointer-events: none;
+}
+.ss-skw-lockmsg .ss-gl { width: 13px; height: 13px; color: var(--ss-gold-a); }
 .ss-skw-dft { margin-top: 12px; }
 .ss-skw-barwrap { display: flex; align-items: center; gap: 14px; padding-top: 12px; border-top: 1px solid var(--ss-line-soft); }
 .ss-skw-bar { display: grid; grid-template-columns: repeat(8, 46px); gap: 6px; }

@@ -9,7 +9,10 @@
 .ss-ui.ss-in-dialog .ss-hud > .ss-cast, .ss-ui.ss-in-dialog .ss-hud > .ss-prompt, .ss-ui.ss-in-dialog .ss-hud > .ss-party, .ss-ui.ss-in-dialog .ss-hud > .ss-xp { opacity: 0; pointer-events: none; }
 .ss-bn-slot { position: absolute; left: 0; right: 0; display: flex; justify-content: center; }
 .ss-bn-main { top: 20%; }
-.ss-bn-warn { top: 33%; }
+.ss-bn-warn { top: 18%; }
+/* mechanic callouts live in the HUD top stack: just under the boss HP bar (≈15–19% of the height), above the toasts */
+.ss-bn-inline { position: relative; top: auto; left: auto; right: auto; width: 100%; }
+.ss-bn-inline:empty { display: none; }
 .ss-bn-pop { top: 41%; }
 .ss-bn { position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; animation: ss-bn-in .7s var(--ss-ease) both; }
 .ss-bn.is-out { animation: ss-bn-out .5s ease forwards; }
@@ -42,11 +45,16 @@
 @keyframes ss-boss-t { from { letter-spacing: .7em; opacity: 0; transform: scale(1.06); } 25% { opacity: 1; } to { letter-spacing: .34em; } }
 .ss-bn--boss .ss-bn-rule { width: 520px; margin-top: 16px; }
 /* mechanic warning */
-.ss-bn--warn .ss-bn-band { height: 64px; min-height: 0; width: 900px; background: linear-gradient(90deg, transparent, rgba(60, 6, 4, .72) 25%, rgba(60, 6, 4, .72) 75%, transparent); }
-.ss-bn--warn .ss-bn-t { display: flex; align-items: center; gap: 12px; font: 700 25px/1.2 var(--ss-font); letter-spacing: .03em; color: #ffd0b8; text-shadow: 0 0 3px #000, 0 0 14px rgba(255, 70, 30, .7); padding: 14px 0; }
-.ss-bn--warn .ss-bn-t .ss-gl { font-size: 26px; color: #ff7a48; }
-.ss-bn--warn { animation: ss-warn-in .45s var(--ss-spring) both; }
-@keyframes ss-warn-in { 0% { opacity: 0; transform: scale(1.25); } 60% { transform: scale(.98); } }
+/* mechanic callout: a thin, mostly transparent band with hairlines; the text carries a soft ember glow */
+.ss-bn--warn .ss-bn-band { height: 36px; min-height: 0; width: 720px; background: linear-gradient(90deg, transparent, rgba(64, 8, 4, .34) 24%, rgba(64, 8, 4, .34) 76%, transparent); }
+.ss-bn--warn .ss-bn-band::before, .ss-bn--warn .ss-bn-band::after { content: ''; position: absolute; left: 20%; right: 20%; height: 1px; background: linear-gradient(90deg, transparent, rgba(255, 128, 88, .42), transparent); }
+.ss-bn--warn .ss-bn-band::before { top: 0; }
+.ss-bn--warn .ss-bn-band::after { bottom: 0; }
+.ss-bn--warn .ss-bn-t { display: flex; align-items: center; gap: 9px; font: 700 19px/1.2 var(--ss-font); letter-spacing: .02em; color: #ffdccb; text-shadow: 0 0 2px #000, 0 1px 3px #000, 0 0 12px rgba(255, 70, 30, .5); padding: 7px 0; }
+.ss-bn--warn .ss-bn-t .ss-gl { font-size: 17px; color: #ff8a58; filter: drop-shadow(0 0 4px rgba(255, 80, 30, .55)); }
+.ss-bn--warn .ss-bn-sub { margin-top: 1px; font-size: 12.5px; }
+.ss-bn--warn { animation: ss-warn-in .4s var(--ss-spring) both; }
+@keyframes ss-warn-in { 0% { opacity: 0; transform: scale(1.12); } 60% { transform: scale(.99); } }
 /* COUNTER! / STAGGER BREAK */
 .ss-bn--counter .ss-bn-t, .ss-bn--stagger .ss-bn-t {
   font: italic 900 50px/1 var(--ss-font); letter-spacing: .04em; text-transform: uppercase;
