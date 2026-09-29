@@ -1,0 +1,20 @@
+{
+  "name": "sevenshard",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "SEVENSHARD — a Lost Ark-inspired isometric action MMO that runs in one browser tab.",
+  "scripts": {
+    "build": "node build.mjs --min",
+    "dev": "node build.mjs --watch",
+    "serve": "node tools/serve.mjs dist 5299"
+  },
+  "dependencies": {
+    "peerjs": "1.5.5",
+    "three": "0.186.1"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "puppeteer-core": "25.12.0"
+  }
+}
