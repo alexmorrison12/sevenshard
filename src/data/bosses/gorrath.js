@@ -42,7 +42,7 @@ function hideHorn(B) {
 function endFury(B) {
   if (!B.flags.fury) return;
   B.flags.fury = false; unbuff(B, 'horned_fury'); setHaste(B); hideHorn(B);
-  B.u.model?.setGlow?.('enrage', 0);
+  B.u.model?.setGlow?.('enrage', 0); if (!B.enraged) B.u.data.enraged = false;   // data.enraged is co-op synced
 }
 const cw = B => 2 * (B.u.radius + 0.6);   // width of the strip a charge actually sweeps
 const ghostly = B => B.phase >= 3;
@@ -84,7 +84,7 @@ export default {
       await wait(B, 0.4);
     } },
     // COUNTER: blue glow during the long wind-up of the first sweep (model counter window 0.35–1.85 of 4.8 s)
-    reaping: { range: 6, cd: 18, weight: 3, recover: 1.0, async run(B, t) {
+    reaping: { range: 6, cd: 21, weight: 3, recover: 1.0, async run(B, t) {
       B.turnTo(t); act(B, 'triple_sweep', 1.85);
       await wait(B, 0.3);
       counter(B, 1.35, 4.5);
@@ -160,7 +160,7 @@ export default {
       B.flags.fury = true; setHaste(B); showHorn(B);
       const id = B.flags.furyId = (B.flags.furyId || 0) + 1;
       buff(B, 'horned_fury', 22, { dmgMul: 0.3 }, 'Horned Fury');
-      B.u.model?.setGlow?.('enrage', 1);
+      B.u.model?.setGlow?.('enrage', 1); B.u.data.enraged = true;
       B.level.after(22, () => { if (B.flags.furyId === id) endFury(B); });
       smash(B, 'circle', { r: 8, coef: 0.3, knock: 'push', kb: 4, fx: 'enrage', fxR: 8, sfx: 'boss_roar', shake: 0.4 });
       await wait(B, 0.6);

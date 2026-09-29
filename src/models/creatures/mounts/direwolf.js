@@ -15,11 +15,11 @@ import { mRear, mJump, mShake, mHit, mDeath, mSpawn, mPick, mountPose, counterSc
 const K = 1.5; // wolf space → metres
 const k3 = (p) => [p[0] * K, p[1] * K, p[2] * K];
 const PAL = {
-  grey: { base: 0x676a72, dark: 0x2b2c32, belly: 0xd2cbbe, mane: 0x9ca0a8, maneTip: 0x3a3b42, muzzle: 0xdcd5c8, mask: 0x393a40, leg: 0xa9a8a8, nose: 0x121012, eye: 0xf2b422, eyeGlow: 0.45, earIn: 0xb49a8e, tail: 0x5f626a,
+  grey: { base: 0x676a72, dark: 0x2b2c32, belly: 0xd2cbbe, mane: 0x9ca0a8, maneTip: 0x3a3b42, muzzle: 0xdcd5c8, mask: 0x393a40, leg: 0xa9a8a8, nose: 0x121012, eye: 0xe8a820, eyeGlow: 0.22, earIn: 0xb49a8e, tail: 0x5f626a,
     t: { leather: 0x3e2616, seat: 0x4e301c, stitch: 0xb08a58, pelt: 0x7a5a3c, peltTip: 0xd8c4a0, trim: 0xd8ccb0, metal: 0x8a8e96, strap: 0x2e1c10 } },
-  snow: { base: 0xd6dbe2, dark: 0x96a0ae, belly: 0xf4f4f2, mane: 0xf2f4f6, maneTip: 0xa4b0c2, muzzle: 0xf4f2ee, mask: 0xaab4c2, leg: 0xe6e8ec, nose: 0x2a2a32, eye: 0x7ad4ff, eyeGlow: 0.9, earIn: 0xd8b8b8, tail: 0xdce1e8,
+  snow: { base: 0xd6dbe2, dark: 0x96a0ae, belly: 0xf4f4f2, mane: 0xf2f4f6, maneTip: 0xa4b0c2, muzzle: 0xf4f2ee, mask: 0xaab4c2, leg: 0xe6e8ec, nose: 0x2a2a32, eye: 0x7ad4ff, eyeGlow: 0.6, earIn: 0xd8b8b8, tail: 0xdce1e8,
     t: { leather: 0x4a3222, seat: 0x5a3c28, stitch: 0xd8e4f0, pelt: 0x2c4a6e, peltTip: 0x9ac0e8, trim: 0xe8eef6, metal: 0xc8d4e2, strap: 0x3a2618 } },
-  black: { base: 0x2a292f, dark: 0x111014, belly: 0x5a5660, mane: 0x3b3a42, maneTip: 0x0e0d10, muzzle: 0x6e6872, mask: 0x131215, leg: 0x46444b, nose: 0x080708, eye: 0xffc22a, eyeGlow: 1.2, earIn: 0x5a4648, tail: 0x222127,
+  black: { base: 0x2a292f, dark: 0x111014, belly: 0x5a5660, mane: 0x3b3a42, maneTip: 0x0e0d10, muzzle: 0x6e6872, mask: 0x131215, leg: 0x46444b, nose: 0x080708, eye: 0xffc22a, eyeGlow: 0.9, earIn: 0x5a4648, tail: 0x222127,
     t: { leather: 0x241612, seat: 0x301e16, stitch: 0xc89a3a, pelt: 0x6a1418, peltTip: 0xd8a040, trim: 0xe0b040, metal: 0xd4a640, strap: 0x1a100c } },
 };
 

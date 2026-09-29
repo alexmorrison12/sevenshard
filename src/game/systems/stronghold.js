@@ -25,7 +25,8 @@ export function state(account, now = Date.now()) {
   s.energy ??= ACTION_ENERGY.max; s.energyT ??= now;
   // action energy regen
   const cap = ACTION_ENERGY.max, gain = Math.max(0, now - s.energyT) / HOUR * ACTION_ENERGY.perHour * (1 + (perksOf(s).energyRegen || 0));
-  s.energy = Math.min(cap, s.energy + gain); s.energyT = now;
+  if (s.energy < cap) s.energy = Math.min(cap, s.energy + gain);
+  s.energyT = Math.max(s.energyT, now);
   return s;
 }
 function starterCrew(account) {

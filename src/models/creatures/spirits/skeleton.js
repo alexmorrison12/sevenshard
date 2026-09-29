@@ -7,7 +7,7 @@
 // Death: the bones come apart and clatter into a scattered pile (holds). Spawn: claws its way out of the ground.
 import * as THREE from 'three';
 import { BipedCtl, armRot, legsLocal, legsPlant } from '../ctl.js';
-import { bHit, bKnockback, bKnockdown, bGetup, bStun, bSpawn, bDrop, kf } from '../acts.js';
+import { bHit, bKnockback, bKnockdown, bGetup, bStun, bSpawn, bDrop, kf, bLie } from '../acts.js';
 import { sweep, rigid, bez, taper, leafGeo } from '../../kit/geo.js';
 import { col } from '../../kit/sdf.js';
 import { addHorn } from '../../kit/parts.js';
@@ -448,12 +448,12 @@ function knightArmour(acc, b, c, cB) {
   }
   // ---- broken cuirass over the upper ribcage (front arc), gorget
   {
-    const prof = [[0.135, 1.5], [0.172, 1.46], [0.188, 1.4], [0.186, 1.34], [0.176, 1.28]].map(([r, y]) => [r, y - 1.29]); // top → bottom: outward-facing
+    const prof = [[0.176, 1.28], [0.186, 1.34], [0.188, 1.4], [0.172, 1.46], [0.135, 1.5]].map(([r, y]) => [r, y - 1.29]); // bottom → top: outward-facing
     const g = new THREE.LatheGeometry(prof.map(([r, y]) => new THREE.Vector2(r, y)), 10, Math.PI * 0.58, Math.PI * 0.84);
     const pa = g.attributes.position;
     for (let i = 0; i < pa.count; i++) { const x = pa.getX(i), y = pa.getY(i); if (y < 0.02 && x > 0.02) pa.setY(i, y + 0.06 * sstep(0.02, 0.14, x)); pa.setZ(i, pa.getZ(i) * 0.9); }
     g.computeVertexNormals();
-    acc.add(g, { matrix: new THREE.Matrix4().makeTranslation(0, 1.29, 0.02), skin: rigid(b('chest')), color: (p, n, uv) => uv[1] < 0.15 ? cT : iron(p), dtl: [0, 0, 0.35, 0.05] });
+    acc.add(g, { matrix: new THREE.Matrix4().makeTranslation(0, 1.29, 0.02), skin: rigid(b('chest')), color: (p, n, uv) => uv[1] > 0.85 ? cT : iron(p), dtl: [0, 0, 0.35, 0.05] });
   }
   // ---- faulds: three hanging plates at the belt
   for (let i = -1; i <= 1; i++) {
@@ -680,7 +680,7 @@ const COMMON = {
     const P = ctl.pose, b = ctl.b, k = a.k, t = a.t;
     ctl.glow = mix(ctl.glow, 0, sstep(0.05, 0.5, t) * w * (0.6 + 0.4 * Math.abs(Math.sin(t * 40))));
     ctl.flame = 1 - sstep(0.15, 0.55, t);
-    if (a.u.fromDown) { P.move(b.hips, 0, -(ctl.pose.rest[b.hips].y - 0.13) * w, 0); P.rx(b.hips, 1.5 * w); legsLocal(ctl, w, 0.04, 1.2, 0, 0.28); return; }
+    if (a.u.fromDown) { bLie(ctl, w, ctl.downSide || 1, t, ctl.downO || { lieY: 0.13 }); return; } // same pose the knockdown left
     const jolt = sstep(0, 0.06, t) * (1 - sstep(0.1, 0.3, t)), buckle = sstep(0.08, 0.34, t);
     P.move(b.hips, 0, -0.28 * buckle * w, 0.05 * jolt * w);
     P.rot(b.hips, (0.15 * jolt - 0.2 * buckle) * w, 0, 0.08 * buckle * w);
@@ -737,17 +737,20 @@ const SWORD = {
     ctl.jaw = Math.max(ctl.jaw, 0.55 * sstep(0.44, 0.5, a.k) * (1 - sstep(0.6, 0.9, a.k)) * w);
     legsPlant(ctl, sstep(0.2, 0.4, a.k) * (1 - sstep(0.7, 1, a.k)) * w * 0.6, 1.35, -0.05);
   } },
-  attack2: { dur: 0.8, a: 0.06, d: 0.85, hit: 0.48, fn(ctl, a, w) { // shield bash + lunge
+  attack2: { dur: 0.8, a: 0.06, d: 0.85, hit: 0.48, fn(ctl, a, w) { // shield bash: left shoulder coils back, then drives the shield forward in a lunge
     const P = ctl.pose, b = ctl.b, k = a.k;
-    const wind = sstep(0, 0.36, k) * (1 - sstep(0.36, 0.46, k)), bash = sstep(0.38, 0.5, k) * (1 - sstep(0.65, 1, k));
-    P.move(b.hips, 0, -0.04 * (wind + bash) * w, (0.05 * wind - 0.16 * bash) * w);
-    P.rot(b.spine, (0.1 * wind - 0.2 * bash) * w, (-0.45 * wind + 0.4 * bash) * w, 0);
-    P.ry(b.armLL, 0);
-    up(ctl, -1, 0.3 * wind + 0.9 * bash, 0.1 * wind + 0.25 * bash, -0.9 * wind - 0.6 * bash, 1.6 * wind + 0.9 * bash, 0, w);
-    ctl.pose.ry(ctl.b.armL[1], (1.4 * wind + 1.3 * bash) * w);
-    up(ctl, 1, 0.4 * wind, 0.3, 0, 0.9, 0, w);
+    const wind = sstep(0, 0.36, k) * (1 - sstep(0.36, 0.46, k)), bash = sstep(0.38, 0.5, k) * (1 - sstep(0.66, 1, k)), g = 1 - wind - bash;
+    P.move(b.hips, 0, -0.05 * (wind + bash) * w, (0.06 * wind - 0.24 * bash) * w);
+    P.rot(b.hips, 0, (0.25 * wind - 0.2 * bash) * w, 0);
+    P.rot(b.spine, (0.08 * wind - 0.22 * bash) * w, (0.35 * wind - 0.35 * bash) * w, 0);
+    P.rot(b.head, (0.1 * wind - 0.1 * bash) * w, (-0.4 * wind + 0.3 * bash) * w, 0);
+    // left arm: guard → shield hugged in → shoved out (FK params from the solved guard)
+    const L = b.armL;
+    P.rot(L[0], (-0.11 * g - 0.25 * wind + 0.95 * bash) * w, (-1.39 * g - 1.3 * wind - 1.15 * bash) * w, -(0.45 * g + 0.3 * wind + 0.35 * bash) * w);
+    P.rx(L[1], (1.77 * g + 2.15 * wind + 0.55 * bash) * w); P.ry(L[1], 1.52 * w);
+    up(ctl, 1, 0.3 + 0.2 * wind, 0.35, 0, 0.9, 0, w);
     ctl.jaw = Math.max(ctl.jaw, 0.6 * bash * w);
-    legsPlant(ctl, (wind + bash) * w * 0.6, 1.3, -0.06 * bash);
+    legsPlant(ctl, (wind + bash) * w * 0.7, 1.35, -0.1 * bash);
   } },
   attack_big: { dur: 1.6, a: 0.05, d: 0.9, hit: 0.64, fn(ctl, a, w) { // overhead cleave: long trembling windup (eyes flare) → slam
     const k = a.k;

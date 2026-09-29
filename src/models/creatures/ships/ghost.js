@@ -4,11 +4,11 @@
 // siren figurehead with burning eyes, teal rim light so the silhouette reads as haunted from the game camera.
 import * as THREE from 'three';
 import { linColor as lc } from '../../../engine/geom.js';
-import { WoodBuilder, V3, M, MY, cyl, box, sphere, cone, lerp } from './build.js';
+import { WoodBuilder, V3, M, MY, cyl, box, cone, lerp } from './build.js';
 import { makeHull, buildHull, buildFoam, sweep, sidePath } from './hull.js';
 import { SailBuilder, squareSail, foreAft, flag } from './sails.js';
 import { mast, spar, platform, shrouds } from './rig.js';
-import { cannon, gunport, lantern, lamp, wheel, windowAt, balustrade, ladder, barrel, crate, IRON } from './props.js';
+import { cannon, gunport, lantern, wheel, windowAt, balustrade, ladder, barrel, crate } from './props.js';
 import { shroudLines, yard, anchor, rudder, chain, skull, breach, barnacles, seaweed } from './common.js';
 import { Atlas, rgb, tatter, hh } from './tex.js';
 
@@ -178,8 +178,7 @@ export function buildGhost() {
   sb.sheet(sq[0].corners.clewR, railPt(-2.6, 1), 0.03, ropeUV);                   // one fore sheet parted
   sb.sheet(sq[1].corners.clewL, railPt(2.9, -1), 0.03, ropeUV); sb.sheet(sq[1].corners.clewR, railPt(2.5, 1), 0.03, ropeUV);
   sb.sheet(sq[2].corners.clewL, ym[0].a, 0.022, ropeUV); sb.sheet(sq[2].corners.clewR, ym[0].b, 0.022, ropeUV);
-  const jib = foreAft(sb, { head: V3(0, 9.9, FORE - 0.25), tack: V3(0, 4.7, -11.2), clew: V3(-0.45, 5.4, -7.8), lee: -1, depth: 0.55, region: R.jib });
-  void jib;
+  foreAft(sb, { head: V3(0, 9.9, FORE - 0.25), tack: V3(0, 4.7, -11.2), clew: V3(-0.45, 5.4, -7.8), lee: -1, depth: 0.55, region: R.jib });
   flag(sb, { at: V3(0, 14.95, MAIN + 0.03), h: 1.0, len: 1.5, region: R.flag, phase: 0.4, n: 12 });
   wb.mark('sails+yards');
   // ---------------------------------------------------------------------------------------------- rigging (slack, some parted), hanging lanterns & chains

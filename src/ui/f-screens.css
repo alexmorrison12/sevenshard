@@ -237,10 +237,10 @@
 .ss-cc-left { left: 28px; width: 360px; padding: 16px 16px 14px; }
 .ss-cc-right { right: 28px; width: 440px; padding: 18px 18px 16px; }
 .ss-cc-gridwrap, .ss-cc-lookwrap { display: flex; flex-direction: column; flex: 1; min-height: 0; }
-.ss-cc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; overflow: auto; }
+.ss-cc-grid { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: minmax(118px, 1fr); gap: 8px; margin-top: 14px; overflow: auto; flex: 1; }
 .ss-cc-tile {
   --cc: #9fb0d0; --cc2: #dfe6f5;
-  position: relative; height: 118px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 8px; cursor: pointer; color: var(--ss-text);
+  position: relative; min-height: 118px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 8px; cursor: pointer; color: var(--ss-text);
   background: linear-gradient(180deg, rgba(22, 28, 46, .85), rgba(8, 11, 20, .9)); border: 1px solid var(--ss-line-a); border-radius: 2px;
   transition: border-color .15s, background-color .15s, box-shadow .2s, transform .15s;
 }

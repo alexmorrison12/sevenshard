@@ -7,6 +7,7 @@
 import { h, btn, esc, clear } from '../core/util.js';
 import { glyph } from '../core/glyphs.js';
 import { iconUrl } from '../core/icon.js';
+import { slug } from '../core/data.js';
 
 const KIND_G = { quest: 'quest', shop: 'market', leave: 'exit', talk: 'chat' };
 const CPS = 60; // typing speed, characters per second
@@ -41,7 +42,13 @@ export class NpcDialog {
     clear(this.por);
     const p = npc.portrait;
     if (p && p.tagName === 'CANVAS') this.por.appendChild(p);
-    else { const i = h('i', 'ss-dlg-pi', this.por); i.style.backgroundImage = `url("${p || iconUrl(npc.id ? 'npc:' + npc.id : 'class:' + (npc.cls || 'oathkeeper'), 150)}")`; if (!p && !npc.id) i.classList.add('is-crest'); }
+    else {
+      // portrait: supplied image → npc:<id> → npc:<slug(name)> (the icon set paints named NPCs, a hooded bust otherwise) → class crest
+      const key = npc.id || slug(npc.name || '');
+      const i = h('i', 'ss-dlg-pi', this.por);
+      i.style.backgroundImage = `url("${p || iconUrl(key ? 'npc:' + key : 'class:' + (npc.cls || 'oathkeeper'), 150)}")`;
+      if (!p && !key) i.classList.add('is-crest');
+    }
     this.el.style.display = '';
     this.el.classList.remove('is-out'); void this.el.offsetWidth; this.el.classList.add('is-in');
     this.ui.tip.hide();

@@ -117,7 +117,7 @@ K.ground_crack = (fx, p) => {        // a crack racing forward along the ground 
   const c = ctx(fx, p, null, 1.2, 6), s = c.s, col = tc(c.tint, CRIMSON, 1.5);
   const L = c.L, speed = 24, pos = vec(c.x, c.y, c.z);
   decal(fx, { pos, dir: c.f, radius: 0.9 * s, length: L, kind: 'fissure', dur: 4, color: col });
-  const o = fx.o(s, hue(col, [0, 0, 0])), od = fx.o(s * 0.9, null);
+  const o = fx.o(s, hue(col, [0, 0, 0])), od = fx.o2(s * 0.9, null);
   along(c.x, c.z, c.f, L, fx.n(Math.round(L * 2.5)), (x, z, u) => {
     o.dt = u * L / speed; od.dt = o.dt;
     fx.spawn(CRACK_SPARK, x, c.y + 0.1, z, fx.r(-2, 2), fx.r(3, 8), fx.r(-2, 2), o);
@@ -243,8 +243,9 @@ K.light_pillar = (fx, p) => {        // pillar of light slamming down on the tar
   const x = p.target ? c.tx : c.x, z = p.target ? c.tz : c.z, y = p.target ? c.ty : c.y;
   const pos = vec(x, y, z);
   decal(fx, { pos, radius: c.R * 1.2, kind: 'holy', dur: 2.2, color: col, hot: 0.4 });
-  lightPillar(fx, x, y, z, c.R * 0.6, 16 * s, [col[0], col[1], col[2]], 1.0, 0, 0.12);
-  lightPillar(fx, x, y, z, c.R * 0.25, 18 * s, [1.4, 1.3, 1.1], 0.8, 3, 0.12);
+  const H = p.height ?? 16 * s;
+  lightPillar(fx, x, y, z, c.R * 0.6, H, [col[0], col[1], col[2]], 1.0, 0, 0.12);
+  lightPillar(fx, x, y, z, c.R * 0.25, H * 1.12, [1.4, 1.3, 1.1], 0.8, 3, 0.12);
   fx.at(HOLY.flash, pos, 1.6 * s, null, { dt: 0.12 }, 0, 1, 0);
   shockwave(fx, { pos, radius: c.R * 2.2, color: col, dur: 0.45, delay: 0.12, dust: false });
   const o = fx.o(s, col); o.dt = 0.12;
@@ -294,12 +295,12 @@ K.brand_mark = (fx, p) => fx.aura({ attach: p.attach ?? p.follow ?? p.unit, pos:
 K.holy_explosion = (fx, p) => {
   const c = ctx(fx, p, null, 3.5, 8, 5), s = c.R / 3.5, col = tc(c.tint, GOLD, 1.25);
   const x = p.target ? c.tx : c.x, z = p.target ? c.tz : c.z, y = p.target ? c.ty : c.y, pos = vec(x, y, z), up = vec(x, y + 1, z);
-  fx.at(HOLY.flash, up, 1.7 * s, null);
-  fx.at(GEN.rays, up, 1.1 * s, col, { i: 0.7 });
+  fx.at(HOLY.flash, up, 1.4 * s, null);
+  fx.at(GEN.rays, up, 1.0 * s, col, { i: 0.6 });
   fx.sphere(HOLY.cross, 6, up, 1, 3, s, col);
   fx.sphere(HOLY.spark, 40, up, 4, 11, s, col);
   shockwave(fx, { pos, radius: c.R * 1.6, color: col, dur: 0.45, height: 1.6 * s, dust: false });
-  decal(fx, { pos, radius: c.R, kind: 'sun', dur: 2.5, color: col });
+  decal(fx, { pos, radius: c.R, kind: 'sun', dur: 2.5, color: [col[0] * 0.6, col[1] * 0.6, col[2] * 0.6] });
   fx.shake(0.2 * s, pos);
 };
 K.heal_burst = (fx, p) => {          // party heal: green-gold swirl burst on the caster

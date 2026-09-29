@@ -107,7 +107,7 @@ const FRAG_COLOR = /* glsl */`
     float mask = smoothstep( 0.05, 0.4, vExt.z );
     float pulse = 0.7 + 0.3 * sin( uTime * 2.1 - vRP.y * 5.0 / uUnit + vr.z * 6.28 );
     diffuseColor.rgb *= 1.0 - halo * mask * 0.45;
-    gEmis += uGlowCol * ( line * mix( 0.3, 1.0, fade ) + halo * 0.08 ) * mask * pulse * uCrackK * ( 1.0 + uBodyGlow * 2.5 + uEnrage * 1.3 );
+    gEmis += uGlowCol * ( line * mix( 0.3, 1.0, fade ) + halo * 0.08 ) * mask * pulse * uCrackK * ( 1.0 + uBodyGlow * 1.4 + uEnrage * 1.1 );
   }
 }
 `;
@@ -119,7 +119,7 @@ const FRAG_EMIS = /* glsl */`
   if ( gcls > 0.5 && gcls < 1.5 ) k *= uEyeK * ( 1.0 + uEnrage * 0.8 );
   else if ( gcls > 1.5 && gcls < 2.5 ) k *= ( 1.0 + uCharge * 2.2 + uEnrage * 0.5 ) * ( 0.9 + 0.1 * sin( uTime * 5.0 + vRP.y * 8.0 / uUnit ) );
   else if ( gcls > 2.5 && gcls < 3.5 ) k *= ( 0.8 + 0.2 * sin( uTime * 23.0 + vRP.x * 40.0 / uUnit ) * sin( uTime * 7.3 + 1.0 ) ) * ( 1.0 + uEnrage * 0.6 + uBodyGlow );
-  else if ( gcls > 3.5 ) k *= ( 0.55 + 0.45 * sin( uTime * 2.4 - vRP.y * 6.0 / uUnit ) ) * ( 1.0 + uBodyGlow * 2.0 + uEnrage * 1.2 + uCharge * 0.8 );
+  else if ( gcls > 3.5 ) k *= ( 0.55 + 0.45 * sin( uTime * 2.4 - vRP.y * 6.0 / uUnit ) ) * ( 1.0 + uBodyGlow * 1.3 + uEnrage * 1.0 + uCharge * 0.8 );
   vec3 ec = vColor.rgb * vEmis * k;
   ec = mix( ec, uEnrageCol * dot( ec, vec3( 0.4, 0.4, 0.2 ) ) * 1.4, uEnrage * 0.3 );
   totalEmissiveRadiance += ec + gEmis;

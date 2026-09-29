@@ -8,7 +8,7 @@ import { sweep, eyeGeo, rigid, bez, taper, leafGeo, eyeMatrix } from '../../kit/
 import { col } from '../../kit/sdf.js';
 import { lerp3 } from '../../kit/parts.js';
 import { sstep, clamp01, mix, bell } from '../../kit/rig.js';
-import { hsh, ov, cancelRestOnMove, prepLegs, sidePair, surfaceCrack } from './util.js';
+import { hsh, ov, cancelRestOnMove, prepLegs, surfaceCrack } from './util.js';
 
 const PAL = {
   grey: { base: 0x74777e, dark: 0x2c2e33, belly: 0xd6d0c4, mane: 0x979aa1, maneTip: 0xcfd1d5, muzzle: 0xe0dace, mask: 0x3e3f45, leg: 0xb0afae, nose: 0x121012, eye: 0xe0a424, earIn: 0xb49a8e, tail: 0x6c6f76, glow: 0xff6a2a },
@@ -395,7 +395,9 @@ const ACTIONS = {
   } },
   hit: qHit(),
   knockback: qKnockback(),
-  ...sidePair(qKnockdown({ lieY: 0.24 }), qGetup({ lieY: 0.24 }), qDeath({ lieY: 0.22, dist: 1.2, peak: 0.4 })),
+  knockdown: qKnockdown({ lieY: 0.24 }),
+  getup: qGetup({ lieY: 0.24 }),
+  death: qDeath({ lieY: 0.22, dist: 1.2, peak: 0.4 }),
   stun: qStun(),
   spawn: qSpawn({ depth: 1.15 }),
 };
@@ -413,7 +415,7 @@ const WOLF_SPEC = {
   },
   neck: { pitch: 0, run: -0.3, combat: -0.38, walk: -0.06, headCombat: 0.2, comp: 0.55 },
   tail: { wag: 0.22, wagF: 0.5, run: 0.55, combat: 0.35 },
-  combatCrouch: 0.07, combatPitch: -0.06, runDrop: 0.05, chargeK: 0.05,
+  combatCrouch: 0.07, combatPitch: -0.06, runDrop: 0.05, chargeK: 0.03,
   fidgets: [{ name: 'idle_alt', w: 3 }, { name: 'yawn', w: 1 }, { name: 'scratch', w: 1 }, { name: 'shake', w: 1 }],
   fidgetGap: 5,
   pose(ctl) {

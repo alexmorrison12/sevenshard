@@ -4,7 +4,7 @@
 // a side, warm lanterns and a green guild flag with a gold coin.
 import * as THREE from 'three';
 import { linColor as lc } from '../../../engine/geom.js';
-import { WoodBuilder, V3, M, MY, cyl, box, sphere, cone, torus, lerp } from './build.js';
+import { WoodBuilder, V3, M, MY, cyl, box, sphere, torus, lerp } from './build.js';
 import { makeHull, buildHull, buildFoam, sweep, sidePath } from './hull.js';
 import { SailBuilder, squareSail, flag } from './sails.js';
 import { mast, spar, platform, shrouds } from './rig.js';
@@ -150,13 +150,13 @@ export function buildMerchant() {
   spar(wb, V3(0, 3.4, -6.8), V3(0, 5.5, -11.8), 0.2, 0.1, C.mast);
   wb.mark('masts');
   // ---------------------------------------------------------------------------------------------- sails
-  const BR = 0.2;
+  const BR = 0.42;
   const ym = [
     yard(wb, { z: MAIN, y: 10.7, w: 10.8, brace: BR, r: 0.16, color: C.spar, rope: C.rope, liftTo: V3(0, 12.2, MAIN) }),
     yard(wb, { z: MAIN, y: 14.2, w: 6.4, brace: BR, r: 0.1, color: C.spar, rope: C.rope, liftTo: V3(0, 15.2, MAIN) }),
   ];
   const yf = yard(wb, { z: FORE, y: 8.55, w: 7.0, brace: BR, r: 0.12, color: C.spar, rope: C.rope, liftTo: V3(0, 9.5, FORE) });
-  const ysp = yard(wb, { z: -10.3, y: 4.72, w: 5.4, brace: 0, r: 0.09, color: C.spar, fwd: -0.15 });
+  yard(wb, { z: -10.3, y: 4.72, w: 5.4, brace: 0, r: 0.09, color: C.spar, fwd: -0.15 });
   const sq = [
     squareSail(sb, { z: MAIN, y: 10.65, Wt: 10.2, Wb: 10.6, H: 5.5, brace: BR, fwd: 0.44, depth: 1.8, region: R.mc, na: 14, nb: 11 }),
     squareSail(sb, { z: MAIN, y: 14.15, Wt: 5.6, Wb: 7.2, H: 2.5, brace: BR, fwd: 0.34, tilt: 0.6, depth: 0.9, region: R.mt }),
@@ -170,7 +170,6 @@ export function buildMerchant() {
   flag(sb, { at: V3(0, 8.35, MIZ + 0.03), h: 0.95, len: 1.45, region: R.flag, phase: 0.3, n: 12 });
   flag(sb, { at: V3(0, 15.35, MAIN + 0.03), h: 0.45, len: 4.6, taper: 0.9, region: R.pen, phase: 0.1, n: 16 });
   flag(sb, { at: V3(0, 9.55, FORE + 0.03), h: 0.38, len: 3.2, taper: 0.9, region: R.pen2, phase: 0.6, n: 12 });
-  void ysp;
   wb.mark('sails+yards');
   // ---------------------------------------------------------------------------------------------- rigging
   const chanY = u => H.railY(u) - 0.2;

@@ -215,8 +215,10 @@ export class FX {
   dir3(d, out) { return dir3(d, out); }
   gy(x, z, fallback) { return this.heightAt ? this.heightAt(x, z) : (fallback ?? this.u.uGroundY.value); }
   /** scratch spawn options (reset every call): fx.o(scale, tint) */
-  o(scale = 1, tint = null) {
-    const o = this._o;
+  o(scale = 1, tint = null) { return this._reset(this._o, scale, tint); }
+  /** a second, independent scratch (when two option sets are needed at once) */
+  o2(scale = 1, tint = null) { return this._reset(this._o2 || (this._o2 = {}), scale, tint); }
+  _reset(o, scale, tint) {
     o.scale = scale; o.tint = tint; o.size = undefined; o.life = undefined; o.end = undefined; o.i = undefined; o.alpha = undefined;
     o.dt = 0; o.rot = undefined; o.spin = undefined; o.drag = undefined; o.stretch = undefined; o.anchor = -1; o.held = false; o.mirror = false; o.yaw = 0;
     return o;

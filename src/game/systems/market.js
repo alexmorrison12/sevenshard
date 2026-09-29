@@ -21,13 +21,13 @@ const WEEK = 7 * DAY, TAU = 6 * HOUR;
 const HONING = ['destruction_stone', 'guardian_stone', 'leapstone', 'fusion', 'solar_grace', 'solar_blessing', 'solar_protection'];
 const FOOD = ['food1', 'food2', 'food3', 'food4'];
 const catOf = (id, t) => HONING.includes(id) ? 'honing' : t.kind === 'battle' ? 'battle' : FOOD.includes(id) ? 'food' : 'trade';
-const px = v => v < 10 ? Math.round(v * 10) / 10 : Math.round(v);
+const px = v => v < 100 ? Math.round(v * 10) / 10 : Math.round(v);
 const VOL = { honing: 0.08, battle: 0.05, trade: 0.06, food: 0.05, book: 0.12, gem: 0.1 };
 const DAILY = { honing: 5000, battle: 2000, trade: 3000, food: 800 };
 export const ITEMS_MARKET = {};
 for (const [id, t] of Object.entries(ITEMS)) {
   if (!t.tradable && !FOOD.includes(id)) continue;
-  const g = t.gold ?? (t.value || 1) / SILVER_PER_GOLD, unit = g >= 1 ? 1 : g >= 0.1 ? 10 : 100, cat = catOf(id, t);
+  const g = t.gold ?? (t.value || 1) / SILVER_PER_GOLD, unit = g >= 5 ? 1 : g >= 0.5 ? 10 : g >= 0.05 ? 100 : 1000, cat = catOf(id, t);
   ITEMS_MARKET[id] = { id, name: t.name, grade: t.grade ?? 1, icon: iconFor(id), cat, unit, base: px(g * unit), vol: VOL[cat], daily: DAILY[cat] };
 }
 for (const e of COMBAT_ENGRAVINGS) {
@@ -119,7 +119,7 @@ export function book(account, id, now = Date.now(), char = null) {
   const M = ITEMS_MARKET[id]; if (!M) return null;
   tick(account, now);
   const asks = asksFor(account, id, now), ref = refPrice(account, id, now), cheapest = asks.find(a => !a.you) || asks[0];
-  const step = cheapest.price < 10 ? 0.1 : 1;
+  const step = cheapest.price < 100 ? 0.1 : 1;
   return { id, name: M.name, grade: M.grade, icon: M.icon, cat: M.cat, unit: M.unit, ref, price: cheapest.price, change24: change24(id, now), have: haveOf(account, char, id), asks, history: history(id, { now, hours: 24 }), suggest: Math.max(0.1, px(cheapest.price - step)) };
 }
 /** Cost of buying `qty` bundles cheapest-first (no side effects). */
@@ -202,7 +202,7 @@ export function tick(account, now = Date.now()) {
     for (let t = Math.max(l.tp, l.t) + STEP; t <= end && l.qty > 0; t += STEP) {
       const ref = l.item && l.item.kind === 'accessory' ? accessoryPrice(l.item) : price(l.itemId, t);
       const ratio = l.price / Math.max(0.1, ref * 0.99);
-      const p = clamp(0.45 * Math.exp(-9 * Math.max(0, ratio - 1)) + (ratio < 0.9 ? 0.4 : 0), 0.004, 0.95);
+      const p = Math.min(0.95, 0.45 * Math.exp(-9 * Math.max(0, ratio - 1)) + (ratio < 0.9 ? 0.4 : 0));   // ~18%/10 min at +10%, ~3% at +30%, ~0 at ×2
       if (hash01(l.id, t) < p) {
         const n = l.item ? 1 : Math.max(1, Math.min(l.qty, Math.ceil(l.qty * (0.25 + 0.5 * hash01(l.id, 'q', t)) * Math.min(1, (M?.daily || 100) / 400 + 0.2))));
         l.qty -= n; l.sold += n; soldNow += n; gold += l.price * n;

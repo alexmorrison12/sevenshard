@@ -46,6 +46,7 @@ export class Banners {
     b.style.setProperty('--dur', it.dur + 's');
     const k = it.kind;
     if (k === 'zone') {
+      h('i', 'ss-bn-band', b);
       if (it.sub) h('div', 'ss-bn-over', b, it.sub);
       h('div', 'ss-bn-t', b, it.text);
       h('i', 'ss-bn-rule', b);
@@ -55,6 +56,7 @@ export class Banners {
       h('div', 'ss-bn-t', b, it.text);
       h('i', 'ss-bn-rule', b);
     } else if (k === 'levelup') {
+      h('i', 'ss-bn-band', b);
       h('i', 'ss-bn-rays', b);
       h('div', 'ss-bn-over', b, it.sub || 'Level Up');
       h('div', 'ss-bn-t', b, it.level != null ? String(it.level) : it.text);

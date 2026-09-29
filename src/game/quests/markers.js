@@ -106,10 +106,10 @@ export class QuestMarkers {
       if (!u.level || u.dead) { m.sprite.removeFromParent(); this.npc.delete(u); continue; }
       const h = (u.model?.height || u.height || 1.85);
       const bob = Math.sin(this.t * 2.6 + m.ph) * 0.08;
-      m.sprite.position.set(u.pos.x, u.pos.y + h + 0.75 + bob, u.pos.z);
+      m.sprite.position.set(u.pos.x, u.pos.y + h + 1.5 + bob, u.pos.z);
       const d = me ? Math.hypot(u.pos.x - me.pos.x, u.pos.z - me.pos.z) : 0;
       m.sprite.visible = d < 45 && !u.data.hidden;
-      const s = 0.72 * (u.data.markerScale || 1); m.sprite.scale.set(s, s * 1.333, 1);
+      const s = 0.95 * (u.data.markerScale || 1); m.sprite.scale.set(s, s * 1.333, 1);
     }
     for (const b of this.beacons.values()) {
       const k = 0.5 + 0.5 * Math.sin(this.t * 2.2 + b.ph);

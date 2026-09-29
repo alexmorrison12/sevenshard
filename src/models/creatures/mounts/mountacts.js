@@ -84,7 +84,12 @@ export function mGraze(o = {}) {
     P.rot(b.head, ((o.head ?? 0.35) + 0.08 * nib) * w, Math.sin(t * 0.9) * 0.1 * w, 0);
     ctl.jaw = Math.max(ctl.jaw, (0.06 + 0.1 * Math.max(0, Math.sin(t * 9))) * w);
     ctl.ear = mix(ctl.ear, 0.25 + 0.2 * Math.sin(t * 0.7), w);
-    P.rx(b.chest, -0.04 * w);
+    P.rx(b.chest, (o.chest ?? -0.04) * w);
+    P.move(b.body, 0, (o.drop ?? -0.03) * w, 0);
+    // one foreleg eased forward, the other back a touch (natural grazing stance)
+    const G = ctl.gait.legs;
+    legTo(G[0], G[0].home.x, 0, G[0].home.z - 0.16, w, false, 0);
+    legTo(G[1], G[1].home.x, 0, G[1].home.z + 0.04, w, false, 0);
     seatK(ctl, 0.03, 0, w);
   } };
 }

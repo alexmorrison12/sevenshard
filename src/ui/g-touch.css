@@ -102,3 +102,64 @@
 .ss-tsk .ss-sk--item { --sz: 44px; }
 .ss-tsk-i { bottom: 250px; } .ss-tsk-i0 { right: 300px; } .ss-tsk-i1 { right: 350px; } .ss-tsk-i2 { right: 400px; } .ss-tsk-i3 { right: 250px; bottom: 280px; }
 .ss-touch-skills .ss-loot { top: 150px; }
+
+/* ---------------------------------------------------------------------------------------------------- screens in touch mode
+   Virtual height is ~540 here (phones in landscape), so every screen gets a compact layout with ≥44 px targets. */
+/* title */
+.ss-touch .ss-logo { top: 14px; }
+.ss-touch .ss-logo-mark { height: 74px; transform: scale(.5); transform-origin: 50% 0; }
+.ss-touch .ss-logo-word { font-size: 58px; margin-top: 0; }
+.ss-touch .ss-logo-tag { margin-top: 10px; font-size: 11px; }
+.ss-touch .ss-ti-menu { top: 262px; }
+.ss-touch .ss-ti-b { padding: 10px 20px; min-height: 44px; }
+.ss-touch .ss-ti-b.is-primary { margin-bottom: 4px; padding: 12px 20px; }
+.ss-touch .ss-ti-b.is-hot .ss-ti-bs { display: none; }
+.ss-touch .ss-ti-srv { top: auto; bottom: 12px; }
+.ss-touch .ss-ti-news, .ss-touch .ss-ti-hint { display: none; }
+.ss-touch .ss-ti-ver { bottom: 14px; right: 16px; }
+/* character select */
+.ss-touch .ss-cs-hd { left: 20px; top: 16px; }
+.ss-touch .ss-cs-title { font-size: 20px; }
+.ss-touch .ss-cs-roster { margin-top: 10px; width: 200px; padding: 8px 10px; }
+.ss-touch .ss-cs-side { right: 16px; top: 12px; bottom: 12px; width: 380px; }
+.ss-touch .ss-cs-count { margin-bottom: 6px; }
+.ss-touch .ss-cs-list { gap: 5px; overflow: auto; min-height: 0; flex: 1; }
+.ss-touch .ss-cs-card { height: 62px; flex: none; }
+.ss-touch .ss-cs-card.is-empty { height: 46px; }
+.ss-touch .ss-cs-crest { width: 46px; height: 46px; } .ss-touch .ss-cs-crest i { width: 32px; height: 32px; }
+.ss-touch .ss-cs-loc { display: none; }
+.ss-touch .ss-cs-enter { margin-top: 8px; height: 48px; flex: none; }
+.ss-touch .ss-cs-plate { bottom: 20px; margin-left: -420px; }
+.ss-touch .ss-cs-pn { font-size: 26px; }
+.ss-touch .ss-cs-foot { left: 16px; bottom: 10px; }
+/* character create */
+.ss-touch .ss-cc-steps { top: 6px; }
+.ss-touch .ss-cc-left, .ss-touch .ss-cc-right { top: 44px; bottom: 64px; padding: 12px; }
+.ss-touch .ss-cc-left { left: 12px; width: 300px; }
+.ss-touch .ss-cc-right { right: 12px; width: 360px; overflow: auto; }
+.ss-touch .ss-cc-grid { grid-auto-rows: minmax(80px, 1fr); gap: 6px; margin-top: 10px; }
+.ss-touch .ss-cc-tile { min-height: 80px; gap: 2px; }
+.ss-touch .ss-cc-crest { width: 34px; height: 34px; }
+.ss-touch .ss-cc-tile span { display: none; }
+.ss-touch .ss-cc-tile b { font-size: 12px; letter-spacing: .05em; }
+.ss-touch .ss-cc-icrest { width: 54px; height: 54px; }
+.ss-touch .ss-cc-iname { font-size: 24px; }
+.ss-touch .ss-cc-blurb { margin: 10px 0; font-size: 12px; }
+.ss-touch .ss-cc-bot { bottom: 12px; }
+.ss-touch .ss-cc-foot { left: 12px; bottom: 14px; }
+.ss-touch .ss-cc-next { right: 12px; bottom: 10px; width: 360px; }
+.ss-touch .ss-cc-look { gap: 8px; }
+.ss-touch .ss-cc-cats { width: 104px; }
+.ss-touch .ss-cc-opt { height: 48px; }
+.ss-touch .ss-cc-create { height: 46px; }
+/* loading, results, death */
+.ss-touch .ss-ld-tx { left: 30px; right: 220px; bottom: 44px; }
+.ss-touch .ss-ld-zone { font-size: 40px; }
+.ss-touch .ss-ld-tip { font-size: 12.5px; }
+.ss-touch .ss-ld-pct { right: 24px; bottom: 16px; font-size: 20px; }
+.ss-touch .ss-rs { transform: translate(-50%, -50%) scale(.78); }
+.ss-touch .ss-rs.is-anim { animation: none; }
+.ss-touch .ss-dt { top: 8%; }
+.ss-touch .ss-dt-title { font-size: 34px; }
+.ss-touch .ss-dt-opts { margin-top: 14px; }
+.ss-touch .ss-dt-b { min-height: 48px; }

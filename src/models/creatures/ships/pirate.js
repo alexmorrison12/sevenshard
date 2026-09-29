@@ -3,11 +3,11 @@
 // crossed jagged sabres in a sawtooth ring), red lanterns, iron guns behind red port lids (5 a side).
 import * as THREE from 'three';
 import { linColor as lc } from '../../../engine/geom.js';
-import { WoodBuilder, V3, M, MY, cyl, box, sphere, cone, lathe, torus, lerp } from './build.js';
+import { WoodBuilder, V3, M, MY, cyl, box, cone, lathe, torus, lerp } from './build.js';
 import { makeHull, buildHull, buildFoam, sweep, sidePath } from './hull.js';
 import { SailBuilder, squareSail, foreAft, flag } from './sails.js';
 import { mast, spar, platform, shrouds } from './rig.js';
-import { cannon, gunport, lantern, lamp, wheel, windowAt, balustrade, ladder, hatch, barrel, crate, coil, IRON } from './props.js';
+import { cannon, gunport, lantern, lamp, wheel, windowAt, balustrade, ladder, hatch, barrel, crate, coil } from './props.js';
 import { shroudLines, yard, anchor, pinRail, rudder, chain, spikes, shotPile, skull } from './common.js';
 import { Atlas, cloth, tatter, patch, rgb, hh } from './tex.js';
 
@@ -188,7 +188,7 @@ export function buildPirate() {
   chain(wb, V3(0, 3.7, -10.0), 1.6, { color: C.iron });
   chain(wb, V3(0.2, 3.2, -9.0), 1.1, { color: C.iron, end: 'hook' });
   wb.mark('masts');
-  const BR = 0.26;
+  const BR = 0.34;
   const yf = [
     yard(wb, { z: FORE, y: 7.95, w: 7.8, brace: BR, r: 0.13, color: C.spar, rope: C.rope, liftTo: V3(0, 8.9, FORE) }),
     yard(wb, { z: FORE, y: 10.95, w: 6.0, brace: BR, r: 0.1, color: C.spar, rope: C.rope, liftTo: V3(0, 12.0, FORE) }),

@@ -60,7 +60,9 @@
 .ss-bn--stagger .ss-bn-burst { background: radial-gradient(ellipse, rgba(160, 90, 255, .45), transparent 65%); }
 @keyframes ss-burst { from { transform: translate(-50%, -50%) scale(.3); opacity: 1; } to { transform: translate(-50%, -50%) scale(1.3); opacity: .6; } }
 /* level up */
-.ss-bn--levelup .ss-bn-over { font-size: 16px; letter-spacing: .5em; }
+.ss-bn--levelup .ss-bn-over { font-size: 19px; letter-spacing: .5em; color: #fff0c4; }
+.ss-bn--levelup .ss-bn-band, .ss-bn--zone .ss-bn-band { height: 150px; width: 820px; }
+.ss-bn--levelup .ss-bn-sub { font-size: 15px; }
 .ss-bn--levelup .ss-bn-t {
   font: 400 88px/1 var(--ss-serif); letter-spacing: .02em;
   background: linear-gradient(180deg, #fffbe8 10%, #ffd96a 55%, #b8741e); -webkit-background-clip: text; background-clip: text; color: transparent;
@@ -102,3 +104,5 @@
 .ss-toast.is-out { animation: ss-toast-out .4s ease forwards; }
 @keyframes ss-toast-in { from { opacity: 0; transform: translateY(-6px); } }
 @keyframes ss-toast-out { to { opacity: 0; transform: translateY(-4px); } }
+
+.ss-toasts--screen { position: absolute; left: 50%; top: 22px; width: 640px; margin-left: -320px; z-index: 20; }

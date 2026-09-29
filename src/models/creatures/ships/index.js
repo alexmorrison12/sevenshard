@@ -8,7 +8,7 @@
 //                                               // sail 0 furled … 1 full. Call every frame; allocates nothing.
 //   const { dur, times } = ship.fire('L');      // port broadside ('R' = starboard). Guns fire bow → stern; times[i] (s) is when
 //                                               // sockets.cannons{L|R}[i] fires (muzzle flash / smoke there); dur = until the last
-//                                               // gun has eased back into battery (~1.6–1.8 s)
+//                                               // gun has eased back into battery (~1.4 s merchant … ~1.8 s pirate)
 //   ship.setGlow(k);                            // lantern / window emissive multiplier (1 = authored; e.g. 1.6 at night)
 //   ship.dispose();                             // removes root, frees per-instance materials (geometry/textures stay cached)
 //

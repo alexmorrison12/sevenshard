@@ -15,7 +15,7 @@ import { prepLegs } from './util.js';
 const PAL = {
   thornweaver: { body: 0x2e2a22, dark: 0x16130f, abd: 0x2a2620, mark: 0xb8d83c, mark2: 0xf0d848, leg: 0x2c261e, band: 0xa88a52, eye: 0xff2a10, fang: 0x1a1210, glow: 0xb8ff40, venom: 0x9cff3a },
   blightfang: { body: 0x2c1f36, dark: 0x140d1a, abd: 0x2a1c34, mark: 0x60e040, mark2: 0xb0ff60, leg: 0x281c30, band: 0x7a5a90, eye: 0x7cff40, fang: 0x14101a, glow: 0x80ff40, venom: 0x80ff30 },
-  pale: { body: 0x6a6258, dark: 0x3a3430, abd: 0x5e564c, mark: 0xd8ccb4, mark2: 0xf0e8d0, leg: 0x5a5248, band: 0xc0b49c, eye: 0x7ad8ff, fang: 0x2a2420, glow: 0x9ae0ff, venom: 0xb0f0ff },
+  pale: { body: 0x6a6258, dark: 0x3a3430, abd: 0x5e564c, mark: 0xc8b89a, mark2: 0xe0d2b4, leg: 0x5a5248, band: 0xc0b49c, eye: 0x7ad8ff, fang: 0x2a2420, glow: 0x9ae0ff, venom: 0xb0f0ff },
   broodmother: { body: 0x241a14, dark: 0x0e0a08, abd: 0x2a1c14, mark: 0xff9a20, mark2: 0xffd050, leg: 0x2a1e16, band: 0xd09040, eye: 0xff4010, fang: 0x100a08, glow: 0xff8a20, venom: 0xffb030 },
 };
 const LEGS = [ // coxa angle, toe angle, toe reach, knee height, knee reach
@@ -43,7 +43,7 @@ export const spider = {
   config(variant, opts = {}) {
     const v = PAL[variant] ? variant : (opts.elite ? 'broodmother' : 'thornweaver');
     const elite = v === 'broodmother' || !!opts.elite;
-    return { variant: elite ? 'broodmother' : v, pal: PAL[elite ? 'broodmother' : v], elite, shapeKey: elite ? 'elite' : 'base', scale: elite ? 1.6 : 1, h: 0.042, hg: { 1: 0.026 }, mat: { dfreq: 2.8, rim: 0.35, rimColor: 0xe8f0ff, spec: 0.35, shine: 30 } };
+    return { variant: elite ? 'broodmother' : v, pal: PAL[elite ? 'broodmother' : v], elite, shapeKey: elite ? 'elite' : 'base', scale: elite ? 1.6 : 1, h: 0.042, hg: { 1: 0.026 }, mat: { dfreq: 2.8, rim: 0.35, rimColor: 0xe8f0ff, spec: 0.14, shine: 60 } };
   },
   rig(R) {
     R.add('body', null, C0);
@@ -95,7 +95,7 @@ export const spider = {
       }
       v.mix(c.mark2, spot * 0.9);
       v.mix(c.dark, sstep(-0.2, -0.7, ny) * 0.7);
-      v.emis = Math.max(v.emis, (chev * 0.6 + stripe * 0.4 + spot * 0.5) * (cfg.elite ? 1.4 : 0.12));
+      v.emis = Math.max(v.emis, (chev * 0.6 + stripe * 0.4 + spot * 0.5) * (cfg.elite ? 0.75 : cfg.variant === 'pale' ? 0.04 : 0.12));
     }
     if (v.t('egg') > 0.3) { const w = Math.sin(x * 60 + y * 40) * Math.sin(z * 55 - y * 30); v.mul(0.9 + 0.12 * w); }
     // carapace: radial grooves + lighter rim
@@ -190,6 +190,7 @@ export const spider = {
 };
 
 // ------------------------------------------------------------------------------------------------ controller
+const SOLVE0 = { air: 0, airPaw: 0 }; // shared gait.solve options (no per-frame literal)
 function spiderLegs() {
   const legs = [];
   for (const s of [-1, 1]) for (let i = 0; i < 4; i++) {
@@ -264,7 +265,7 @@ class SpiderCtl extends BaseCtl {
     const si = b.silk;
     if (this.silk > 0.01) { P.wq[si].identity(); P.sc[si].set(1, this.silk, 1); }
     else P.sc[si].set(0.0001, 0.0001, 0.0001);
-    G.solve(P, { air: 0, airPaw: 0 });
+    G.solve(P, SOLVE0);
     P.apply(this.inst.bones);
     this._uniforms();
   }
@@ -490,6 +491,6 @@ const ACTIONS = {
 const SPEC = {
   bones: { body: 'body', abd: 'abdomen', silk: 'silk', chelL: 'chelL', chelR: 'chelR', palpL: 'palpL', palpR: 'palpR', palp2L: 'palp2L', palp2R: 'palp2R' },
   fidgets: [{ name: 'tap', w: 3 }, { name: 'idle_alt', w: 2 }, { name: 'roar', w: 0.5 }],
-  fidgetGap: 3.5, chargeK: 0.07,
+  fidgetGap: 3.5, chargeK: 0.02,
   actions: ACTIONS,
 };

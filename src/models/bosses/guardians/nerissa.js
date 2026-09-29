@@ -65,7 +65,6 @@ function sculpt(S) {
   for (const [s, n] of SIDES) {
     const sh = X(J.sh, s), el = X(J.el, s), wr = X(J.wr, s), hd = X(J.hand, s);
     S.ell('chest', add(sh, [-0.05 * s, 0.04, 0]), [0.2, 0.18, 0.18], { k: 0.1, col: C.skin, tag: 'shoulder', dtl: skinD });
-    S.ell('arm' + n, add(sh, [0.06 * s, 0.1, 0]), [0.22, 0.14, 0.22], { k: 0.06, col: C.nacre, tag: 'pauldron', rot: [0, 0, -0.35 * s], dtl: shellD });
     S.cone('arm' + n, sh, el, 0.12, 0.09, { k: 0.06, col: C.skin, tag: 'arm', b2: 'fore' + n, t0: 0.85, t1: 1, dtl: skinD });
     S.cone('fore' + n, el, wr, 0.09, 0.065, { k: 0.05, col: C.skin, tag: 'fore', b2: 'hand' + n, t0: 0.85, t1: 1, dtl: skinD });
     S.ell('hand' + n, lerp3(wr, hd, 0.4), [0.07, 0.13, 0.05], { k: 0.04, col: C.skin, tag: 'hand', dtl: skinD });
@@ -91,6 +90,15 @@ function paint(v) {
     v.mix(C.tailDk, sstep(0.0, 0.8, ny + nz * 0.3) * 0.6);
     v.mix(C.belly, sstep(-0.1, -0.8, nz - ny * 0.3) * 0.5);
     v.mul(1 + 0.08 * Math.sin((x + z) * 14) * Math.sin(y * 12));
+  }
+  // nacre bodice: scallop ribs fanning up from a hinge low at the sternum, darker grooves, pearly crests
+  const shl = v.t('shell') + v.t('belt');
+  if (shl > 0.3) {
+    const hy = v.t('belt') > 0.5 ? 3.2 : 4.0, a = Math.atan2(x - (x >= 0 ? 0.03 : -0.03), y - hy);
+    const rib = Math.cos(a * (v.t('belt') > 0.5 ? 6 : 7)), k = Math.min(1, shl);
+    v.mix(0xa890d8, k * 0.55);
+    v.mix(0x3e2e6e, k * sstep(0.0, 0.8, -rib) * 0.7);
+    v.mix(0xf4e4ff, k * sstep(0.45, 1, rib) * 0.4);
   }
   // skin: slightly darker extremities
   v.mix(C.skinDk, (v.t('hand') + v.t('fore')) * sstep(3.9, 3.2, y) * 0.5);
@@ -165,6 +173,30 @@ function dress({ acc, macc, S, b }) {
   const fk = J.fluke, T = norm(sub(fk, J.tail[NT - 1]));
   const flukeM = grid(8, 6, (u, vv) => { const a = (u - 0.5) * 2.4; const side = norm(cross(T, [0, 1, 0])); return add(addS(addS(fk, T, vv * 1.1 * (1 - 0.3 * Math.abs(a))), [0, 1, 0], Math.sin(a) * vv * 0.9), side.map(q => q * Math.cos(a) * vv * 0.25)); });
   macc.addRaw(flukeM, { skin: rigid(b('tail' + (NT - 1))), kind: K.membrane, color: (t, p, nn, uv) => lc(C.fin, C.finEdge, uv[1]), emis: (t, p, uv) => 0.8 * Math.pow(uv[1], 3), gm: 1, dtl: [0, 0, 0, 0] });
+  // ---- scallop-shell pauldrons: a ribbed nacre valve hinged at the neck side, fanning out over the deltoid with a
+  // scalloped, faintly glowing rim (outer + inner layer so it holds up from low camera angles)
+  for (const [s, n] of SIDES) {
+    const sh = X(J.sh, s), Cc = add(sh, [0.03 * s, -0.03, 0.01]);
+    const hd = norm([-0.3 * s, 1, 0.05]);
+    const o = [s, 0, 0], e1 = norm(sub(o, hd.map(q => q * (hd[0] * o[0])))), e2 = norm(cross(hd, e1));
+    const AM = 1.25, NR = 9;
+    const rib = (u) => { const a = (u - 0.5) * 2 * AM, c = 0.5 + 0.5 * Math.cos((u * NR) * Math.PI * 2); return { a, c }; };
+    const shell = (R0, inner) => grid(18, 9, (u, vv) => {
+      const { a, c } = rib(u);
+      const th = vv * 1.62 * (1 - 0.3 * Math.abs(a) / AM) * (1 + 0.04 * c);
+      const t = add(e1.map(q => q * Math.cos(a)), e2.map(q => q * Math.sin(a)));
+      const d = norm(add(hd.map(q => q * Math.cos(th)), t.map(q => q * Math.sin(th))));
+      const R = R0 + (inner ? 0 : 0.024 * c * c * sstep(0.05, 0.35, vv)) + 0.03 * Math.sin(vv * Math.PI) * (1 - Math.abs(a) / AM * 0.5);
+      return addS(Cc, d, R);
+    }, { flip: inner });
+    const pk = rigid(b('arm' + n));
+    acc.addRaw(shell(0.29, false), { skin: pk, kind: K.hard, dtl: shellD, gm: 1,
+      color: (t, p, nn, uv) => { const { c } = rib(uv[0]); const base = lc(C.nacreDk, C.nacre, Math.pow(uv[1], 0.5) * (0.55 + 0.45 * c)); return lc(base, (Math.sin(uv[0] * 7 + uv[1] * 5) > 0 ? 0xf6d0ec : 0xc0f4ee), 0.18 + 0.12 * uv[1]); },
+      emis: (t, p, uv) => 0.55 * sstep(0.86, 1, uv[1]) });
+    acc.addRaw(shell(0.255, true), { skin: pk, kind: K.hard, color: (t, p, nn, uv) => lc(0xb8a8d8, C.nacre, uv[1]), dtl: shellD });
+    // hinge knuckle
+    acc.addRaw(eyeball(addS(Cc, hd, 0.28), 0.05, hd, [0, 0, 1], 6, 0.8), { skin: pk, kind: K.hard, color: C.nacreDk, dtl: shellD });
+  }
   // ---- pearl strands on the bodice
   for (let k = 0; k < 11; k++) {
     const a = (k / 10 - 0.5) * 2.2, p = [Math.sin(a) * 0.3, 4.52 - Math.cos(a) * 0.1, -0.2 - Math.cos(a) * 0.02];

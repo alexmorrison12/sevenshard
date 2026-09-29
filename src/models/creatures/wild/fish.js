@@ -6,7 +6,7 @@
 // Actions: jump (leap & dive, lands ~0.6 m ahead), dart (hold: fast flight), nibble (rises to peck at the surface —
 // bobbers / bait), flop (loop: stranded on a deck, flopping on its side at the root), hit, death (belly-up at the surface).
 import * as THREE from 'three';
-import { BaseCtl } from '../ctl.js';
+import { BaseCtl, RV, rotA, moveA } from '../ctl.js';
 import { rigid } from '../../kit/geo.js';
 import { col } from '../../kit/sdf.js';
 import { lerp3 } from '../../kit/parts.js';
@@ -103,45 +103,51 @@ export const fish = {
 };
 
 // ================================================================================================ controller
+// Per-frame code is allocation-free: pose writes go through the framework's RV/rotA/moveA (no double crosses a call
+// boundary), the wander noise is inline sine sums.
 export class FishCtl extends BaseCtl {
   constructor(inst, spec) {
     super(inst, spec);
     inst.material.side = THREE.DoubleSide;
     this.gait = null;
     const b = this.pose.b;
-    this.bb = { body: b.body, head: b.head, jaw: b.jaw, sp1: b.sp1, sp2: b.sp2, tail: b.tail, finL: b.finL, finR: b.finR };
+    this.bBody = b.body; this.bHead = b.head; this.bJaw = b.jaw; this.bSp1 = b.sp1; this.bSp2 = b.sp2; this.bTail = b.tail; this.bFinL = b.finL; this.bFinR = b.finR;
     this.ph = Math.random() * 10; this.sd = Math.random() * 100;
-    this.depth = 0.35; this.amp = 0; this.freq = 1; this.fin = 1; this.roll = 0; this.pitch = 0;
+    this.depth = 0.35; this.amp = 0; this.freq = 1; this.fin = 1; this.roll = 0; this.pitch = 0; this.lift = 0; this.fwd = 0;
   }
-  update(dt, state = {}) {
-    dt = Math.min(dt, 0.1);
-    const P = this.pose, B = this.bb, t = this.t += dt;
-    this._state(state, dt);
+  update(dt, state = EMPTY_STATE) {
+    if (dt > 0.1) dt = 0.1;
+    const P = this.pose, R = RV, t = this.t += dt, sd = this.sd;
+    this.dt = dt; this._stateS(state);
     this.speedSm += (this._speed - this.speedSm) * (1 - Math.exp(-3 * dt));
     this.turnSm += (this._turn - this.turnSm) * (1 - Math.exp(-3 * dt));
     P.reset();
-    const sp = clamp01(Math.abs(this.speedSm) / 2.5);
+    const asp = this.speedSm < 0 ? -this.speedSm : this.speedSm, sp = asp > 2.5 ? 1 : asp / 2.5;
     // base swim parameters (actions blend on top)
-    this.depth = 0.35 + vnoise(t * 0.3, this.sd) * 0.06; this.amp = 0.1 + 0.32 * sp; this.freq = 1.1 + 3.2 * sp;
-    this.fin = 1 - 0.7 * sp; this.roll = 0; this.pitch = vnoise(t * 0.5, this.sd + 4) * 0.08; this.jaw = 0.1 + 0.08 * Math.sin(t * 3.1); this.glow = 1;
+    this.depth = 0.35 + (Math.sin(t * 0.3 + sd) * 0.7 + Math.sin(t * 0.71 + sd * 1.3) * 0.3) * 0.06;
+    this.amp = 0.1 + 0.32 * sp; this.freq = 1.1 + 3.2 * sp; this.fin = 1 - 0.7 * sp; this.roll = 0;
+    this.pitch = (Math.sin(t * 0.5 + sd * 2.1) * 0.7 + Math.sin(t * 1.13 + sd) * 0.3) * 0.08; this.jaw = 0.1 + 0.08 * Math.sin(t * 3.1); this.glow = 1;
     this.lift = 0; this.fwd = 0;
     this.acts.apply();
     this.ph += dt * TAU * this.freq;
     const A = this.amp, ph = this.ph, tb = this.turnSm;
-    P.move(B.body, vnoise(t * 0.4, this.sd + 8) * 0.04, -this.depth + this.lift, vnoise(t * 0.35, this.sd + 9) * 0.05 - this.fwd);
-    P.rot(B.body, this.pitch, A * 0.12 * Math.sin(ph) + tb * 0.12, this.roll);
-    P.ry(B.head, -A * 0.35 * Math.sin(ph) + tb * 0.25);
-    P.ry(B.sp1, A * 0.45 * Math.sin(ph - 0.9) - tb * 0.2);
-    P.ry(B.sp2, A * 0.7 * Math.sin(ph - 1.8) - tb * 0.25);
-    P.ry(B.tail, A * 1.1 * Math.sin(ph - 2.7) - tb * 0.2);
-    const sc = Math.sin(t * 5.3 + this.sd) * 0.35 * this.fin;
-    P.rot(B.finL, 0, 0.3 + sc, 0); P.rot(B.finR, 0, -0.3 - sc, 0);
-    P.rx(B.jaw, -this.jaw);
+    R[0] = (Math.sin(t * 0.4 + sd * 0.7) * 0.7 + Math.sin(t * 0.93 + sd) * 0.3) * 0.04; R[1] = -this.depth + this.lift;
+    R[2] = (Math.sin(t * 0.35 + sd * 1.9) * 0.7 + Math.sin(t * 0.83 + sd * 0.4) * 0.3) * 0.05 - this.fwd; moveA(P.lt[this.bBody]);
+    R[0] = this.pitch; R[1] = A * 0.12 * Math.sin(ph) + tb * 0.12; R[2] = this.roll; rotA(P.lq[this.bBody]);
+    R[0] = 0; R[2] = 0;
+    R[1] = -A * 0.35 * Math.sin(ph) + tb * 0.25; rotA(P.lq[this.bHead]);
+    R[1] = A * 0.45 * Math.sin(ph - 0.9) - tb * 0.2; rotA(P.lq[this.bSp1]);
+    R[1] = A * 0.7 * Math.sin(ph - 1.8) - tb * 0.25; rotA(P.lq[this.bSp2]);
+    R[1] = A * 1.1 * Math.sin(ph - 2.7) - tb * 0.2; rotA(P.lq[this.bTail]);
+    const sc = Math.sin(t * 5.3 + sd) * 0.35 * this.fin;
+    R[1] = 0.3 + sc; rotA(P.lq[this.bFinL]); R[1] = -0.3 - sc; rotA(P.lq[this.bFinR]);
+    R[0] = -this.jaw; R[1] = 0; rotA(P.lq[this.bJaw]);
     P.fk();
     P.apply(this.inst.bones);
     this._uniforms();
   }
 }
+const EMPTY_STATE = {};
 
 const ACTIONS = {
   jump: { dur: 1.2, a: 0.02, d: 0.95, fn(ctl, a, w) { // bursts up, arcs through the air, dives back in ahead
@@ -172,4 +178,5 @@ const ACTIONS = {
     ctl.amp = mix(ctl.amp, 0.02, e * w); ctl.freq = mix(ctl.freq, 0.4, e * w); ctl.fin = mix(ctl.fin, 0, e * w); ctl.jaw = mix(ctl.jaw, 0.3, e * w);
   } },
 };
+ACTIONS.flee = ACTIONS.dart; // common critter verb
 const SPEC = { bones: {}, actions: ACTIONS, fidgets: [{ name: 'nibble', w: 1 }], fidgetGap: 6 };

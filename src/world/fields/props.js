@@ -19,13 +19,30 @@ const hidden = (F, ldx, ldz) => (-ldx * F.s + ldz * F.c) < -0.35;
 const roofSpot = (kit, x, z, w, d, rot, color) => (kit.spots.roofs ||= []).push({ rect: [x, z, w, d, rot], color });
 
 // ------------------------------------------------------------------------------------------------ natural
+const ROCKG = new Map();
+function rockGeo(seed, detail = 1) {
+  const k = seed % 6 + ':' + detail;
+  if (!ROCKG.has(k)) { const nz = new Simplex(seed % 6 + 11); const g = blob(1, detail, d => 1 + nz.noise3(d.x * 1.5, d.y * 1.5, d.z * 1.5) * 0.28 + nz.noise3(d.x * 4, d.y * 4, d.z * 4) * 0.06, [1.2, 1, 1]).toNonIndexed(); g.computeVertexNormals(); ROCKG.set(k, g); }
+  return ROCKG.get(k);
+}
+/** boulder with controllable moss and a sun-bleached top (lighter than cliffs.boulder) */
+export function rock(kit, x, y, z, { s = 1, seed = 1, tint = 0x9a9284, moss = 0x7a8a4a, mossAmt = 0.35, flat = 0.7, block = true, mat = 'rock', rot = null, bury = 0.2 } = {}) {
+  const base = linColor(tint), mc = moss != null ? linColor(moss) : null, top = base.map(v => Math.min(1, v * 1.22));
+  kit.add(mat, rockGeo(seed), M(x, y + (flat - bury) * s * 0.9, z, rot ?? seed * 1.7, s, s * flat, s), { tint: (p, n) => {
+    const t = clamp((p.y - y) / (1.6 * s * flat), 0, 1);
+    let c = lerpC(base.map(v => v * 0.72), top, t * 0.8 + clamp(n.y, 0, 1) * 0.2);
+    if (mc) c = lerpC(c, mc, smoothstep(0.62, 0.9, n.y) * mossAmt);
+    return c;
+  } });
+  if (block && s > 0.55) kit.block(S.circle(x, z, s * 1.1), 0.3);
+}
 /** a cluster of 2–5 boulders around (x, z); H = heightAt */
-export function rockCluster(kit, x, z, H, { n = 3, s = 1, seed = 1, tint = 0x8a8278, moss = 0x5a7a2a, spread = 1.4, flat = 0.7, block = true, mat = 'rock' } = {}) {
+export function rockCluster(kit, x, z, H, { n = 3, s = 1, seed = 1, tint = 0x9e9688, moss = 0x7a8a4a, spread = 1.4, flat = 0.7, block = true, mat = 'rock' } = {}) {
   const r = new RNG(seed);
   for (let i = 0; i < n; i++) {
     const a = r.range(0, TAU), d = i === 0 ? 0 : r.range(0.6, 1.2) * spread * s, sc = (i === 0 ? 1 : r.range(0.35, 0.7)) * s;
     const px = x + Math.cos(a) * d, pz = z + Math.sin(a) * d;
-    boulder(kit, px, H(px, pz) - 0.15 * sc, pz, { s: sc, seed: seed * 7 + i, tint, moss, flat: flat * r.range(0.8, 1.2), block: block && sc > 0.5, mat });
+    rock(kit, px, H(px, pz), pz, { s: sc, seed: seed * 7 + i, tint, moss, mossAmt: 0.3, flat: flat * r.range(0.8, 1.2), block: block && sc > 0.5, mat });
   }
 }
 export function stump(kit, x, y, z, { r = 0.45, h = 0.6, seed = 1, tint = 0x7a5a3a, moss = true } = {}) {
@@ -53,6 +70,19 @@ export function standingStone(kit, x, y, z, { h = 3, w = 1, rot = 0, tint = 0x8a
   kit.add('rock', g, M(x, y + h * 0.42, z, rot, 1, 1, 1, lean, 0), { tint, yGround: y, aoH: h });
   if (glyph != null) kit.glow(box(w * 0.18, h * 0.35, 0.04, 1), M(x + Math.sin(rot) * w * 0.34, y + h * 0.5, z + Math.cos(rot) * w * 0.34, rot), glyph, 2.4);
   if (block) kit.block(S.circle(x, z, w * 0.55), 0.3);
+}
+
+/** dolmen: a heavy capstone resting on three uprights (old altar) */
+export function dolmen(kit, x, y, z, rot = 0, { s = 1, tint = 0xb0a898, glyph = null } = {}) {
+  const F = new Frame(x, y, z, rot);
+  for (const [lx, lz, hh] of [[-1.1, -0.5, 1.35], [1.1, -0.45, 1.3], [0.05, 0.75, 1.25]]) {
+    const g = blob(1, 1, d => 1 + Math.sin(d.x * 5 + d.y * 3 + lx) * 0.06, [0.42 * s, hh * 0.5 * s, 0.34 * s]).toNonIndexed(); g.computeVertexNormals();
+    kit.add('rock', g, F.at(lx * s, hh * 0.45 * s, lz * s, lx), { tint, yGround: y, aoH: 1.5 });
+  }
+  const cap = blob(1, 1, d => 1 + Math.sin(d.x * 4 + d.z * 3) * 0.08, [1.9 * s, 0.36 * s, 1.35 * s]).toNonIndexed(); cap.computeVertexNormals();
+  kit.add('rock', cap, F.at(0, 1.45 * s, 0.05, 0.2), { tint: new THREE.Color(tint).multiplyScalar(1.08).getHex() });
+  if (glyph != null) kit.glow(cyl(0.3 * s, 0.3 * s, 0.03, 12, 1), F.at(0, 1.83 * s, 0.1), glyph, 1.6);
+  kit.block(S.circle(x, z, 1.7 * s), 0.3);
 }
 
 // ------------------------------------------------------------------------------------------------ rural buildings
@@ -270,27 +300,79 @@ export function stoneBridge(kit, x, z, rot, { len = 16, w = 4.6, deckY = 0.6, be
   for (const s of [-1, 1]) kit.block(S.line([F.world(-len / 2 - 1.5, s * (w / 2 - 0.19)), F.world(len / 2 + 1.5, s * (w / 2 - 0.19))], 0.4), 0.25);
   return { deck: S.rect(x, z, len + 2.4, w - 0.9, rot), y: deckY + 0.1, F };
 }
-/** low dry-stone wall along a polyline */
-export function dryWall(kit, pts, H, { h = 0.8, t = 0.6, tint = 0xa89e8a, seed = 1, block = true, gaps = [] } = {}) {
-  const r = new RNG(seed);
+/** low dry-stone wall along a polyline: irregular flat stones laid in courses, capstones, sparse moss */
+export function dryWall(kit, pts, H, { h = 0.85, t = 0.62, tint = 0xb4ac9a, seed = 1, block = true, gaps = [], moss = 0x7a8a48 } = {}) {
+  const r = new RNG(seed), nz = new Simplex(seed);
+  const stoneG = [0, 1, 2].map(k => { const g = blob(1, 1, d => 1 + nz.noise3(d.x * 2.1 + k * 5, d.y * 2.1, d.z * 2.1) * 0.22, [1, 1, 1]).toNonIndexed(); g.computeVertexNormals(); return g; });
+  const col = (m) => new THREE.Color(tint).multiplyScalar(m).getHex();
   for (let i = 0; i < pts.length - 1; i++) {
-    const [ax, az] = pts[i], [bx, bz] = pts[i + 1], L = Math.hypot(bx - ax, bz - az), n = Math.max(1, Math.round(L / 0.55)), ang = Math.atan2(-(bz - az), bx - ax);
+    const [ax, az] = pts[i], [bx, bz] = pts[i + 1], L = Math.hypot(bx - ax, bz - az), ang = Math.atan2(-(bz - az), bx - ax);
+    const n = Math.max(1, Math.round(L / 0.5));
     for (let k = 0; k < n; k++) {
       const tt = (k + 0.5) / n, px = ax + (bx - ax) * tt, pz = az + (bz - az) * tt;
       if (gaps.some(([gx, gz, gr]) => Math.hypot(px - gx, pz - gz) < gr)) continue;
-      const y = H(px, pz);
-      for (let row = 0; row < 2; row++) {
-        const s = r.range(0.26, 0.36);
-        kit.add('rock', blob(s, 0, null, [1.4, 0.8, 1]), M(px + r.range(-0.1, 0.1), y + 0.15 + row * h * 0.45, pz + r.range(-0.1, 0.1), ang + r.range(-0.3, 0.3)), { tint: new THREE.Color(tint).multiplyScalar(r.range(0.85, 1.1)).getHex(), ao: row === 0, chunkAt: [px, pz] });
+      const y = H(px, pz), courses = 3;
+      for (let c = 0; c < courses; c++) {
+        const sx = r.range(0.24, 0.34), sy = r.range(0.1, 0.16), sz = t * r.range(0.4, 0.52), off = (c % 2) * 0.25;
+        const lx = (tt * L + off) % 0.5 - 0.25;
+        void lx;
+        kit.add('paint', stoneG[(k + c) % 3], M(px + r.range(-0.05, 0.05), y + 0.08 + c * h * 0.3 + sy * 0.5, pz + r.range(-0.05, 0.05), ang + r.range(-0.15, 0.15), sx, sy, sz), { tint: col(r.range(0.78, 1.1)), ao: c === 0, yGround: y, aoH: 1.0, chunkAt: [px, pz] });
       }
-      kit.add('paint', blob(0.3, 0, null, [1.2, 0.3, 1]), M(px, y + h * 0.95, pz, ang), { tint: r.chance(0.5) ? 0x5a7a30 : 0x8a8a5a, ao: false, cast: false, chunkAt: [px, pz] });
+      kit.add('paint', stoneG[k % 3], M(px, y + h * 0.92, pz, ang + r.range(-0.3, 0.3), 0.3, 0.1, t * 0.55), { tint: col(r.range(1.0, 1.2)), ao: false, chunkAt: [px, pz] });
+      if (moss != null && r.chance(0.18)) kit.add('paint', blob(0.16, 1, null, [1.3, 0.25, 1]), M(px, y + h * 1.0, pz, ang), { tint: moss, ao: false, cast: false, chunkAt: [px, pz] });
+      if (block && !gaps.length) continue;
+      if (block) kit.block(S.circle(px, pz, 0.34), 0.25);
     }
-    if (block) {
-      if (gaps.length) {
-        for (let k = 0; k < n; k++) { const tt = (k + 0.5) / n, px = ax + (bx - ax) * tt, pz = az + (bz - az) * tt; if (!gaps.some(([gx, gz, gr]) => Math.hypot(px - gx, pz - gz) < gr)) kit.block(S.circle(px, pz, 0.35), 0.25); }
-      } else kit.block(S.line([[ax, az], [bx, bz]], t), 0.25);
-    }
+    if (block && !gaps.length) kit.block(S.line([[ax, az], [bx, bz]], t), 0.25);
   }
+}
+/** zone entrance on an east–west road: two stone gate pillars with lanterns & banners, a signboard facing the camera */
+export function gatePosts(kit, flags, x, y, z, { w = 7, axis = 'x', sign = 0xd8a830, banner = 0x2a5aa8, H = null } = {}) {
+  const pts = axis === 'x' ? [[x, z - w / 2], [x, z + w / 2]] : [[x - w / 2, z], [x + w / 2, z]];
+  for (const [px, pz] of pts) {
+    const py = H ? H(px, pz) : y;
+    kit.add('stone', box(1.2, 0.5, 1.2, 1), M(px, py + 0.1, pz), { tint: 0xa89e8c, yGround: py });
+    kit.add('stone', box(0.9, 3.4, 0.9, 1.5), M(px, py + 1.9, pz), { tint: 0xc4baa6, yGround: py, aoH: 2 });
+    kit.add('stone', box(1.15, 0.3, 1.15, 1), M(px, py + 3.7, pz), { tint: 0xd8d0bc, ao: false });
+    kit.add('stone', cone(0.55, 0.8, 4, 1), M(px, py + 4.25, pz, Math.PI / 4), { tint: 0xc4baa6, ao: false });
+    kit.glow(box(0.24, 0.3, 0.24), M(px, py + 3.1, pz + 0.62), 0xffc070, 2.6);
+    kit.add('metal', box(0.3, 0.05, 0.3), M(px, py + 3.28, pz + 0.62), { tint: 0x26262c, ao: false });
+    kit.add('metal', box(0.05, 0.05, 0.25), M(px, py + 3.28, pz + 0.47), { tint: 0x26262c, ao: false });
+    kit.light(px, py + 3.1, pz + 0.8, 0xffc070, 4, 8, 0.08);
+    if (flags) flags.add(M(px, py + 3.4, pz + 0.47), 0.8, 2.2, banner, { hang: 'top' });
+    kit.block(S.circle(px, pz, 0.8), 0.25);
+  }
+  // signboard on two posts beside the road, facing south (the camera)
+  const [sx, sz] = axis === 'x' ? [x - 2.5, z + w / 2 + 2.2] : [x + w / 2 + 2.2, z + 2.5];
+  const sy = H ? H(sx, sz) : y;
+  for (const d of [-0.9, 0.9]) kit.add('timber', box(0.14, 2.0, 0.14, 1), M(sx + d, sy + 1.0, sz), { tint: 0x6a4a30 });
+  kit.add('planks', box(2.3, 1.0, 0.1, 0.8), M(sx, sy + 1.55, sz + 0.05), { tint: 0x8a5a34 });
+  kit.add('paint', box(1.9, 0.62, 0.11, 1), M(sx, sy + 1.55, sz + 0.06), { tint: sign });
+  kit.add('roof', gableRoof(2.6, 0.5, 0.3, 0.1, 0.06, 1).roof, M(sx, sy + 2.1, sz + 0.05), { tint: 0x7a4a34, ao: false });
+  kit.block(S.rect(sx, sz, 2.2, 0.4), 0.25);
+}
+/** timber gate arch over a road: posts on stone footings, crossbeam with a shingled cap, hanging sign, lanterns, banners */
+export function roadArch(kit, flags, x, y, z, rot, { w = 6.5, h = 4.6, sign = 0xd8a830, banner = 0x2a5aa8, tint = 0x6a4a30 } = {}) {
+  const F = new Frame(x, y, z, rot);
+  for (const s of [-1, 1]) {
+    kit.add('stone', box(1.0, 0.9, 1.0, 1), F.at(s * w / 2, 0.35, 0), { tint: 0xb4aa98, yGround: y });
+    kit.add('timber', box(0.42, h, 0.42, 1), F.at(s * w / 2, h / 2 + 0.6, 0), { tint });
+    kit.add('timber', box(0.2, 1.5, 0.2, 1), F.at(s * (w / 2 - 0.55), h - 0.1, 0, 0, 1, 1, 1, 0, s * 0.75), { tint, ao: false });
+    // lantern on the outer face
+    kit.add('metal', box(0.08, 0.08, 0.5, 1), F.at(s * w / 2, h * 0.62, 0.42), { tint: 0x2a2624, ao: false });
+    kit.glow(box(0.2, 0.28, 0.2), F.at(s * w / 2, h * 0.62 - 0.25, 0.62), 0xffc070, 2.6);
+    kit.add('metal', cone(0.17, 0.16, 4), F.at(s * w / 2, h * 0.62 - 0.02, 0.62, Math.PI / 4), { tint: 0x26262c, ao: false });
+    const [lx, lz] = F.world(s * w / 2, 0.62); kit.light(lx, y + h * 0.62 - 0.2, lz, 0xffc070, 4, 8, 0.08);
+    if (flags) flags.add(F.at(s * (w / 2 + 0.24), h + 0.1, 0.1, 0), 0.9, 2.2, banner, { hang: 'top' });
+    kit.block(S.circle(...F.world(s * w / 2, 0), 0.6), 0.25);
+  }
+  kit.add('timber', box(w + 1.2, 0.46, 0.5, 1), F.at(0, h + 0.75, 0), { tint });
+  const cap = gableRoof(w + 1.6, 1.1, 0.45, 0.12, 0.1, 1.5);
+  kit.add('roof', cap.roof, F.at(0, h + 1.0, 0), { tint: 0x7a4a34, ao: false });
+  // hanging sign
+  for (const s of [-1, 1]) kit.add('metal', box(0.03, 0.5, 0.03, 1), F.at(s * 0.9, h + 0.28, 0.05), { tint: 0x2a2624, ao: false });
+  kit.add('planks', box(2.2, 0.62, 0.1, 0.8), F.at(0, h - 0.2, 0.05), { tint: 0x8a5a34, ao: false });
+  kit.add('paint', box(1.8, 0.36, 0.11, 1), F.at(0, h - 0.2, 0.06), { tint: sign, ao: false });
 }
 /** rail fence with a gate gap list [[x, z, r]] */
 export function railFence(kit, pts, H, { post = 2.2, tint = 0x8a6a48, gaps = [] } = {}) {
@@ -404,17 +486,26 @@ export function pumpkin(kit, x, y, z, s = 1) {
 }
 
 // ------------------------------------------------------------------------------------------------ camps & ruins
-export function tent(kit, x, y, z, rot = 0, { w = 2.6, d = 3.2, h = 2.1, color = 0xb89c70, patch = 0x8a6a4a, open = true } = {}) {
+export function tent(kit, x, y, z, rot = 0, { w = 2.8, d = 3.4, h = 2.2, color = 0xb89c70, patch = 0x8a6a4a } = {}) {
   const F = new Frame(x, y, z, rot);
-  const { roof } = gableRoof(d, w, h, 0.05, 0.04, 1.5);
-  kit.add('cloth', roof, F.at(0, 0, 0, Math.PI / 2), { tint: color, ao: false });
-  kit.add('timber', cyl(0.05, 0.05, d + 0.6, 5, 1), F.at(0, h + 0.02, 0, 0, 1, 1, 1, Math.PI / 2), { tint: 0x5a4028, ao: false });
-  for (const s of [-1, 1]) kit.add('timber', cyl(0.05, 0.05, h + 0.2, 5, 1), F.at(0, h / 2, s * d / 2), { tint: 0x5a4028, ao: false });
-  kit.add('cloth', box(0.8, 0.6, 0.02, 1), F.at(-0.4, h * 0.45, 0.3, 0, 1, 1, 1, 0, 0.3), { tint: patch, ao: false, cast: false });
-  if (!open) { const tri = new THREE.BufferGeometry(); tri.setAttribute('position', new THREE.Float32BufferAttribute([-w / 2, 0, 0, w / 2, 0, 0, 0, h, 0], 3)); tri.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, 1, 0, 0.5, 1], 2)); tri.setIndex([0, 1, 2]); tri.computeVertexNormals(); kit.add('cloth', tri, F.at(0, 0, d / 2 + 0.02, Math.PI / 2 * 0), { tint: color, ao: false }); }
-  else kit.add('paint', box(w * 0.5, h * 0.7, 0.02, 1), F.at(0, h * 0.3, d / 2 - 0.1), { tint: 0x1e1812, ao: false, cast: false });
-  for (const s of [-1, 1]) for (const e of [-1, 1]) kit.add('timber', box(0.05, 0.3, 0.05, 1), F.at(s * (w / 2 + 0.4), 0.1, e * d * 0.35), { tint: 0x6a4a30, ao: false, cast: false });
-  kit.block(S.rect(x, z, w + 0.2, d + 0.2, rot + Math.PI / 2 * 0), 0.25);
+  const half = w / 2, slope = Math.hypot(half, h), ang = Math.atan2(h, half);
+  for (const s of [-1, 1]) {
+    kit.add('cloth', box(slope + 0.25, 0.06, d, 1.2), F.at(s * half / 2, h / 2 - 0.02, 0, 0, 1, 1, 1, 0, -s * ang), { tint: color });
+    kit.add('cloth', box(slope * 0.4, 0.07, d * 0.3, 1), F.at(s * half * 0.55, h * 0.42, d * 0.12, 0, 1, 1, 1, 0, -s * ang), { tint: patch, ao: false, cast: false });
+  }
+  kit.add('timber', cyl(0.05, 0.05, d + 0.7, 5, 1), F.at(0, h + 0.02, 0, 0, 1, 1, 1, Math.PI / 2), { tint: 0x5a4028, ao: false });
+  for (const s of [-1, 1]) kit.add('timber', cyl(0.05, 0.05, h + 0.25, 5, 1), F.at(0, h / 2, s * (d / 2 + 0.2)), { tint: 0x5a4028, ao: false });
+  // back wall + dark entrance with a rolled flap
+  const tri = (zz, c) => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute([-half, 0, 0, half, 0, 0, 0, h, 0], 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, 1, 0, 0.5, 1], 2)); g.setIndex([0, 1, 2, 0, 2, 1]); g.computeVertexNormals(); kit.add('cloth', g, F.at(0, 0.02, zz), { tint: c, ao: false }); };
+  tri(-d / 2 + 0.02, color);
+  { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute([-half * 0.6, 0, 0, half * 0.6, 0, 0, 0, h * 0.8, 0], 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, 1, 0, 0.5, 1], 2)); g.setIndex([0, 1, 2]); g.computeVertexNormals(); kit.add('paint', g, F.at(0, 0.02, d / 2 - 0.05), { tint: 0x1a140e, ao: false, cast: false }); }
+  kit.add('cloth', cyl(0.12, 0.12, h * 0.8, 6, 1), F.at(-half * 0.55, h * 0.4, d / 2 + 0.02, 0, 1, 1, 1, 0, -ang * 0.35), { tint: color, ao: false });
+  // guy ropes and pegs
+  for (const s of [-1, 1]) for (const e of [-1, 1]) {
+    kit.add('timber', tube([V(s * half * 0.2, h * 0.9, e * d / 2), V(s * (half + 0.9), 0.05, e * (d / 2 + 0.5))], [0.012, 0.012], 3, false), F.m, { tint: 0xc8b890, ao: false, cast: false, chunkAt: [x, z] });
+    kit.add('timber', box(0.05, 0.25, 0.05, 1), F.at(s * (half + 0.9), 0.08, e * (d / 2 + 0.5)), { tint: 0x6a4a30, ao: false, cast: false });
+  }
+  kit.block(S.rect(x, z, w + 0.2, d + 0.2, rot), 0.25);
 }
 /** sharpened-log palisade along a polyline; gaps [[x, z, r]] */
 export function palisade(kit, pts, H, { h = 3, tint = 0x7a5a3a, gaps = [], seed = 1 } = {}) {

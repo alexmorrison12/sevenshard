@@ -221,21 +221,22 @@ export const wraith = {
 function claw(acc, bone, s, wr, cuff, c) {
   const cH = col(c.hand), cK = col(c.claw), sk = rigid(bone);
   const dir = cuff.clone().sub(wr).normalize(), side = new V3(s, 0, 0), fw = new V3(0, 0, -1);
-  const palm = wr.clone().addScaledVector(dir, 0.05);
-  acc.add(new THREE.BoxGeometry(0.05, 0.07, 0.03), { matrix: new THREE.Matrix4().lookAt(new V3(), dir, new V3(0, 0, 1)).setPosition(palm.x, palm.y, palm.z), skin: sk, color: cH, dtl: [0, 0.1, 0.3, 0] });
+  const palm = wr.clone().addScaledVector(dir, 0.08);
+  acc.add(new THREE.BoxGeometry(0.06, 0.08, 0.035), { matrix: new THREE.Matrix4().lookAt(new V3(), dir, new V3(0, 0, 1)).setPosition(palm.x, palm.y, palm.z), skin: sk, color: cH, dtl: [0, 0.1, 0.3, 0] });
+  acc.add(sweep([wr.clone().addScaledVector(dir, -0.02), palm], [0.018, 0.02], { radial: 4 }), { skin: sk, color: cH, dtl: [0, 0.1, 0.3, 0] }); // wrist bones
   for (let f = 0; f < 4; f++) {
-    const o = (f - 1.5) * 0.02;
-    const k0 = palm.clone().addScaledVector(dir, 0.035).addScaledVector(fw, o * 0.6).addScaledVector(side, o * 0.8);
-    const L = 0.13 - Math.abs(f - 1.5) * 0.015;
-    const k1 = k0.clone().addScaledVector(dir, L * 0.5).addScaledVector(fw, -0.01);
-    const k2 = k0.clone().addScaledVector(dir, L * 0.85).addScaledVector(fw, -0.04).addScaledVector(side, o * 0.3);
-    const k3 = k2.clone().addScaledVector(dir, 0.02).addScaledVector(fw, -0.035);
-    acc.add(sweep([k0, k1, k2], [0.0085, 0.007, 0.006], { radial: 4 }), { skin: sk, color: cH, dtl: [0, 0.1, 0.3, 0] });
-    knob(acc, sk, k1.toArray(), 0.009, c.hand, { ws: 4, hs: 3 });
-    acc.add(sweep(bez(k2.toArray(), k2.clone().addScaledVector(dir, 0.03).toArray(), k3.clone().addScaledVector(fw, -0.012).toArray(), 4), [0.0065, 0.005, 0.003, 0.0005], { radial: 4 }), { skin: sk, color: cK, dtl: [0, 0, 0.2, 0] });
+    const o = (f - 1.5) * 0.026;
+    const k0 = palm.clone().addScaledVector(dir, 0.04).addScaledVector(fw, o * 0.6).addScaledVector(side, o * 0.8);
+    const L = 0.2 - Math.abs(f - 1.5) * 0.022;
+    const k1 = k0.clone().addScaledVector(dir, L * 0.5).addScaledVector(fw, -0.015);
+    const k2 = k0.clone().addScaledVector(dir, L * 0.85).addScaledVector(fw, -0.06).addScaledVector(side, o * 0.4);
+    const k3 = k2.clone().addScaledVector(dir, 0.03).addScaledVector(fw, -0.05);
+    acc.add(sweep([k0, k1, k2], [0.011, 0.009, 0.008], { radial: 4 }), { skin: sk, color: cH, dtl: [0, 0.1, 0.3, 0] });
+    knob(acc, sk, k1.toArray(), 0.012, c.hand, { ws: 4, hs: 3 });
+    acc.add(sweep(bez(k2.toArray(), k2.clone().addScaledVector(dir, 0.045).toArray(), k3.clone().addScaledVector(fw, -0.018).toArray(), 4), [0.009, 0.007, 0.004, 0.0006], { radial: 4 }), { skin: sk, color: cK, dtl: [0, 0, 0.2, 0] });
   }
-  const t0 = palm.clone().addScaledVector(side, -s * 0.0).addScaledVector(fw, 0.0).addScaledVector(new V3(-s, 0, 0), 0.025);
-  acc.add(sweep(bez(t0.toArray(), t0.clone().addScaledVector(dir, 0.04).addScaledVector(fw, 0.02).toArray(), t0.clone().addScaledVector(dir, 0.07).addScaledVector(fw, 0.045).toArray(), 4), [0.008, 0.007, 0.005, 0.002], { radial: 4 }), { skin: sk, color: cH, dtl: [0, 0.1, 0.3, 0] });
+  const t0 = palm.clone().addScaledVector(new V3(-s, 0, 0), 0.032);
+  acc.add(sweep(bez(t0.toArray(), t0.clone().addScaledVector(dir, 0.06).addScaledVector(fw, -0.02).toArray(), t0.clone().addScaledVector(dir, 0.1).addScaledVector(fw, -0.06).toArray(), 4), [0.011, 0.009, 0.006, 0.002], { radial: 4 }), { skin: sk, color: cH, dtl: [0, 0.1, 0.3, 0] });
 }
 
 // ================================================================================================ controller

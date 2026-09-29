@@ -16,6 +16,8 @@ export class Win {
   static id = 'win'; static title = 'Window'; static glyph = null; static width = 420; static height = null; static bare = false;
   /** 'win' (default: hidden while a full screen is up) or 'modal' (stays above screens, e.g. the raid auction over results) */
   static layer = 'win';
+  /** false: Esc does not close this window (e.g. the raid auction) */
+  static escClose = true;
   /** default position: 'center' | 'left' | 'right' | { x|right, y|bottom } (virtual px) */
   static pos = 'center';
   constructor(ui, mgr) {
@@ -138,12 +140,13 @@ export class WindowManager {
     for (const o of this.inst.values()) o.el.classList.toggle('is-top', o === w);
   }
   /** Topmost open window id, or null. */
-  top() {
+  top(escOnly = false) {
     let best = null;
-    for (const w of this.inst.values()) if (w.isOpen && (!best || w._z > best._z)) best = w;
+    for (const w of this.inst.values()) if (w.isOpen && (!escOnly || w.constructor.escClose !== false) && (!best || w._z > best._z)) best = w;
     return best ? best.id : null;
   }
-  closeTop() { const t = this.top(); return t ? this.close(t) : false; }
+  /** Close the topmost window Esc may close. */
+  closeTop() { const t = this.top(true); return t ? this.close(t) : false; }
   /** A window living in the modal layer (e.g. the auction) is open: screens shouldn't take Enter/Esc. */
   hasOpenModal() { for (const w of this.inst.values()) if (w.isOpen && w.constructor.layer === 'modal') return true; return false; }
   closeAll() { for (const w of this.inst.values()) if (w.isOpen) this.close(w.id); }

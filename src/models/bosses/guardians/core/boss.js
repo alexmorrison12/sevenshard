@@ -27,7 +27,7 @@ export class Boss {
       mesh.boundingSphere = entry.sphere.clone();
       mesh.castShadow = variant !== 'flame'; mesh.receiveShadow = variant !== 'flame';
       mesh.name = id + ':' + name;
-      if (variant === 'flame') mesh.renderOrder = 2;
+      if (variant === 'flame') { mesh.renderOrder = 2; mesh.userData.noShadow = true; }   // hosts honour userData.noShadow
       this.pivot.add(mesh);
       this.meshes[name] = mesh; this.materials.push(mat);
     };

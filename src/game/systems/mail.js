@@ -56,7 +56,7 @@ export function remove(account, id) {
 
 // ------------------------------------------------------------------------------------------------ letters
 export const POWERPASS_CRATE = {
-  silver: 1050000, gold: 4500, shards: 40000, guardian_stone: 6000, destruction_stone: 2000, leapstone: 260, fusion: 150, horn_shard: 40,
+  silver: 1050000, gold: 4500, shards: 40000, guardian_stone: 6000, destruction_stone: 3000, leapstone: 260, fusion: 150, horn_shard: 40,
   solar_grace: 24, solar_blessing: 16, solar_protection: 6, card_pack: 5, gem_pouch: 3, hp_potion: 30, feather: 3,
 };
 const APOLOGIES = [

@@ -16,6 +16,10 @@ export function makeShip(type = 'dawnrunner') {
   return f(type);
 }
 export const SHIP_TYPES = REAL.SHIPS || CONTRACT_SHIPS || { dawnrunner: { name: 'Dawnrunner', length: 18 } };
+/** true while a ship type still falls back to the Dawnrunner's geometry (so callers can tint it for now) */
+export function isPlaceholderShip(type) {
+  try { const a = REAL.preloadShip?.(type), b = REAL.preloadShip?.('dawnrunner'); return !a || !b || (type !== 'dawnrunner' && a.tris === b.tris); } catch (e) { return true; }
+}
 
 const _t = { y: 0, pitch: 0, roll: 0 };
 const _v = new THREE.Vector3();

@@ -259,7 +259,7 @@ const ACTIONS = {
   rear: { ...REAR, fn(ctl, a, w) { REAR.fn(ctl, a, w); flare(ctl, 1.6 * sstep(0.2, 0.4, a.k) * (1 - sstep(0.7, 0.95, a.k)) * w); } },
   call: { ...CALL, fn(ctl, a, w) { CALL.fn(ctl, a, w); flare(ctl, 1.2 * sstep(0.15, 0.3, a.k) * (1 - sstep(0.7, 0.9, a.k)) * w); } },
   bow: mBow({ dur: 2.8, pitch: 0.24 }),
-  graze: mGraze({ dur: 4.6, neck: -1.0, neck2: -0.4, head: 0.25 }),
+  graze: mGraze({ dur: 4.6, neck: -1.72, neck2: -0.34, head: 1.08, chest: -0.2, drop: -0.07 }),
   shake: mShake({ dur: 1.6, amp: 0.8 }),
   jump: mJump({ dur: 1.3, h: 0.9, pitch: 0.35, tuck: 0.5, tuckH: 0.36 }),
   hit: mHit(),

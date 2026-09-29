@@ -66,13 +66,13 @@ async function wispHunt(B, n, hops = 3) {
       w.x = tgt.pos.x; w.z = tgt.pos.z;
       list.push(['circle', { x: w.x, z: w.z, r: 2.3 }]);
     }
-    await volley(B, list, k ? 0.8 : 1.0, { coef: 0.6, color: 'orange', fx: 'fire_burst', fxR: 2.3, fxColor: FOX, sfx: 'fire_burst' });
+    await volley(B, list, k ? 0.8 : 1.0, { coef: 0.45, color: 'orange', fx: 'fire_burst', fxR: 2.3, fxColor: FOX, sfx: 'fire_burst' });
   }
 }
 
 export default {
   id: 'kurai', model: 'kurai', name: 'Kurai', title: 'the Pyrefox', kind: 'guardian',
-  radius: 2.4, height: 5.2, hp: 50000, atk: 0.14, bars: 210, speed: 6.4, turnRate: 4.5, enrage: 600,
+  radius: 2.4, height: 5.2, hp: 50000, atk: 0.16, bars: 210, speed: 6.4, turnRate: 4.5, enrage: 600,
   music: 'boss', arena: 'frostmere',
   anims: {
     claw: { dur: 1.2, hits: [0.55] }, tail_whip: { dur: 1.9, hits: [0.9] }, fire_orbs: { dur: 2.3, hits: [0.95, 1.3, 1.65] },
@@ -122,7 +122,7 @@ export default {
       for (let d = 3; d < len; d += 4) pool(B, { x: x0 + dir.x * d, z: z0 + dir.z * d, r: 1.6, dur: 4, tick: 0.5, coef: 0.12, kind: 'fire' });
       await wait(B, 0.4);
     } },
-    wisps: { range: 30, cd: 14, weight: 2.5, recover: 1.0, async run(B) {
+    wisps: { range: 30, cd: 16, weight: 2.5, recover: 1.0, async run(B) {
       act(B, 'fire_orbs', 0.95);
       await wispHunt(B, B.phase >= 1 ? 4 : 3);
       await wait(B, 0.4);

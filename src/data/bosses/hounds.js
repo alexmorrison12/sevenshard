@@ -94,7 +94,7 @@ async function howl(B, lead, shared) {
     const fail = async () => {
       tg.alive = false;
       act(B, 'howl', 0.6); await wait(B, 0.6);
-      smash(B, 'all', { coef: 3.4, knock: 'down', fx: 'fear_howl', fxR: 16, fxColor: B.def.element, sfx: 'boss_roar', shake: 0.7 });
+      smash(B, 'all', { coef: 3.0, knock: 'down', fx: 'fear_howl', fxR: 16, fxColor: B.def.element, sfx: 'boss_roar', shake: 0.7 });
       B.banner(`${u.name}'s howl tears through the kennels!`, 'fail');
       await wait(B, 1.2);
     };
@@ -115,7 +115,7 @@ async function howl(B, lead, shared) {
 }
 export async function twinHowl(B) {
   const o = other(B);
-  const shared = { o, lead: B.u, amount: Math.round(TWIN_HOWL * (o ? 2 : 1) * (B.mods.hard ? 1.08 : 1)), sg: null };
+  const shared = { o, lead: B.u, amount: Math.round(TWIN_HOWL * (o ? 2 : 1)), sg: null };
   if (o) { o.ctrl.mechDone.add('twin_howl'); o.data.hpFloor = 0; command(o, B2 => howl(B2, false, shared), 0.8); }
   // publish the lead's stagger object as soon as staggerCheck creates it
   const L = B.level, tm = L.every(0.05, () => { if (B.u.data.stagger) { shared.sg = B.u.data.stagger; L.cancelTimer(tm); } else if (B.u.dead) L.cancelTimer(tm); });

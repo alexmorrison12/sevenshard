@@ -16,8 +16,8 @@ export function state(account, now = Date.now()) {
   for (const s of SKILL_IDS) L.tools[s] ||= { tier: 1, dur: TOOLS[1].dur };
   L.energy ??= LIFE.maxEnergy; L.t ??= now;
   const c = cap(account);
-  if (L.energy < c) L.energy = Math.min(c, L.energy + Math.max(0, now - L.t) / HOUR * regen(account));
-  L.t = now;
+  if (now > L.t && L.energy < c) L.energy = Math.min(c, L.energy + (now - L.t) / HOUR * regen(account));
+  L.t = Math.max(L.t, now);
   return L;
 }
 export function energy(account, now = Date.now()) { const L = state(account, now); return { now: Math.floor(L.energy), max: cap(account), perHour: regen(account) }; }
@@ -73,8 +73,8 @@ export function fishCast(account, { rng, now = Date.now() } = {}) {
   return ok({ cast: { ...cast } });
 }
 /** reactAt: seconds after the cast when the player pulled */
-export function fishReel(account, char, cast, reactAt, { rng } = {}) {
-  const L = state(account);
+export function fishReel(account, char, cast, reactAt, { rng, now = Date.now() } = {}) {
+  const L = state(account, now);
   if (!L.cast || !cast || L.cast.id !== cast.id) return fail('cast', 'Cast your line first.');
   const c = L.cast; L.cast = null;
   const r = rngOf(rng);
@@ -96,8 +96,8 @@ export function digStart(account, { rng, now = Date.now() } = {}) {
   return ok({ dig: { ...dig } });
 }
 /** pos: where the meter was stopped, 0..1 */
-export function digStop(account, char, dig, pos, { rng } = {}) {
-  const L = state(account);
+export function digStop(account, char, dig, pos, { rng, now = Date.now() } = {}) {
+  const L = state(account, now);
   if (!L.dig || !dig || L.dig.id !== dig.id) return fail('dig', 'Start digging first.');
   const g = L.dig; L.dig = null;
   const inP = pos >= g.perfect[0] && pos <= g.perfect[1], inZ = pos >= g.zone[0] && pos <= g.zone[1];
@@ -107,9 +107,9 @@ export function digStop(account, char, dig, pos, { rng } = {}) {
 }
 
 // ------------------------------------------------------------------------------------------------ tools & food
-export function buyTool(account, skill, tier) {
+export function buyTool(account, skill, tier, now = Date.now()) {
   if (!LIFE_SKILLS[skill] || !TOOLS[tier]) return fail('unknown', 'Unknown tool.');
-  const L = state(account);
+  const L = state(account, now);
   if (!pay(account, { silver: TOOL_PRICES[tier] })) return fail('materials', 'Not enough silver.');
   L.tools[skill] = { tier, dur: TOOLS[tier].dur }; account.save();
   return ok({ tool: toolView(skill, L.tools[skill]) });

@@ -540,6 +540,30 @@ export function legsLocal(ctl, w, bend = 0.1, spread = 1.15, up = 0, back = 0) {
     if (w > L.overrideW) L.overrideW = w;
   }
 }
+/**
+ * Lying on the back / belly: feet rest on the ground in front of (or behind) the hips — legs extended along the ground,
+ * knees slightly up, metatarsus flat, soles facing along the body — in model space, so no joint sinks under the ground
+ * whatever the body's pitch. slideZ: how far the hips have been moved along z by the action (fall slide / death fling);
+ * o: { reach (0.75, fraction of the leg's height), spread (1.35), paw (1.1 = toes up), lift (feet above ground, × height),
+ * dir (-1 = feet in front, +1 = behind for belly-down) }.
+ */
+export function legsLie(ctl, w, slideZ = 0, o = EMPTY) {
+  const G = ctl.gait; if (!G || w <= 0) return;
+  const legs = G.legs, R = ctl.pose.rest, H = ctl.H;
+  const reach = o.reach ?? 0.75, spread = o.spread ?? 1.35, paw = o.paw ?? 1.1, lift = (o.lift ?? 0.01) * H, dir = o.dir ?? -1;
+  const cp = Math.cos(paw), sp = Math.sin(paw);
+  for (let i = 0; i < legs.length; i++) {
+    const L = legs[i], hip = R[L.idx[0]], len = hip.y - L.toe.y, to = L.toeOff;
+    // the target is the toe tip: with the paw pitched `paw` the heel (paw bone) must stay at its rest height above the
+    // ground, so lift the tip by the rotated toe offset
+    const ty = (R[L.paw].y - L.toe.y) + (to.y * cp - to.z * sp), tz = to.y * sp + to.z * cp;
+    L.gT.set(L.toe.x * spread, L.toe.y + lift + (ty > 0 ? ty : 0), hip.z + slideZ + dir * reach * len + (tz < 0 ? 0 : tz));
+    L.gPaw = paw;
+    // metatarsus world pitch that lays it flat along z (ankle a touch above the foot)
+    if (L.four) { const mv = L.metaVec; let a = Math.atan2(mv.y, mv.z) - (dir < 0 ? Math.PI + 0.15 : -0.15); a -= Math.round(a / TAU) * TAU; L.gMeta = a; }
+    if (w > L.gW) L.gW = w;
+  }
+}
 /** Feet pinned to world-ish positions (model space): home * spread, forward offset dz. */
 export function legsPlant(ctl, w, spread = 1.2, dz = 0) {
   const G = ctl.gait; if (!G) return;

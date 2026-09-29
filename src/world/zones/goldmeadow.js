@@ -20,7 +20,7 @@ import { buildWater } from '../water.js';
 import { boulder } from '../cliffs.js';
 import { blob } from '../../engine/geom.js';
 import { FieldGround, DistGrid, FieldKit, Anchors, snapAnchors, seedSpots, spline, along, paintPath, pieces, scatter, bump, ramp, faceTo, S, RNG, clamp, smoothstep, lerp } from '../fields/common.js';
-import { FieldGrass, FieldFlora, sunflowerGeo, reedGeo } from '../fields/flora.js';
+import { FieldGrass, FieldFlora, sunflowerGeo, reedGeo, tallGrassGeo } from '../fields/flora.js';
 import { Mist, buildSmoke, buildDrifters, buildButterflies } from '../fields/fx.js';
 import * as F from '../fields/props.js';
 
@@ -49,7 +49,7 @@ export async function build(zone, { quality = 1 } = {}) {
   const g = zone.ground = new FieldGround({
     x0: -150, z0: -150, w: 300, d: 300, res: 1, seed: 21, base: 'grass',
     layers: ['grass', 'moss', 'dirt', 'gravel', 'sand', 'mud', 'rock', 'cobble', 'flagstone'],
-    ltint: { grass: [1.1, 1.02, 0.66], moss: [1.05, 1.0, 0.75], sand: [1.08, 0.9, 0.5], dirt: [1.06, 0.96, 0.84], rock: [1.02, 0.98, 0.9] },
+    ltint: { grass: [1.12, 1.1, 0.8], moss: [1.05, 1.0, 0.75], sand: [1.08, 0.9, 0.5], dirt: [0.98, 0.93, 0.86], rock: [1.02, 0.98, 0.9] },
   });
   const N = g.noise;
   const bound = S.poly(BOUND);
@@ -162,8 +162,8 @@ export async function build(zone, { quality = 1 } = {}) {
   g.paint('dirt', S.ring(STONES[0], STONES[1], 16.5, 3), { soft: 2, noise: 1.5, nscale: 2, amount: 0.55 });
   g.paint('flagstone', S.circle(STONES[0], STONES[1], 3.2), { soft: 0.8, noise: 0.5, nscale: 1 });
   g.paint('gravel', S.circle(CHAOS[0], CHAOS[1], 9), { soft: 3, noise: 2.5, nscale: 2.5, amount: 0.8 });
-  g.paint('rock', S.circle(DENS[0], DENS[1], 16), { soft: 4, noise: 4, nscale: 3, amount: 0.8 });
-  g.paint('gravel', S.circle(DENS[0] + 6, DENS[1] + 6, 9), { soft: 3, noise: 3, nscale: 2, amount: 0.7 });
+  g.paint('dirt', S.circle(DENS[0], DENS[1], 15), { soft: 4, noise: 4, nscale: 3, amount: 0.7 });
+  g.paint('gravel', S.circle(DENS[0] + 2, DENS[1] - 4, 10), { soft: 3, noise: 3, nscale: 2, amount: 0.8 });
   g.paint('dirt', S.circle(HUNTER[0], HUNTER[1], 7), { soft: 2, noise: 1.5, nscale: 2, amount: 0.8 });
   g.paint('dirt', S.circle(HERMIT[0], HERMIT[1], 6), { soft: 2, noise: 1.5, nscale: 2, amount: 0.8 });
   g.paint('gravel', S.circle(TOWER[0], TOWER[1], 7), { soft: 2.5, noise: 2, nscale: 2, amount: 0.7 });
@@ -200,6 +200,8 @@ export async function build(zone, { quality = 1 } = {}) {
   P.cart(kit, hx + 26, H(hx + 26, hz + 12), hz + 12, 1.2);
   for (let i = 0; i < 3; i++) P.bunting(kit, [hx - 9 + i * 7, H(hx, hz) + 4.2, hz - 12], [hx - 5 + i * 7, H(hx, hz) + 3.6, hz + 12], { sag: 0.8 });
   F.signpost(kit, hx + 16, H(hx + 16, hz + 18), hz + 18, 0, { arms: [0.2, Math.PI - 0.3] });
+  // the east gate: a timber arch over the Solhaven road
+  F.gatePosts(kit, flags, 103, H(103, 30), 30, { w: 8, axis: 'x', H });
   // east road: the watch post by the gate
   F.lookout(kit, 90, H(90, 38), 38, 0.2, { h: 4.5 });
   F.tent(kit, 84, H(84, 38), 38, 0.3, { color: 0x3a5a8a });
@@ -280,11 +282,14 @@ export async function build(zone, { quality = 1 } = {}) {
   // --- Standing Stones (field boss arena)
   const [sx0, sz0] = STONES;
   for (let i = 0; i < 11; i++) { const a = i / 11 * Math.PI * 2 + 0.2, x = sx0 + Math.cos(a) * 19.5, z = sz0 + Math.sin(a) * 19.5; if (i === 3) { F.rockCluster(kit, x, z, H, { n: 2, s: 0.7, seed: 30 + i }); continue; } F.standingStone(kit, x, H(x, z), z, { h: rng.range(2.8, 4.2), w: rng.range(1.1, 1.5), rot: -a + Math.PI / 2, lean: i === 7 ? 0.25 : 0 }); }
-  kit.add('rock', box(3.4, 0.6, 1.8, 1), M(sx0, H(sx0, sz0) + 0.3, sz0, 0.3), { tint: 0x8a8478 }); kit.block(S.rect(sx0, sz0, 3.4, 1.8, 0.3), 0.3);
+  F.dolmen(kit, sx0, H(sx0, sz0), sz0, 0.2, { s: 1.15, glyph: 0xffd070 });
+  for (let i = 0; i < 5; i++) { const a = i * 1.3 + 0.4, d = rng.range(7, 13), x = sx0 + Math.cos(a) * d, z = sz0 + Math.sin(a) * d; F.rock(kit, x, H(x, z), z, { s: rng.range(0.35, 0.55), seed: 60 + i, tint: 0xa8a092, block: false }); }
   // --- Wolf Dens: rock outcrops with cave mouths under the western cliffs, bones
   const [dx0, dz0] = DENS;
-  for (const [x, z, s] of [[dx0 - 6, dz0 - 4, 2.6], [dx0 + 4, dz0 - 8, 2.2], [dx0 - 12, dz0 + 6, 1.8], [dx0 + 12, dz0 - 2, 1.6], [dx0 - 2, dz0 + 10, 1.3]]) F.rockCluster(kit, x, z, H, { n: 4, s, seed: Math.round(x * z), tint: 0x8a8274, spread: 1.2 });
-  for (const [x, z, rot] of [[dx0 - 6, dz0 - 1.2, 0.2], [dx0 + 4.5, dz0 - 5.6, -0.3]]) { kit.add('paint', blob(1.2, 1, null, [1.2, 0.95, 0.35]), M(x, H(x, z) + 0.8, z, rot), { tint: 0x14100e, ao: false, cast: false }); }
+  const denFace = [[dx0 - 18, dz0 + 8], [dx0 - 16, dz0 - 6], [dx0 - 8, dz0 - 14], [dx0 + 4, dz0 - 16], [dx0 + 16, dz0 - 13], [dx0 + 26, dz0 - 16]];
+  F.cliffEdge(kit, denFace, H, { height: 6.5, thick: 5, seed: 14, inside: [dx0 + 2, dz0 + 6], tint: 0xa09684, strata: 0x857a6a, top: 0x6a7a3a, lean: 0.25 });
+  for (const [x, z, rot, s] of [[dx0 - 7.5, dz0 - 10.4, 0.25, 1.3], [dx0 + 5, dz0 - 12.8, -0.1, 1.1]]) { kit.add('paint', blob(1.0, 1, null, [1.3 * s, 1.1 * s, 0.5]), M(x, H(x, z) + 0.9 * s, z, rot), { tint: 0x0e0b0a, ao: false, cast: false }); kit.add('rock', blob(0.5, 0, null, [1.6 * s, 0.35, 0.8]), M(x, H(x, z) + 2.0 * s, z + 0.45, rot), { tint: 0x9a9080, ao: false }); }
+  for (const [x, z, s] of [[dx0 - 9, dz0 - 5, 1.8], [dx0 + 9, dz0 - 7, 1.6], [dx0 - 13, dz0 + 5, 1.5], [dx0 + 13, dz0 + 1, 1.2], [dx0 - 3, dz0 + 11, 1.0], [dx0 + 3, dz0 - 9, 0.9]]) F.rockCluster(kit, x, z, H, { n: 3, s, seed: Math.round(x * z), tint: 0x9e9686, moss: 0x7a8a4a, spread: 1.2 });
   for (let i = 0; i < 6; i++) { const x = dx0 + rng.range(-8, 10), z = dz0 + rng.range(-2, 10); kit.add('bone', blob(0.12, 0, null, [3.2, 0.6, 0.8]), M(x, H(x, z) + 0.05, z, rng.range(0, 6)), { tint: 0xe8dcc0, ao: false, cast: false }); }
   // hunter's camp
   const [hux, huz] = HUNTER;
@@ -313,6 +318,7 @@ export async function build(zone, { quality = 1 } = {}) {
   kit.add('timber', cyl(0.05, 0.06, 3.4, 5, 1), M(bx0 + 7.05, H(bx0 + 7, bz0 - 5) + 5.8, bz0 - 5), { tint: 0x5a4028, ao: false });
   // --- roadside dressing: signposts, lantern posts along the main road, milestones, carts
   F.signpost(kit, -27, H(-27, -4), -4, 0, { arms: [0.8, -0.4, Math.PI] });
+  F.signpost(kit, -37.5, H(-37.5, -100), -100, 0, { arms: [1.2, -0.3] });
   F.signpost(kit, -46, H(-46, 24), 24, 0, { arms: [2.2, -0.9] });
   const gateN = [-42, -106];
   for (const s of [-1, 1]) { F.standingStone(kit, gateN[0] + s * 4.2, H(gateN[0] + s * 4.2, gateN[1] + 3), gateN[1] + 3, { h: 2.4, w: 1.0, tint: 0x7a7468, glyph: 0x60e0a0 }); }
@@ -372,9 +378,14 @@ export async function build(zone, { quality = 1 } = {}) {
   // wildflowers: drifts of colour in the meadows
   const FL = [0xffffff, 0xf4d040, 0xe04040, 0xa070e0, 0xffa0c0, 0xf8f0a0];
   for (const [x, z] of scatter(rng, [-100, -100, 104, 104], 2.6, 3400, (x, z) => free(x, z, 0.5, 2.8) && N.noise2(x / 18, z / 18) > 0.1)) flora.flower(x, H(x, z), z, FL[(Math.floor(N.noise2(x / 9 + 3, z / 9) * 3 + 3) + (rng.chance(0.2) ? 1 : 0)) % FL.length], { s: rng.range(0.8, 1.3) });
+  // tall grass clumps with seed heads, thicker in the lush hollows
+  const tgM = flora.mats.flower;
+  for (const [x, z] of scatter(rng, [-100, -100, 104, 104], 2.2, 8000, (x, z) => free(x, z, 0.4, 2.6) && (N.noise2(x / 14 + 5, z / 14) > -0.05 || rng.chance(0.25)))) flora.thing('tallgrass' + (Math.round(x * 7 + z) & 3), () => tallGrassGeo(Math.round(x * 7 + z) & 3, { h: 0.75 + (Math.round(x * 7 + z) & 3) * 0.08 }), tgM, x, H(x, z) - 0.03, z, { s: rng.range(0.8, 1.25), rot: rng.range(0, 6.28), cast: false });
+  // a dark wall of firs where the Thornwood road leaves
+  for (let i = 0; i < 26; i++) { const x = -42 + rng.range(-22, 22), z = -108 - rng.range(0, 16); if (Math.abs(x + 42) > 3.4 + (z + 108) * -0.1) T(rng.chance(0.7) ? 'fir' : 'pine', x, z, { s: rng.range(1.0, 1.4), variant: rng.int(0, 1), block: false }); }
   // Sunflower Hill: every head faces the camera (south)
   const sunMat = flora.mats.flower;
-  for (const [x, z] of scatter(rng, [SUNHILL[0] - 20, SUNHILL[1] - 18, SUNHILL[0] + 20, SUNHILL[1] + 16], 1.15, 2600, (x, z) => Math.hypot(x - SUNHILL[0], (z - SUNHILL[1]) * 1.1) < 17 && bound.sd(x, z) < -2 && roadD.at(x, z) > 1.8 && Math.hypot(x - SUNHILL[0], z - SUNHILL[1]) > 2.6)) flora.thing('sunflower' + (Math.round(x * 3) & 1), () => sunflowerGeo(Math.round(x * 3) & 1), sunMat, x, H(x, z) - 0.05, z, { s: rng.range(0.85, 1.12), rot: rng.range(-0.25, 0.25), cast: true });
+  for (const [x, z] of scatter(rng, [SUNHILL[0] - 20, SUNHILL[1] - 18, SUNHILL[0] + 20, SUNHILL[1] + 16], 1.3, 2400, (x, z) => Math.hypot(x - SUNHILL[0], (z - SUNHILL[1]) * 1.1) < 17 && bound.sd(x, z) < -2 && roadD.at(x, z) > 1.8 && Math.hypot(x - SUNHILL[0], z - SUNHILL[1]) > 2.6)) flora.thing('sunflower' + (Math.round(x * 3) & 1), () => sunflowerGeo(Math.round(x * 3) & 1), sunMat, x, H(x, z) - 0.05, z, { s: rng.range(0.85, 1.12), rot: rng.range(-0.25, 0.25), cast: true });
   // reeds along the waterline and in the wallows
   const reedM = flora.mats.flower;
   for (let s2 = 0; s2 < 262; s2 += 0.9) { const p = along(RIVER, s2); for (const side of [-1, 1]) { if (rng.chance(0.45)) continue; const d = rng.range(3.6, 5.4), x = p.x - p.dz * d * side, z = p.z + p.dx * d * side; if (bound.sd(x, z) > 4 || Math.hypot(x - BR.x, z - BR.z) < 9 || roadD.at(x, z) < 2.5) continue; flora.thing('reed' + (Math.round(s2) % 3), () => reedGeo(Math.round(s2) % 3), reedM, x, H(x, z) - 0.05, z, { s: rng.range(0.7, 1.15), rot: rng.range(0, 6.28), cast: false }); } }
@@ -392,11 +403,11 @@ export async function build(zone, { quality = 1 } = {}) {
   const sprinkle = (kind, n, cx, cz, r, o = {}) => { for (let i = 0; i < n; i++) { const a = rng.range(0, 6.28), d = Math.sqrt(rng.next()) * r, x = cx + Math.cos(a) * d, z = cz + Math.sin(a) * d; dec.add(kind, x, z, { size: rng.range(o.s0 ?? 1, o.s1 ?? 2.2), alpha: o.a ?? 0.8, tint: o.tint ?? 0xffffff }); } };
   sprinkle('straw', 26, FARM[0] + 2, FARM[1] + 2, 12, { s0: 1.2, s1: 2.4 }); sprinkle('straw', 10, MILL[0], MILL[1] + 2, 5);
   for (const f of FIELDS.filter(f => f.kind === 'stubble')) sprinkle('straw', 20, f.x, f.z, Math.min(f.w, f.d) / 2, { s0: 1.4, s1: 2.8, a: 0.9 });
-  sprinkle('pebbles', 30, hx, hz, 16, { a: 0.6 }); sprinkle('leaves', 16, hx + 3, hz + 10, 5);
-  sprinkle('leaves', 40, ORCHARD[0], ORCHARD[1], 16, { tint: 0xd0c070 }); sprinkle('petals', 20, ORCHARD[0], ORCHARD[1], 16, { s0: 0.8, s1: 1.6 });
+  sprinkle('pebbles', 30, hx, hz, 16, { a: 0.6 }); sprinkle('leaves', 12, hx - 6, hz - 3.5, 4, { tint: 0x9a8a60 });
+  sprinkle('leaves', 40, ORCHARD[0], ORCHARD[1], 16, { tint: 0xa89a60 }); sprinkle('petals', 20, ORCHARD[0], ORCHARD[1], 16, { s0: 0.8, s1: 1.6 });
   sprinkle('scorch', 10, BANDIT[0], BANDIT[1], 9, { s0: 1.2, s1: 2.6, a: 0.6 }); sprinkle('stain', 10, BANDIT[0], BANDIT[1], 10, { s0: 1.5, s1: 3 });
   sprinkle('puddle', 14, WALLOW[0], WALLOW[1], 13, { s0: 1.5, s1: 3.2 }); sprinkle('stain', 12, WALLOW[0], WALLOW[1], 14, { s0: 2, s1: 3.5, a: 0.6 });
-  sprinkle('rubble', 12, TOWER[0], TOWER[1], 6, { s0: 1, s1: 2 }); sprinkle('moss', 10, TOWER[0], TOWER[1], 6);
+  sprinkle('rubble', 12, TOWER[0], TOWER[1], 6, { s0: 1, s1: 2 });
   sprinkle('scorch', 8, CHAOS[0], CHAOS[1], 8, { s0: 2, s1: 4, a: 0.7 }); sprinkle('cracks', 6, CHAOS[0], CHAOS[1], 6, { s0: 1.5, s1: 3 });
   dec.add('runes', CHAOS[0], CHAOS[1], { size: 8, tint: 0xa060ff, emit: 0x8040ff, emitI: 0.9, alpha: 0.55 });
   dec.add('runes', STONES[0], STONES[1], { size: 6.5, tint: 0xe0d0a0, alpha: 0.5 });
@@ -507,11 +518,11 @@ export async function build(zone, { quality = 1 } = {}) {
   zone.region('Hermit’s Hollow', HERMIT[0], HERMIT[1], 9); zone.region('Bandit Camp', BANDIT[0], BANDIT[1], 14); zone.region('Thornwood Road', -38, -88, 12);
   const base = { music: 'goldmeadow', ambience: 'meadow' };
   const day = makeEnv('day', {
-    ...base, sunColor: 0xffe2b0, sunIntensity: 3.5, sunDir: [-0.52, 0.6, 0.6],
-    hemiSky: 0xc4d8f0, hemiGround: 0x8a7040, hemiIntensity: 1.05,
-    fogColor: 0xe4d6b8, fogSunColor: 0xffd48a, fogDensity: 0.0048, fogHeight: 0.04,
-    background: 0xc8d4e0,
-    grade: { exposure: 1.03, saturation: 1.14, contrast: 1.07, warm: 0.09, cool: 0.02, lift: [0.015, 0.01, 0.0], gain: [1.04, 1.0, 0.93], bloom: 0.5, bloomThreshold: 0.88 },
+    ...base, sunColor: 0xffdfa6, sunIntensity: 3.8, sunDir: [-0.5, 0.68, 0.54],
+    hemiSky: 0xd4e2f4, hemiGround: 0xa89060, hemiIntensity: 1.5,
+    fogColor: 0xeadcc0, fogSunColor: 0xffd48a, fogDensity: 0.0042, fogHeight: 0.04,
+    background: 0xd8dce0,
+    grade: { exposure: 1.1, saturation: 1.1, contrast: 1.05, vignette: 0.28, warm: 0.08, cool: 0.02, lift: [0.03, 0.022, 0.0], gain: [1.04, 1.0, 0.92], bloom: 0.5, bloomThreshold: 0.88 },
   });
   const dusk = makeEnv('dusk', { ...base, fogColor: 0xe0a080, background: 0x8a6a70 });
   zone.envs = { day, dusk, night: makeEnv('night', { ...base, ambience: 'meadow_night' }) };

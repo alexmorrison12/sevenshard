@@ -6,7 +6,7 @@ import { SETS, GEAR_SLOTS, SLOT_NAMES } from '../../data/items.js';
 import { honeCost, gearIlvl, gearStats, BOOSTER_CAP, HONE_RATES, transfer as gearTransfer, upgradeQuality as gearQuality, qualityCost } from './gear.js';
 import { itemLevel } from './stats.js';
 import { perks } from './stronghold.js';
-import { ok, fail, pay, missing, costRows, discount, rngOf, seeded, emit, merge } from './common.js';
+import { ok, fail, pay, missing, costRows, discount, rngOf, seeded, emit, merge, itemInfo } from './common.js';
 import { weekId, nextWeekly } from '../../core/util.js';
 
 // ------------------------------------------------------------------------------------------------ weekly support
@@ -101,7 +101,7 @@ export function hone(account, char, slot, { boosters = {}, rng, now = Date.now()
   const cost = costOf(account, it, now);
   const all = merge({ ...cost }, Object.fromEntries(Object.entries(boosters || {}).filter(([, v]) => v > 0)));
   const miss = missing(account, all);
-  if (Object.keys(miss).length) { const need = Object.keys(miss)[0]; return fail('materials', 'Not enough materials.', { need, missing: miss }); }
+  if (Object.keys(miss).length) { const need = Object.keys(miss)[0]; return fail('materials', `Not enough ${itemInfo(need).name} (need ${miss[need].toLocaleString('en-US')} more).`, { need, missing: miss }); }
   pay(account, all);
   const ev = supportEvent(now), ch = chanceOf(it, boosters, now);
   const r = rngOf(rng);

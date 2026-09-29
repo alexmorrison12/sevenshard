@@ -31,7 +31,7 @@ const state = { speed: num('speed', 4), sail: num('sail', 1), turn: num('turn', 
 let mode = Q.get('mode') || 'still', type = Q.get('ship') || 'dawnrunner';
 const R = num('radius', 30);
 const list = [];   // { s, x, z, heading }
-const api = (window.__ships = { lab, list, state, SHIPS });
+const api = (window.__ships = { lab, list, state, SHIPS, createShip, shipStats });
 
 function clear() { for (const it of list) it.s.dispose(); list.length = 0; }
 // placeholder 1.85 m captain on the helm socket + muzzle markers (toggle: captain=0, markers=1)

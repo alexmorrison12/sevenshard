@@ -12,6 +12,7 @@ import { sandmawSpec } from './sandmaw_anim.js';
 const C = {
   plate: 0xc8a068, plateDk: 0x6a4a2c, groove: 0x3a2616, flesh: 0xa86a52, fleshDk: 0x5a2a20, spike: 0x4a3420, spikeTip: 0xe8d6b0,
   tooth: 0xf0e6d0, toothBase: 0x8a6a4a, gullet: 0x6a1a08, sand: 0xd8b67a,
+  back: 0x7a4424, band: 0x2e1a0e, belly: 0xe2cc98,
 };
 export const NS = 14;
 // spine: an S-curve rising out of the sand, the maw facing forward and a little down
@@ -63,19 +64,33 @@ function sculpt(S) {
   for (const s of [-1, 1]) for (let k = 0; k < 3; k++) S.ell('head', add(addS(cp, FWD, 0.2 - k * 0.35), [s * 1.38, 0.35 + k * 0.1, 0]), [0.11, 0.09, 0.11], { k: 0.03, sub: true, col: 0x201008, tag: 'pit' });
 }
 
+// spine samples for paint: nearest point → arc fraction + dorsal direction (two-tone back/belly and banding)
+const SAMP = SPINE.map((p, i) => ({ p, s: ACC[i] / LEN, d: dorsal(norm(sub(SPINE[Math.min(SPINE.length - 1, i + 1)], SPINE[Math.max(0, i - 1)]))) }));
+function nearest(p) {
+  let bi = 0, bd = 1e9;
+  for (let i = 0; i < SAMP.length; i++) { const q = SAMP[i].p, d = (p[0] - q[0]) ** 2 + (p[1] - q[1]) ** 2 + (p[2] - q[2]) ** 2; if (d < bd) { bd = d; bi = i; } }
+  return SAMP[bi];
+}
 function paint(v) {
   const [x, y, z] = v.p, [nx, ny, nz] = v.n;
   // armour rings: sandstone with darker bands near the grooves; soft flesh in between shows as dark folds
   const ring = v.t('ring') + v.t('ridge') + v.t('collar');
   v.mix(C.groove, (1 - Math.min(1, ring * 1.6)) * 0.9);
-  // lighter crests on top, darker underside
-  v.mix(C.sand, sstep(0.3, 0.9, ny) * Math.min(1, ring) * 0.35);
-  v.mix(C.plateDk, sstep(0.0, -0.8, ny) * 0.35);
+  // two-tone hide: dark rust-umber saddle down the back with chevron bands per ring, pale scuted belly
+  const sp = nearest(v.p), dor = nx * sp.d[0] + ny * sp.d[1] + nz * sp.d[2];
+  const back = sstep(-0.15, 0.55, dor) * Math.min(1, ring + 0.3), belly = sstep(0.05, -0.6, dor);
+  v.mix(C.back, back * 0.7);
+  const ph = sp.s / 0.94 * NS + 0.22 * Math.abs(x), f = ph - Math.floor(ph);
+  v.mix(C.band, back * sstep(0.42, 0.6, f) * (1 - sstep(0.76, 0.94, f)) * 0.7 * sstep(0.12, 0.3, sp.s));
+  v.mix(C.belly, belly * 0.55 * Math.min(1, ring + 0.2));
+  // lighter wind-scoured crests on top, darker underside
+  v.mix(C.sand, sstep(0.3, 0.9, ny) * Math.min(1, ring) * 0.3);
+  v.mix(C.plateDk, sstep(0.0, -0.8, ny) * 0.3);
   // mottled weathering streaks
   const st = Math.sin(y * 3.7 + Math.sin(x * 2.1) * 1.5) * Math.sin(z * 2.9 + x);
   v.mul(1 + st * 0.08);
   if (v.t('maw') > 0.4) { v.mix(C.gullet, 0.9); v.kind = K.mouth; v.emis = 0.4 + 1.4 * sstep(0.2, 0.9, v.t('maw')); v.gm = 0.8; }
-  if (v.t('pit') > 0.4) { v.mix(0x3a1a08, 0.9); v.kind = K.eye; v.emis = 2.0; v.gm = 0.6; }
+  if (v.t('pit') > 0.4) { v.mix(0x3a1a08, 0.9); v.kind = K.eye; v.emis = 1.2; v.gm = 0.6; }
 }
 
 function dress({ acc, facc, S, b }) {

@@ -34,14 +34,25 @@ K.holy_aura = (fx, p) => {           // Aegis of Dawn: party-wide golden aura pu
 };
 K.holy_blessing = (fx, p) => { const c = ctx(fx, p, null, 6); fx.play('music_buff_ring', { ...p, color: p.color ?? HOLYC }); fx.play('holy_nova', { ...p, radius: c.R * 0.8, color: p.color ?? HOLYC }); };
 K.holy_circle = { ...WARRIOR.sanctuary_zone, name: 'holy_circle' };
+// one of many pillars: column + core + a small flash, ring and sparks (no per-pillar decal/shockwave → no white-out)
+function pillarStrike(fx, x, y, z, R, H, col) {
+  lightPillar(fx, x, y, z, R * 0.5, H, col, 0.8, 0, 0.1);
+  lightPillar(fx, x, y, z, R * 0.18, H * 1.1, [1.2, 1.1, 0.9], 0.6, 3, 0.1);
+  const g = vec(x, y, z);
+  fx.at(HOLY.flash, g, 0.8 * R, null, { dt: 0.1, i: 0.6 }, 0, 0.8, 0);
+  fx.rings.ground(vec(x, y + 0.05, z), R * 1.3, 0.4, [col[0] * 0.8, col[1] * 0.8, col[2] * 0.8], { ew: 0.2, delay: 0.1 });
+  const o = fx.o(R / 1.5, col); o.dt = 0.1;
+  for (let i = 0; i < fx.n(10); i++) { const a = fx.r(0, TAU); fx.spawn(HOLY.spark, x + Math.cos(a) * 0.3, y + 0.3, z + Math.sin(a) * 0.3, Math.cos(a) * fx.r(2, 6), fx.r(2, 7), Math.sin(a) * fx.r(2, 6), o); }
+}
 K.holy_pillars = {                   // many pillars of light slam down across the area
   name: 'holy_pillars', fade: 0.1, group: 'Oathkeeper',
-  init(T) { const c = ctx(T.fx, T.p, T.v.c = {}, 7); T.v.n = Math.round(5 + c.R); T.dur = 0.3 + T.v.n * 0.07; T.v.col = tc(c.tint, HOLYC, 1.6); decal(T.fx, { pos: vec(c.x, c.y, c.z), radius: c.R, kind: 'holy', dur: 2.5, color: T.v.col }); },
+  init(T) { const c = ctx(T.fx, T.p, T.v.c = {}, 7); T.v.n = Math.round(5 + c.R); T.dur = 0.3 + T.v.n * 0.07; T.v.col = tc(c.tint, HOLYC, 1.3); decal(T.fx, { pos: vec(c.x, c.y, c.z), radius: c.R, kind: 'holy', dur: 2.5, color: [T.v.col[0] * 0.7, T.v.col[1] * 0.7, T.v.col[2] * 0.7] }); },
   tick(T) {
     const fx = T.fx, v = T.v, c = v.c;
     for (let i = 0; i < v.n; i++) if (T.once(KEYS[i % 32], 0.05 + i * 0.07)) {
       const a = fx.r(0, TAU), r = i === 0 ? 0 : Math.sqrt(Math.random()) * c.R * 0.85, x = c.x + Math.cos(a) * r, z = c.z + Math.sin(a) * r;
-      WARRIOR.light_pillar(fx, { pos: vec(x, c.y, z), radius: fx.r(1.4, 2.2) * c.s, color: v.col });
+      pillarStrike(fx, x, fx.gy(x, z, c.y), z, fx.r(1.3, 1.8) * c.s, fx.r(6, 8) * c.s, v.col);
+      if (i % 3 === 0) fx.shake(0.12, c);
     }
   },
 };
@@ -74,7 +85,7 @@ K.holy_sword = {                     // a sword of light plunges into the point 
     if (T.once('hit', 0.25)) {
       v.trail.stopped = true;
       WARRIOR.holy_explosion(fx, { pos: g, radius: c.R, color: T.p.color ?? HOLYC });
-      lightPillar(fx, g.x, g.y, g.z, c.R * 0.3, 12, [1.3, 1.1, 0.7], 0.6, 0);
+      lightPillar(fx, g.x, g.y, g.z, c.R * 0.22, 8, [1.1, 0.95, 0.6], 0.5, 0);
       fx.meshes.debris(g.x, g.y + 0.3, g.z, 8, c.s, 7, { gy: g.y, glow: [2, 1.6, 0.7] });
     }
     if (T.age > T.dur - 0.5) v.sword.alpha = Math.max(0, (T.dur - T.age) / 0.5) * 1.2;
@@ -170,7 +181,7 @@ K.shadow_burst = (fx, p) => { const c = ctx(fx, p, null, 1.2), up = vec(c.x, c.y
 K.shadow_dash = (fx, p) => { const c = ctx(fx, p, null, 1, 7); SHADE.blade_dash(fx, { ...p, target: vec(c.x + c.f.x * c.L, c.y, c.z + c.f.z * c.L), color: p.color ?? BLADEC }); };
 K.surge_slash = (fx, p) => { const c = ctx(fx, p, null, 1, 7), col = tc(c.tint, BLADEC, 2.4); slash(fx, { pos: vec(c.x, c.y, c.z), dir: c.f, style: 'thrust', radius: 1, length: c.L, width: 0.35 * c.s, color: [2.4, 2.4, 2.8], intensity: 1, dur: 0.35, height: 1.0 }); slash(fx, { pos: vec(c.x + c.f.x * c.L * 0.5, c.y, c.z + c.f.z * c.L * 0.5), dir: c.f, style: 'x', radius: 2 * c.s, color: col, intensity: 1, delay: 0.1 }); };
 K.surge_burst = (fx, p) => { const c = ctx(fx, p, null, 3.4), s = c.R / 3.4, col = tc(c.tint, BLADEC, 2), pos = vec(c.x, c.y, c.z); slash(fx, { pos, dir: c.f, style: 'x', radius: c.R, color: col, intensity: 1 }); slash(fx, { pos, dir: c.rt, style: 'x', radius: c.R * 0.8, color: [2.2, 2.2, 2.6], intensity: 1, delay: 0.06, glow: false }); shockwave(fx, { pos, radius: c.R * 1.5, color: col, dur: 0.45, height: 2 * s }); fx.at(GEN.bigFlash, vec(c.x, c.y + 1.2, c.z), 0.5 * s, col); fx.shake(0.3 * s, pos); };
-K.moon_ring = (fx, p) => { const c = ctx(fx, p, null, 4.6), col = tc(c.tint, 0xd8e0f0, 2.2); slash(fx, { pos: vec(c.x, c.y, c.z), dir: c.f, style: 'spin', radius: c.R, color: col, intensity: 1, width: c.R * 0.3, dur: 0.45 }); shockwave(fx, { pos: vec(c.x, c.y, c.z), radius: c.R * 1.2, color: col, dur: 0.4, wall: false, dust: false }); fx.radial(GEN.star, 20, vec(c.x, c.y + 1, c.z), c.R, c.R * 1.6, 0.2, 1, c.s, col); };
+K.moon_ring = (fx, p) => { const c = ctx(fx, p, null, 4.6), col = tc(c.tint, 0xc8d4f0, 1.5); slash(fx, { pos: vec(c.x, c.y, c.z), dir: c.f, style: 'spin', radius: c.R, color: col, intensity: 1, width: c.R * 0.2, dur: 0.45 }); shockwave(fx, { pos: vec(c.x, c.y, c.z), radius: c.R * 1.2, color: col, dur: 0.4, wall: false, dust: false }); fx.radial(GEN.star, 20, vec(c.x, c.y + 1, c.z), c.R, c.R * 1.6, 0.2, 1, c.s, col); };
 
 // ------------------------------------------------------------------ Demonbound
 K.claw_slash = (fx, p) => { const c = ctx(fx, p, null, 3.6); slash(fx, { pos: vec(c.x, c.y, c.z), dir: c.f, style: 'claw', radius: c.R, arc: p.arc ?? 160, color: tc(c.tint, DEMONC, 2.4), intensity: 1, flip: p.flip }); };
@@ -194,15 +205,16 @@ K.axe_cleave = (fx, p) => {          // giant axe falls along the lane (rect len
   BOSS.axe_shockwave(fx, { ...p, len: Math.max(1, c.L - 2.5), radius: W });
 };
 K.axe_sweep = (fx, p) => { const c = ctx(fx, p, null, 7.5), s = c.R / 7.5; slash(fx, { pos: vec(c.x, c.y, c.z), dir: c.f, style: 'h', radius: c.R, arc: p.arc ?? p.angle ?? 190, color: tc(c.tint, 0xffc080, 2.2), intensity: 1, width: c.R * 0.3, dur: 0.45, height: 1.4, flip: p.flip }); fx.radial(PHYS.dustBig, 16, vec(c.x, c.y, c.z), c.R * 0.8, c.R * 1.3, 0.2, 1, s, null, c.R * 0.35, 0.2); fx.shake(0.25, vec(c.x, c.y, c.z)); };
-K.axe_spin = (fx, p) => { const c = ctx(fx, p, null, 8.5), s = c.R / 8.5, pos = vec(c.x, c.y, c.z); slash(fx, { pos, dir: c.f, style: 'spin', radius: c.R, color: tc(c.tint, 0xffa060, 2.2), intensity: 1, width: c.R * 0.28, dur: 0.55, height: 1.3 }); slash(fx, { pos, dir: c.rt, style: 'spin', radius: c.R * 0.8, color: [2, 1.4, 1], intensity: 1, width: c.R * 0.15, dur: 0.5, delay: 0.1, glow: false, height: 1.1 }); shockwave(fx, { pos, radius: c.R * 1.15, color: [1.8, 1.1, 0.6], dur: 0.5, height: 1.6 * s }); fx.radial(PHYS.dustBig, 24, pos, c.R, c.R * 1.5, 0.2, 1, s, null, c.R * 0.5, 0.2); fx.shake(0.45, pos); };
+K.axe_spin = (fx, p) => { const c = ctx(fx, p, null, 8.5), s = c.R / 8.5, pos = vec(c.x, c.y, c.z); slash(fx, { pos, dir: c.f, style: 'spin', radius: c.R, color: tc(c.tint, 0xff9050, 1.5), intensity: 1, width: c.R * 0.17, dur: 0.55, height: 1.3, glow: false }); slash(fx, { pos, dir: c.rt, style: 'spin', radius: c.R * 0.8, color: [1.5, 1.0, 0.7], intensity: 1, width: c.R * 0.1, dur: 0.5, delay: 0.1, glow: false, height: 1.1 }); shockwave(fx, { pos, radius: c.R * 1.15, color: [1.3, 0.8, 0.45], dur: 0.5, height: 1.2 * s }); fx.radial(PHYS.dustBig, 24, pos, c.R, c.R * 1.5, 0.2, 1, s, null, c.R * 0.5, 0.2); fx.shake(0.45, pos); };
 K.stomp_quake = (fx, p) => { const c = ctx(fx, p, null, 4.5); groundSmash(fx, c.x, c.y, c.z, c.R, tc(c.tint, 0xff7a3a, 1.2), { decal: 'quake', decalR: 1.5, rocks: 16, shake: 0.5 }); };
 K.tyrant_wrath = (fx, p) => {        // arena-wide wrath: horn flare, fire rings, eruptions everywhere
   const c = ctx(fx, p, null, 16), s = c.R / 16, g = vec(c.x, c.y, c.z), col = tc(c.tint, 0xff4a1a, 1.6);
-  fx.at(GEN.bigFlash, vec(c.x, c.y + 5, c.z), 2.4 * s, [1.2, 0.5, 0.2]);
-  for (let k = 0; k < 4; k++) shockwave(fx, { pos: g, radius: c.R * (0.6 + k * 0.25), color: col, dur: 0.8, delay: k * 0.12, height: 3.5 - k * 0.6 });
-  for (let i = 0; i < 12; i++) { const a = i / 12 * TAU + 0.2, r = c.R * (0.35 + (i % 3) * 0.22); fx.task(DELAY_EXPL, { pos: vec(c.x + Math.cos(a) * r, c.y, c.z + Math.sin(a) * r), delay: 0.1 + i * 0.05, s: 1.6 * s }); }
+  fx.at(GEN.bigFlash, vec(c.x, c.y + 5, c.z), 1.4 * s, [1.2, 0.5, 0.2]);
+  const cw = [col[0] * 0.7, col[1] * 0.7, col[2] * 0.7];
+  for (let k = 0; k < 4; k++) shockwave(fx, { pos: g, radius: c.R * (0.6 + k * 0.25), color: cw, dur: 0.8, delay: k * 0.12, height: 2.4 - k * 0.45 });
+  for (let i = 0; i < 9; i++) { const a = i / 9 * TAU + 0.2, r = c.R * (0.35 + (i % 3) * 0.22); fx.task(DELAY_EXPL, { pos: vec(c.x + Math.cos(a) * r, c.y, c.z + Math.sin(a) * r), delay: 0.1 + i * 0.08, s: 1.05 * s }); }
   decal(fx, { pos: g, radius: c.R * 0.6, kind: 'crater', dur: 10, color: col });
-  fx.flash(0.5, [1.2, 0.5, 0.25]); fx.shake(1, g); fx.aberr(1); fx.radialBlur(0.6);
+  fx.flash(0.3, [1.2, 0.5, 0.25]); fx.shake(1, g); fx.aberr(0.7); fx.radialBlur(0.45);
 };
 K.rift_eruption = (fx, p) => { const c = ctx(fx, p, null, 3.4), s = c.R / 3.4, col = tc(c.tint, 0xa040ff, 1.8), g = vec(c.x, c.y, c.z); fx.meshes.pillars.spawn(c.x, c.y, c.z, c.R * 0.45, 8 * s, 0.8, 3, [col[0] * 1.2, col[1] * 1.2, col[2] * 1.2], 0.04); fx.meshes.spikeRings(c.x, c.y, c.z, [[c.R * 0.3, 6, 1.4], [c.R * 0.7, 10, 1.0]], 1, { color: [0.2, 0.1, 0.26], glow: [1.4, 0.4, 2.2], fres: 0.5, life: [1.0, 1.3], speed: 30 }); fx.at(ARC.flash, vec(c.x, c.y + 1, c.z), 2.6 * s, null); fx.sphere(ARC.spark, 30, vec(c.x, c.y + 1, c.z), 4, 11, s, null, UP, 1.0); shockwave(fx, { pos: g, radius: c.R * 1.3, color: col, dur: 0.4 }); decal(fx, { pos: g, radius: c.R * 0.8, kind: 'quake', dur: 4, color: col }); };
 K.spectral_axe = (fx, p) => {        // ghost phase: a translucent spectral axe slams the point

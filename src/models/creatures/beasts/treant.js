@@ -493,7 +493,7 @@ const SPEC = {
   },
   arm: { swing: 0.22, out: 0.12, elbow: 0.25, runSwing: 0.45, runOut: 0.1, runElbow: 0.4, combatUp: 0.35, combatElbow: 0.35, combatOut: 0.15 },
   lean: { walk: 0.06, run: 0.14, combat: 0.1 }, twist: 0.1, waddle: 0.06, crouch: 0.06, breathe: 0.01,
-  fidgets: [{ name: 'idle_alt', w: 1 }], fidgetGap: 7, chargeK: 0.08,
+  fidgets: [{ name: 'idle_alt', w: 1 }], fidgetGap: 7, chargeK: 0.05,
   pose(ctl) {
     cancelRestOnMove(ctl);
     const P = ctl.pose, b = ctl.b;

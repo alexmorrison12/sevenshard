@@ -1,7 +1,7 @@
 // Deck furniture and fittings: cannons (recoil anim), gunports, lanterns (flicker / sway), helm wheel (spins),
 // windows, balustrades, ladders, hatches, cargo (barrels, crates, sacks), rope coils, capstan, bell.
 import * as THREE from 'three';
-import { V3, M, MY, MB, cyl, lathe, box, sphere, cone, torus, lerp, TU, TV } from './build.js';
+import { V3, M, MY, cyl, lathe, box, sphere, cone, torus } from './build.js';
 import { linColor as lc } from '../../../engine/geom.js';
 
 export const IRON = lc(0x1c1a19), DARK = lc(0x0c0908);

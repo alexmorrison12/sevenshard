@@ -29,7 +29,8 @@ const MOUTH = P({ sprite: S.glow, ramp: R.wPulse, life: 0.14, size: 2.6, i: 2.4,
 const WIND = P({ sprite: S.spark, ramp: R.wInOut, life: [0.35, 0.55], size: [0.08, 0.12], orient: 'stretch', stretch: 0.25, drag: 0.5, color: [0.9, 0.95, 1], i: 1.5, alpha: 0.8 });
 const SONIC = P({ sprite: S.ring, ramp: R.wFade, life: 0.7, size: 1.2, end: 6, ease: 1.3, rot: 0, color: [0.4, 0.9, 1], i: 1.8, noGround: true });
 const FOXORB = P({ sprite: [S.flame1, S.flame2], ramp: R.foxfire, life: [0.3, 0.5], size: [0.5, 0.8], end: 0.4, rot: [-0.3, 0.3], drag: 2, accY: 3, i: [2, 3] });
-const GHOSTMIST = P({ pool: 'alpha', sprite: [S.smoke1, S.smoke2, S.smoke3], ramp: R.frostMist, life: [3, 5], size: [2.5, 4], end: 1.6, ease: 2, spin: [-0.2, 0.2], drag: 0.8, accY: 0.1, turb: 0.8, color: [0.75, 0.9, 1.2], alpha: 0.7 });
+const SANDWALL = P({ pool: 'alpha', sprite: [S.dust, S.smoke2, S.smoke3], ramp: R.sand, life: [1.4, 2.0], size: [1.4, 2.2], end: 1.6, ease: 2, motion: 'orbit', rise: 0.35, rgrow: 0.25, spin: [-0.4, 0.4], alpha: 0.75 });
+const GHOSTMIST = P({ pool: 'alpha', sprite: [S.smoke1, S.smoke2, S.smoke3], ramp: R.frostMist, life: [3.5, 5.5], size: [3.5, 5.5], end: 1.5, ease: 2, orient: 'flat', spin: [-0.15, 0.15], drag: 0.8, accY: 0, turb: 0.5, color: [0.7, 0.88, 1.2], alpha: 0.55 });
 
 /** mouth/origin point: explicit `from`, a socket, or pos lifted by `height` */
 function origin(fx, p, c, out, h = 3) {
@@ -96,11 +97,11 @@ K.frost_burst = (fx, p) => { const c = ctx(fx, p, null, 3); fx.play('frost_nova'
 K.absolute_zero = (fx, p) => {       // arena-wide freeze burst
   const c = ctx(fx, p, null, 16), pos = vec(c.x, c.y, c.z), s = c.R / 16;
   fx.meshes.spikeRings(c.x, c.y, c.z, [[3, 14, 1.6], [6, 22, 1.4], [9, 30, 1.2], [12, 38, 1.0], [15, 44, 0.8]], s, { speed: 22, life: [2, 2.6] });
-  for (let k = 0; k < 3; k++) shockwave(fx, { pos, radius: c.R * (1 + k * 0.15), color: [0.7, 1.3, 2.4], dur: 0.9, delay: k * 0.12, height: 3 });
+  for (let k = 0; k < 3; k++) shockwave(fx, { pos, radius: c.R * (1 + k * 0.15), color: [0.5, 0.95, 1.8], dur: 0.9, delay: k * 0.12, height: 2.2 - k * 0.5 });
   decal(fx, { pos, radius: c.R, kind: 'ice', dur: 8, fadeIn: 0.3 });
-  fx.at(GEN.bigFlash, vec(c.x, c.y + 3, c.z), 3 * s, [0.7, 0.9, 1.4]);
-  fx.radial(FROST.mist, 60, pos, 8, 16, 0.2, 1.5, 2 * s, null, 2, 0.4);
-  fx.flash(0.5, [0.7, 0.85, 1.2]); fx.shake(0.9, pos);
+  fx.at(GEN.bigFlash, vec(c.x, c.y + 3, c.z), 1.6 * s, [0.7, 0.9, 1.4]);
+  fx.radial(FROST.mist, 40, pos, 8, 16, 0.2, 1.5, 1.6 * s, null, 2, 0.4);
+  fx.flash(0.3, [0.7, 0.85, 1.2]); fx.shake(0.9, pos);
 };
 
 // ------------------------------------------------------------------ gusts, breath-less cones
@@ -129,10 +130,10 @@ K.siren_scream = (fx, p) => {        // Nerissa: sonic cone of rings (aqua) with
 };
 K.boss_roar = (fx, p) => K.roar_ring(fx, p);
 K.roar_ring = (fx, p) => {           // expanding roar shock rings + dust + screen shake
-  const c = ctx(fx, p, null, 9), s = c.R / 9, pos = vec(c.x, c.y, c.z), col = tc(c.tint, 0xffe8c8, 1.2);
-  for (let k = 0; k < 3; k++) shockwave(fx, { pos, radius: c.R * (0.8 + k * 0.3), color: col, dur: 0.6 + k * 0.1, delay: k * 0.12, height: 2.2 - k * 0.5, dust: k === 0, dustCount: 26 });
-  const o = origin(fx, p, c, _b, 4).clone();
-  for (let k = 0; k < 4; k++) fx.at(SONIC, o, s * (1 + k * 0.6), col, { dt: k * 0.06, life: 0.6 });
+  const c = ctx(fx, p, null, 9), s = c.R / 9, pos = vec(c.x, c.y, c.z), col = tc(c.tint, 0xe0cdb0, 0.85);
+  for (let k = 0; k < 3; k++) shockwave(fx, { pos, radius: c.R * (0.8 + k * 0.3), color: col, dur: 0.6 + k * 0.1, delay: k * 0.12, height: 1.8 - k * 0.45, dust: k === 0, dustCount: 26 });
+  const o = origin(fx, p, c, _b, 4).clone(), cs = [col[0] * 0.45, col[1] * 0.45, col[2] * 0.45];
+  for (let k = 0; k < 3; k++) fx.at(SONIC, o, s * (0.7 + k * 0.35), cs, { dt: k * 0.08, life: 0.5 });
   fx.radialBlur(0.4, o); fx.shake(0.5, pos);
 };
 
@@ -169,7 +170,7 @@ K.tail_flame_whip = (fx, p) => {     // Kurai: a flaming tail sweeps an arc
     fx.spawn(FOXORB, c.x + (c.f.x * Math.cos(a) + c.rt.x * Math.sin(a)) * r, c.y + fx.r(0.3, 1), c.z + (c.f.z * Math.cos(a) + c.rt.z * Math.sin(a)) * r, 0, fx.r(1, 3), 0, o);
   }
 };
-K.tail_sweep = (fx, p) => { const c = ctx(fx, p, null, 7); slash(fx, { pos: vec(c.x, c.y, c.z), dir: c.f, radius: c.R, style: 'h', arc: p.arc ?? 3.6, color: tc(c.tint, 0xe8f0ff, 1.6), intensity: 1, width: c.R * 0.25, dur: 0.42, height: 0.5, flip: p.flip }); fx.radial(PHYS.dust, 14, vec(c.x, c.y, c.z), c.R * 0.8, c.R * 1.3, 0.2, 1, c.s, null, c.R * 0.3, 0.2); };
+K.tail_sweep = (fx, p) => { const c = ctx(fx, p, null, 7); slash(fx, { pos: vec(c.x, c.y, c.z), dir: c.f, radius: c.R, style: 'h', arc: p.arc ?? 3.6, color: tc(c.tint, 0xd8ccb8, 1.0), intensity: 0.8, width: c.R * 0.18, dur: 0.42, height: 0.5, flip: p.flip }); fx.radial(PHYS.dust, 14, vec(c.x, c.y, c.z), c.R * 0.8, c.R * 1.3, 0.2, 1, c.s, null, c.R * 0.3, 0.2); };
 K.foxfire_orbs = {                   // Kurai: blue fox-fire orbs circle the boss, then fly out (loop until dur)
   name: 'foxfire_orbs', fade: 0.3, group: 'Bosses',
   init(T) {
@@ -218,7 +219,25 @@ K.burrow_plume = (fx, p) => {        // Sandmaw emerges: sand column, ring, debr
   decal(fx, { pos, radius: c.R, kind: 'quake', dur: 6, color: [0.6, 0.45, 0.25], hot: 0 });
   fx.shake(0.6 * s, pos);
 };
-K.sandstorm = (fx, p) => fx.weather('dust', { intensity: 2, color: 0xd8b070, dur: p.dur ?? 6 });
+K.sandstorm = {                      // Sandmaw: a wall of sand whirling round the boss + blowing dust over the screen (loop)
+  name: 'sandstorm', fade: 1.0, group: 'Bosses',
+  init(T) {
+    const fx = T.fx, c = ctx(fx, T.p, T.v.c = {}, 9);
+    T.dur = T.p.dur ?? 6;
+    T.v.w = fx.weather('dust', { intensity: 2, color: 0xd8b070, dur: T.dur + 1 });
+    T.acc.s = 12;                        // pre-warm the wall
+  },
+  tick(T) {
+    const fx = T.fx, c = T.v.c, p = T.pos, gy = fx.gy(p.x, p.z, p.y);
+    if (T.stopping) return;
+    let n = T.rate('s', 9 + c.R * 1.6);
+    const o = fx.o(c.s, null);
+    for (let i = 0; i < n; i++) fx.spawn(SANDWALL, p.x, gy + fx.r(0.2, 2.6), p.z, c.R * fx.r(0.55, 1.05), fx.r(0, TAU), fx.r(1.1, 1.7), o);
+    n = T.rate('g', 30);
+    for (let i = 0; i < n; i++) { const a = fx.r(0, TAU), r = c.R * fx.r(0.4, 1.1); fx.spawn(PHYS.sandGrain, p.x + Math.cos(a) * r, gy + fx.r(0.5, 3), p.z + Math.sin(a) * r, -Math.sin(a) * 9, fx.r(1, 3), Math.cos(a) * 9, o); }
+  },
+  stop(T) { T.v.w?.stop(); }, end(T) { T.v.w?.stop(); },
+};
 
 // ------------------------------------------------------------------ water (siren / kraken)
 K.water_orb = (fx, p) => { const c = ctx(fx, p, null, 1, 12, 12); return fx.projectile({ from: origin(fx, p, c, _b, 2.5).clone(), to: p.target ? vec(c.tx, c.ty + 1, c.tz) : undefined, dir: c.f, kind: 'water', speed: 14, scale: 1.4 * c.s }); };
@@ -272,7 +291,7 @@ K.axe_shockwave = (fx, p) => {       // Gorrath: axe slam + a line shockwave rac
   for (let k = 0; k < 5; k++) fx.rings.ground(vec(hitP.x + c.f.x * L * k / 5, c.y, hitP.z + c.f.z * L * k / 5), 2.6 * s, 0.35, col, { ew: 0.2, trail: 1, flags: 1, delay: L * k / 5 / speed });
 };
 K.impact_heavy = (fx, p) => { const c = ctx(fx, p, null, 3); groundSmash(fx, c.x, c.y, c.z, c.R, tc(c.tint, 0xffc080, 1.1), { decal: 'crack', rocks: 8 }); };
-K.slash_heavy = (fx, p) => { const c = ctx(fx, p, null, 5); slash(fx, { pos: vec(c.x, c.y, c.z), dir: c.f, radius: c.R, style: p.style ?? 'h', color: tc(c.tint, 0xffe0c0, 2.2), intensity: 1, width: c.R * 0.4, dur: 0.4, flip: p.flip }); fx.shake(0.2, vec(c.x, c.y, c.z)); };
+K.slash_heavy = (fx, p) => { const c = ctx(fx, p, null, 5); slash(fx, { pos: vec(c.x, c.y, c.z), dir: c.f, radius: c.R, style: p.style ?? 'h', color: tc(c.tint, 0xffc890, 1.5), intensity: 1, width: c.R * 0.3, dur: 0.4, flip: p.flip }); fx.shake(0.2, vec(c.x, c.y, c.z)); };
 K.bite = (fx, p) => { const c = ctx(fx, p, null, 3), g = vec(c.x + c.f.x * c.R * 0.7, c.y + 1.2, c.z + c.f.z * c.R * 0.7); for (const k of [-1, 1]) slash(fx, { pos: vec(g.x, c.y, g.z), dir: c.f, radius: 1.2 * c.s, style: k > 0 ? 'v' : 'up', color: [2, 1.9, 1.8], intensity: 1, dur: 0.18, width: 0.3, glow: false, height: 0.9 }); fx.hit({ pos: g, dir: c.f, crit: true, scale: 1.4 }); };
 K.monster_hit = (fx, p) => { const c = ctx(fx, p); fx.hit({ pos: vec(c.x, c.y + 1, c.z), dir: c.f, scale: 1.2 }); };
 K.rift_carve = {                     // Gorrath: 8-wedge carve — alternating wedges telegraph, then erupt
@@ -309,10 +328,10 @@ K.rift_carve = {                     // Gorrath: 8-wedge carve — alternating w
 };
 K.ghost_mist = {                     // ghost phase: pale blue mist + wisps over the arena (loop)
   name: 'ghost_mist', fade: 1.5, group: 'Bosses',
-  init(T) { ctx(T.fx, T.p, T.v.c = {}, 16); T.dur = T.p.dur ?? Infinity; },
+  init(T) { ctx(T.fx, T.p, T.v.c = {}, 16); T.dur = T.p.dur ?? Infinity; T.acc.m = 4 + T.v.c.R * 1.2; },   // pre-warm: a first bank of mist
   tick(T) {
     const fx = T.fx, c = T.v.c, p = T.pos, gy = fx.gy(p.x, p.z, p.y);
-    let n = T.rate('m', 4 + c.R * 0.6);
+    let n = T.rate('m', 5 + c.R * 1.0);
     for (let i = 0; i < n; i++) { const a = fx.r(0, TAU), r = Math.sqrt(Math.random()) * c.R; fx.spawn(GHOSTMIST, p.x + Math.cos(a) * r, gy + fx.r(0.3, 1.2), p.z + Math.sin(a) * r, fx.r(-0.3, 0.3), 0.05, fx.r(-0.3, 0.3), fx.o(1, null)); }
     n = T.rate('w', 1 + c.R * 0.4);
     for (let i = 0; i < n; i++) { const a = fx.r(0, TAU), r = Math.sqrt(Math.random()) * c.R; fx.spawn(AMB.wisp, p.x + Math.cos(a) * r, gy + fx.r(0.3, 2), p.z + Math.sin(a) * r, 0, 0.6, 0, fx.o(1.2, null)); }

@@ -14,7 +14,7 @@ import { Modals } from './core/modal.js';
 import { initDrag } from './core/drag.js';
 import * as data from './core/data.js';
 import { Hud } from './hud/hud.js';
-import { Banners } from './hud/center.js';
+import { Banners, Toasts } from './hud/center.js';
 import { MENU } from './hud/menu.js';
 import { SCREENS } from './screens/index.js';
 import { WINDOWS } from './windows/index.js';
@@ -50,6 +50,8 @@ class UI {
     this.hud = new Hud(this, this.layers.hud);
     this.chat = this.hud.chat;
     this.banners = new Banners(this.layers.center);
+    this.screenToasts = new Toasts(this.layers.top); // used while a full screen hides the HUD
+    this.screenToasts.el.classList.add('ss-toasts--screen');
     this.windows = new WindowManager(this, this.layers.win);
     this.windows.register(...WINDOWS);
     this.modals = new Modals(this, this.layers.modal);
@@ -113,7 +115,7 @@ class UI {
   }
   // ------------------------------------------------------------------ HUD helpers
   banner(text, opts) { this.banners.show(text, opts); }
-  toast(text, kind = 'info', dur) { return this.hud.toasts.add(text, kind, dur); }
+  toast(text, kind = 'info', dur) { const onScreen = this.current && !this.current.constructor.overlay; return (onScreen ? this.screenToasts : this.hud.toasts).add(text, kind, dur); }
   /** Show/hide the whole HUD (photo mode). */
   setHudVisible(on) {
     this._hudOn = !!on;
@@ -199,7 +201,10 @@ class UI {
     if (field) return;
     if (this.npc.active) { if (this.npc.key(e)) e.preventDefault(); return; }
     if (this.current) {
-      if (this.windows.hasOpenModal()) return; // e.g. the raid auction open over the results screen
+      if (this.windows.hasOpenModal()) { // e.g. settings over the title, the raid auction over results
+        if (e.key === 'Escape' && this.windows.closeTop()) e.preventDefault();
+        return;
+      }
       if (this.current.key && this.current.key(e)) { e.preventDefault(); return; }
       if (!this.current.constructor.overlay) return;
     }

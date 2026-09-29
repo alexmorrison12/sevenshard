@@ -345,13 +345,20 @@ export class QuestSystem {
   // ---------------------------------------------------------------- interaction
   interactable() {
     const me = this.me; if (!me || this.channel || cutsceneActive()) return null;
+    let best = null, bd = Infinity;
     const o = this.world.nearestObj(me);
-    if (!o) return null;
-    // an NPC right next to us wins over a quest object further away
+    if (o) {
+      bd = dist(o, me.pos);
+      best = o.launch ? { name: o.s.launchName || o.q.title, label: o.s.launchLabel || 'Enter', portal: 'quest:launch', pos: { x: o.x, z: o.z }, data: { npcDef: { object: true } }, qobj: o }
+        : { name: o.s.name || o.q.title, label: o.s.label || 'Use', pos: { x: o.x, z: o.z }, data: { npcDef: { object: true } }, qobj: o };
+    }
+    // story NPCs we spawned (the zone's own mode doesn't know about them)
+    for (const u of this.world.spawned.values()) { if (!u.level || u.dead || !u.data.npcDef) continue; const d = me.distTo(u); if (d < 3.2 && d < bd) { bd = d; best = u; } }
+    if (!best) return null;
+    // the mode's own target wins when it is clearly closer
     const other = this.g.mode?.interactable?.();
-    if (other && other.pos && dist(other.pos, me.pos) < dist(o, me.pos) - 0.4) return null;
-    if (o.launch) return { name: o.s.launchName || o.q.title, label: o.s.launchLabel || 'Enter', portal: 'quest:launch', pos: { x: o.x, z: o.z }, data: { npcDef: { object: true } }, qobj: o };
-    return { name: o.s.name || o.q.title, label: o.s.label || 'Use', pos: { x: o.x, z: o.z }, data: { npcDef: { object: true } }, qobj: o };
+    if (other && other !== best && other.pos && dist(other.pos, me.pos) < bd - 0.4) return null;
+    return best;
   }
   interact(t) {
     if (cutsceneActive()) return true;

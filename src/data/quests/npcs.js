@@ -53,6 +53,8 @@ const has = (Q, id) => Q.isActive(id) || Q.isDone(id);
 export const PLACEMENTS = [
   // Chapter I — arrival on the pier at dawn; Seraphine waits there until you've found Brannoc
   { id: 'seraphine', zone: 'solhaven', at: 'dock:ship', off: [-7, -2.2], move: true, face: -Math.PI / 2, when: Q => Q.isActive('c1_harbour') },
+  // Seraphine joins the council; Brannoc walks you up, then goes back to his post
+  { id: 'seraphine', zone: 'solhaven', pos: [-2.4, -75.4], move: true, face: Math.PI, when: Q => Q.isActive('c1_council') },
   // Brannoc walks you up to the council, then goes back to his post
   { id: 'brannoc', zone: 'solhaven', pos: [-7.4, -76.8], move: true, face: Math.PI - 0.8, when: Q => Q.isActive('c1_council') },
   // the epilogue gathers everyone at the keep forecourt

@@ -86,8 +86,9 @@ lab.onFrame((dt, t) => {
 
 // ------------------------------------------------------------------ demo params per preset (sensible defaults)
 function demoParams(name) {
-  const p = { pos: HERO().clone(), dir: fwd.clone(), target: BOSS().clone().add(new THREE.Vector3(0, 0, 2.5)), attach: hero.root, caster: hero.root, sockets: hero.sockets };
-  return p;
+  // boss attacks come from the dummy boss (front edge of its body) toward the hero; everything else is cast by the hero
+  if (fx.PRESETS[name]?.group === 'Bosses') return { pos: BOSS().clone().add(new THREE.Vector3(0, 0, 1.4)), dir: new THREE.Vector3(0, 0, 1), target: HERO().clone(), caster: boss.root, sockets: boss.sockets };
+  return { pos: HERO().clone(), dir: fwd.clone(), target: BOSS().clone().add(new THREE.Vector3(0, 0, 2.5)), attach: hero.root, caster: hero.root, sockets: hero.sockets };
 }
 function play(name, extra = {}) { return fx.play(name, { ...demoParams(name), ...extra }); }
 

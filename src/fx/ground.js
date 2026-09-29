@@ -210,11 +210,13 @@ void main() {
   } else if (kind == 3 || kind == 21) {    // frost / frozen floor
     float fr = cellTex(${D.frost}.0, rot2(p, seed * 6.0));
     float body = smoothstep(1.0, 0.55, r + (nz - 0.5) * 0.35);
-    float sheet = kind == 21 ? body * 0.55 : body * 0.28;
-    a = max(sheet, fr * 0.7 * body);
-    dark = mix(vec3(0.55, 0.75, 0.95), vec3(0.9, 0.97, 1.0), fr) * uLight * a;
+    bool ice = kind == 21;                 // ice floor: a glazed sheet with cracks, the snowflake only faint (gone on big floors)
+    if (ice) fr *= 0.15 + 0.85 * smoothstep(6.0, 2.5, R);
+    float sheet = ice ? body * 0.5 : body * 0.28;
+    a = max(sheet, fr * (ice ? 0.3 : 0.7) * body);
+    dark = mix(ice ? vec3(0.42, 0.62, 0.85) : vec3(0.55, 0.75, 0.95), vec3(0.9, 0.97, 1.0), fr) * uLight * a;
     float tw = step(0.985, h21(floor(vL * 7.0) + floor(t * 3.0 + h21(floor(vL * 7.0)) * 3.0)));
-    add = (vec3(0.3, 0.7, 1.4) * fr * 0.6 + vec3(2.5, 3.0, 3.5) * tw * body) * 0.8;
+    add = (vec3(0.3, 0.7, 1.4) * fr * (ice ? 0.2 : 0.6) + vec3(2.5, 3.0, 3.5) * tw * body) * 0.8;
     if (kind == 21) { vec2 v = vor(vL * 0.9, seed); add += vec3(0.4, 0.8, 1.4) * (1.0 - smoothstep(0.0, 0.05, v.y)) * body * 0.6; }
   } else if (kind == 4 || kind == 5 || kind == 6 || kind == 14 || kind == 15 || kind == 19) {  // rune circles
     float cell = kind == 4 ? ${D.holy}.0 : kind == 5 ? ${D.arcane}.0 : kind == 6 ? ${D.demon}.0 : kind == 14 ? ${D.music}.0 : kind == 15 ? ${D.leaves}.0 : ${D.sigil}.0;

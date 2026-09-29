@@ -138,7 +138,7 @@ export class RapportWin extends Win {
 // Lives in the modal layer so it shows above the results screen. Built once and updated in place (the custom
 // amount field keeps its value and focus across the 4 Hz pushes).
 export class BidWin extends Win {
-  static id = 'bid'; static title = 'Raid Auction'; static glyph = 'crown'; static width = 540; static layer = 'modal';
+  static id = 'bid'; static title = 'Raid Auction'; static glyph = 'crown'; static width = 540; static layer = 'modal'; static escClose = false;
   build() {
     const B = this.body; B.classList.add('ss-bd');
     const hd = h('div', 'ss-bd-hd', B);

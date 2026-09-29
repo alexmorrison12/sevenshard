@@ -461,12 +461,15 @@ class SystemsPlugin {
   }
   hud(h) {
     const s = this.s; if (!s?.char) return;
-    const A = s.account;
-    const unread = (A.roster.mail || []).filter(m => !m.read).length;
-    h.badges = { ...(h.badges || {}), mail: unread };
-    const v = S.tasks.view(A);
-    const q = [...v.daily.offered.filter(t => t.accepted && !t.claimed).map(t => ({ t, kind: 'daily' })), ...v.weekly.offered.filter(t => t.accepted && !t.claimed).map(t => ({ t, kind: 'weekly' }))];
-    if (q.length) h.quests = [...(h.quests || []), ...q.map(({ t, kind }) => ({ id: `task:${t.id}`, title: t.name, kind, steps: [{ text: t.desc, n: t.n, need: t.need, done: t.done }] }))];
+    const now = Date.now(), c = this.hc;
+    if (!c || now - c.t > 500 || c.char !== s.char) {   // the HUD asks ~15×/s; tasks & mail change slowly
+      const A = s.account, v = S.tasks.view(A, now);
+      const q = [...v.daily.offered.filter(t => t.accepted && !t.claimed).map(t => ({ t, kind: 'daily' })), ...v.weekly.offered.filter(t => t.accepted && !t.claimed).map(t => ({ t, kind: 'weekly' }))];
+      this.hc = { t: now, char: s.char, unread: (A.roster.mail || []).filter(m => !m.read).length,
+        quests: q.map(({ t, kind }) => ({ id: `task:${t.id}`, title: t.name, kind, steps: [{ text: t.desc, n: t.n, need: t.need, done: t.done }] })) };
+    }
+    h.badges = { ...(h.badges || {}), mail: this.hc.unread };
+    if (this.hc.quests.length) h.quests = [...(h.quests || []), ...this.hc.quests];
   }
   npcChoices(npcId) {
     const out = [];

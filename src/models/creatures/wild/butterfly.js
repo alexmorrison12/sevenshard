@@ -5,7 +5,7 @@
 // Painted fan-sheet wings (veins, borders, spots, eyespots) per variant: monarch, azure, sulphur, rose, glow (luminous,
 // for night / Pipsprout Hollow). Actions: perch (hold), flee (hold), flutter, hit, death (tumbles down, lies flat).
 import * as THREE from 'three';
-import { BaseCtl } from '../ctl.js';
+import { BaseCtl, RV, rotA, moveA } from '../ctl.js';
 import { sweep, rigid } from '../../kit/geo.js';
 import { col } from '../../kit/sdf.js';
 import { lerp3 } from '../../kit/parts.js';
@@ -88,6 +88,8 @@ export const butterfly = {
 };
 
 // ================================================================================================ controller
+// Per-frame code is allocation-free: pose writes go through the framework's RV/rotA/moveA (no double crosses a call
+// boundary), the wander noise is inline sine sums. Actions use this.bb (bone indices) with the usual Pose helpers.
 export class ButterflyCtl extends BaseCtl {
   constructor(inst, spec) {
     super(inst, spec);
@@ -95,52 +97,54 @@ export class ButterflyCtl extends BaseCtl {
     this.gait = null;
     const b = this.pose.b;
     this.bb = { body: b.body, head: b.head, abd: b.abdomen, fwL: b.fwL, fwR: b.fwR, hwL: b.hwL, hwR: b.hwR };
-    this.seed = Math.random() * 100; this.fph = Math.random() * 10; this.gl = 0; this.glT = 1 + Math.random() * 3;
-    this.perch = 0; this.fleeK = 0; this.fall = 0; this.lie = 0; this.wingOpen = 0;
+    this.bBody = b.body; this.bHead = b.head; this.bAbd = b.abdomen; this.bFwL = b.fwL; this.bFwR = b.fwR; this.bHwL = b.hwL; this.bHwR = b.hwR;
+    this.sd = Math.random() * 100; this.fph = Math.random() * 10; this.gl = 0; this.glT = 1 + Math.random() * 3;
+    this.perch = 0; this.fleeK = 0; this.fall = 0; this.lie = 0;
   }
-  update(dt, state = {}) {
-    dt = Math.min(dt, 0.1);
-    const P = this.pose, B = this.bb, t = this.t += dt;
-    this._state(state, dt);
+  update(dt, state = EMPTY_STATE) {
+    if (dt > 0.1) dt = 0.1;
+    const P = this.pose, R = RV, t = this.t += dt, sd = this.sd;
+    this.dt = dt; this._stateS(state);
     this.speedSm += (this._speed - this.speedSm) * (1 - Math.exp(-4 * dt));
     this.turnSm += (this._turn - this.turnSm) * (1 - Math.exp(-4 * dt));
     P.reset();
     this.perch = 0; this.fleeK = 0; this.fall = 0; this.lie = 0; this.glow = 1;
     this.acts.apply();
-    const perch = this.perch, flee = this.fleeK, air = (1 - perch) * (1 - this.fall);
+    const perch = this.perch, flee = this.fleeK, air = (1 - perch) * (1 - this.fall), lie = this.lie;
     // glides: every few seconds hold the wings open for a moment
     this.glT -= dt; if (this.glT <= 0) { this.gl = 0.35; this.glT = 2 + Math.random() * 4; }
-    this.gl = Math.max(0, this.gl - dt);
-    const glide = sstep(0, 0.1, this.gl) * (1 - flee) * air;
-    const f = mix(9, 15, flee) * (1 - glide * 0.9);
-    this.fph += dt * TAU * f;
-    const flap = Math.sin(this.fph);
-    // erratic wander (smooth value noise) + bob on each downstroke
-    const sd = this.seed, wk = 1 + flee * 1.5;
-    const wx = vnoise(t * 0.9 * wk, sd) * 0.18 * wk + vnoise(t * 2.3 * wk, sd + 3) * 0.05;
-    const wy = vnoise(t * 0.7 * wk, sd + 7) * 0.14 + vnoise(t * 2.9, sd + 9) * 0.04 + flee * 0.3;
-    const wz = vnoise(t * 0.8 * wk, sd + 11) * 0.15 * wk;
-    const bob = -Math.cos(this.fph) * 0.012 * (1 - glide);
-    const hov = (0.9 + wy + bob - glide * 0.03) * air;
-    const sp = clamp01(this.speedSm / 1.5);
-    P.move(B.body, wx * air, hov, wz * air);
-    P.rot(B.body, (0.35 * (1 - sp) - 0.15 * sp + 0.25 * Math.sin(this.fph + 0.6) * (1 - glide)) * air - 0.1 * perch, vnoise(t * 1.3, sd + 15) * 0.5 * air + this.turnSm * 0.2, (vnoise(t * 1.7, sd + 19) * 0.35 - this.turnSm * 0.3) * air);
-    P.rx(B.abd, (-0.2 * Math.sin(this.fph - 0.8) * (1 - glide) * air + 0.1 * perch));
-    P.rot(B.head, 0.1 * Math.sin(t * 3) * perch, 0.2 * vnoise(t * 0.8, sd + 21) * perch, 0);
-    // wings: flight flap (clap together at the top) → perch (closed upright, slowly sunning open)
+    this.gl = this.gl > dt ? this.gl - dt : 0;
+    const g0 = this.gl > 0.1 ? 1 : this.gl / 0.1, glide = g0 * g0 * (3 - 2 * g0) * (1 - flee) * air;
+    this.fph += dt * TAU * (9 + 6 * flee) * (1 - glide * 0.9);
+    const fph = this.fph, flap = Math.sin(fph);
+    // erratic wander (sine sums with incommensurate rates) + bob on each downstroke
+    const wk = 1 + flee * 1.5, tw = t * wk;
+    const wx = (Math.sin(tw * 0.9 + sd) * 0.55 + Math.sin(tw * 2.03 + sd * 1.7) * 0.3 + Math.sin(tw * 4.1 + sd * 0.3) * 0.15) * 0.2 * wk;
+    const wy = (Math.sin(tw * 0.7 + sd * 2.3) * 0.6 + Math.sin(tw * 1.9 + sd) * 0.25 + Math.sin(t * 3.7 + sd * 1.1) * 0.15) * 0.16 + flee * 0.3;
+    const wz = (Math.sin(tw * 0.8 + sd * 0.9) * 0.55 + Math.sin(tw * 1.77 + sd * 2.9) * 0.3 + Math.sin(tw * 3.9 + sd) * 0.15) * 0.17 * wk;
+    const bob = -Math.cos(fph) * 0.012 * (1 - glide);
+    const spd = this.speedSm / 1.5, sp = spd < 0 ? 0 : spd > 1 ? 1 : spd;
+    R[0] = wx * air; R[1] = (0.9 + wy + bob - glide * 0.03) * air; R[2] = wz * air; moveA(P.lt[this.bBody]);
+    R[0] = (0.35 * (1 - sp) - 0.15 * sp + 0.25 * Math.sin(fph + 0.6) * (1 - glide)) * air - 0.1 * perch;
+    R[1] = (Math.sin(t * 1.3 + sd * 1.3) * 0.6 + Math.sin(t * 2.9 + sd) * 0.4) * 0.5 * air + this.turnSm * 0.2;
+    R[2] = ((Math.sin(t * 1.7 + sd * 0.5) * 0.6 + Math.sin(t * 3.3 + sd * 2) * 0.4) * 0.35 - this.turnSm * 0.3) * air; rotA(P.lq[this.bBody]);
+    R[0] = -0.2 * Math.sin(fph - 0.8) * (1 - glide) * air + 0.1 * perch; R[1] = 0; R[2] = 0; rotA(P.lq[this.bAbd]);
+    R[0] = 0.1 * Math.sin(t * 3) * perch; R[1] = 0.2 * Math.sin(t * 0.8 + sd) * perch; rotA(P.lq[this.bHead]);
+    // wings: flight flap (clap together at the top) → perch (closed upright, slowly sunning open) → dead (flat)
     const sun = perch * (0.5 - 0.5 * Math.cos(t * 1.1 + sd));
-    let a = mix(0.35 + 1.05 * flap, 0.08, glide);
-    a = mix(a, mix(1.5, 0.12, sun), perch);
-    a = mix(a, -0.05, this.lie);
-    const ah = mix(mix(0.3 + 0.95 * Math.sin(this.fph - 0.35), 0.05, glide), mix(1.45, 0.1, sun), perch);
-    const sweepF = 0.25 * Math.cos(this.fph) * air * (1 - glide);
-    P.rot(B.fwR, 0, -sweepF, a); P.rot(B.fwL, 0, sweepF, -a);
-    P.rot(B.hwR, 0, -sweepF * 0.5 + 0.1, mix(ah, -0.05, this.lie)); P.rot(B.hwL, 0, sweepF * 0.5 - 0.1, -mix(ah, -0.05, this.lie));
+    let a = 0.35 + 1.05 * flap; a += (0.08 - a) * glide; a += (1.5 + (0.12 - 1.5) * sun - a) * perch; a += (-0.05 - a) * lie;
+    let ah = 0.3 + 0.95 * Math.sin(fph - 0.35); ah += (0.05 - ah) * glide; ah += (1.45 + (0.1 - 1.45) * sun - ah) * perch; ah += (-0.05 - ah) * lie;
+    const sweepF = 0.25 * Math.cos(fph) * air * (1 - glide);
+    R[0] = 0; R[1] = -sweepF; R[2] = a; rotA(P.lq[this.bFwR]);
+    R[1] = sweepF; R[2] = -a; rotA(P.lq[this.bFwL]);
+    R[1] = -sweepF * 0.5 + 0.1; R[2] = ah; rotA(P.lq[this.bHwR]);
+    R[1] = sweepF * 0.5 - 0.1; R[2] = -ah; rotA(P.lq[this.bHwL]);
     P.fk();
     P.apply(this.inst.bones);
     this._uniforms();
   }
 }
+const EMPTY_STATE = {};
 
 const ACTIONS = {
   perch: { dur: 1, hold: true, rest: true, fadeIn: 0.6, fadeOut: 0.4, fn(ctl, a, w) { ctl.perch = Math.max(ctl.perch, w); } },

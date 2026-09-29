@@ -25,7 +25,7 @@ export const DEFAULT_KEYBINDS = [
 const TABS = [{ id: 'graphics', label: 'Graphics' }, { id: 'audio', label: 'Audio' }, { id: 'gameplay', label: 'Gameplay' }, { id: 'interface', label: 'Interface' }, { id: 'keys', label: 'Keybinds' }];
 
 export class SettingsWin extends Win {
-  static id = 'settings'; static title = 'Settings'; static glyph = 'settings'; static width = 640;
+  static id = 'settings'; static title = 'Settings'; static glyph = 'settings'; static width = 640; static layer = 'modal'; // reachable from the title screen too
   build() {
     const b = this.body;
     b.classList.add('ss-set');

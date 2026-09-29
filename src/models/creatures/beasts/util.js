@@ -23,17 +23,6 @@ export function cancelRestOnMove(ctl) {
 /** pre-create the override vectors so no action allocates on its first frame */
 export function prepLegs(gait) { const L = gait.legs; for (let i = 0; i < L.length; i++) if (!L[i].override) L[i].override = new THREE.Vector3(); }
 
-/**
- * Knockdown / getup / death that agree on which side the body lies on (the generic qGetup / qDeath roll a fresh random
- * side from their own seed, so a creature lying on its left would snap to its right when getting up / dying).
- */
-export function sidePair(KD, GU, DE) {
-  const sideOf = (a) => (Math.sin(a.seed * 7.13) > 0 ? 1 : -1);
-  const kd = { ...KD, start(ctl, a) { ctl.kdSide = sideOf(a); KD.start?.(ctl, a); } };
-  const gu = { ...GU, start(ctl, a) { a.u.side = ctl.kdSide ?? 1; GU.start?.(ctl, a); } };
-  const de = { ...DE, start(ctl, a) { DE.start?.(ctl, a); if (ctl.kdSide && ctl.acts.weight('knockdown') > 0.3) a.u.side = ctl.kdSide; } };
-  return { knockdown: kd, getup: gu, death: de };
-}
 
 /**
  * Crisp glowing crack (or scar) ribbon laid onto an SDF surface: pts = rough surface points (model space), projected

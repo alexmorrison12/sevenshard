@@ -10,11 +10,11 @@
 // at fixed arc lengths along the path (the body slides along it when the head reaches out — no stretching); frames are
 // parallel-transported (no twist). Actions steer the path parameters (head pose, entry point, wave, sink offsets).
 import * as THREE from 'three';
-import { BaseCtl } from '../ctl.js';
+import { BaseCtl, RV, rotA } from '../ctl.js';
 import { sweep, rigid, bez, taper } from '../../kit/geo.js';
 import { col } from '../../kit/sdf.js';
 import { addEye, addHorn, lerp3 } from '../../kit/parts.js';
-import { sstep, clamp01, mix, TAU, frameRot } from '../../kit/rig.js';
+import { sstep, clamp01, mix, TAU } from '../../kit/rig.js';
 import { loftZ, chainSkin, fanSheet, twoSided, fkBones, topAt, V3 } from './common.js';
 
 const PAL = {
@@ -273,30 +273,56 @@ export const sea_serpent = {
 };
 
 // ================================================================================================ controller
-const NN = 26, NB = 150, DU = 0.2;
-const _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _e = new THREE.Euler(0, 0, 0, 'YXZ');
-const _T = new V3(), _Tp = new V3(), _N = new V3(), _p = new V3(), _a = new V3(), _b = new V3(), _fw = new V3(), _up = new V3();
-const REST_T = new V3(0, 0, 1), REST_UP = new V3(0, 1, 0);
+// Per-frame code is allocation-free: no double crosses a (possibly non-inlined) call boundary — pose writes go through
+// the framework's RV/rotA, samples are evaluated in one monotonic walk, frames are built with inline math.
+const NN = 26, NB = 150, DU = 0.2, TAU_W = 0.8, NSP = SPINE_S.length;
+// wave envelopes along the body depend only on the sample index → precomputed
+const W_ENV = new Float32Array(NB + 1), W_SINK = new Float32Array(NB + 1), W_TAIL = new Float32Array(NB + 1), W_DEC = new Float32Array(NB + 1);
+for (let j = 1; j <= NB; j++) { const u = j * DU; W_ENV[j] = sstep(0.9, 3.4, u) * (1 - 0.3 * sstep(9, 15, u)); W_SINK[j] = sstep(0.5, 5, u); W_TAIL[j] = sstep(8, 12, u); W_DEC[j] = Math.exp(-u / TAU_W); }
+// query arc lengths per spine bone: (s − 0.3, s, s + 0.3) — monotonic over the whole chain (bone spacing ≥ 0.6)
+const QS = new Float32Array(NSP * 3);
+for (let i = 0; i < NSP; i++) { QS[i * 3] = Math.max(0, SPINE_S[i] - 0.3); QS[i * 3 + 1] = SPINE_S[i]; QS[i * 3 + 2] = SPINE_S[i] + 0.3; }
+const NB_T = new Float32Array(NN); for (let i = 0; i < NN; i++) NB_T[i] = i / (NN - 1);
+const _q = new THREE.Quaternion();
+const _fw = new V3(), _up = new V3(), _B = new V3(), _N = new V3(), _T = new V3();
+const RVQ = RV; // framework scratch (Float64Array) for rotA / moveA
+
+/** q := rotation mapping rest (X, Y, Z) onto the orthonormal basis (B, N, T) (objects only; inline matrix → quaternion) */
+function basisQuat(q, Bv, Nv, Tv) {
+  const m11 = Bv.x, m12 = Nv.x, m13 = Tv.x, m21 = Bv.y, m22 = Nv.y, m23 = Tv.y, m31 = Bv.z, m32 = Nv.z, m33 = Tv.z;
+  const tr = m11 + m22 + m33;
+  if (tr > 0) { const s = 0.5 / Math.sqrt(tr + 1); q._w = 0.25 / s; q._x = (m32 - m23) * s; q._y = (m13 - m31) * s; q._z = (m21 - m12) * s; }
+  else if (m11 > m22 && m11 > m33) { const s = 2 * Math.sqrt(1 + m11 - m22 - m33); q._w = (m32 - m23) / s; q._x = 0.25 * s; q._y = (m12 + m21) / s; q._z = (m13 + m31) / s; }
+  else if (m22 > m33) { const s = 2 * Math.sqrt(1 + m22 - m11 - m33); q._w = (m13 - m31) / s; q._x = (m12 + m21) / s; q._y = 0.25 * s; q._z = (m23 + m32) / s; }
+  else { const s = 2 * Math.sqrt(1 + m33 - m11 - m22); q._w = (m21 - m12) / s; q._x = (m13 + m31) / s; q._y = (m23 + m32) / s; q._z = 0.25 * s; }
+}
 
 export class SerpentCtl extends BaseCtl {
   constructor(inst, spec) {
     super(inst, spec);
     this.gait = null;
     const P = this.pose;
-    this.chain = SPN.map(n => P.b[n]);
-    this.kids = ['jaw', 'frillL', 'frillR'].map(n => P.b[n]);
+    this.chain = Int32Array.from(SPN.map(n => P.b[n]));
+    this.jawB = P.b.jaw; this.frL = P.b.frillL; this.frR = P.b.frillR;
+    this.kids = [this.jawB, this.frL, this.frR];
     const M = NN + NB + 2;
     this.px = new Float32Array(M); this.py = new Float32Array(M); this.pz = new Float32Array(M); this.ps = new Float32Array(M); this.np = 0;
+    this.qx = new Float32Array(NSP * 3); this.qy = new Float32Array(NSP * 3); this.qz = new Float32Array(NSP * 3);
     this.ph = Math.random() * TAU; this.swim = 0;
     this.hb = new V3(); this.bk = new V3();
-    this._baseParams(0);
+    // path parameters (numbers only; written every frame by _baseParams, then blended by actions)
+    this.hx = 0; this.hy = 0; this.hz = 0; this.hpitch = 0; this.hyaw = 0; this.hroll = 0;
+    this.ex = 0; this.ey = 0; this.ez = 0; this.tx = 0; this.ty = 0; this.tz = 0; this.a1 = 0; this.a2 = 0; this.bulge = 0;
+    this.wA = 0; this.wMid = 0; this.wL = 5; this.coil = 0; this.wSpd = 1; this.sinkH = 0; this.sinkB = 0; this.bend = 0; this.tailUp = 0;
+    this.frill = 0; this.throat = 0;
+    this._baseParams();
   }
   play(name, dur, loop) {
     if (name === 'emerge') name = 'spawn';
     return super.play(name, dur, loop);
   }
   /** base pose parameters (actions then blend on top) */
-  _baseParams(dt) {
+  _baseParams() {
     const t = this.t, c = this.combat, sw = this.swim, L = this.look;
     this.hx = Math.sin(t * 0.37) * 0.4 + L.y * 0.7;
     this.hy = 4.25 + Math.sin(t * 0.61 + 1) * 0.16 - 0.45 * c - 0.7 * sw;
@@ -307,24 +333,26 @@ export class SerpentCtl extends BaseCtl {
     this.ex = Math.sin(t * 0.37 - 1.2) * 0.18; this.ey = -0.25; this.ez = 1.0 + 0.3 * sw;
     this.tx = 0; this.ty = -1; this.tz = 0.3 + 0.5 * sw;
     this.a1 = 1.35; this.a2 = 2.3; this.bulge = 0.5 + 0.1 * Math.sin(t * 0.5);
-    this.wA = 1.4 - 0.25 * sw; this.wMid = 0.22; this.wL = 5.0; this.coil = 0.45; this.wSpd = Math.max(0.9, Math.abs(this.speedSm)) * Math.sign(this.speedSm || 1);
+    this.wA = 1.4 - 0.25 * sw; this.wMid = 0.22; this.wL = 5.0; this.coil = 0.45;
+    const sp = this.speedSm, asp = sp < 0 ? -sp : sp; this.wSpd = (asp > 0.9 ? asp : 0.9) * (sp < 0 ? -1 : 1);
     this.sinkH = 0; this.sinkB = 0; this.bend = this.turnSm * 0.018; this.tailUp = 0;
     this.jaw = 0.05 + 0.04 * Math.sin(t * 0.9) + 0.18 * c; this.frill = 0.12 + 0.55 * c + 0.1 * Math.sin(t * 0.7); this.glow = 1; this.throat = 0;
   }
-  update(dt, state = {}) {
+  update(dt, state = EMPTY_STATE) {
     dt = Math.min(dt, 0.1);
     const P = this.pose;
-    this.t += dt;
-    this._state(state, dt);
+    this.t += dt; this.dt = dt;
+    this._stateS(state);
     const k4 = 1 - Math.exp(-2 * dt);
     this.speedSm += (this._speed * this.locoW - this.speedSm) * k4;
     this.turnSm += (this._turn * this.locoW - this.turnSm) * (1 - Math.exp(-1.5 * dt));
-    this.swim = clamp01(Math.abs(this.speedSm) / 5);
+    const asp = this.speedSm < 0 ? -this.speedSm : this.speedSm;
+    this.swim = asp > 5 ? 1 : asp / 5;
     P.reset();
     const idle = 1 - this.swim;
-    this._look(dt, idle * (1 - this.restW), 0.6);
-    this._baseParams(dt);
-    this._fidget(dt, idle);
+    this._idleW = idle * (1 - this.restW); this._lookS(0.6);
+    this._baseParams();
+    this._idleW = idle; this._fidgetS();
     this.acts.apply();
     this.ph += dt * this.wSpd * TAU / this.wL;
     if (this.ph > 1000) this.ph -= 200 * TAU;
@@ -333,48 +361,52 @@ export class SerpentCtl extends BaseCtl {
     this._uniforms();
   }
   _pose() {
-    const P = this.pose;
-    // ---- head frame
-    _e.set(this.hpitch, this.hyaw, this.hroll, 'YXZ');
-    _q.setFromEuler(_e);
+    const P = this.pose, R = RVQ;
+    // ---- head frame (YXZ euler → quaternion through rotA)
+    _q.identity(); R[0] = this.hpitch; R[1] = this.hyaw; R[2] = this.hroll; rotA(_q);
     _fw.set(0, 0, -1).applyQuaternion(_q); _up.set(0, 1, 0).applyQuaternion(_q);
-    this.hb.set(this.hx, this.hy - this.sinkH, this.hz);
+    const hb = this.hb; hb.x = this.hx; hb.y = this.hy - this.sinkH; hb.z = this.hz;
     this.bk.copy(_fw).negate();
-    const h = this.chain[0];
-    P.wq[h].copy(_q); P.wp[h].copy(this.hb);
-    // ---- path
+    const ch = this.chain, h = ch[0];
+    P.wq[h].copy(_q); P.wp[h].copy(hb);
+    // ---- path + all spine queries in one monotonic walk
     this._path();
-    // ---- spine: fixed arc lengths along the path, parallel-transported frames
-    _Tp.copy(this.bk); _N.copy(_up).addScaledVector(_Tp, -_up.dot(_Tp)).normalize();
-    for (let i = 1; i < this.chain.length; i++) {
-      const s = SPINE_S[i], bi = this.chain[i];
-      this._at(s, P.wp[bi]);
-      this._at(s + 0.3, _a); this._at(Math.max(0, s - 0.3), _b);
-      _T.subVectors(_a, _b).normalize();
-      _q2.setFromUnitVectors(_Tp, _T); _N.applyQuaternion(_q2); _N.addScaledVector(_T, -_N.dot(_T)).normalize();
-      frameRot(P.wq[bi], REST_T, REST_UP, _T, _N);
-      _Tp.copy(_T);
+    this._sample();
+    // ---- spine: positions at fixed arc lengths, parallel-transported frames (projection method)
+    const qx = this.qx, qy = this.qy, qz = this.qz;
+    _N.copy(_up);
+    let d = _N.x * this.bk.x + _N.y * this.bk.y + _N.z * this.bk.z;
+    _N.x -= this.bk.x * d; _N.y -= this.bk.y * d; _N.z -= this.bk.z * d; _N.normalize();
+    for (let i = 1; i < NSP; i++) {
+      const bi = ch[i], j = i * 3;
+      const wp = P.wp[bi]; wp.x = qx[j + 1]; wp.y = qy[j + 1]; wp.z = qz[j + 1];
+      _T.x = qx[j + 2] - qx[j]; _T.y = qy[j + 2] - qy[j]; _T.z = qz[j + 2] - qz[j]; _T.normalize();
+      d = _N.x * _T.x + _N.y * _T.y + _N.z * _T.z;
+      _N.x -= _T.x * d; _N.y -= _T.y * d; _N.z -= _T.z * d; _N.normalize();
+      _B.crossVectors(_N, _T);
+      basisQuat(P.wq[bi], _B, _N, _T);
     }
     // throat swell (inhale before a water jet)
-    if (this.throat > 0.001) for (let i = 1; i <= 4; i++) P.sc[this.chain[i]].setScalar(1 + this.throat * (i === 1 || i === 4 ? 0.14 : 0.26));
+    if (this.throat > 0.001) for (let i = 1; i <= 4; i++) { const sc = P.sc[ch[i]], v = 1 + this.throat * (i === 1 || i === 4 ? 0.14 : 0.26); sc.x = v; sc.y = v; sc.z = v; }
     // ---- jaw & frills (FK from the head)
-    const [jw, fl, fr] = this.kids;
-    P.rx(jw, -this.jaw);
     const f = this.frill;
-    P.rot(fl, 0.1 * f, 0.55 * f, 0.25 * f); P.rot(fr, 0.1 * f, -0.55 * f, -0.25 * f);
+    R[0] = -this.jaw; R[1] = 0; R[2] = 0; rotA(P.lq[this.jawB]);
+    R[0] = 0.1 * f; R[1] = 0.55 * f; R[2] = 0.25 * f; rotA(P.lq[this.frL]);
+    R[0] = 0.1 * f; R[1] = -0.55 * f; R[2] = -0.25 * f; rotA(P.lq[this.frR]);
     fkBones(P, this.kids);
   }
   /** sample the neck bezier + body wave into px/py/pz with cumulative arc length ps */
   _path() {
-    const { px, py, pz, ps } = this, hb = this.hb, bk = this.bk;
+    const px = this.px, py = this.py, pz = this.pz, ps = this.ps, hb = this.hb, bk = this.bk;
     const p0x = hb.x, p0y = hb.y, p0z = hb.z;
     const p1x = p0x + bk.x * this.a1, p1y = p0y + bk.y * this.a1, p1z = p0z + bk.z * this.a1;
-    const tl = Math.hypot(this.tx, this.ty, this.tz) || 1, tx = this.tx / tl, ty = this.ty / tl, tz = this.tz / tl;
+    let tx = this.tx, ty = this.ty, tz = this.tz;
+    const tl = Math.sqrt(tx * tx + ty * ty + tz * tz) || 1; tx /= tl; ty /= tl; tz /= tl;
     const ex = this.ex, ey = this.ey - this.sinkH, ez = this.ez;
     const p2x = ex - tx * this.a2, p2y = ey - ty * this.a2, p2z = ez - tz * this.a2 - this.bulge;
     let n = 0;
     for (let i = 0; i < NN; i++) {
-      const t = i / (NN - 1), u = 1 - t, b0 = u * u * u, b1 = 3 * u * u * t, b2 = 3 * u * t * t, b3 = t * t * t;
+      const t = NB_T[i], u = 1 - t, b0 = u * u * u, b1 = 3 * u * u * t, b2 = 3 * u * t * t, b3 = t * t * t;
       px[n] = b0 * p0x + b1 * p1x + b2 * p2x + b3 * ex;
       py[n] = b0 * p0y + b1 * p1y + b2 * p2y + b3 * ey;
       pz[n] = b0 * p0z + b1 * p1z + b2 * p2z + b3 * ez;
@@ -382,35 +414,33 @@ export class SerpentCtl extends BaseCtl {
     }
     // body: helical travelling wave behind the water entry; a decaying correction term keeps position & tangent
     // continuous with the neck curve at the entry point
-    const k = TAU / this.wL, ph = this.ph, tau = 0.8, tzs = Math.max(0.08, tz);
-    const c0 = this.ey - this.wMid, c1 = ty / tzs + c0 / tau, d1 = tx / tzs;
-    const sH = this.sinkH, sB = this.sinkB;
+    const k = TAU / this.wL, ph = this.ph, tzs = tz > 0.08 ? tz : 0.08;
+    const c0 = this.ey - this.wMid, c1 = ty / tzs + c0 / TAU_W, d1 = tx / tzs;
+    const sH = this.sinkH, sB = this.sinkB, wMid = this.wMid, wA = this.wA, coil = this.coil, tailUp = this.tailUp, bend = this.bend;
     for (let j = 1; j <= NB; j++) {
-      const u = j * DU;
-      const env = sstep(0.9, 3.4, u) * (1 - 0.3 * sstep(9, 15, u));
-      const ang = k * u - ph;
-      const dec = Math.exp(-u / tau);
-      const off = sH + (sB - sH) * sstep(0.5, 5, u);
-      const y = this.wMid + this.wA * env * Math.sin(ang) + (c0 + c1 * u) * dec - off + this.tailUp * sstep(8, 12, u);
-      const x = ex + this.coil * env * Math.cos(ang) + d1 * u * dec + this.bend * u * u;
-      px[n] = x; py[n] = y; pz[n] = ez + u;
+      const u = j * DU, env = W_ENV[j], dec = W_DEC[j], ang = k * u - ph;
+      px[n] = ex + coil * env * Math.cos(ang) + d1 * u * dec + bend * u * u;
+      py[n] = wMid + wA * env * Math.sin(ang) + (c0 + c1 * u) * dec - (sH + (sB - sH) * W_SINK[j]) + tailUp * W_TAIL[j];
+      pz[n] = ez + u;
       n++;
     }
     this.np = n;
     ps[0] = 0;
-    for (let i = 1; i < n; i++) ps[i] = ps[i - 1] + Math.hypot(px[i] - px[i - 1], py[i] - py[i - 1], pz[i] - pz[i - 1]);
+    for (let i = 1; i < n; i++) { const dx = px[i] - px[i - 1], dy = py[i] - py[i - 1], dz = pz[i] - pz[i - 1]; ps[i] = ps[i - 1] + Math.sqrt(dx * dx + dy * dy + dz * dz); }
   }
-  /** point at arc length s (linear extrapolation past the ends) */
-  _at(s, out) {
-    const { px, py, pz, ps } = this, n = this.np;
-    if (s <= 0) return out.set(px[0], py[0], pz[0]);
-    if (s >= ps[n - 1]) { const i = n - 1, l = ps[i] - ps[i - 1] || 1, f = (s - ps[i]) / l; return out.set(px[i] + (px[i] - px[i - 1]) * f, py[i] + (py[i] - py[i - 1]) * f, pz[i] + (pz[i] - pz[i - 1]) * f); }
-    let lo = 0, hi = n - 1;
-    while (hi - lo > 1) { const m = (lo + hi) >> 1; if (ps[m] <= s) lo = m; else hi = m; }
-    const f = (s - ps[lo]) / ((ps[hi] - ps[lo]) || 1);
-    return out.set(px[lo] + (px[hi] - px[lo]) * f, py[lo] + (py[hi] - py[lo]) * f, pz[lo] + (pz[hi] - pz[lo]) * f);
+  /** evaluate every spine query (QS, ascending) with one walk along the path; extrapolates past the tail end */
+  _sample() {
+    const px = this.px, py = this.py, pz = this.pz, ps = this.ps, n = this.np, qx = this.qx, qy = this.qy, qz = this.qz;
+    let lo = 0;
+    for (let q = 0; q < QS.length; q++) {
+      const s = QS[q];
+      while (lo < n - 2 && ps[lo + 1] <= s) lo++;
+      const hi = lo + 1, l = ps[hi] - ps[lo], f = (s - ps[lo]) / (l > 1e-6 ? l : 1e-6);
+      qx[q] = px[lo] + (px[hi] - px[lo]) * f; qy[q] = py[lo] + (py[hi] - py[lo]) * f; qz[q] = pz[lo] + (pz[hi] - pz[lo]) * f;
+    }
   }
 }
+const EMPTY_STATE = {};
 
 // ================================================================================================ actions
 // Every action blends the path parameters: absolute targets via mix(current, target, f·w), offsets via += d·w.

@@ -699,14 +699,16 @@ export function meteorImpact(fx, target, Rr = 3.5, tint = null) {
   const up = _q.set(g.x, g.y + 0.6 * s, g.z);
   fx.at(GEN.bigFlash, up, Math.min(s, 2) * 0.6, tint || [1, 0.65, 0.3], null, 0, 1, 0);
   fx.at(GEN.flare, up, Math.min(s, 2) * 1.6, tint || [1, 0.6, 0.3], { rot: 0 });
-  shockwave(fx, { pos: g, radius: Rr * 2.4, color: tint ? [tint[0] * 2, tint[1] * 2, tint[2] * 2] : [2.2, 0.9, 0.3], dur: 0.6, height: 1.6 * s });
-  for (let i = 0; i < fx.n(36); i++) {
+  const sc0 = Math.min(s, 1.15);
+  const kw = 2 / Math.max(1, s);
+  shockwave(fx, { pos: g, radius: Rr * Math.min(2.4, 1.2 + 1.2 / s), color: tint ? [tint[0] * kw, tint[1] * kw, tint[2] * kw] : [1.1 * kw, 0.45 * kw, 0.15 * kw], dur: 0.6, height: 1.6 * sc0 / Math.max(1, s) });
+  for (let i = 0; i < fx.n(Math.round(36 / Math.max(1, s * 0.8))); i++) {
     fx.rdir(_d, _u, 1.35); const sp = fx.r(3, 10) * s;
-    fx.spawn(FIRE.column, up.x, up.y, up.z, _d.x * sp, _d.y * sp * 0.8 + 3 * s, _d.z * sp, fx.o(s * 1.5, tint));
+    fx.spawn(FIRE.column, up.x, up.y, up.z, _d.x * sp, _d.y * sp * 0.8 + 3 * s, _d.z * sp, fx.o(sc0 * 1.5, tint));
   }
   for (let i = 0; i < fx.n(14); i++) {
     const a = fx.r(0, TAU), r = fx.r(0.5, 2.6) * s;
-    const o = fx.o(s * 1.35, tint); o.life = 1.4; o.dt = fx.r(0.1, 0.35);
+    const o = fx.o(sc0 * 1.35, tint); o.life = 1.4; o.dt = fx.r(0.1, 0.35);
     fx.spawn(FIRE.column, up.x + Math.cos(a) * r, up.y, up.z + Math.sin(a) * r, Math.cos(a) * 2 * s, fx.r(3, 7) * s, Math.sin(a) * 2 * s, o);
   }
   fx.sphere(FIRE.lavaBlob, 20, up, 6, 13, s, tint, _u, 1.1);

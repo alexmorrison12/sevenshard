@@ -10,7 +10,8 @@ const BLADE_SPR = P({ sprite: S.slashmark, ramp: R.wFlash, life: [0.12, 0.2], si
 const ORBIT_BLADE = P({ sprite: S.blade, ramp: R.wInOut, life: [0.5, 0.8], size: [0.5, 0.7], motion: 'orbit', rise: 0.4, rgrow: 0.3, spin: 14, randSpin: true, i: [2, 3] });
 const BLOOD_SPIKE_C = [0.32, 0.02, 0.04], BLOOD_GLOW = [1.6, 0.08, 0.1];
 const SKULL = P({ sprite: S.skull, ramp: R.wInOut, life: [0.8, 1.1], size: [0.7, 1.0], end: 1.5, ease: 2, rot: [-0.2, 0.2], drag: 1.5, accY: 0.8, i: 1.5 });
-const WING = P({ sprite: S.wing, ramp: R.wInOut, life: 0.9, size: 3.6, end: 1.35, ease: 2, rot: 0, i: 1.8, noGround: true });
+const WING = P({ sprite: S.wing, ramp: R.wInOut, life: 0.9, size: 3.75, end: 1.35, ease: 2, rot: 0, i: 0.8, noGround: true });
+const WING_DARK = P({ pool: 'alpha', sprite: S.wing, ramp: R.wInOut, life: 0.9, size: 3.5, end: 1.35, ease: 2, rot: 0, color: [0.1, 0.015, 0.03], alpha: 0.85, noGround: true });
 const DSMOKE = P({ pool: 'alpha', sprite: [S.smoke1, S.smoke2, S.smoke3], ramp: R.void, life: [0.7, 1.1], size: [0.6, 0.9], end: [2.2, 3], ease: 2, spin: [-1, 1], drag: 2.5, accY: 1.2, turb: 0.2 });
 
 // ------------------------------------------------------------------ Bladedancer
@@ -111,9 +112,9 @@ K.dark_order = (fx, p) => {          // thrown blades fly out and return
 // ------------------------------------------------------------------ Demonbound
 K.demon_transform = (fx, p) => {     // Demonform: eruption of dark fire, wings unfold, sigil burns
   const c = ctx(fx, p, null, 5), s = c.s, col = tc(c.tint, DEMON, 1.4), pos = vec(c.x, c.y, c.z), up = vec(c.x, c.y + 1.4, c.z);
-  fx.at(GEN.bigFlash, up, 0.8 * s, [0.9, 0.15, 0.4]);
+  fx.at(GEN.bigFlash, up, 0.8 * s, [0.9, 0.05, 0.12]);
   fx.at(GEN.rays, up, 1.8 * s, col);
-  for (const m of [false, true]) { const o = fx.o(s, [0.9, 0.2, 0.5]); o.mirror = m; o.dt = 0.05; const side = m ? -1 : 1; fx.spawn(WING, c.x + c.rt.x * 1.3 * side * s, c.y + 2.2 * s, c.z + c.rt.z * 1.3 * side * s, c.rt.x * side * 0.6, 1.2, c.rt.z * side * 0.6, o); }
+  for (const m of [false, true]) { const side = m ? -1 : 1; let o = fx.o(s, null); o.mirror = m; o.dt = 0.05; fx.spawn(WING_DARK, c.x + c.rt.x * 1.3 * side * s, c.y + 2.2 * s, c.z + c.rt.z * 1.3 * side * s, c.rt.x * side * 0.6, 1.2, c.rt.z * side * 0.6, o); o = fx.o(s, [0.8, 0.012, 0.04]); o.mirror = m; o.dt = 0.05; fx.spawn(WING, c.x + c.rt.x * 1.3 * side * s, c.y + 2.2 * s, c.z + c.rt.z * 1.3 * side * s, c.rt.x * side * 0.6, 1.2, c.rt.z * side * 0.6, o); }
   shockwave(fx, { pos, radius: c.R * 1.4, color: [col[0] * 1.6, col[1] * 1.6, col[2] * 1.6], dur: 0.55, height: 2.6 * s });
   decal(fx, { pos, radius: c.R * 0.7, kind: 'demon', dur: 3, color: [col[0] * 1.5, col[1] * 1.5, col[2] * 1.5], hot: 0.8 });
   fx.sphere(DARK.flame, 50, vec(c.x, c.y + 0.5, c.z), 2, 7, s, null, UP, 1.0);
@@ -182,10 +183,10 @@ K.howl = K.fear_howl;
 K.cruel_cutter = (fx, p) => { const c = ctx(fx, p, null, 1, 12, 12); return fx.projectile({ from: vec(c.x + c.f.x * 0.6, c.y + 1.1, c.z + c.f.z * 0.6), dir: c.f, kind: 'glaive', color: tc(c.tint, DEMON, 2), range: c.L, speed: 22, scale: c.s }); };
 K.hellfire_wings = (fx, p) => {      // demon wings beat: a cone of dark fire forward
   const c = ctx(fx, p, null, 6, 7), s = c.s, up = vec(c.x, c.y + 1.4, c.z);
-  for (const m of [false, true]) { const o = fx.o(s, [0.9, 0.2, 0.4]); o.mirror = m; const side = m ? -1 : 1; fx.spawn(WING, c.x + c.rt.x * 1.4 * side, c.y + 2, c.z + c.rt.z * 1.4 * side, c.f.x * 2, 0.5, c.f.z * 2, o); }
+  for (const m of [false, true]) { const side = m ? -1 : 1, x = c.x + c.rt.x * 1.4 * side, z = c.z + c.rt.z * 1.4 * side; let o = fx.o(s, null); o.mirror = m; fx.spawn(WING_DARK, x, c.y + 2, z, c.f.x * 2, 0.5, c.f.z * 2, o); o = fx.o(s, [0.8, 0.012, 0.04]); o.mirror = m; fx.spawn(WING, x, c.y + 2, z, c.f.x * 2, 0.5, c.f.z * 2, o); }
   const o = fx.o(s, null);
   for (let i = 0; i < fx.n(50); i++) { fx.rdir(_a, c.f, 0.5); const v = fx.r(6, 13); fx.spawn(DARK.flame, up.x, up.y, up.z, _a.x * v, _a.y * v * 0.3, _a.z * v, o); }
-  fx.telegraph({ shape: 'cone', pos: vec(c.x, c.y, c.z), dir: c.f, radius: c.L, angle: 1.3, color: [0.8, 0.05, 0.25], dur: 0.15, detonate: true, intensity: 0.7 });
+  fx.telegraph({ shape: 'cone', pos: vec(c.x, c.y, c.z), dir: c.f, radius: c.L, angle: 1.3, color: [0.7, 0.012, 0.05], dur: 0.15, detonate: true, intensity: 0.6 });
 };
 K.demonic_slam = (fx, p) => { const c = ctx(fx, p, null, 4); groundSmash(fx, c.x, c.y, c.z, c.R, tc(c.tint, DEMON, 1.4), { decal: 'crater', shake: 0.6 }); decal(fx, { pos: vec(c.x, c.y, c.z), radius: c.R * 0.8, kind: 'demon', dur: 3, color: tc(c.tint, DEMON, 1.6) }); };
 K.dark_burst = (fx, p) => { const c = ctx(fx, p, null, 2.5), s = c.R / 2.5, up = vec(c.x, c.y + 1, c.z); fx.at(DARK.flash, up, 2.5 * s, null); fx.sphere(DARK.burst, 20, up, 2, 6, s, null); fx.sphere(DARK.spark, 30, up, 4, 10, s, null); shockwave(fx, { pos: vec(c.x, c.y, c.z), radius: c.R * 1.4, color: tc(c.tint, 0x8a3cff, 1.6), dur: 0.4 }); };

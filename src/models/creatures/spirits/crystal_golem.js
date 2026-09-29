@@ -6,7 +6,7 @@
 // Every boulder rides its own bone, so death crumbles it into a rubble heap and spawn assembles it out of the ground.
 import * as THREE from 'three';
 import { BipedCtl, armRot, legsLocal, legsPlant } from '../ctl.js';
-import { bHit, bKnockback, bKnockdown, bGetup, bStun, retime } from '../acts.js';
+import { bHit, bKnockback, bKnockdown, bGetup, bStun, retime, bLie } from '../acts.js';
 import { rigid } from '../../kit/geo.js';
 import { col } from '../../kit/sdf.js';
 import { orb } from '../parts2.js';
@@ -226,7 +226,7 @@ const ACTIONS = {
   death: { dur: 2.2, hold: true, excl: true, state: true, fadeIn: 0.02, keep: true, fn(ctl, a, w) { // staggers, knees give, the magic fails and it crumbles
     const P = ctl.pose, b = ctl.b, t = a.t;
     ctl.glow = mix(ctl.glow, t < 0.25 ? 2.5 : Math.max(0.08, 1.2 - (t - 0.25) * 1.3) * (0.7 + 0.3 * Math.abs(Math.sin(t * 30))), w);
-    if (a.u.fromDown) { P.move(b.hips, 0, -(P.rest[b.hips].y - 0.36) * w, 0); P.rx(b.hips, 1.5 * w); legsLocal(ctl, w, 0.04, 1.2, 0, 0.28); return; }
+    if (a.u.fromDown) { bLie(ctl, w, ctl.downSide || 1, t, ctl.downO || { lieY: 0.36 }); return; } // same pose the knockdown left
     const st = sstep(0, 0.15, t) * (1 - sstep(0.2, 0.5, t)), buckle = sstep(0.15, 0.6, t);
     P.move(b.hips, 0, -0.45 * buckle * w, 0.06 * st * w);
     P.rot(b.hips, (0.15 * st - 0.25 * buckle) * w, 0, 0.1 * buckle * w);

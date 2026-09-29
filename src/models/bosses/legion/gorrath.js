@@ -37,7 +37,7 @@ const aim = (h, b) => { const H = n3(...h); let B = b; const d = B[0] * H[0] + B
 export const gorrath = {
   meta: { name: 'Gorrath', title: 'the Horned Tyrant', height: 7.0, radius: 2.3, walkSpeed: 2.6, runSpeed: 9 },
   scale: S3,
-  h: 0.0285, hg: { 1: 0.028, 2: 0.0165, 3: 0.016, 4: 0.019 },
+  h: 0.0285, hg: { 1: 0.029, 2: 0.0165, 3: 0.016, 4: 0.019 },
   ao: { dist: 0.04, str: 0.85 },
   grad: { top: 0.16, bottom: 0.34, y0: 0.0, y1: 0.7, low: 0.25 },
   mat: { glow: C.glow, glowK: 3.4, crackFreq: 8.5, crackK: 0.9, dfreq: 4.5, rim: 0.22, rimColor: 0xffd0a8, spec: 0.45, shine: 22, ghostCol: 0x6f63ff, sil: 0.38, silCol: 0x9ab0ff },
@@ -155,13 +155,13 @@ export const gorrath = {
       E('head', HP(s * 0.075, -0.1, -0.29), HR([0.058, 0.062, 0.1]), { k: 0.035, ...hd });                                   // jowls / flews
       E('head', HP(s * 0.1, -0.01, -0.1), HR([0.075, 0.08, 0.11]), { k: 0.05, ...hd });                                // cheeks
     }
-    E('head', HP(0, -0.035, -0.22), HR([0.12, 0.1, 0.14]), { k: 0.06, ...hd });                       // muzzle
-    E('head', HP(0, -0.06, -0.32), HR([0.13, 0.07, 0.045]), { k: 0.035, ...hd, col: C.nose, tag: 'nose' });
+    S.box('head', HP(0, -0.035, -0.225), HR([0.1, 0.075, 0.115]), 0.07, { k: 0.045, ...hd, rot: [0.22, 0, 0] });   // muzzle (squarer, tilted nose-down)
+    S.box('head', HP(0, -0.064, -0.322), HR([0.112, 0.058, 0.034]), 0.034, { k: 0.035, ...hd, col: C.nose, tag: 'nose' });   // broad flat nose pad
     E('head', HP(0, -0.11, -0.27), HR([0.105, 0.045, 0.1]), { k: 0.04, ...hd });                      // upper lip
     for (const s of [-1, 1]) K('head', HP(s * 0.02, -0.13, -0.35), HP(s * 0.11, -0.125, -0.17), 0.009 * HS, 0.007 * HS, { group: 2, k: 0.012, sub: true, col: C.mouth, tag: 'mouth' });  // mouth line
     K('neck', [0, 1.7, -0.02], HP(0, 0.0, 0.02), 0.15, 0.14, { group: 2, k: 0.06, ...sk, b2: 'head', t0: 0.3, t1: 0.9 });
     for (const s of [-1, 1]) {
-      E('head', HP(s * 0.06, -0.045, -0.36), HR([0.03, 0.011, 0.028]), { group: 2, k: 0.01, sub: true, col: 0x0a0404, tag: 'nostril', rot: [0.5, s * 0.6, s * 0.5] });   // flared slit nostrils
+      E('head', HP(s * 0.07, -0.086, -0.355), HR([0.03, 0.012, 0.022]), { group: 2, k: 0.008, sub: true, col: 0x0a0404, tag: 'nostril', rot: [0.2, s * 0.45, -s * 0.45] });   // flared slit nostrils
       E('head', HP(s * 0.1, 0.045, -0.17), HR([0.045, 0.02, 0.035]), { group: 2, k: 0.016, sub: true, col: 0x100404, tag: 'socket', rot: [0, 0, s * 0.35] });
     }
     E('head', HP(0, -0.14, -0.22), HR([0.085, 0.03, 0.13]), { group: 2, k: 0.02, sub: true, col: C.mouth, tag: 'mouth' });
@@ -170,6 +170,8 @@ export const gorrath = {
     E('jaw', HP(0, -0.155, -0.29), HR([0.06, 0.04, 0.05]), { k: 0.03, ...jw });
     for (const s of [-1, 1]) E('jaw', HP(s * 0.085, -0.1, -0.06), HR([0.04, 0.06, 0.06]), { k: 0.03, ...jw });
     E('jaw', HP(0, -0.12, -0.21), HR([0.07, 0.02, 0.11]), { group: 3, k: 0.015, sub: true, col: C.mouth, tag: 'mouth' });
+    K('jaw', HP(0, -0.17, -0.23), HP(0, -0.33, -0.2), 0.055 * HS, 0.012 * HS, { group: 3, k: 0.04, ...fu });          // braided beard under the chin
+    for (let i = 0; i < 3; i++) K('jaw', HP(-0.06, -0.21 - i * 0.035, -0.235 + i * 0.012), HP(0.06, -0.21 - i * 0.035, -0.235 + i * 0.012), 0.006 * HS, 0.006 * HS, { group: 3, k: 0.01, sub: true, ...fu });
     // ---------------- armour (group 1): tiered angular pauldrons, bracers, knee plates, tassets, belt
     const ar = { group: 1, col: C.iron, tag: 'metal', dtl: DT.metal };
     const cut = (y0) => (x, y, z, d) => Math.max(d, y0 - y);
@@ -210,7 +212,7 @@ export const gorrath = {
       X[0] = 0.015;
       // molten fissures: chest, abs, arms, thighs, back; fading toward the face/hands
       let cr = 0.5;
-      if (y > 1.74) cr = 0.2;                     // head
+      if (y > 1.74) cr = 0.22 * sstep(-0.36, -0.46, -z) * sstep(2.1, 1.95, y);   // head: none on the face front / brow
       if (v.group === 4) cr = 0.15;              // hands / hooves
       if (y < 0.35) cr *= 0.4;
       X[2] = cr * Math.min(1, skin);
@@ -242,7 +244,7 @@ export const gorrath = {
     // ---------------- eyes: burning slits deep under the brow (hot white core → orange rim)
     for (const s of [-1, 1]) {
       const c = HPt(s * 0.1, 0.043, -0.165);
-      const eg = new THREE.SphereGeometry(0.026, 14, 10);
+      const eg = new THREE.SphereGeometry(0.026, 10, 6);
       const m = new THREE.Matrix4().compose(new THREE.Vector3(...c), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, s * 0.35, s * 0.35, 'YXZ')), new THREE.Vector3(1.35, 0.38, 0.7));
       const hot = col(0xffd070), rim = col(0xff4a08);
       acc.add(eg, { matrix: m, skin: rigid(b('head')), dtl: [0, 0, 0, 0], color: (p, n) => lerp3(rim, hot, sstep(0.3, 0.95, -n.z * 0.8 + 0.2)), emis: 3.6, ext: [0, 0, 0, 1] });
@@ -284,7 +286,7 @@ export const gorrath = {
     }
     // ---------------- teeth / tusks
     for (const s of [-1, 1]) {
-      acc.add(sweep(bez(HPt(s * 0.085, -0.13, -0.25), HPt(s * 0.11, -0.06, -0.3), HPt(s * 0.16, 0.0, -0.27), 7), taper(7, 0.026, 0.003), { radial: 8 }), { skin: rigid(b('jaw')), color: (p, n, uv) => lerp3(col(0xa89478), col(C.tooth), uv[1]), dtl: [0, 0, 0.1, 0], ext: [0.12, 0, 0, 0] });
+      acc.add(sweep(bez(HPt(s * 0.08, -0.145, -0.26), HPt(s * 0.15, -0.075, -0.31), HPt(s * 0.19, 0.015, -0.265), 7), taper(7, 0.03, 0.004, 0.8), { radial: 8 }), { skin: rigid(b('jaw')), color: (p, n, uv) => lerp3(col(0x8a7458), col(C.tooth), uv[1]), dtl: [0, 0, 0.1, 0], ext: [0.12, 0, 0, 0] });
       for (let i = 0; i < 3; i++) acc.add(sweep([HPt(s * (0.035 + i * 0.022), -0.13, -0.3 + i * 0.025), HPt(s * (0.035 + i * 0.022), -0.155, -0.302 + i * 0.025)], [0.01, 0.001], { radial: 4 }), { skin: rigid(b('head')), color: C.tooth, dtl: [0, 0, 0.1, 0] });
     }
     // ---------------- nose ring (gold) through the septum
@@ -292,15 +294,62 @@ export const gorrath = {
       const g = new THREE.TorusGeometry(0.058, 0.013, 7, 20);
       acc.add(g, { matrix: new THREE.Matrix4().makeRotationY(Math.PI / 2).setPosition(...HPt(0, -0.125, -0.395)), skin: rigid(b('ring')), color: C.gold, dtl: DT.metal, ext: [0.6, 0, 0, 0] });
     }
+    // ---------------- iron chanfron: a war plate down the brow and nose bridge, angry brow wings over the eyes
+    {
+      const hb = rigid(b('head'));
+      const nrm = [0, 0, 0];
+      const surf = (x, y) => {                  // HP front-view (x, y) → head surface point + normal (ray along +Z)
+        const p = HPt(x, y, -0.62);
+        for (let k = 0; k < 64; k++) { const d = S.sdf(p[0], p[1], p[2], 2); if (d < 0.0008) break; p[2] += Math.max(0.002, d * 0.85); }
+        S.normal(p[0], p[1], p[2], nrm, 2);
+        return { p, n: nrm.slice() };
+      };
+      const cI2 = col(0x3e3a3d), cE = col(0x161416), cB2 = col(C.bronze);
+      const strip = (fn, nu, nv, thick, keel = 0) => {
+        const P = [], UV = [], I = [], NS = [], ED = [];
+        for (let j = 0; j < nv; j++) for (let i = 0; i < nu; i++) {
+          const u = i / (nu - 1) * 2 - 1, v = j / (nv - 1);
+          const [x, y] = fn(u, v);
+          const { p, n } = surf(x, y);
+          const edge = i === 0 || i === nu - 1 || j === 0 || j === nv - 1;
+          const off = edge ? 0.004 : thick * (1 - Math.abs(u) ** 6) + keel * (1 - Math.abs(u)) ** 2;
+          P.push(p[0] + n[0] * off, p[1] + n[1] * off, p[2] + n[2] * off); UV.push((u + 1) / 2, v); NS.push(n); ED.push(edge);
+        }
+        // wind the quads so they face out along the surface normal
+        const mid = surf(...fn(0, 0.5)).n, q = (k) => new THREE.Vector3(P[k * 3], P[k * 3 + 1], P[k * 3 + 2]);
+        const i0 = Math.floor(nu / 2) - 1 + Math.floor(nv / 2) * nu, fnrm = new THREE.Vector3().subVectors(q(i0 + nu), q(i0)).cross(new THREE.Vector3().subVectors(q(i0 + 1), q(i0)));
+        const flip = fnrm.x * mid[0] + fnrm.y * mid[1] + fnrm.z * mid[2] < 0;
+        for (let j = 0; j < nv - 1; j++) for (let i = 0; i < nu - 1; i++) { const a = j * nu + i; if (flip) I.push(a, a + 1, a + nu, a + 1, a + nu + 1, a + nu); else I.push(a, a + nu, a + 1, a + 1, a + nu, a + nu + 1); }
+        const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(UV, 2)); g.setIndex(I); g.computeVertexNormals();
+        { // smooth the plate face with the head's own normals; keep the geometric bevel at the rim
+          const na = g.attributes.normal;
+          for (let k = 0; k < na.count; k++) { if (ED[k]) continue; const n = NS[k]; const x = n[0] * 0.75 + na.getX(k) * 0.25, y = n[1] * 0.75 + na.getY(k) * 0.25, z = n[2] * 0.75 + na.getZ(k) * 0.25, l = Math.hypot(x, y, z); na.setXYZ(k, x / l, y / l, z / l); }
+        }
+        acc.add(g, { skin: hb, dtl: DT.metal, color: (pp, nn, uv) => { const e = Math.min(uv[0], 1 - uv[0], uv[1], 1 - uv[1]); return e < 0.02 ? cE : lerp3(cI2, cB2, sstep(0.3, 0.9, nn.y) * 0.25); }, ext: [0.5, 0, 0, 0] });
+        return P;
+      };
+      // bridge: pointed arch between the horn roots → tapering down the nose
+      strip((u, v) => { const w = mix(0.07, 0.04, v) * Math.min(1, 0.3 + v * 4.5); return [u * w, mix(0.125, -0.025, v) - (1 - v) * 0.03 * Math.abs(u)]; }, 7, 12, 0.026, 0.014);
+      // brow wings (inner end low, outer end high)
+      for (const s of [-1, 1]) {
+        const a = [s * 0.02, 0.05], c = [s * 0.16, 0.108];
+        const d = n3(c[0] - a[0], c[1] - a[1], 0), pn = [-d[1] * s, d[0] * s];
+        strip((u, v) => { const hw = mix(0.034, 0.012, v); const x = mix(a[0], c[0], v), y = mix(a[1], c[1], v) + 0.01 * Math.sin(v * Math.PI); return [x + pn[0] * u * hw * s, y + pn[1] * u * hw * s]; }, 5, 8, 0.026);
+      }
+      // rivets: along the bridge + wing tips
+      const rv = (x, y) => { const { p, n } = surf(x, y); acc.add(new THREE.SphereGeometry(0.012, 6, 3), { matrix: new THREE.Matrix4().setPosition(p[0] + n[0] * 0.03, p[1] + n[1] * 0.03, p[2] + n[2] * 0.03), skin: hb, color: C.bronze, dtl: DT.metal, ext: [0.7, 0, 0, 0] }); };
+      for (const y of [0.098, 0.02]) rv(0, y);
+      for (const s of [-1, 1]) rv(s * 0.12, 0.094);
+    }
     // ---------------- mane spikes (shaggy silhouette) + goatee
     const cF = col(C.fur), cFL = col(C.furL);
-    const tuft = (p, d, L, r) => {
-      const { p: q } = S.project(p.slice(), 0, 3);
+    const tuft = (p, d, L, r, g = 0) => {
+      const { p: q } = S.project(p.slice(), g, 3);
       const D = new THREE.Vector3(...d).normalize();
       const a = new THREE.Vector3(...q).addScaledVector(D, -r * 1.2);
       const m = a.clone().addScaledVector(D, L * 0.55).add(new THREE.Vector3(0, -L * 0.08, 0));
       const t = a.clone().addScaledVector(D, L).add(new THREE.Vector3(0, -L * 0.22, 0));
-      acc.add(sweep([a, m, t], [r, r * 0.55, r * 0.05], { radial: 5 }), { skin: skinAt(q), dtl: DT.fur, color: (pp, n, uv) => lerp3(cF, cFL, uv[1] * 0.8), ext: [0, 0, 0, 0] });
+      acc.add(sweep([a, m, t], [r, r * 0.55, r * 0.05], { radial: 4 }), { skin: skinAt(q), dtl: DT.fur, color: (pp, n, uv) => lerp3(cF, cFL, uv[1] * 0.8), ext: [0, 0, 0, 0] });
     };
     let seed = 7; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
     for (let i = 0; i < 64; i++) {
@@ -308,20 +357,19 @@ export const gorrath = {
       const p = [Math.sin(a) * 0.23, yy, 0.02 + Math.cos(a) * 0.2];
       tuft(p, [Math.sin(a) * 0.55, 0.1 + rnd() * 0.25 - (yy - 1.6) * 0.3, 0.9], 0.1 + rnd() * 0.1, 0.02 + rnd() * 0.012);
     }
-    for (let i = 0; i < 26; i++) { // curly forelock between the horns, falling over the brow
-      const x = (rnd() - 0.5) * 0.22;
-      tuft(HPt(x, 0.14, -0.05 + rnd() * 0.06), [x * 1.8, -0.2 + rnd() * 0.4, -1], 0.07 + rnd() * 0.05, 0.016);
+    for (let i = 0; i < 18; i++) { // shaggy poll between the horns, behind the chanfron
+      const x = (rnd() - 0.5) * 0.2;
+      tuft(HPt(x, 0.165, -0.02 + rnd() * 0.07), [x * 2.5, 0.5 + rnd() * 0.4, -0.6], 0.06 + rnd() * 0.05, 0.017, 2);
     }
-    for (let i = 0; i < 7; i++) { const x = (i - 3) * 0.02; tuft(HPt(x, -0.19, -0.26 + Math.abs(x)), [x * 2, -1, -0.25], 0.09 + (3 - Math.abs(i - 3)) * 0.016, 0.017); }
     // ---------------- pauldron rivets along the lame rims
     for (const s of [-1, 1]) {
       const n = s < 0 ? 'L' : 'R';
       for (const [bone, cy, cx, y0, rx, rz] of [['clav' + n, 1.64, 0.47, 1.715, 0.26, 0.26], ['armU' + n, 1.565, 0.555, 1.625, 0.25, 0.25], ['armU' + n, 1.485, 0.625, 1.54, 0.22, 0.225]]) {
-        for (let k = 0; k < 9; k++) {
-          const a = -1.2 + k * 0.3;
+        for (let k = 0; k < 6; k++) {
+          const a = -1.15 + k * 0.46;
           const p0 = [s * (cx + Math.sin(a) * rx * 0.55), y0 - 0.004, 0.035 - Math.cos(a) * rz * 0.9];
           const pr = S.project(p0.slice(), 1, 3).p;
-          acc.add(new THREE.SphereGeometry(0.011, 6, 4), { matrix: new THREE.Matrix4().setPosition(pr[0], pr[1], pr[2]), skin: rigid(b(bone)), color: C.bronze, dtl: DT.metal, ext: [0.6, 0, 0, 0] });
+          acc.add(new THREE.SphereGeometry(0.013, 5, 3), { matrix: new THREE.Matrix4().setPosition(pr[0], pr[1], pr[2]), skin: rigid(b(bone)), color: C.bronze, dtl: DT.metal, ext: [0.6, 0, 0, 0] });
         }
       }
     }
@@ -340,8 +388,8 @@ export const gorrath = {
       const pts = bez(a, m, t, 8);
       acc.add(sweep(pts, taper(8, r, r * 0.04, 1.1), { radial: 8, capStart: true }), {
         skin: rigid(b(bone)), dtl: DT.metal,
-        color: (pp, nn, uv) => (uv[1] > 0.84 ? cG : lerp3(cI, cIL, uv[1] * 0.7)),
-        emis: (pp, uv) => (uv[1] > 0.84 ? 2.4 : 0), ext: (pp, uv) => [0.9, 0, 0, uv[1] > 0.84 ? 4 : 0],
+        color: (pp, nn, uv) => (uv[1] > 0.89 ? cG : lerp3(cI, cIL, uv[1] * 0.7)),
+        emis: (pp, uv) => (uv[1] > 0.89 ? 1.6 : 0), ext: (pp, uv) => [0.9, 0, 0, uv[1] > 0.89 ? 4 : 0],
       });
     };
     for (const s of [-1, 1]) {
@@ -362,24 +410,25 @@ export const gorrath = {
       acc.add(jawG, { matrix: new THREE.Matrix4().setPosition(0, 0.94, -0.25), skin: hb, color: cB, dtl: [0, 0, 0.25, 0.1] });
       for (const s of [-1, 1]) {
         const sock = new THREE.SphereGeometry(0.02, 8, 6);
-        acc.add(sock, { matrix: new THREE.Matrix4().setPosition(s * 0.028, 1.005, -0.293), skin: hb, color: 0xff7020, emis: 2, dtl: [0, 0, 0, 0], ext: [0, 0, 0, 1] });
+        acc.add(sock, { matrix: new THREE.Matrix4().setPosition(s * 0.028, 1.005, -0.29), skin: hb, color: 0xff7020, emis: 1.3, dtl: [0, 0, 0, 0], ext: [0, 0, 0, 1] });
         spike(hb, [s * 0.05, 1.05, -0.26], [s * 0.6, 1, -0.3], 0.09, 0.018, false);
       }
       for (let i = 0; i < 12; i++) {
         const a = (i / 12) * TAU;
-        const st = new THREE.SphereGeometry(0.014, 6, 4);
-        acc.add(st, { matrix: new THREE.Matrix4().setPosition(Math.sin(a) * 0.29, 1.0, 0.03 - Math.cos(a) * 0.232), skin: hb, color: C.bronze, dtl: DT.metal, ext: [1, 0, 0, 0] });
+        const st = new THREE.SphereGeometry(0.014, 5, 3);
+        acc.add(st, { matrix: new THREE.Matrix4().setPosition(Math.sin(a) * 0.29, 1.0, 0.03 - Math.cos(a) * 0.232), skin: hb, color: 0x6a4a26, dtl: DT.metal, ext: [0.35, 0, 0, 0] });
       }
     }
     // ---------------- loincloth (front, tattered; skinned to loin1/2 springs)
     {
-      const nu = 7, nv = 7, P = [], I = [], UV = [];
+      const nu = 9, nv = 8, P = [], I = [], UV = [];
       for (let j = 0; j < nv; j++) for (let i = 0; i < nu; i++) {
         const u = i / (nu - 1), v = j / (nv - 1);
-        const hem = (i % 2 ? 0.06 : 0) + Math.sin(i * 2.3) * 0.02;
-        const yy = 0.93 - v * (0.42 - hem * v);
-        const w = 0.13 + v * 0.03;
-        P.push((u - 0.5) * 2 * w, yy, -0.265 - v * 0.02 - Math.cos((u - 0.5) * 2.5) * 0.02); UV.push(u, v);
+        const hem = (i % 2 ? 0.07 : 0) + Math.sin(i * 2.3) * 0.025 + (Math.abs(u - 0.5) < 0.1 ? -0.04 : 0);
+        const yy = 0.93 - v * (0.44 - hem * v);
+        const w = 0.14 + v * 0.02;
+        const fold = Math.sin(u * Math.PI * 4 + 0.5) * 0.011 * v;                     // vertical folds deepen toward the hem
+        P.push((u - 0.5) * 2 * w, yy, -0.265 - v * 0.02 - Math.cos((u - 0.5) * 2.5) * 0.02 + fold); UV.push(u, v);
       }
       for (let j = 0; j < nv - 1; j++) for (let i = 0; i < nu - 1; i++) { const a = j * nu + i; I.push(a, a + 1, a + nu, a + 1, a + nu + 1, a + nu); }
       const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(UV, 2)); g.setIndex(I); g.computeVertexNormals();
@@ -387,8 +436,13 @@ export const gorrath = {
       const cc = col(C.cape), cd = col(C.capeD), ct = col(C.capeTrim);
       for (const gg of [g, back]) acc.add(gg, {
         skin: (p) => { const v = clamp01((0.93 - p.y) / 0.42); return v < 0.5 ? blend2(b('hips'), b('loin1'), v * 2) : blend2(b('loin1'), b('loin2'), (v - 0.5) * 2); },
-        dtl: DT.cloth, color: (p, n, uv) => (uv[1] < 0.08 ? ct : lerp3(cc, cd, uv[1] * 0.9)), ext: [0.05, 0, 0, 0],
+        dtl: DT.cloth, color: (p, n, uv) => (uv[1] < 0.07 ? ct : lerp3(lerp3(cc, cd, 0.35), col(0x120505), sstep(0.35, 1.0, uv[1]) * 0.9)),
+        emis: (p, uv) => sstep(0.9, 1.0, uv[1]) * 0.3, ext: [0.05, 0, 0, 0],
       });
+      // the Legion's horned ring, burned into the cloth
+      const lp = [0, 0.93 - 0.3 * 0.44, -0.29], sk = blend2(b('hips'), b('loin1'), 0.6);
+      acc.add(new THREE.TorusGeometry(0.045, 0.008, 4, 16), { matrix: new THREE.Matrix4().setPosition(lp[0], lp[1], lp[2]), skin: sk, color: 0xff6a22, emis: 1.8, dtl: [0, 0, 0, 0], ext: [0, 0, 0, 4] });
+      for (const s of [-1, 1]) acc.add(sweep(bez([s * 0.035, lp[1] + 0.03, lp[2] - 0.002], [s * 0.075, lp[1] + 0.055, lp[2] - 0.002], [s * 0.065, lp[1] + 0.1, lp[2] - 0.002], 5), taper(5, 0.009, 0.0015), { radial: 3 }), { skin: sk, color: 0xff6a22, emis: 1.8, dtl: [0, 0, 0, 0], ext: [0, 0, 0, 4] });
     }
     // ---------------- war-cape (tattered), draped over the back from the pauldrons
     {

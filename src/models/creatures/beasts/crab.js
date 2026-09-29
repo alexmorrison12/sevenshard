@@ -160,7 +160,7 @@ export const crab = {
       const p0 = [s * 0.05, 0.27, -0.152], p1 = [s * 0.056, 0.31, -0.16], p2 = [s * 0.062, 0.335, -0.164];
       acc.add(sweep(bez(C(p0), C(p1), C(p2), 4), taper(4, 0.015, 0.012), { radial: 5 }), { skin: bone, color: c.stalk, dtl: [0, 0.1, 0.15, 0] });
       const eg = new THREE.SphereGeometry(0.024, 8, 6);
-      acc.add(eg, { matrix: new THREE.Matrix4().makeTranslation(...C([s * 0.064, 0.347, -0.166])), skin: bone, color: c.eye, emis: E ? 2.8 : 0, dtl: [0, 0, 0, 0] });
+      acc.add(eg, { matrix: new THREE.Matrix4().makeTranslation(...C([s * 0.064, 0.347, -0.166])), skin: bone, color: c.eye, emis: E ? 1.7 : 0, dtl: [0, 0, 0, 0] });
       const gl = new THREE.IcosahedronGeometry(0.007, 0);
       acc.add(gl, { matrix: new THREE.Matrix4().makeTranslation(...C([s * 0.058, 0.362, -0.184])), skin: bone, color: 0xffffff, emis: 0.9, dtl: [0, 0, 0, 0] });
     }
@@ -211,6 +211,7 @@ export const crab = {
 };
 
 // ------------------------------------------------------------------------------------------------ controller
+const SOLVE0 = { air: 0, airPaw: 0 }; // shared gait.solve options (no per-frame literal)
 const LEG_IDS = [];
 function crabLegs() {
   const legs = [];
@@ -263,7 +264,8 @@ class CrabCtl extends BaseCtl {
     let busy = 0;
     const A = this.acts.list;
     for (let i = 0; i < A.length; i++) { const a = A[i]; if (!a.d.rest && !a.out && a.w > busy) busy = a.w; }
-    const travel = Math.hypot(sp, st) > 0.35 && busy < 0.3 && !this.dead && !this.isDown;
+    const sv = Math.sqrt(sp * sp + st * st);
+    const travel = sv > 0.35 && busy < 0.3 && !this.dead && !this.isDown;
     if (travel && this.scut < 0.5) this.pref = tr > 0.3 ? -1 : tr < -0.3 ? 1 : this.pref; // lead with the side it is turning toward
     this.scut += ((travel ? 1 : 0) - this.scut) * (1 - Math.exp(-6 * dt));
     const target = travel ? (this.pref > 0 ? 0 : -Math.PI) : FACE;
@@ -276,7 +278,7 @@ class CrabCtl extends BaseCtl {
     // root-frame travel → pivot frame
     const c = Math.cos(this.theta), s = Math.sin(this.theta);
     const spG = -st * s + sp * c, stG = st * c + sp * s;
-    this.speedSm += (Math.hypot(sp, st) - this.speedSm) * (1 - Math.exp(-6 * dt));
+    this.speedSm += (sv - this.speedSm) * (1 - Math.exp(-6 * dt));
     this.turnSm += (tr - this.turnSm) * (1 - Math.exp(-4 * dt));
     this.run = clamp01((this.speedSm - 1.2) / 2.5);
     P.reset();
@@ -321,7 +323,7 @@ class CrabCtl extends BaseCtl {
     crot(P, b.mouth, 0.12 * Math.max(0, Math.sin(this.t * (6 + 8 * cb))) + this.jaw * 0.6, 0, 0);
     P.sc[b.foam].setScalar(Math.max(0.0001, this.foam));
     P.fk();
-    G.solve(P, { air: 0, airPaw: 0 });
+    G.solve(P, SOLVE0);
     P.apply(this.inst.bones);
     this._uniforms();
   }
@@ -522,6 +524,6 @@ const SPEC = {
     cUL: 'cUL', cLL: 'cLL', cHL: 'cHL', cFL: 'cFL', cUR: 'cUR', cLR: 'cLR', cHR: 'cHR', cFR: 'cFR',
   },
   fidgets: [{ name: 'idle_alt', w: 3 }, { name: 'eyewipe', w: 1.5 }, { name: 'clack', w: 1 }],
-  fidgetGap: 3, chargeK: 0.1,
+  fidgetGap: 3, chargeK: 0.05,
   actions: ACTIONS,
 };

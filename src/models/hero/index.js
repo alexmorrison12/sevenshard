@@ -20,7 +20,7 @@ import { lockHairPiece } from './hair2.js';
 import { armGeometry, CLASS_ACCENT } from './arms.js';
 import { MOVE_NAMES } from './moves.js';
 import { FACE_PRESETS } from './head.js';
-import { demonHorns, demonWing, makeAuraMaterial } from './demon.js';
+import { demonHorns, demonWing, makeAura } from './demon.js';
 
 export { HAIR_STYLES, FACE_PRESETS };
 
@@ -378,18 +378,16 @@ export function createHero(opts = {}) {
     const clawR = new THREE.Mesh(cg.geo, matDemon), clawL = new THREE.Mesh(cg.geo, matDemon);
     clawR.name = 'demon_clawR'; clawL.name = 'demon_clawL'; clawR.castShadow = clawL.castShadow = true;
     S.handR.add(clawR); S.handL.add(clawL); clawR.visible = clawL.visible = false;
-    const auraMat = makeAuraMaterial();
-    const aura = new THREE.SkinnedMesh(mesh.geometry, auraMat); aura.name = 'demon_aura';
-    aura.bind(skeleton, new THREE.Matrix4()); aura.frustumCulled = false; aura.renderOrder = 2;
-    inner.add(aura);
-    D = { base, horns, wingR: wing(1), wingL: wing(-1), clawR, clawL, aura, auraMat, t: 0, flap: 0, info: cg.info };
+    const aura = makeAura();
+    root.add(aura.pts);
+    D = { base, horns, wingR: wing(1), wingL: wing(-1), clawR, clawL, aura, t: 0, flap: 0, info: cg.info };
     if (kindNow() === 'claws') { clawR.visible = clawL.visible = true; attachWeapons(anim.drawn); }
     return D;
   }
   function dropDemon() {
     if (!D) return;
-    for (const m of [D.horns, D.wingR, D.wingL, D.clawR, D.clawL, D.aura]) m.parent?.remove(m);
-    D.auraMat.dispose(); D = null;
+    for (const m of [D.horns, D.wingR, D.wingL, D.clawR, D.clawL, D.aura.pts]) m.parent?.remove(m);
+    D.aura.dispose(); D = null;
   }
   function syncDemonArms() {
     const on = kindNow() === 'claws';
@@ -399,12 +397,10 @@ export function createHero(opts = {}) {
   }
   function updateDemon(dt, state) {
     const s = sstep(demon);
-    if (s <= 0.001) { if (D) { D.horns.visible = D.wingR.visible = D.wingL.visible = D.aura.visible = false; } return; }
+    if (s <= 0.001) { if (D) { D.horns.visible = D.wingR.visible = D.wingL.visible = D.aura.pts.visible = false; } return; }
     ensureDemon();
-    if (D.aura.geometry !== mesh.geometry) D.aura.geometry = mesh.geometry;
-    if (D.aura.skeleton !== skeleton) D.aura.bind(skeleton, new THREE.Matrix4());
     D.t += dt;
-    D.horns.visible = D.wingR.visible = D.wingL.visible = D.aura.visible = true;
+    D.horns.visible = D.wingR.visible = D.wingL.visible = D.aura.pts.visible = true;
     D.horns.scale.setScalar(Math.max(0.001, s));
     const moving = (state.speed || 0) > 0.6, down = state.dead || state.down;
     D.flap += dt * (moving ? 7.5 : 2.3);
@@ -414,8 +410,8 @@ export function createHero(opts = {}) {
       wg.scale.setScalar(Math.max(0.001, 0.25 + 0.75 * s));
       wg.rotation.set(0.12 + fold * 0.3, -sg * (0.3 + fold + (moving ? 0.2 : 0) - f * amp * 0.5), sg * (0.1 + f * amp - fold * 0.4));
     }
-    D.auraMat.userData.u.uAura.value = s;
-    D.auraMat.userData.u.uTime.value = D.t;
+    root.updateMatrixWorld();
+    D.aura.update(dt, bones, root, s);
   }
   h.setLook = (look = {}) => { Object.assign(o.look, look); build(); };
   h.setGear = (gear = {}) => { Object.assign(o.gear, gear); if (gear.tier != null && !(opts.weapon && opts.weapon.tier != null)) o.weapon.tier = gear.tier; build(); };

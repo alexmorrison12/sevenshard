@@ -8,7 +8,7 @@
 // Sockets: head (top), mouth & tip (tip end), grip (inside the curled tip — attach a grabbed hero between the grab hits),
 // center (mid-arm hit point), back, base (waterline splash).
 import * as THREE from 'three';
-import { BaseCtl } from '../ctl.js';
+import { BaseCtl, RV, rotA, moveA } from '../ctl.js';
 import { rigid, sweep, aim } from '../../kit/geo.js';
 import { col } from '../../kit/sdf.js';
 import { addHorn, lerp3 } from '../../kit/parts.js';
@@ -139,17 +139,17 @@ export class TentacleCtl extends BaseCtl {
   constructor(inst, spec) {
     super(inst, spec);
     this.gait = null;
-    this.ch = TN.map(n => this.pose.b[n]);
+    this.ch = Int32Array.from(TN.map(n => this.pose.b[n]));
     this.cx = new Float32Array(NB); this.cy = new Float32Array(NB); this.cz = new Float32Array(NB);
     this.bx = 0; this.by = 0; this.bz = 0; this.ph = Math.random() * 10; this.sw = Math.random() * 10;
     this.side = Math.random() < 0.5 ? -1 : 1;
   }
   play(name, dur, loop) { if (name === 'emerge') name = 'spawn'; return super.play(name, dur, loop); }
-  update(dt, state = {}) {
-    dt = Math.min(dt, 0.1);
+  update(dt, state = EMPTY_STATE) {
+    if (dt > 0.1) dt = 0.1;
     const P = this.pose;
-    this.t += dt;
-    this._state(state, dt);
+    this.t += dt; this.dt = dt;
+    this._stateS(state);
     this.speedSm += (this._speed - this.speedSm) * (1 - Math.exp(-2 * dt));
     this.turnSm += (this._turn - this.turnSm) * (1 - Math.exp(-2 * dt));
     P.reset();
@@ -166,15 +166,18 @@ export class TentacleCtl extends BaseCtl {
     }
     cx[0] += -0.08 * cb - 0.06 * clamp01(this.speedSm / 4);
     this.bx = 0; this.by = 0; this.bz = 0; this.glow = 1;
-    this._fidget(dt, 1 - cb);
+    this._idleW = 1 - cb; this._fidgetS();
     this.acts.apply();
-    for (let i = 0; i < NB; i++) P.rot(this.ch[i], cx[i], cy[i], cz[i]);
-    P.move(this.ch[0], this.bx, this.by, this.bz);
+    const R = RV, ch = this.ch;
+    for (let i = 0; i < NB; i++) { R[0] = cx[i]; R[1] = cy[i]; R[2] = cz[i]; rotA(P.lq[ch[i]]); }
+    R[0] = this.bx; R[1] = this.by; R[2] = this.bz; moveA(P.lt[ch[0]]);
     P.fk();
     P.apply(this.inst.bones);
     this._uniforms();
   }
 }
+
+const EMPTY_STATE = {};
 
 // ================================================================================================ actions
 const env2 = (k, a, b, c, d) => sstep(a, b, k) * (1 - sstep(c, d, k));

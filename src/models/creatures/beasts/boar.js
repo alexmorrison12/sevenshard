@@ -9,7 +9,7 @@ import { leafGeo, rigid, sweep } from '../../kit/geo.js';
 import { col } from '../../kit/sdf.js';
 import { addEye, addSpikes, addHorn, lerp3 } from '../../kit/parts.js';
 import { sstep, clamp01, mix, bell } from '../../kit/rig.js';
-import { ov, cancelRestOnMove, prepLegs, sidePair, surfaceCrack } from './util.js';
+import { ov, cancelRestOnMove, prepLegs, surfaceCrack } from './util.js';
 
 const PAL = {
   bristleback: { base: 0x7c4a30, dark: 0x3a1f14, belly: 0xc08e70, stripe: 0xd2a476, snout: 0xc98676, nose: 0xe0a092, hoof: 0x2a1e1a, mane: 0x22120c, maneTip: 0x5e3a26, tusk: 0xf4e8cc, eye: 0x1a0c08, glow: 0xff5a1a },
@@ -33,7 +33,7 @@ export const boar = {
     R.add('head', 'neck', [0, 0.62, -0.55]);
     R.add('jaw', 'head', [0, 0.5, -0.6]);
     R.add('earL', 'head', [-0.1, 0.76, -0.56]); R.add('earR', 'head', [0.1, 0.76, -0.56]);
-    R.add('tail1', 'hips', [0, 0.66, 0.54]); R.add('tail2', 'tail1', [0, 0.6, 0.62]);
+    R.add('tail1', 'hips', [0, 0.65, 0.45]); R.add('tail2', 'tail1', [0, 0.6, 0.54]);
     for (const s of [-1, 1]) {
       const n = s < 0 ? 'L' : 'R';
       R.add('fU' + n, 'chest', [0.15 * s, 0.5, -0.3]); R.add('fL' + n, 'fU' + n, [0.155 * s, 0.31, -0.2]); R.add('fP' + n, 'fL' + n, [0.155 * s, 0.11, -0.29]);
@@ -66,7 +66,7 @@ export const boar = {
     S.cone('jaw', [0, 0.49, -0.62], [0, 0.462, -0.83], 0.07, 0.045, { group: 1, k: 0.03, col: c.snout, tag: 'jaw', dtl: skin });
     // dorsal crest (SDF ridge; bristles added as parts)
     for (let i = 0; i < 7; i++) {
-      const t = i / 6, z = -0.58 + t * 0.7, y = 0.8 + Math.sin(t * Math.PI) * 0.14 * (E ? 1.15 : 1) - t * 0.02;
+      const t = i / 6, z = -0.58 + t * 0.6, y = 0.8 + Math.sin(t * Math.PI) * 0.14 * (E ? 1.15 : 1) - t * 0.06;
       S.cone(i < 2 ? 'head' : i < 5 ? 'chest' : 'body', [0, y - 0.07, z], [0, y + 0.03, z + 0.1], 0.08, 0.03, { k: 0.05, col: c.mane, tag: 'mane', dtl: hair });
     }
     // legs: short, thick above, trim below, dark hooves
@@ -82,9 +82,9 @@ export const boar = {
       S.box('rP' + n, [s * 0.15, 0.035, 0.325], [0.04, 0.035, 0.046], 0.016, { k: 0.015, col: c.hoof, tag: 'hoof', rot: [-0.25, 0, 0], dtl: hoofD, soft: 0.004 });
     }
     // curly tail
-    S.cone('tail1', [0, 0.66, 0.5], [0, 0.63, 0.6], 0.025, 0.018, { k: 0.02, col: c.base, tag: 'tail', b2: 'tail2', dtl: hair });
-    S.cone('tail2', [0, 0.63, 0.6], [0.03, 0.58, 0.64], 0.018, 0.012, { k: 0.015, col: c.base, tag: 'tail', dtl: hair });
-    S.ell('tail2', [0.04, 0.55, 0.65], [0.025, 0.04, 0.025], { k: 0.015, col: c.dark, tag: 'tail', dtl: hair });
+    S.cone('tail1', [0, 0.65, 0.4], [0, 0.63, 0.52], 0.028, 0.02, { k: 0.02, col: c.base, tag: 'tail', b2: 'tail2', dtl: hair });
+    S.cone('tail2', [0, 0.63, 0.52], [0.03, 0.58, 0.56], 0.02, 0.013, { k: 0.015, col: c.base, tag: 'tail', dtl: hair });
+    S.ell('tail2', [0.04, 0.55, 0.57], [0.028, 0.045, 0.028], { k: 0.015, col: c.dark, tag: 'tail', dtl: hair });
   },
   paint(v, cfg) {
     const c = cfg.pal, [x, y, z] = v.p, [nx, ny, nz] = v.n;
@@ -256,7 +256,9 @@ const ACTIONS = {
   } },
   hit: qHit(),
   knockback: qKnockback(),
-  ...sidePair(qKnockdown({ lieY: 0.27, roll: 1.4 }), qGetup({ lieY: 0.27, roll: 1.4 }), qDeath({ lieY: 0.27, dist: 1.0, peak: 0.3, roll: 1.4, spin: 0.3 })),
+  knockdown: qKnockdown({ lieY: 0.27, roll: 1.4 }),
+  getup: qGetup({ lieY: 0.27, roll: 1.4 }),
+  death: qDeath({ lieY: 0.27, dist: 1.0, peak: 0.3, roll: 1.4, spin: 0.3 }),
   stun: qStun(),
   spawn: qSpawn({ depth: 1.3 }),
 };
@@ -279,7 +281,7 @@ const BOAR_SPEC = {
   },
   neck: { pitch: 0, run: -0.15, combat: -0.25, walk: -0.04, headCombat: 0.05, comp: 0.3, stab: 0.6 },
   tail: { wag: 0.5, wagF: 2.2, run: 0.3, combat: 0.2 },
-  breathe: 0.018, combatCrouch: 0.04, combatPitch: -0.04, runDrop: 0.02, chargeK: 0.05,
+  breathe: 0.018, combatCrouch: 0.04, combatPitch: -0.04, runDrop: 0.02, chargeK: 0.03,
   fidgets: [{ name: 'idle_alt', w: 3 }, { name: 'snort', w: 2 }],
   fidgetGap: 4,
   pose(ctl) {

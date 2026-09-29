@@ -5,7 +5,8 @@ import { KEYS, ctx, tc, vec, groundSmash, skyBolt, along, risingRing, groundPuls
 const K = {};
 const _a = new THREE.Vector3(), _b = new THREE.Vector3();
 const ARCANE = 0xc070ff, FROSTC = 0x8fd8ff, MUSICC = 0xff8ad8;
-const HAIL = P({ sprite: S.shard, ramp: R.frostCore, life: [0.5, 0.7], size: [0.25, 0.4], orient: 'stretch', stretch: 0.02, drag: 0, accY: -10, i: [1.6, 2.4] });
+const HAIL = P({ sprite: S.shard, ramp: R.frostCore, life: [0.5, 0.7], size: [0.22, 0.34], orient: 'stretch', stretch: 0.02, drag: 0, accY: -10, i: [1.3, 2] });
+const GUST = P({ sprite: S.snow, ramp: R.frostCore, life: [1.0, 1.6], size: [0.07, 0.13], end: 0.5, motion: 'orbit', rise: 0.5, rgrow: 0.25, spin: 4, i: [1.6, 2.6] });
 const VOID_IN = P({ sprite: S.ember, ramp: R.shadowCore, life: [0.8, 1.2], size: [0.08, 0.14], end: 0.3, motion: 'orbit', rise: 0.2, rgrow: -3.2, i: [3, 5] });
 const VOID_DUST = P({ pool: 'alpha', sprite: [S.smoke1, S.smoke3], ramp: R.void, life: [0.9, 1.3], size: [0.6, 0.9], end: 0.3, motion: 'orbit', rise: 0.3, rgrow: -3, alpha: 0.8 });
 const DISK = P({ sprite: S.swirl, ramp: R.wConst, life: 1, size: 5, orient: 'flat', spin: 3, i: 1.2, noGround: true });
@@ -82,21 +83,24 @@ K.blizzard = {                       // Seraphic Hail / blizzard: shards pelt an
   tick(T) {
     const fx = T.fx, v = T.v, c = v.c, R0 = c.R;
     if (T.stopping) return;
-    let n = T.rate('h', 26 * R0);
+    let n = T.rate('h', 17 * R0);
     const o = fx.o(c.s, null);
     for (let i = 0; i < n; i++) {
       const a = fx.r(0, TAU), r = Math.sqrt(Math.random()) * R0, x = v.cx + Math.cos(a) * r, z = v.cz + Math.sin(a) * r;
       fx.spawn(HAIL, x - 2, v.cy + 9, z - 1, 3.3, -14, 1.6, o);
     }
-    n = T.rate('i', 3.5 * R0);
+    n = T.rate('i', 2.2 * R0);          // shards shatter where the hail lands (delayed to the landing time)
     for (let i = 0; i < n; i++) {
       const a = fx.r(0, TAU), r = Math.sqrt(Math.random()) * R0, x = v.cx + Math.cos(a) * r, z = v.cz + Math.sin(a) * r;
-      const oo = fx.o(c.s, null); oo.dt = 0.62;
+      const oo = fx.o(c.s * 0.8, null); oo.dt = 0.62;
       fx.spawn(FROST.sparkle, x, v.cy + 0.2, z, 0, 0.5, 0, oo);
       fx.spawn(FROST.shard, x, v.cy + 0.2, z, fx.r(-2, 2), fx.r(2, 4), fx.r(-2, 2), oo);
     }
-    n = T.rate('m', 2.2 * R0);
-    for (let i = 0; i < n; i++) { const a = fx.r(0, TAU), r = Math.sqrt(Math.random()) * R0; fx.spawn(FROST.mist, v.cx + Math.cos(a) * r, v.cy + 0.4, v.cz + Math.sin(a) * r, fx.r(-1, 1), 0.1, fx.r(-1, 1), fx.o(c.s * 1.6, null)); }
+    n = T.rate('g', 14 * R0);           // the storm's wind: snow swirling round the centre
+    const og = fx.o(c.s, null);
+    for (let i = 0; i < n; i++) fx.spawn(GUST, v.cx, v.cy + fx.r(0.2, 2.2), v.cz, R0 * fx.r(0.25, 1.0), fx.r(0, TAU), fx.r(1.6, 2.6), og);
+    n = T.rate('m', 1.1 * R0);
+    for (let i = 0; i < n; i++) { const a = fx.r(0, TAU), r = Math.sqrt(Math.random()) * R0; fx.spawn(FROST.mist, v.cx + Math.cos(a) * r, v.cy + 0.3, v.cz + Math.sin(a) * r, fx.r(-1, 1), 0.1, fx.r(-1, 1), fx.o(c.s * 1.3, null)); }
   },
   stop(T) { T.v.dec.stop(); }, end(T) { T.v.dec.stop(); },
 };

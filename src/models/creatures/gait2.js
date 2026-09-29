@@ -83,6 +83,9 @@ class Leg { // fixed-shape leg record (all fields created up-front)
     this.liftH = L.lift ?? 0.08; this.flex = L.flex ?? 0.9; this.body = pose.b[L.body]; this.out = L.out ?? 0.15; this.side = Math.sign(L.toe[0]) || 1;
     this.pawPitch = 0; this.metaPitch = 0; this.air = 0; this.down = 0;
     this.override = new THREE.Vector3(); this.overrideW = 0; this.overrideLocal = false; this.overridePaw = 0; this.pawAdd = 0; this.overrideMeta = NaN;
+    // ground target (model space) blended on top of everything: lying poses rest the feet on the ground in front of the
+    // body, with the metatarsus / paw in world (not body) orientation so nothing sinks under the ground (see legsLie)
+    this.gT = new THREE.Vector3(); this.gW = 0; this.gPaw = 0; this.gMeta = 0;
     this.metaK = L.metaK ?? 1.2; this.metaBase = L.metaBase ?? 0; this.heel = L.heel ?? 0.35; this.scap = L.scap ?? 0; this.dutyMul = L.dutyMul ?? 1;
     // phase offset of this leg in every gait (unit-circle blend input)
     this.offC = new Float64Array(nG); this.offS = new Float64Array(nG);
@@ -195,7 +198,7 @@ export class Gait {
     const legs = this.legs;
     for (let i = 0; i < legs.length; i++) {
       const L = legs[i];
-      L.overrideW = 0; L.overrideLocal = false; L.overridePaw = 0; L.pawAdd = 0; L.overrideMeta = NaN;
+      L.overrideW = 0; L.overrideLocal = false; L.overridePaw = 0; L.pawAdd = 0; L.overrideMeta = NaN; L.gW = 0;
       L.home.copy(L.toe).add(L.homeOff);
       const vgx = -turn * L.F.z - strafe, vgz = speed + turn * L.F.x;
       if (moving) {
@@ -280,9 +283,12 @@ export class Gait {
         pawPitch = mix(pawPitch, L.overridePaw, ow);
         const om = L.overrideMeta; if (typeof om === 'number' && om === om) metaPitch = mix(metaPitch, om, ow);
       }
-      const yaw = yawOf(bodyQ);
+      const gw = L.gW;
+      if (gw > 0) { _p.lerp(L.gT, gw); pawPitch = mix(pawPitch, L.gPaw, gw); metaPitch = mix(metaPitch, L.gMeta, gw); }
+      const yaw = yawOf(bodyQ) * (1 - gw); // ground-resting feet keep the model's heading (stable for a body lying on its back)
+      const ng = 1 - gw;
       _q.setFromAxisAngle(Y, yaw).multiply(_q2.setFromAxisAngle(X, pawPitch + L.pawAdd));
-      if (air > 0 || ow > 0) _q.slerp(bodyQ, Math.max(air * 0.5, L.overrideLocal ? ow : 0));
+      if (air > 0 || ow > 0) _q.slerp(bodyQ, Math.max(air * 0.5, L.overrideLocal ? ow : 0) * ng);
       _v.copy(L.toeOff).applyQuaternion(_q);
       const endP = _p.sub(_v);
       const pole = _v.copy(L.chain.pole0).applyQuaternion(bodyQ);
@@ -294,7 +300,7 @@ export class Gait {
       }
       if (L.four) {
         const qm = _q2.setFromAxisAngle(Y, yaw).multiply(tmpQ.setFromAxisAngle(X, metaPitch));
-        const carry = Math.max(air, L.overrideLocal ? ow : 0);
+        const carry = Math.max(air, L.overrideLocal ? ow : 0) * ng;
         if (carry > 0) { const om = L.overrideMeta; tmpQ.copy(bodyQ).multiply(tmpQ2.setFromAxisAngle(X, typeof om === 'number' && om === om ? om : 0.35)); qm.slerp(tmpQ, carry); }
         const hock = tmpV.copy(L.metaVec).applyQuaternion(qm).negate().add(endP);
         solveIK(pose, L.chain, hock, pole);

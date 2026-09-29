@@ -1,7 +1,7 @@
 // Generic whole-body actions shared by every creature family (parameterised by body proportions):
 // hit, knockback, knockdown (hold) → getup, death (a satisfying fling / collapse, holds), stun (loop), spawn (claw out of
 // the ground / drop from a portal), roar. Species files add their own attacks on top.
-import { legsLocal, legsPlant, armRot, ease, sstep, clamp01, mix, TAU } from './ctl.js';
+import { legsLocal, legsPlant, legsLie, armRot, ease, sstep, clamp01, mix, TAU } from './ctl.js';
 
 /** piecewise smooth interpolation through keys (T ascending) */
 /** Time-warp for re-timing an authored action: normalised k where the authored impact (`from`) should land at `to`. */
@@ -20,7 +20,10 @@ const hipsY = (ctl) => ctl.pose.rest[ctl.b.hips].y;
 const bodyY = (ctl) => ctl.pose.rest[ctl.b.body].y;
 
 // ============================================================================================== bipeds
-function bLieLimbs(ctl, w, side, t, o) {
+// legs of a biped lying on its back: resting on the ground in front (legsLie) — or, for bodies flipped past vertical
+// (pitch > 1.7, e.g. a bird on its back), tucked up relative to the body
+const lieLegs = (ctl, w, o, slide) => { if ((o.pitch ?? 1.5) <= 1.7) legsLie(ctl, w, slide, o.lieLegs); else legsLocal(ctl, w, 0.04, 1.2, 0, o.legBack ?? 0.28); };
+function bLieLimbs(ctl, w, side, t, o, slide = 0) {
   const P = ctl.pose, b = ctl.b;
   const br = Math.sin(t * 2.4) * 0.03;
   P.rx(b.spine, (0.05 + br) * w); P.rx(b.chest, (0.06 - br) * w);
@@ -31,13 +34,15 @@ function bLieLimbs(ctl, w, side, t, o) {
   if (b.tail) for (let i = 0; i < b.tail.length; i++) P.rot(b.tail[i], 0.25 * w, side * 0.2 * w, 0);
   ctl.jaw = Math.max(ctl.jaw, 0.3 * w);
   ctl.wingSpread = mix(ctl.wingSpread, o.wingLie ?? 0.9, w);
-  legsLocal(ctl, w, 0.04, 1.2, 0, o.legBack ?? 0.28);
+  lieLegs(ctl, w, o, slide);
 }
-function bLie(ctl, w, side, t, o) {
+/** Lying on the back exactly as bKnockdown leaves the body (for custom deaths from the knockdown: pass ctl.downSide,
+ *  ctl.downO || own options) — keeps knockdown → death continuity. */
+export function bLie(ctl, w, side, t, o) {
   const P = ctl.pose, b = ctl.b, lie = hipsY(ctl) - (o.lieY ?? ctl.H * 0.11);
   P.move(b.hips, 0, -lie * w, KD_ZB * ctl.H * w);
   P.rot(b.hips, (o.pitch ?? 1.5) * w, 0, 0.1 * side * w);
-  bLieLimbs(ctl, w, side, t, o);
+  bLieLimbs(ctl, w, side, t, o, KD_ZB * ctl.H);
 }
 
 export function bHit(o = {}) {
@@ -84,8 +89,7 @@ export function bKnockdown(o = {}) {
     // struggle twitches while down
     const tw = Math.pow(Math.max(0, Math.sin(t * 1.3 + a.seed)), 12) * sstep(1.2, 1.6, t);
     P.rx(b.chest, -0.25 * tw * w); P.rx(b.head, -0.3 * tw * w);
-    bLieLimbs(ctl, fall * w, s, t, o);
-    legsLocal(ctl, w, mix(0.12, 0.04, fall), 1.2, 0, (o.legBack ?? 0.28) * fall);
+    bLieLimbs(ctl, fall * w, s, t, o, KD_ZB * H * ease.out(k / 0.6));
     ctl.jaw = Math.max(ctl.jaw, 0.4 * jolt * w);
   } };
 }
@@ -108,7 +112,7 @@ export function bGetup(o = {}) {
     armRot(ctl, -1, mix(armUp, au, f), mix(0.25, lo, f), aw, mix(armOut, out, f));
     armRot(ctl, 1, mix(armUp * 0.6, au, f), mix(0.35, lo, f), aw, mix(armOut * 0.8, out, f));
     const lw = 1 - sstep(0.22, 0.42, k), pw = sstep(0.22, 0.42, k) * (1 - sstep(0.8, 1, k));
-    if (lw > 0) legsLocal(ctl, lw * w, mix(0.04, 0.08, f), 1.2, 0, (o.legBack ?? 0.28) * (1 - sstep(0, 0.3, k)));
+    if (lw > 0) lieLegs(ctl, lw * w, o, KD_ZB * H * (1 - sstep(0.3, 1, k)));
     if (pw > 0) legsPlant(ctl, pw * w, 1.25, 0.05 * H);
     ctl.jaw = Math.max(ctl.jaw, 0.3 * lw0);
     ctl.wingSpread = mix(ctl.wingSpread, mix(o.wingLie ?? 0.9, 0.8, f), (1 - k) * w);
@@ -139,8 +143,9 @@ export function bDeath(o = {}) {
       P.rot(b.head, 0.6 * fl, 0, 0); P.rx(b.spine, 0.3 * fl);
       ctl.jaw = Math.max(ctl.jaw, 0.7 * fl);
       ctl.wingSpread = mix(ctl.wingSpread, 1, fl); ctl.flap = Math.max(ctl.flap, fl * 0.8);
-      bLieLimbs(ctl, land * w, s, t, o);
-      legsLocal(ctl, w, mix(0.3, 0.04, land), 1.2, 0, (o.legBack ?? 0.28) * land);
+      if ((o.pitch ?? 1.5) <= 1.7) legsLocal(ctl, w, 0.3, 1.2); // tucked in the air; the lying legs blend in on landing
+      else legsLocal(ctl, w, mix(0.3, 0.04, land), 1.2, 0, (o.legBack ?? 0.28) * land);
+      bLieLimbs(ctl, land * w, s, t, o, fz);
       ctl.ear = mix(ctl.ear, 1.2, w);
       // eyes & veins fade out
       ctl.glow = mix(ctl.glow, 0.15, sstep(0.4, 1.4, t) * w);

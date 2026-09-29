@@ -114,9 +114,10 @@ export function makeHeroMaterial(U, opts = {}) {
           if (uDemon > 0.001) {
             vec4 t2 = texture2D(uDetail, op.zy * 0.23) * bw.x + texture2D(uDetail, op.xz * 0.23) * bw.y + texture2D(uDetail, op.xy * 0.23) * bw.z;
             float ln = abs(t2.g - 0.5);
-            veins = smoothstep(0.035, 0.0, ln) * uDemon;
+            float skinM = step(0.04, vDet.g) * step(vDet.g, 0.12) * step(vDet.w, 0.05) * step(vDet.b, 0.05) * step(vDet.r, 0.05);
+            veins = smoothstep(0.016, 0.0, ln) * skinM * uDemon;
             float lum = dot(diffuseColor.rgb, vec3(0.3, 0.5, 0.2));
-            diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.16, 0.07, 0.2) * (0.35 + lum * 1.4), uDemon * 0.85);
+            diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.075, 0.034, 0.095) * (0.5 + lum * 1.3), uDemon * 0.92);
           }
           if (vFace.x > 0.0 && vFace.y > 0.0 && vFace.x < 1.0 && vFace.y < 1.0) {
             vec4 f = texture2D(uFace, vFace * 0.5 + uFaceTile);
@@ -139,12 +140,12 @@ export function makeHeroMaterial(U, opts = {}) {
         float castA = min(uCast.a, 3.0);
         totalEmissiveRadiance += uCast.rgb * castA * vMat.z * 1.1;
         totalEmissiveRadiance += uRune.rgb * uRune.a * vMat.w * (0.8 + 0.2 * sin(uTime * 4.0 + vOP.y * 9.0));
-        totalEmissiveRadiance += vec3(1.1, 0.1, 0.9) * veins * 2.2 * (0.75 + 0.25 * sin(uTime * 5.0 + vOP.y * 20.0));
+        totalEmissiveRadiance += vec3(0.95, 0.12, 1.0) * veins * 1.1 * (0.7 + 0.3 * sin(uTime * 5.0 + vOP.y * 20.0));
         totalEmissiveRadiance += vec3(1.6, 0.35, 1.3) * eyeEmit * 2.2;`)
       .replace('+ gSpecAcc +', `+ gSpecAcc * vMat.x * (0.12 + smoothstep(0.5, 1.0, vMat.x) * 0.2 + diffuseColor.rgb * 0.32) + heroEnv(geometryNormal, geometryViewDir, diffuseColor.rgb, vMat.x) +`)
       .replace('vec3 outgoingLight = reflectedLight', `
         float rimG = pow(1.0 - saturate(dot(geometryNormal, geometryViewDir)), 2.5);
-        totalEmissiveRadiance += uCast.rgb * min(uCast.a, 3.0) * rimG * rimG * 0.28 + vec3(0.55, 0.05, 0.6) * rimG * uDemon * 0.9;
+        totalEmissiveRadiance += uCast.rgb * min(uCast.a, 3.0) * rimG * rimG * 0.28 + vec3(0.5, 0.06, 0.62) * rimG * uDemon * 0.75;
         vec3 outgoingLight = reflectedLight`)
       .replace('void main() {', `vec3 heroEnv(vec3 n, vec3 v, vec3 alb, float metal) {
           if (metal < 0.3) return vec3(0.0);

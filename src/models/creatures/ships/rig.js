@@ -1,6 +1,6 @@
 // Masts, spars, platforms and standing rigging (all rigid → the wood mesh).
 import * as THREE from 'three';
-import { V3, M, MY, cyl, lathe, box, torus, lerp, TU, GV0, GV1 } from './build.js';
+import { V3, M, MY, cyl, lathe, box, torus, lerp } from './build.js';
 
 const IRON = [0.05, 0.045, 0.04];
 
@@ -29,9 +29,7 @@ export function spar(wb, a, b, r0, r1, color, yard = false, seg = 8) {
 /** Round top platform / crow's nest at (x, y, z). nest: basket walls + rail. */
 export function platform(wb, o) {
   const { x = 0, y, z, r } = o;
-  const P = [];
   const seg = 14;
-  for (let i = 0; i < seg; i++) { const t = i / seg * Math.PI * 2; P.push([Math.cos(t) * r, Math.sin(t) * r]); }
   // floor (cylinder slab)
   wb.add(cyl(r, r, 0.12, seg), M(x, y - 0.06, z), { uv: 'box', color: o.color, d: 1 });
   // cross trees under it

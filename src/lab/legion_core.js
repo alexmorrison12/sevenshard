@@ -161,8 +161,9 @@ function sheet(name, n = 6, o = {}) {
     b.root.rotation.y = o.face ?? Math.PI;
     b.root.position.set((i - (n - 1) / 2) * gap, 0, 0);
     scene.add(b.root);
-    b.play(name, { dur: m.dur });
-    const t = o.times ? o.times[i] : (i / (n - 1)) * m.dur * 0.999;
+    const D = o.dur ?? m.dur;                         // o.dur: review at a game-scaled duration
+    b.play(name, { dur: D });
+    const t = o.times ? o.times[i] : (i / (n - 1)) * D * 0.999;
     const steps = Math.ceil(t / (1 / 60));
     for (let k = 0; k < steps; k++) b.update(t / Math.max(1, steps), { combat: 1 });
     b.update(0, { combat: 1 });

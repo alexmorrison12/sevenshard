@@ -199,7 +199,8 @@ export function crystal(acc, skin, base, dir, len, r, c, emis = [0.6, 2.4], o = 
 }
 /** Lathe disc (shield / buckler / plate): profile [[r, y]…] revolved around local Y, then oriented so +Y → normal at pos. */
 export function lathe(profile, seg, pos, normal, spin = 0, disp = null) {
-  const g = new THREE.LatheGeometry(profile.map(([r, y]) => new THREE.Vector2(Math.max(1e-4, r), y)), seg);
+  // authored top/centre → outward/down along the outer surface; LatheGeometry faces outward for upward profiles → reverse
+  const g = new THREE.LatheGeometry(profile.map(([r, y]) => new THREE.Vector2(Math.max(1e-4, r), y)).reverse(), seg);
   if (disp) { const p = g.attributes.position; for (let i = 0; i < p.count; i++) { _a.fromBufferAttribute(p, i); disp(_a, i); p.setXYZ(i, _a.x, _a.y, _a.z); } g.computeVertexNormals(); }
   const m = new THREE.Matrix4().makeRotationY(spin);
   m.premultiply(new THREE.Matrix4().makeRotationFromQuaternion(new THREE.Quaternion().setFromUnitVectors(Y, new V3(...normal).normalize())));

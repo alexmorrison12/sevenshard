@@ -1,6 +1,8 @@
-// SEVENSHARD mounts & pets. Defs map + a self-contained registry for the sub-area lab.
-//   mounts: horse (brown / white / black / armoured), direwolf (grey / snow / black), sunstag (dawn / moon / ember)
-//   pets:   foxling (red / snow / shadow), owlet (tawny / snowy / moonlit), slimelet (mint / rose / azure / gold)
+// SEVENSHARD mounts & pets. Defs map + a self-contained registry for the sub-area lab (src/lab/creatures_mounts.js).
+//   mounts (mount: true, `rider` socket): horse (brown / white / black / armoured), direwolf (grey / snow / black),
+//                                         sunstag (dawn / dusk / moon)
+//   pets   (pet: true):                   foxling (red / snow / shadow), owlet (tawny / snowy / moonlit, flies),
+//                                         slimelet (mint / rose / azure / gold)
 import { makeRegistry } from '../core.js';
 import { horse } from './horse.js';
 import { direwolf } from './direwolf.js';

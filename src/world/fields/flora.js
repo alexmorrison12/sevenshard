@@ -368,7 +368,7 @@ export function sunflowerGeo(seed = 1) {
     b.add(g, null, leafC, { extra: { sway: p => (p.y / h) ** 2 * 0.6 } });
   }
   // head: disc + two petal rings, tilted toward +Z and a little down
-  const head = new THREE.Matrix4().compose(V(0.02, h, 0.14), new THREE.Quaternion().setFromEuler(new THREE.Euler(0.35, 0, 0)), V(1, 1, 1));
+  const head = new THREE.Matrix4().compose(V(0.02, h, 0.14), new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.85, 0, 0)), V(1.25, 1.25, 1.25));
   const discG = new THREE.CylinderGeometry(0.16, 0.17, 0.07, 14); discG.rotateX(Math.PI / 2);
   b.add(discG, head, (p, n) => n.z > 0.5 ? disc : lerpC(stem, disc, 0.5), { extra: { sway: 0.6 } });
   for (let ring = 0; ring < 2; ring++) for (let i = 0; i < 14; i++) {
@@ -418,6 +418,19 @@ export function reedGeo(seed = 1, { h = 1.6, color = 0x4a6a24, tip = 0xa8b060, n
     const x = rng.range(-0.12, 0.12), z = rng.range(-0.12, 0.12), L = h * rng.range(0.85, 1.1);
     const st = new THREE.CylinderGeometry(0.01, 0.014, L, 3); st.translate(x, L / 2, z); b.add(st, null, c0, { extra: { sway: p => clamp(p.y / h, 0, 1) ** 2 } });
     const hd = new THREE.CylinderGeometry(0.045, 0.045, 0.24, 6); hd.translate(x, L - 0.14, z); b.add(hd, null, cat, { extra: { sway: (L / h) ** 2 } });
+  }
+  return b.build();
+}
+/** tall meadow grass clump with seed heads (static, instanced) */
+export function tallGrassGeo(seed = 1, { h = 0.8, color = 0x5a7a28, tip = 0xd8c878, n = 12 } = {}) {
+  const rng = new RNG(seed), b = MB(), c0 = linColor(color), c1 = linColor(tip);
+  for (let i = 0; i < n; i++) {
+    const a = rng.range(0, Math.PI * 2), r = rng.range(0, 0.18), L = h * rng.range(0.55, 1.1), lean = rng.range(0.15, 0.45);
+    const g = new THREE.PlaneGeometry(0.045, L, 1, 3); g.translate(0, L / 2, 0);
+    const pp = g.attributes.position; for (let k = 0; k < pp.count; k++) { const t = pp.getY(k) / L; pp.setX(k, pp.getX(k) * (1 - t * 0.85)); pp.setZ(k, t * t * lean * L); }
+    g.rotateY(a); g.translate(Math.cos(a) * r, 0, Math.sin(a) * r);
+    b.add(g, null, (p) => lerpC(c0, c1, clamp(p.y / h, 0, 1) ** 1.5), { extra: { sway: p => clamp(p.y / h, 0, 1) ** 2 } });
+    if (i % 3 === 0) { const hd = new THREE.PlaneGeometry(0.05, 0.16); hd.translate(0, L + 0.06, lean * L * 0.9); hd.rotateY(a); hd.translate(Math.cos(a) * r, 0, Math.sin(a) * r); b.add(hd, null, c1, { extra: { sway: (L / h) ** 2 } }); }
   }
   return b.build();
 }

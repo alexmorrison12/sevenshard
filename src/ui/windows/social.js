@@ -277,7 +277,7 @@ export const BOARDS = [
   { id: 'seeds', label: 'Most Pip Seeds', group: 'Just for Fun' },
 ];
 export class LeaderboardsWin extends Win {
-  static id = 'leaderboards'; static title = 'Leaderboards'; static glyph = 'trophy'; static width = 900;
+  static id = 'leaderboards'; static title = 'Leaderboards'; static glyph = 'trophy'; static width = 900; static layer = 'modal';
   build() {
     const b = this.body; b.classList.add('ss-lb');
     this.side = h('div', 'ss-lb-side ss-scroll', b);

@@ -35,8 +35,9 @@ function frameCam(h, center = new THREE.Vector3(0, 0, 0), how = Q.get('cam') || 
   const d = how === 'head' ? h * 1.0 + 0.6 : how === 'close' ? h * 1.9 + 1 : h * 2.6 + 1.6;
   const ty = num('camY', how === 'head' ? h * 0.8 : h * 0.5);
   const a = THREE.MathUtils.degToRad(num('camYaw', 0)), p = THREE.MathUtils.degToRad(num('camPitch', 14));
-  ctr.target.set(center.x, ty, center.z);
-  cam.position.set(center.x + Math.sin(a) * Math.cos(p) * d * num('zoom', 1), ty + Math.sin(p) * d * num('zoom', 1), center.z + Math.cos(a) * Math.cos(p) * d * num('zoom', 1));
+  const cx = center.x + num('camX', 0), cz = center.z + num('camZ', 0);
+  ctr.target.set(cx, ty, cz);
+  cam.position.set(cx + Math.sin(a) * Math.cos(p) * d * num('zoom', 1), ty + Math.sin(p) * d * num('zoom', 1), cz + Math.cos(a) * Math.cos(p) * d * num('zoom', 1));
   cam.fov = 35; cam.updateProjectionMatrix(); ctr.update();
 }
 api.frame = frameCam;

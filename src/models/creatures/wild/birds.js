@@ -6,7 +6,7 @@
 // overridden for bird wings: folded on the ground, flapping (downstroke extended, upstroke wrist-flexed), gliding
 // (seagull), bounding flight (songbird: flap bursts + wing tucks). The game moves flyers; `fly` lifts the model by flyH.
 import * as THREE from 'three';
-import { BipedCtl, legsLocal } from '../ctl.js';
+import { BipedCtl, legsLocal, RV, rotA, moveA } from '../ctl.js';
 import { bDeath, bKnockback } from '../acts.js';
 import { sweep, rigid, bez, taper, eyeGeo, aim } from '../../kit/geo.js';
 import { col } from '../../kit/sdf.js';
@@ -111,41 +111,39 @@ export function birdController(inst, spec) {
   c.open = 0; c.glideT = Math.random() * 10; c.bnd = Math.random();
   return c;
 }
-function birdWings(ctl, dt) {
-  const W = ctl.spec.bw, b = ctl.b, P = ctl.pose;
-  const fly = ctl.fly, sp = Math.abs(ctl.speedSm);
+function birdWings(ctl, dt) { // allocation-free: pose writes via the framework's RV/rotA/moveA, no double-argument calls
+  const W = ctl.spec.bw, b = ctl.b, P = ctl.pose, R = RV;
+  const fly = ctl.fly, asp = ctl.speedSm < 0 ? -ctl.speedSm : ctl.speedSm;
   // cruise mode: glide share (gull) / bounding tucks (songbird)
   ctl.glideT += dt;
-  const cruise = fly * sstep(0.8, 2.5, sp);
+  const cr0 = asp < 0.8 ? 0 : asp > 2.5 ? 1 : (asp - 0.8) / 1.7, cruise = fly * cr0 * cr0 * (3 - 2 * cr0);
   let glide = 0, tuck = 0;
-  if (W.glide) glide = cruise * sstep(0.35, 0.6, 0.5 + 0.5 * Math.sin(ctl.glideT * TAU / 5.2)) * W.glide;
-  if (W.bound) { ctl.bnd = fract(ctl.bnd + dt / 0.75); tuck = cruise * sstep(0.62, 0.7, ctl.bnd) * (1 - sstep(0.94, 1, ctl.bnd)); }
-  const flapA = Math.max(fly * (1 - glide) * (1 - tuck), ctl.flap);
-  const openT = Math.max(fly * (1 - tuck * 0.85), ctl.flap, ctl.wingSpread);
+  if (W.glide) { const g = (0.5 + 0.5 * Math.sin(ctl.glideT * TAU / 5.2) - 0.35) / 0.25, g0 = g < 0 ? 0 : g > 1 ? 1 : g; glide = cruise * g0 * g0 * (3 - 2 * g0) * W.glide; }
+  if (W.bound) { let bn = ctl.bnd + dt / 0.75; bn -= Math.floor(bn); ctl.bnd = bn; const u0 = (bn - 0.62) / 0.08, u1 = (bn - 0.94) / 0.06, a0 = u0 < 0 ? 0 : u0 > 1 ? 1 : u0, a1 = u1 < 0 ? 0 : u1 > 1 ? 1 : u1; tuck = cruise * a0 * a0 * (3 - 2 * a0) * (1 - a1 * a1 * (3 - 2 * a1)); }
+  let flapA = fly * (1 - glide) * (1 - tuck); if (ctl.flap > flapA) flapA = ctl.flap;
+  let openT = fly * (1 - tuck * 0.85); if (ctl.flap > openT) openT = ctl.flap; if (ctl.wingSpread > openT) openT = ctl.wingSpread;
   ctl.open += (openT - ctl.open) * (1 - Math.exp(-(openT > ctl.open ? 14 : 6) * dt));
-  const open = clamp01(ctl.open);
-  const f = mix(W.flapF, W.hoverF ?? W.flapF * 1.4, fly * (1 - sstep(0.3, 1.5, sp)));
+  const open = ctl.open < 0 ? 0 : ctl.open > 1 ? 1 : ctl.open, fold = 1 - open;
+  const hq = asp < 0.3 ? 0 : asp > 1.5 ? 1 : (asp - 0.3) / 1.2, hov = fly * (1 - hq * hq * (3 - 2 * hq)); // hovering share
+  const f = W.flapF + (W.hoverF - W.flapF) * hov;
   ctl.wt += dt * TAU * f * (flapA > 0.02 ? 1 : 0.2);
-  const beat = Math.sin(ctl.wt), up = Math.cos(ctl.wt);
-  const fold = 1 - open;
+  const beat = Math.sin(ctl.wt), up = Math.cos(ctl.wt), lag = Math.sin(ctl.wt - 0.9);
+  const armK = 1 - fold * (1 - W.armFold), flex0 = (up > 0 ? up : 0) * flapA * 0.7 * open;
   for (let s = -1; s <= 1; s += 2) {
-    const w = s < 0 ? b.wingL : b.wingR;
-    const roll = (W.mid + W.amp * beat * flapA + glide * 0.1 - tuck * 0.2) * open;
-    // folded: yaw back along the body, lie over the back like a roof, arm compressed (wrist near the shoulder)
-    P.rot(w[0], fold * (W.foldRoll ?? -0.3), -s * fold * (Math.PI / 2 - (W.foldYaw ?? 0.08)), s * roll);
-    P.move(w[0], s * (W.foldOut ?? 0) * fold, (W.foldUp ?? 0) * fold, 0);
-    if (W.foldPitch) P.prot(w[0], X_AXIS, W.foldPitch * fold); // folded tips follow the sloping back
-    P.sc[w[0]].set(1 - fold * (1 - (W.armFold ?? 0.3)), 1, 1);
-    P.move(w[1], -s * W.L * ARM * fold * (1 - (W.armFold ?? 0.3)), 0, 0);
+    const w = s < 0 ? b.wingL : b.wingR, w0 = w[0], w1 = w[1];
+    // folded: tips follow the sloping back (pitch, pre-applied), yaw back along the body, roof over the back, arm compressed
+    if (W.foldPitch) { R[0] = W.foldPitch * fold; R[1] = 0; R[2] = 0; rotA(P.lq[w0]); }
+    R[0] = fold * W.foldRoll; R[1] = -s * fold * (Math.PI / 2 - W.foldYaw); R[2] = s * (W.mid + W.amp * beat * flapA + glide * 0.1 - tuck * 0.2) * open; rotA(P.lq[w0]);
+    R[0] = s * W.foldOut * fold; R[1] = W.foldUp * fold; R[2] = 0; moveA(P.lt[w0]);
+    P.sc[w0].x = armK;
+    R[0] = -s * W.L * ARM * fold * (1 - W.armFold); R[1] = 0; R[2] = 0; moveA(P.lt[w1]);
     // hand: flexes back on the upstroke, lags the beat, droops slightly when gliding
-    const flex = Math.max(0, up) * flapA * 0.7 * open;
-    P.rot(w[1], 0, s * (flex * 0.9) + s * fold * 0.06, s * (W.amp * 0.35 * Math.sin(ctl.wt - 0.9) * flapA * open - glide * 0.12));
+    R[0] = 0; R[1] = s * (flex0 * 0.9 + fold * 0.06); R[2] = s * (W.amp * 0.35 * lag * flapA * open - glide * 0.12); rotA(P.lq[w1]);
   }
   // tail fans in flight
-  P.sc[b.tail[0]].set(1 + 0.6 * open * fly, 1, 1);
+  P.sc[b.tail[0]].x = 1 + 0.6 * open * fly;
   ctl.wingBeat = beat;
 }
-
 // ------------------------------------------------------------------------------------------------ shared actions
 const peck = (d = 0.9, deep = 1) => ({ dur: d, a: 0.05, d: 0.9, fn(ctl, a, w) {
   const P = ctl.pose, b = ctl.b, k = a.k;
@@ -185,21 +183,23 @@ const hitB = { dur: 0.4, a: 0.03, d: 0.5, hit: 0, fn(ctl, a, w) {
   P.move(b.hips, 0, 0.02 * ctl.H * j, 0.05 * ctl.H * j); P.rx(b.spine, 0.3 * j); P.rx(b.head, 0.3 * j);
   P.sc[b.chest].multiplyScalar(1 + 0.15 * j); ctl.flap = Math.max(ctl.flap, 0.6 * j); ctl.jaw = Math.max(ctl.jaw, 0.5 * j);
 } };
-const birdPose = (extra) => (ctl, dt) => {
-  const P = ctl.pose, B = ctl.b, G = ctl.gait;
+const birdPose = (extra) => (ctl, dt) => { // allocation-free (RV/rotA/moveA, inline leg overrides)
+  const P = ctl.pose, B = ctl.b, G = ctl.gait, R = RV, K = ctl.spec;
   // head-bob while walking: the head holds still, then thrusts forward each step
-  const hp = fract(G.phase * 2), v = clamp01(Math.abs(ctl.speedSm) / (ctl.spec.bobV ?? 0.5));
+  let hp = G.phase * 2; hp -= Math.floor(hp);
+  const v0 = (ctl.speedSm < 0 ? -ctl.speedSm : ctl.speedSm) / K.bobV, v = v0 > 1 ? 1 : v0;
   const hold = hp < 0.65 ? hp / 0.65 : 1 - (hp - 0.65) / 0.35;
-  P.move(B.head, 0, 0, (hold - 0.5) * (ctl.spec.bobZ ?? 0.03) * ctl.H * v * G.act * (1 - ctl.fly));
+  R[0] = 0; R[1] = 0; R[2] = (hold - 0.5) * K.bobZ * ctl.H * v * G.act * (1 - ctl.fly); moveA(P.lt[B.head]);
   // flight posture: tail streams, feet tucked up & back under the tail
-  P.rx(B.tail[0], 0.15 * ctl.fly);
-  if (ctl.fly > 0.01) for (let li = 0, LL = G.legs; li < LL.length; li++) { const L = LL[li];
-    const hip = P.rest[L.idx[0]];
-    ov(L, L.toe.x * 0.7, hip.y * 0.62, hip.z + hip.y * 0.55, ctl.fly, true, -1.3);
+  R[0] = 0.15 * ctl.fly; R[2] = 0; rotA(P.lq[B.tail[0]]);
+  const fly = ctl.fly;
+  if (fly > 0.01) for (let li = 0, LL = G.legs; li < LL.length; li++) {
+    const L = LL[li], hip = P.rest[L.idx[0]];
+    L.override.x = L.toe.x * 0.7; L.override.y = hip.y * 0.62; L.override.z = hip.z + hip.y * 0.55;
+    L.overrideLocal = true; L.overridePaw = -1.3; if (fly > L.overrideW) L.overrideW = fly;
   }
   if (extra) extra(ctl, dt);
 };
-
 // ================================================================================================ songbird
 const SB = { // dims (model space, faces −Z, feet at y = 0)
   hips: [0, 0.086, 0.014], spine: [0, 0.096, 0.0], chest: [0, 0.102, -0.018], neck: [0, 0.114, -0.03], head: [0, 0.128, -0.045], jaw: [0, 0.126, -0.068],
@@ -279,10 +279,10 @@ const SB_SPEC = {
     ],
   },
   lean: { walk: 0.05, run: 0.15, combat: 0 }, twist: 0.02, crouch: 0.01, breathe: 0.05,
-  bw: { L: SB.wingL, flapF: 11, hoverF: 15, amp: 1.05, mid: 0.25, bound: true, foldRoll: -0.25, foldYaw: 0.1, armFold: 0.3, foldOut: 0.005, foldUp: 0.004, foldPitch: 0.12 },
+  bw: { L: SB.wingL, flapF: 11, hoverF: 15, amp: 1.05, mid: 0.25, glide: 0, bound: true, foldRoll: -0.25, foldYaw: 0.1, armFold: 0.3, foldOut: 0.005, foldUp: 0.004, foldPitch: 0.12 },
   flyH: 1.5, flyBob: 0.05, flyLean: 0.45, airPaw: -1.0, bobV: 0.3, bobZ: 0.02,
   fidgets: [{ name: 'peck', w: 3 }, { name: 'look', w: 2 }, { name: 'hop', w: 2 }, { name: 'sing', w: 1 }, { name: 'preen', w: 1 }], fidgetGap: 1.6,
-  pose: birdPose((ctl) => { ctl.pose.rx(ctl.b.hips, 0.12 * ctl.fly * (1 - sstep(0.3, 1.5, Math.abs(ctl.speedSm)))); }),
+  pose: birdPose((ctl) => { const a = ctl.speedSm < 0 ? -ctl.speedSm : ctl.speedSm, u = a < 0.3 ? 0 : a > 1.5 ? 1 : (a - 0.3) / 1.2; RV[0] = 0.12 * ctl.fly * (1 - u * u * (3 - 2 * u)); RV[1] = 0; RV[2] = 0; rotA(ctl.pose.lq[ctl.b.hips]); }),
   post: birdWings,
   actions: SB_ACTIONS,
 };
@@ -368,7 +368,7 @@ const SG_SPEC = {
     ],
   },
   lean: { walk: 0.08, run: 0.25, combat: 0 }, twist: 0.05, waddle: 0.12, crouch: 0.01, breathe: 0.03,
-  bw: { L: SG.wingL, flapF: 3.0, hoverF: 4.2, amp: 0.65, mid: 0.18, glide: 0.85, foldRoll: -0.2, foldYaw: 0.1, armFold: 0.25, foldOut: 0.012, foldUp: -0.006, foldPitch: 0.16 },
+  bw: { L: SG.wingL, flapF: 3.0, hoverF: 4.2, amp: 0.65, mid: 0.18, glide: 0.85, bound: false, foldRoll: -0.2, foldYaw: 0.1, armFold: 0.25, foldOut: 0.012, foldUp: -0.006, foldPitch: 0.16 },
   flyH: 2.6, flyBob: 0.12, flyLean: 0.3, airPaw: -1.2, bobV: 0.5, bobZ: 0.025,
   fidgets: [{ name: 'peck', w: 3 }, { name: 'look', w: 2 }, { name: 'squawk', w: 1 }, { name: 'preen', w: 1 }], fidgetGap: 2.5,
   pose: birdPose(),
@@ -475,7 +475,7 @@ const CK_SPEC = {
     ],
   },
   lean: { walk: 0.1, run: 0.4, combat: 0 }, twist: 0.05, waddle: 0.05, breathe: 0.03,
-  bw: { L: CK.wingL, flapF: 7, hoverF: 9, amp: 0.9, mid: 0.2, foldRoll: 1.15, armFold: 0.3, foldOut: 0.03, foldUp: 0.0 },
+  bw: { L: CK.wingL, flapF: 7, hoverF: 9, amp: 0.9, mid: 0.2, glide: 0, bound: false, foldRoll: 1.15, foldYaw: 0.08, armFold: 0.3, foldOut: 0.03, foldUp: 0.0, foldPitch: 0 },
   flyH: 0.6, flyBob: 0.06, flyLean: 0.4, airPaw: -0.8, bobV: 0.5, bobZ: 0.035,
   fidgets: [{ name: 'peck', w: 4 }, { name: 'scratch', w: 2 }, { name: 'cluck', w: 2 }, { name: 'look', w: 1 }, { name: 'flap', w: 1 }], fidgetGap: 2,
   pose: birdPose(),

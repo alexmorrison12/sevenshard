@@ -4,7 +4,7 @@
 // All sail area stands forward of the helm, so the game camera (behind, 54° down) always sees whoever steers.
 import * as THREE from 'three';
 import { linColor as lc } from '../../../engine/geom.js';
-import { WoodBuilder, V3, M, MY, cyl, box, sphere, cone, lerp } from './build.js';
+import { WoodBuilder, V3, M, MY, box, sphere, cone, lerp } from './build.js';
 import { makeHull, buildHull, buildFoam, sweep, sidePath } from './hull.js';
 import { SailBuilder, squareSail, foreAft, flag } from './sails.js';
 import { mast, spar, platform, shrouds } from './rig.js';
@@ -197,12 +197,11 @@ export function buildDawnrunner() {
   spar(wb, boom0, boom1, 0.13, 0.09, C.spar);
   wb.add(box(0.3, 0.3, 0.3), M(0, 9.8, MAIN + 0.3), { color: C.walnut, d: 0.8 });
   wb.add(box(0.3, 0.3, 0.3), M(0, 5.2, MAIN + 0.3), { color: C.walnut, d: 0.8 });
-  const gs = foreAft(sb, { throat: V3(0, 9.7, MAIN + 0.45), peak: V3(0, 11.72, 6.5), tack: V3(0, 5.32, MAIN + 0.45), clew: V3(0, 5.84, 6.6), lee: -1, depth: 1.2, region: R.gaff, na: 12, nb: 11 });
+  foreAft(sb, { throat: V3(0, 9.7, MAIN + 0.45), peak: V3(0, 11.72, 6.5), tack: V3(0, 5.32, MAIN + 0.45), clew: V3(0, 5.84, 6.6), lee: -1, depth: 1.2, region: R.gaff, na: 12, nb: 11 });
   const tr = V3(0, yRT + 0.1, zT(yRT) - 0.35);
   wb.rope(boom1, tr, 0.025, C.rope, 0);
   for (const s of [-1, 1]) wb.rope(gaff1, V3(s * (H.hb(yRT, 0.04) - 0.1), yRT + 0.08, 7.6), 0.016, C.rope, 0.25, { radial: 3 });   // vangs
   wb.rope(gaff1, V3(0, 14.4, MAIN), 0.02, C.rope, 0.1, { radial: 3 });                                                           // peak halyard
-  void gs;
   const st = foreAft(sb, { head: V3(0, 9.7, MAIN - 0.55), tack: V3(0, 4.0, FORE + 1.3), clew: V3(-0.3, 4.35, MAIN - 0.45), lee: -1, depth: 0.55, region: R.stay });
   sb.sheet(st.corners.clew, V3(-0.62, yMain + 0.65, MAIN - 0.35), 0.018, ropeUV);
   const j1 = foreAft(sb, { head: V3(0, 11.85, FORE - 0.25), tack: V3(0, 4.95, -11.75), clew: V3(-0.45, 4.4, -6.9), lee: -1, depth: 0.75, region: R.j1 });
@@ -300,16 +299,17 @@ function sunbird(wb, H) {
     const p0 = V3(0, 3.92, zs - 1.2), p1 = p0.clone().addScaledVector(dir, 0.38 + (i % 2 ? 0 : 0.14));
     wb.add(cone(0.045, p0.distanceTo(p1), 5), MY(p0, p1), { uv: 'box', color: gold, ...o });
   }
-  // wings: tapered feather blades lying on the bow planking, fanned from the shoulder
-  for (const s of [-1, 1]) for (let k = 0; k < 6; k++) {
-    const t = k / 5, path = [];
+  // wings: overlapping feather blades lying on the bow planking, fanned from the shoulder (reads as one carved wing)
+  for (const s of [-1, 1]) for (let k = 0; k < 8; k++) {
+    const t = k / 7, path = [];
     for (let i = 0; i <= 7; i++) {
       const q = i / 7;
-      const u = lerp(0.985, lerp(0.915, 0.86, t), q), y = lerp(2.85 - t * 0.35, lerp(3.55, 1.85, t), q) + Math.sin(q * Math.PI) * 0.12;
+      const u = lerp(0.985, lerp(0.905, 0.87, t), q), y = lerp(2.9 - t * 0.3, lerp(3.6, 2.0, t), q) + Math.sin(q * Math.PI) * 0.1;
       const f = H.frame(Math.min(0.995, u), y, s);
-      path.push({ o: f.o.addScaledVector(f.N, 0.04 + 0.1 * (1 - q)), A: f.N, B: f.U });
+      path.push({ o: f.o.addScaledVector(f.N, 0.035 + 0.1 * (1 - q) + 0.012 * k), A: f.N, B: f.U });
     }
-    sweep(wb, path, [[0, -0.1], [0.05, -0.07], [0.05, 0.07], [0, 0.1]], { color: gold, ...o, closed: false, scale: q => 1.15 - q * 0.95 });
+    const w = 0.13 + 0.04 * Math.sin(t * Math.PI);
+    sweep(wb, path, [[0, -w], [0.045, -w * 0.7], [0.045, w * 0.7], [0, w]], { color: k % 2 ? gold : lc(0xc89028), ...o, closed: false, scale: q => 1.1 - q * 0.92 });
   }
   // tail feathers down the stem
   for (let k = -1; k <= 1; k++) {

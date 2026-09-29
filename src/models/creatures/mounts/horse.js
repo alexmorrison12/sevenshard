@@ -17,7 +17,7 @@ const PAL = {
   brown: { coat: 0x7e4526, coat2: 0x5a2d16, belly: 0xa06a44, points: 0x1c1411, mane: 0x18110e, maneTip: 0x46301f, muzzle: 0x2e2320, hoof: 0x35302c, eye: 0x3a1c0a, sock: 0xeee8de,
     star: 1, blaze: 0, socks: [0, 0, 0.27, 0],
     t: { leather: 0x4a2612, seat: 0x5a2e16, stitch: 0xc89a5a, pad: 0x8e1d24, trim: 0xe0b048, trim2: 0x5a1218, strap: 0x3a2214, metal: 0xa8acb4 } },
-  white: { coat: 0xe6e1d8, coat2: 0xcac2b6, belly: 0xf2eee8, points: 0xa89e94, mane: 0xf4f0e8, maneTip: 0xc9bfb2, muzzle: 0x5a4e4e, hoof: 0x8e857c, eye: 0x2a1a10, sock: 0xf4f0e8, dapple: 0xb4aca2,
+  white: { coat: 0xd8d3ca, coat2: 0xbab2a6, belly: 0xe4e0d8, points: 0x9a9088, mane: 0xcfc6b8, maneTip: 0x9a9084, muzzle: 0x5a4e4e, hoof: 0x8e857c, eye: 0x2a1a10, sock: 0xf4f0e8, dapple: 0xb4aca2,
     star: 0, blaze: 0, socks: [0, 0, 0, 0],
     t: { leather: 0x6a3e1e, seat: 0x7a4826, stitch: 0xe8d0a0, pad: 0x21428e, trim: 0xe8ecf4, trim2: 0x142a66, strap: 0x5a3a20, metal: 0xc4c8d0 } },
   black: { coat: 0x201e25, coat2: 0x131217, belly: 0x2c2a33, points: 0x131216, mane: 0x0e0d11, maneTip: 0x2e2a36, muzzle: 0x1a1719, hoof: 0x2a2622, eye: 0x1a0e08, sock: 0xece8e0, sheen: 0x565a70,
@@ -40,7 +40,7 @@ export const horse = {
   config(variant) {
     const v = PAL[variant] ? variant : 'brown';
     return { variant: v, pal: PAL[v], shapeKey: 'base', scale: 1, h: 0.068, hg: { 1: 0.044, 2: 0.038, 3: 0.04 }, aoScale: 1.3,
-      grad: { top: 0.14, bottom: 0.3, y0: 0.1, y1: 1.0, low: 0.18 }, mat: { dfreq: 2.2, rim: 0.3, rimColor: 0xfff0dc, spec: v === 'black' ? 0.18 : 0.08, shine: 18 } };
+      grad: { top: 0.14, bottom: 0.3, y0: 0.1, y1: 1.0, low: 0.18 }, mat: { dfreq: 2.2, rim: v === 'white' ? 0.16 : 0.3, rimColor: 0xfff0dc, spec: v === 'black' ? 0.18 : 0.08, shine: 18 } };
   },
   rig(R) {
     R.add('body', null, [0, 1.16, 0.0]);
@@ -183,7 +183,7 @@ export const horse = {
     for (const s of [-1, 1]) addEye(acc, S, b('head'), H(0.17, 0.02, s * 0.086), [s * 1, -0.05, -0.32], 0.03, { iris: c.eye, pupil: 0x080404, rim: 0x120c0a, pupilA: 0.5, irisA: 0.95, sink: 0.42, group: 2, seg: 8 });
     // ---- ears: pricked, concave, dark tips
     for (const s of [-1, 1]) {
-      const g = leafGeo(0.042, 0.15, 0.03, 0.7, -0.04, { nu: 4, nv: 5, pw: 0.9, tipW: 0.004 });
+      const g = leafGeo(0.033, 0.135, 0.028, 0.75, -0.06, { nu: 4, nv: 5, pw: 1.05, tipW: 0.003 });
       const m = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(-0.2, -s * 0.45, -s * 0.12, 'YXZ')); m.setPosition(...H(-0.02, 0.035, s * 0.055));
       const co = col(c.coat), ci = col(c.coat2), ct = col(c.points || c.coat2);
       addG(acc, g, { matrix: m, skin: rigidSkin(b(s < 0 ? 'earL' : 'earR')), dtl: [0.25, 0, 0.1, 0], color: (p, n, uv) => uv[0] >= 1 ? lerp3(co, ct, sstep(0.65, 0.95, uv[1])) : lerp3(lerp3(ci, [0.02, 0.015, 0.012], 0.4), co, sstep(0.55, 0.9, (uv[0] % 1) * 2)) });
@@ -415,11 +415,11 @@ const legs = [
   { id: 'RL', chain: ['rTL', 'rSL', 'rML', 'rPL'], toe: [-0.19, 0, 0.585], body: 'hips', scap: 0.14, lift: 0.15, flex: 1.2, out: 0.06, metaK: 0.8, heel: 0.45 },
   { id: 'RR', chain: ['rTR', 'rSR', 'rMR', 'rPR'], toe: [0.19, 0, 0.585], body: 'hips', scap: 0.14, lift: 0.15, flex: 1.2, out: 0.06, metaK: 0.8, heel: 0.45 },
 ];
-const GRAZE = mGraze({ dur: 5.2 }), SHAKE = mShake({ dur: 1.7 }), PAW = mPaw({ dur: 2.2, leg: 1 });
+const GRAZE = mGraze({ dur: 5.2, neck: -1.72, neck2: -0.34, head: 1.12, chest: -0.2, drop: -0.07 }), SHAKE = mShake({ dur: 1.7 }), PAW = mPaw({ dur: 2.2, leg: 1 });
 const ACTIONS = {
   rear: mRear({ dur: 2.4, ang: 0.95, sit: 0.3 }),
   whinny: mWhinny({ dur: 1.8 }),
-  idle_alt: mPick([mGraze({ dur: 3.4 }), SHAKE, PAW], 3.4),
+  idle_alt: mPick([mGraze({ dur: 3.4, neck: -1.72, neck2: -0.34, head: 1.12, chest: -0.2, drop: -0.07 }), SHAKE, PAW], 3.4),
   graze: GRAZE, shake: SHAKE, paw: PAW, swish: mSwish(),
   jump: mJump({ dur: 1.15, h: 0.6 }),
   hit: mHit(),

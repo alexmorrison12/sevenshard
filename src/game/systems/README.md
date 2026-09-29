@@ -1,478 +1,421 @@
 # SEVENSHARD systems — progression & economy layer (`src/game/systems/`)
 
 Pure logic (no DOM, no three.js): plain functions that operate on an `Account` (src/game/account.js) and a character
-record, and return plain result objects the UI renders. Deterministic when given an RNG. Everything persists inside
-`account.data` (roster-wide state under `account.roster.*`, per-character state on the `char` object) and is saved
-through `account.save()`.
+record and return plain result objects. Deterministic when given an RNG. Everything persists inside `account.data`
+(roster-wide state under `account.roster.*`, per-character state on the `char` object) and is saved via `account.save()`.
+`hooks.js` is the one module that talks to the session: it plugs every system into `src/game/registry.js` (window data,
+UI actions, NPC services, bus tracking, ticks) — see **hooks.js** at the end.
 
 ```js
 import * as S from './game/systems/index.js';
-S.loot.chaosReward(account, char, { tier: 3 });          // namespaces: loot honing cards gems engravings market
-S.market.buy(account, char, 'leapstone', 5);             //   stronghold lifeskills collectibles rapport tasks guild
-S.tasks.track(account, char, 'kill', { mob: 'imp' });    //   shops mail titles mods boards partyfinder economy
-const ctx = S.mods.statContext(account, char);           //   gear stats rolls common (+ top-level track, statContext)
+S.loot.chaosReward(account, char, { tier: 3 });          // namespaces: common rolls gear stats loot economy honing cards
+S.market.buy(account, char, 'leapstone', 5);             //   gems engravings market stronghold lifeskills collectibles
+S.tasks.track(account, char, 'kill', { family: 'demon' }); // rapport tasks guild shops mail titles boards mods
+const ctx = S.statContext(account, char);                // top level: tick, track, statContext, applyMods, simulateEconomy
 ```
+Tests: `node tools/test-systems.mjs` (452 checks + economy summary, ~2 s; `--quick` for a shorter run).
 
 ## Conventions
-
 | | |
 |---|---|
-| `account` | an `Account` instance. Systems only use `account.roster`, `account.data`, `count/has/take/give/addItem/addXp/addRosterXp/save`. |
-| `char` | a character record from `account.chars` (`char.equip`, `char.inv`, `char.books`, `char.gems`, `char.daily`, `char.weekly`, `char.rest`…). Pass `null` where a function says the character is optional. |
-| `now` | optional last argument / option (ms since epoch). Defaults to `Date.now()`. Daily reset 10:00 UTC, weekly Wednesday 10:00 UTC (`src/core/util.js`). |
-| `rng` | optional: an `RNG` from `src/core/noise.js`, a `() => [0,1)` function, or a numeric/string seed. Omitted → `Math.random`. |
-| results | every action returns `{ ok: true, … }` or `{ ok: false, why, msg, … }` — `why` is a short code (`'materials'`, `'locked'`, `'limit'`, …), `msg` a player-facing sentence. |
+| `account` | an `Account`. Systems use `account.roster`, `account.data`, `account.chars`, `count/has/take/give/addItem/addXp/addRosterXp/resets/save`. |
+| `char` | a character record (`char.equip`, `char.inv`, `char.books`, `char.gems`, `char.daily`, `char.rest`, `char.weekly`…). Pass `null` where a function says the character is optional. |
+| `now` | optional last argument / option (ms since epoch), default `Date.now()`. Daily reset 10:00 UTC, weekly Wednesday 10:00 UTC. |
+| `rng` | optional: an `RNG` (`src/core/noise.js`), a `() => [0,1)` function, or a numeric/string seed. Omitted → `Math.random`. |
+| results | actions return `{ ok: true, … }` or `{ ok: false, why, msg, … }` — `why` a short code (`'materials'`, `'locked'`, `'limit'`, `'energy'`…), `msg` a player-facing sentence (e.g. "Not enough Destruction Stone (need 240 more)."). |
 
 ### Shared shapes
 ```js
 Row    = { id, name, count, grade: 0..7, icon, kind, uid?, item?, unlock? }
-         // one line of a reward/cost list: currencies ('silver', 'gold', 'crystals', 'royal', 'shards', 'pirate',
-         // 'bloodstone', 'pvp', 'tokens'), ITEMS ids, unique items (item = the full Item), cards (id 'card:<id>'),
-         // unlocks (id 'titles:<id>' | 'mounts:<id>' | 'pets:<id>' | 'emotes:<id>' | 'songs:<id>', unlock: 'Title'…)
+         // one line of a reward/cost list. ids: wallet currencies ('silver','gold','crystals','royal','shards','pirate',
+         // 'bloodstone','pvp','tokens'), ITEMS ids, unique items (item = the full Item), cards ('card:<id>'), unlocks
+         // ('titles:<id>' | 'mounts:<id>' | 'pets:<id>' | 'emotes:<id>' | 'songs:<id>' | 'unlocks:<id>', unlock: 'Title'…)
 Bundle = { <currency|ITEMS id>: count, items?: [Item], cards?: { cardId: n }, xp?, rosterXp?, skillPts?,
            titles?: [id], mounts?: [id], pets?: [id], emotes?: [id], songs?: [id], unlocks?: [id] }
-Item   = ARCHITECTURE.md Item (weapon/armor/accessory/stone/bracelet/gem/book… with uid)
+Item   = ARCHITECTURE.md Item (unique items carry a uid: gear, accessories, stones, bracelets, gems, books)
 Cost   = { <currency|ITEMS id>: count }
+Notification = { kind: 'taskDone'|'weekly'|'rep'|'title'|'achievement'|'rapport'|'research'|'sold'|'expired'|'event'|'board'|…, text, id? }
 ```
-Icons follow the `src/ui/icons` catalogue (`item:<id>`, `currency:<id>`, `item:gem:<type>:<lv>`, `item:book:<engr>`,
-`npc:<id>`, `boss:<id>`); new ids that have no dedicated art: cards use `card:<id>` (generic art until the icons owner
-paints them).
+Icons follow `src/ui/icons` ids (`item:<id>`, `currency:<id>`, `item:gem:<type>:<lv>`, `item:book:<engr>`, `npc:<id>`,
+`boss:<id>`, `class:<id>`). New stackables in items.js carry an `icon` when their own id has no art. Cards use
+`cardIcon(id)` → `boss:<id>` / `npc:<id>` / `class:<id>` portraits.
 
-### Persistence map (what lives where)
+### Persistence map
 | state | path |
 |---|---|
-| materials / currencies | `roster.mats`, `roster.wallet` (Account helpers) |
-| cards, deck, pending selector | `roster.cards[id] = { n: duplicates, awaken }`, `roster.deck = [id\|null ×6]`, `roster.cardChoice` |
-| gems | loose gems are `char.inv` items (`kind: 'gem'`); sockets `char.gems = [Gem\|null ×11]` (`Gem.skill` = skill id) |
-| engravings | learned points `char.learned[engr]`; equipped `char.books = [{ id, nodes }]` (read by data/engravings.js) |
-| honing pity & stats | `item.honeState` (gear.js), `item.honeLog`, `roster.stats.honing` |
-| market | `roster.market` (`listings`, `sold`, `impact`, `taken`, `t`) |
-| stronghold | `roster.stronghold` |
-| life skills | `roster.life` |
-| collectibles / tome | `roster.collect`, `roster.claimed`, `roster.tome` |
-| rapport | `roster.rapport[npcId]` |
-| tasks & reputation | `roster.tasks` |
-| guild | `roster.guild` |
-| shops limits | `roster.shops` |
-| mail | `roster.mail` |
-| titles & achievements | `roster.titles`, `roster.activeTitle`, `roster.records`, `roster.achieved` |
-| boards | `roster.boards` |
-| per-character dailies | `char.daily` (`chaos`, `guardian` counts), `char.rest`, `char.weekly` (raid gold, abyss, inferno) |
+| wallet / materials | `roster.wallet`, `roster.mats` (Account helpers) |
+| cards | `roster.cards[id] = { n: duplicates, awaken }`, `roster.deck = [id\|null ×6]`, `roster.cardChoice` (pending selector) |
+| gems | loose gems: `char.inv` (`kind: 'gem'`); sockets `char.gems = [Gem\|null ×11]`, `Gem.skill` = skill id |
+| engravings | learned points `char.learned[engr]` (0–80), mirrored as `char.library[engr]` = equippable nodes; equipped `char.books = [{ id, nodes, slot }]` |
+| honing pity | `item.honeState` (gear.js), `item.honeLog`, `roster.stats.honing`, `roster.stats.bestStone` |
+| market | `roster.market` (`listings`, `sold`, `impact`, `taken`, `accTaken`, `t`) |
+| stronghold / life skills | `roster.stronghold`, `roster.life` |
+| collectibles / tome | `roster.collect[type]`, `roster.claimed`, `roster.tome[region][kind]` |
+| rapport / tasks / guild / shops | `roster.rapport[npc]`, `roster.tasks`, `roster.guild` (+ `roster.guildLeft`), `roster.shops` |
+| mail / titles / boards | `roster.mail`, `roster.titles` + `roster.activeTitle` + `roster.records` + `roster.achieved`, `roster.boards` |
+| per character | `char.daily` (`chaos`, `guardian`), `char.rest`, `char.weekly.{raid,abyss,inferno}` (self-stamped with the week), `char.events` |
 
 ---
 
 ## Hook-in for the lead
+`src/game/plugins.js` already imports `systems/hooks.js`, which registers the windows, actions, services, NPC choices,
+bus tracking, the 10 s tick and HUD badges (details at the end). What remains in lead-owned code:
 
-1. **Stats.** `const ctx = S.mods.statContext(account, char)`, then `let st = heroStats(char, ctx)` and
-   `st = S.mods.applyMods(st, ctx.extra)` (stats.js already consumes `ctx.rosterLevel`, `ctx.research.atk` and
-   `ctx.cardBonus.dmgAdd`; `ctx.extra` carries the rest — card set crit / crit damage / damage taken / HP / heal &
-   shield, research HP, title and guild mods — using the stats.js conventions: keys ending in `Mul` multiply
-   `(1 + v)`, `hpMaxMul` scales `hpMax`, anything else is added). Per-skill gem mods: `ctx.skills[skillId] =
-   { dmg: 0.24, cdr: 0.16 }` → multiply that skill's damage by `1 + dmg` and its cooldown by `1 − cdr` in the skill
-   runner. Economy-side mods (`silverGain`, `xpGain`, `elemRes`, `dotMul`, `seedSense`) are in `ctx.econ` /
-   `ctx.extra` (`elemRes`, `dotMul` need combat support; loot already applies `silverGain`; apply `xpGain` to
-   combat XP grants). Re-run after any change to deck, gems, research, titles or guild.
-2. **World events → `S.tasks.track(account, char, event, data)`** (returns notifications `[{ kind, text, … }]` to toast):
-   | event | data | when |
-   |---|---|---|
-   | `kill` | `{ mob, family: 'demon'\|'beast'\|'undead'\|'construct'\|'pip'…, zone, elite?, boss?, count? }` | every kill |
-   | `clear` | `{ content: 'chaos'\|'guardian'\|'abyss'\|'raid'\|'inferno'\|'fieldboss'\|'chaosgate'\|'island'\|'ghostship'\|'pvp', id, tier?, gate?, mode?, time?, deaths? }` | content completed |
-   | `sail` | `{ dist?, arrive?: islandId }` | distance sailed (m) / island reached |
-   | `pvp` | `{ win: bool, mode }` | Proving Grounds match end |
-   | `death` | `{ content? }` | hero died |
-   | `login` | `{}` | once per session start |
-   | `zone` | `{ zone }` | entered a zone |
-   | `song` / `emote` | `{ song\|emote, npc? }` | only when played outside `S.rapport` (rapport functions emit these themselves) |
-   | `boss_part` | `{ boss, part }` | a boss part was broken (Gorrath horns → title) |
-   Everything performed *through* systems functions (hone, transfer, facet, market buy/sell, craft, dispatch,
-   research, gather/fish/dig, rapport song/emote/gift, card awaken/open, gem fuse, collect, donate, shop buy, mail
-   claim) emits its own event — do not track those again.
-3. **Rewards.** Replace `Session.contentDone`'s placeholder loot with `S.loot.*` (they grant and return rows):
-   chaos → `S.loot.chaosReward(A, ch, { tier, cleared })` (it consumes rest bonus itself — drop the session's own
-   `rest.chaos -= 20` and the `rested` multiplier; pass `rested` into ChaosMode from `S.loot.restInfo(ch).chaos.rested`);
-   guardian → `S.loot.guardianReward(A, ch, { guardian: id })`; abyss gate → `S.loot.abyssReward(A, ch, { raid:
-   'oratory', gate: 0|1 })`; legion gate → `S.loot.raidReward(A, ch, { raid: 'gorrath', gate: 0|1, mode:
-   'normal'|'hard' })` then optionally `S.loot.buyMoreRewards(...)`; field kills → `S.loot.fieldDrop(A, ch, { kind:
-   'mob'|'elite'|'named' })`; events → `S.loot.eventReward(A, ch, { kind: 'fieldboss'|'chaosgate'|'island'|
-   'ghostship'|'treasure', island? })`; Inferno floor → `S.loot.infernoReward(A, ch, { floor })`. Each result's
-   `rows` feed the results screen `loot`, `currencies` feeds the currency line. Then call `S.tasks.track(A, ch,
-   'clear', …)`.
-4. **Honing.** Use `S.honing.hone(A, ch, slot, { boosters })` instead of `gear.hone` (same rules, plus weekly Honing
-   Support events, research discounts, pity stats, share-card data and task/title tracking).
-5. **Timers.** Every ~10 s while playing (and on window open) call `S.tick(account, char)` — it brings the market
-   (your listings selling, expiries → mail), stronghold research, life energy and the calendar up to date and returns
-   notifications `[{ kind, text }]` to toast. It is cheap.
-6. **First login of a new character**: `S.mail.welcome(account, char)` (starter kit letters; powerpass characters
-   get the Powerpass Starter Crate). Safe to call more than once.
-7. **Account change needed (optional):** nothing is required — every system lazily initialises its own state. The
-   old `roster.market = { listings, sold }` and `roster.stronghold` defaults are migrated in place.
+1. **Content rewards** — in `Session.contentDone`, replace the placeholder reward block (the `if (c.kind === 'chaos') …
+   else …` giving silver/stones/leapstones/gold, the `rest.chaos -= 20` and `daily.chaos++`) with:
+   ```js
+   import { contentRewards, moreRewards } from './systems/hooks.js';
+   const R = contentRewards(this, c, r);            // rolls + grants; handles resonance, rest bonus, weekly raid gold
+   loot.push(...R.loot); Object.assign(cur, R.currencies);   // results-screen rows & currency line
+   // after the results screen: if (R.more) moreRewards(this, R.more);   (replaces Session.moreRewards)
+   ```
+   Keep XP, Sunheart points and `bus.emit('clear', …)` as they are (hooks.js tracks the clear for tasks/titles/boards —
+   don't also call `tasks.track('clear')`). For `ChaosMode({ rested })` use `S.loot.restInfo(ch).chaos.rested`.
+2. **Stats** — in `spawnMe` and `refreshChar`: `const ctx = S.statContext(this.account, c); const st = S.applyMods(heroStats(c, ctx), ctx.extra);`
+   (stats.js consumes `ctx.rosterLevel`, `ctx.research.atk`, `ctx.cardBonus.dmgAdd`; `ctx.extra` adds card-set crit /
+   crit damage / damage taken / HP / heal & shield, research HP and title mods with the stats.js conventions).
+   Per-skill gems: `ctx.skills[skillId] = { dmg: 0.24, cdr: 0.16, ruin, swift }` → skill damage × (1 + dmg), cooldown ×
+   (1 − cdr) in the skill runner. `ctx.extra.elemRes` / `dotMul` and `ctx.econ.xpGain` need combat/XP support.
+3. **Bus events** hooks.js listens to: `kill` (needs `mine`), `clear`, `zone`, `talk`, `song`, `emote`, `gather`,
+   `collect`, `hone`/`facet` (legacy only; events with `sys: true` are skipped), `sail`, `pvp`, `death`, `boss_part`.
+   World owners: emit `collect { id: 'seed:goldmeadow:3' }` for any collectible id (hooks calls `collectibles.collect`),
+   `gather { skill }` without `items` to let the systems roll the node, `sail { dist | arrive }`, `pvp { win, mode }`,
+   `boss_part { boss, part: 'hornL' }`, `clear { content: { kind: 'inferno', floor } | { kind: 'fieldboss'|'chaosgate'|'island'|'ghostship', island? }, result }`.
+4. **Account** — no change required; every system lazily initialises and migrates its state (old
+   `roster.market = { listings, sold }`, `roster.stronghold`, `char.library`, premade `char.books`).
+5. The lead's `honingMenu` dialog and the `shop:general` vendor are superseded by hooks.js services (`honing` opens the
+   honing window, `shop:general` opens the vendor with `S.shops` stock and limits); `engr:*` actions and the
+   `engravings` window now read learned points (same UI shape as before).
 
 ---
 
 ## `loot` — reward tables & rolls (`loot.js`, tables in `src/data/loot.js`)
-
-Every reward function rolls, **grants** (unless `grant: false`) and returns a `LootResult`:
+Every reward function rolls, **grants** (unless `grant: false`) and returns:
 ```js
-LootResult = { ok, source: 'chaos:3'|'guardian:rimewing'|'abyss:oratory:0'|'raid:gorrath:normal:1'|…, title,
-  rows: [Row], bundle: Bundle, currencies: { silver, gold, … }  // only currencies, for the results screen line
-  resonance: bool, rested: bool, first: bool, gold: n,           // flags that applied
-  notes: [string],                                              // e.g. 'Rest bonus ×2', 'Weekly gold already claimed'
-  more?: { cost: { gold }, gate, mode, raid } }                  // raid only: the More Rewards offer
+LootResult = { ok, source: 'chaos:3'|'guardian:rimewing'|'abyss:oratory:0'|'raid:gorrath:normal:1'|'island:gold'|'inferno:20'…, title,
+  rows: [Row], bundle: Bundle, currencies: { silver, gold, … },  // currencies only — the results-screen line
+  resonance, rested, first, gold, notes: [string], more?: { cost: { gold }, raid, gate, mode } }
 ```
 | function | notes |
 |---|---|
-| `chaosReward(account, char, { tier: 1-4, cleared = true, rng, now, grant = true })` | base loot every clear; the first 2 clears per day add the **Resonance Chest** (×2 and extras rolled twice when rest ≥ 20, which is consumed). Increments `char.daily.chaos`. Research *Rift Cartography* +10% materials; card sets' `silverGain` applies to silver. |
-| `guardianReward(account, char, { guardian: 'rimewing'\|'cinderhorn'\|'sandmaw'\|'kurai', cleared, rng, now, grant })` | leapstone-heavy; 2 resonance clears/day with rest bonus like chaos. |
-| `abyssReward(account, char, { raid: 'oratory', gate: 0\|1, cleared, rng, now, grant })` | weekly first clear of each gate: gold + chest; later clears that week: small `repeat` table. |
-| `raidReward(account, char, { raid: 'gorrath', gate: 0\|1, mode: 'normal'\|'hard', cleared, rng, now, grant })` | gate gold once per gate per character per week (either difficulty) + chest; result has `more` (the More Rewards offer). Repeat clears: `notes` explains, practice silver only. |
-| `buyMoreRewards(account, char, { raid, gate, mode, rng, now })` | pays gold, rolls the More Rewards chest (once per gate per week). |
-| `fieldDrop(account, char, { kind: 'mob'\|'elite'\|'named', rng, grant })` | per-kill drops (cheap, often empty `rows`). |
-| `eventReward(account, char, { kind: 'fieldboss'\|'chaosgate'\|'island'\|'ghostship'\|'treasure', island?, focus?, rng, now, grant })` | open-world events; `island` = Adventure Island id (`S.tasks.calendar` gives the island and its `focus`: `'gold'\|'silver'\|'cards'\|'shards'\|'pips'`). Field boss & chaos gate pay once per event window per character. |
-| `infernoReward(account, char, { floor: 1-100, rng, now, grant })` | per floor; every 5th floor a boon chest; every 10th floor a weekly milestone chest (gold, gem pouch, card pack, horn shards from 20). |
-| `restInfo(char)` → `{ chaos: { rest, rested, resonanceLeft }, guardian: { … } }` | for the content menu ("Rested ×2"). |
-| `weeklyInfo(account, char, now)` → `{ raid: { 'gorrath:0': 'normal'\|null, … }, abyss: { 'oratory:0': bool, … }, inferno: { best, milestones: [10, 20…] }, more: {…} }` | what is still claimable this week. |
-| `preview(source)` → `{ title, mins, ilvl, sections: [{ name: 'Every clear'\|'Resonance Chest'\|…, rows: [{ id, name, grade, icon, min, max, chance }] }] }` | reward preview for any source id (`'chaos:3'`, `'guardian:kurai'`, `'abyss:oratory:1'`, `'raid:gorrath:hard:1'`, `'fieldboss'`, `'island:gold'`, `'inferno:40'`). |
-| `sources()` → `[{ id, title, ilvl, mins, kind }]` | every content source (for menus / the economy model). |
-| `simulateEconomy(opts)` | re-exported from `economy.js` (see below). |
+| `chaosReward(account, char, { tier: 1-4, cleared = true, rng, now, grant = true })` | base loot every clear; the first 2 clears per day add the **Resonance Chest** (×2 and extras rolled twice when rest ≥ 20, which is consumed). Calls `account.resets()`, increments `char.daily.chaos`. Research *Rift Cartography* +10% honing mats; `silverGain` (cards/guild) on silver. |
+| `guardianReward(account, char, { guardian: 'rimewing'\|'cinderhorn'\|'sandmaw'\|'kurai', … })` | leapstone-heavy; 2 resonance hunts/day with rest bonus; *Guardian Studies* +10% leapstones. |
+| `abyssReward(account, char, { raid: 'oratory', gate: 0\|1, … })` | weekly first clear of each gate: gold (250 / 400) + chest; later clears: small `repeat` table. |
+| `raidReward(account, char, { raid: 'gorrath', gate: 0\|1, mode: 'normal'\|'hard', … })` | gate gold (NM 500/800, HM 750/1200) **once per gate per character per week, either difficulty** + chest + `more` offer. Repeat clears: 10k silver + a note. |
+| `buyMoreRewards(account, char, { raid, gate, mode, rng })` | pays `moreCost` gold (NM 250/400, HM 400/600) once per gate per week → horns, leapstones, fusion, relic accessory / book chance. |
+| `fieldDrop(account, char, { kind: 'mob'\|'elite'\|'named', rng, grant })` | per-kill drops (often empty). |
+| `eventReward(account, char, { kind: 'fieldboss'\|'chaosgate'\|'island'\|'ghostship'\|'treasure', island?, focus?, rng, now })` | once per event window per character (hourly / 2-hourly). Island focus from `ISLANDS[island].focus` (`gold silver cards shards pips`). Rare collectibles: Gilded Atoll soul (2%), Heart of Tidebearer on the Ghost Ship (3%). |
+| `infernoReward(account, char, { floor: 1-100, rng, now })` | every floor; boon chest every 5th; weekly milestone chest every 10th (gold 30 + 3·floor, gem pouch, card pack, horns from 20); floor ≥ 50 grants the Heart of the Ember Titan once. |
+| `restInfo(char)` | `{ chaos: { rest, rested, resonanceLeft }, guardian: { … } }` |
+| `weeklyInfo(account, char, now)` | `{ raid: { 'gorrath:0': 'normal'\|'hard'\|null, … }, abyss: { 'oratory:0': bool, … }, inferno: { best, milestones }, more: { 'gorrath:1': 'offer'\|'bought' } }` |
+| `preview(source)` | `{ title, mins, ilvl, sections: [{ name, rows: [{ id, name, grade, icon, min, max, chance }] }] }` for `'chaos:3'`, `'guardian:kurai'`, `'abyss:oratory:1'`, `'raid:gorrath:hard:1'`, `'fieldboss'`, `'chaosgate'`, `'ghostship'`, `'treasure'`, `'island:gold'`, `'inferno:40'`, `'mob'`/`'elite'`/`'named'`. |
+| `sources()` | `[{ id, title, ilvl, mins, kind }]` |
+| `simulateEconomy(opts)` | re-export of `economy.js` |
 
 ## `economy` — `simulateEconomy(opts)` (`economy.js`)
-Plays a dedicated player from a Powerpass character (Vanguard +10, iLvl 1200) to Horned Tyrant +8 (iLvl 1420) in a
-sandbox account (never touches the real save): picks content by iLvl (chaos, guardians, abyss, hourly events,
-Inferno), opens pouches, sells tradable drops on the market, buys missing honing materials with gold, hones greedily
-(lowest piece first), and transfers Vanguard → Horned Tyrant at the raid vendor.
+Plays a dedicated player in a sandbox account (`SimAccount`, never the real save): Powerpass Starter Crate → hone Vanguard
+to +12 → reforge all six pieces at the raid vendor (→ Horned +6, 1400) → Horned +6 → +8 (1420). Activities: world events
+when live (waits up to 4 min for one), abyss gates once ≥ 1325, daily resonance chaos/guardian, then the best
+value-per-minute of chaos / guardian / Inferno; sells tradable drops, buys missing honing mats with gold, uses boosters
+when the base chance ≤ 35%, accepts & claims Wayfarer's Tasks.
 ```js
-simulateEconomy({ runs = 24, seed = 1, strategy = 'early'|'late', start: ms, maxHours = 12, log = false })
-→ { runs, strategy, target: 1420, entry: 1415,
-    hours: { median, p10, p90, mean, min, max },          // to iLvl 1420 (all pieces Horned +8)
-    entryHours: { median, p10, p90 },                     // to iLvl 1415 (raid entry)
-    transferHours: { median },
-    per: { chaos, guardian, abyss, events, inferno, taps, fails, transfers, marketBuys, marketSales },   // means
-    spent: { silver, gold, leapstone, fusion, shards, horn_shard, destruction_stone, guardian_stone },   // means
-    earned: { … same keys },
-    timeline: [{ min, ilvl, what }],                      // of the median run
-    text }                                                // printable summary
+simulateEconomy({ runs = 24, seed = 1, strategy = 'early' (reforge at +12) | 'late' (at +15), start (ms, default Wed 2026-09-30 10:05 UTC;
+                  runs rotate weekly Honing Support events), maxHours = 12, crate = true, verbose = false, debug = false })
+→ { runs, strategy, target: 1420, entry: 1415, finished,
+    hours: { median, p10, p90, mean, min, max }, entryHours: { median, p10, p90 }, transferHours: { median },
+    per: { chaos, guardian, abyss, events, inferno, taps, fails, transfers, marketBuys, marketSales, salesGold, buyGold },
+    spent: { silver, gold, leapstone, fusion, shards, horn_shard, destruction_stone, guardian_stone }, earned: { … },
+    timeline: [{ min, ilvl, what }], supportEvents: [names], results?: [per-run, with stall counts] (debug), text }
 ```
+Current tuning (48 runs): **legion ready median 2.6 h** (p10 1.8 h, p90 4.3 h), raid entry (1415) median 1.9 h, all
+six pieces reforged after ~15 min (crate-funded). ~60 honing taps. Binding resources: horn shards and gold (by design);
+without the crate ≈ 10 h; the 'late' (+15) path is gold-bound and much slower — reforging at +12 is the intended path.
 
-## `honing` — honing polish (`honing.js`)
+## `honing` (`honing.js`)
 | function | returns |
 |---|---|
-| `view(account, char, now)` | `HoningView` (below) |
+| `view(account, char, now)` | `{ iLvl, support: SupportEvent, stats: HoningStats, pieces: [Piece] }` |
 | `hone(account, char, slot, { boosters: { solar_grace, solar_blessing, solar_protection }, rng, now })` | `HoneResult` |
-| `expected(item, { boosters, now, account })` | `{ taps (mean attempts), p50, p90, perTap: Cost, cost: Cost (expected total), chances: [0..1 per tap] }` |
-| `transferPreview(account, char, slot)` | `{ ok, why, msg, from: { set, hone, iLvl }, to: { set: 'horned', hone, iLvl }, cost, costRows, missing }` |
-| `transfer(account, char, slot)` | `{ ok, item (new Horned Tyrant piece, equipped), old, cost }` — Vanguard **+12 or higher** only; hone becomes `round(hone / 2)` (+12 → +6 = 1400, +15 → +8 = 1420, +20 → +10); quality kept; costs horn shards + gold + sunshards (weapon 10 / 300 / 6000, armor 6 / 150 / 3500). |
-| `upgradeQuality(account, char, slot, { rng })` | `{ ok, old, rolled, now, cost }` (never goes down; silver + gold cost from gear.js) |
-| `supportEvent(now)` | `{ id, name, desc, costMul?, rateBonus?, energyMul?, maxHone?, ends }` — this week's **Honing Support** (rotates weekly: Artisan's Week, Lucky Forge, Silver Lining, Stonemason's Discount, Leap of Faith, Shardstorm) |
-| `stats(account)` | `{ taps, wins, fails, guaranteed, luckiest: Share\|null, unluckiest: Share\|null, history: [Share ×≤20] }` |
-| `TRANSFER` | `{ from: 'vanguard', to: 'horned', minHone: 12, cost: { weapon: Cost, armor: Cost } }` |
+| `chanceOf(item, boosters, now)` | `{ base, raw, event, failBonus, boost, total, energy, guaranteed, fails }` (0..1) |
+| `costOf(account \| null, item, now)` | Cost of one attempt after the weekly event and research discounts |
+| `expected(item, { boosters, now, account })` | `{ taps (mean), p50, p90, perTap: Cost, cost: Cost, chances: [p per tap] }` |
+| `transferPreview(account, char, slot)` / `transfer(account, char, slot)` | preview `{ ok, why, msg, from, to: { set: 'horned', hone, iLvl }, cost, costRows, missing }` / `{ ok, item, old, cost }` — **Vanguard +12 or higher only**; hone becomes `round(hone / 2)` (+12 → +6 = 1400, +15 → +8 = 1420, +20 → +10); quality kept; cost weapon 10 horns / 200 gold / 4,000 sunshards, armor 6 / 100 / 2,500. |
+| `upgradeQuality(account, char, slot, { rng })` | `{ ok, old, rolled, now, cost }` (never lowers quality) |
+| `supportEvent(now)` | `{ id, name, desc, costMul?, rateMul?, maxHone?, energyMul?, ends }` — weekly **Honing Support** rotation: Artisan's Week (energy ×1.5), Lucky Forge (base ×1.2 on +1…+15), Silver Lining (silver −40%), Stonemason's Discount (stones −30%), Leap of Faith (leapstones & fusion −25%), Shardstorm (sunshards −50%) |
+| `stats(account)` | `{ taps, wins, fails, guaranteed, luckiest, unluckiest, history: [Share ×≤20] }` |
+| `TRANSFER`, `SUPPORT_EVENTS` | constants |
 ```js
-HoningView = { iLvl, support: SupportEvent, stats: HoningStats,
-  pieces: [{ slot, uid, name, set, setName, grade, icon, hone, max, iLvl, nextILvl, quality,
-    canHone, why: null|'max'|'story'|'materials', msg,
-    chance: { base, failBonus, boost, event, total },          // 0..1
-    energy: 0..1, guaranteed: bool, fails, taps,               // Artisan's Energy & pity at this level
-    cost: Cost, costRows: [Row], missing: Cost,
-    boosters: { solar_grace: { have, max, add }, solar_blessing: {…}, solar_protection: {…} },  // add = chance per piece
-    expected: { taps, cost },
-    transfer: null | TransferPreview }] }
-HoneResult = { ok, why?, msg?, need?,                          // why: 'max'|'story'|'materials'|'booster'
-  success, guaranteed, slot, name, from, to, hone, iLvl, chance, base,
-  energy (after, 0..1), energyGain, fails, taps, cost: Cost, costRows: [Row],
-  share: null | Share,                                         // on success
-  notes: [Notification] }                                      // task/title progress
+Piece = { slot, slotName, uid, name, set, setName, grade, icon, hone, max, iLvl, nextILvl, quality,
+  canHone, why: null|'story'|'max'|'materials', msg, chance: { base, failBonus, boost, event, total }, energy, guaranteed, fails, taps,
+  cost, costRows, missing, boosters: { solar_grace: { have, max, add }, … }, expected: { taps, cost },
+  transfer: null | { ok, can, why, msg, from, to, cost, costRows, missing } }
+HoneResult = { ok, why?, msg?, need?, missing?, success, guaranteed, slot, name, from, to, hone, iLvl, chance, base,
+  energy, energyGain, fails, taps, cost, costRows, share: null | Share, notes }
 Share = { kind: 'hone', name, slot, set, from, to, taps, fails, chance, base, energy, guaranteed,
-  luck: 0..1 (share of Shardbearers who needed MORE taps), label: 'Lucky'|'Average'|'Unlucky'|'Artisan',
-  spent: Cost, t, char: { name, cls } }
+  luck: 0..1 (share of Shardbearers who needed MORE taps), label: 'Lucky'|'Average'|'Unlucky'|'Artisan', spent, t, char: { name, cls } }
 ```
 
-## `engravings` — books, equipping, stone faceting, build summary (`engravings.js`)
-Learned points: a book adds its points (Rare 5, Epic 10, Legendary 20) to `char.learned[engr]` (max 80). Equipping
-one of 2 slots gives +3 nodes per 20 learned points (max +12).
+## `engravings` (`engravings.js`)
+Books add points (Rare 5, Epic 10, Legendary 20) to `char.learned[engr]` (max 80); each 20 points allow +3 equipped
+nodes (max +12) in one of 2 slots. Stones: `gear.facet` rules (75% start, −10% on success, +10% on failure, 25–75%).
 | function | returns |
 |---|---|
-| `view(account, char)` | `{ slots: [{ slot: 0\|1, id, name, nodes, max } \| null ×2], learned: [{ id, name, points, max: 80, equipMax }], books: [{ uid, engr, name, grade, points }] (unread in bag), summary: Summary, stones: [StoneView] (bag + equipped) }` |
+| `view(account, char)` | `{ slots: [{ slot, id, name, nodes, max } \| null ×2], learned: [{ id, name, points, max: 80, equipMax }], books: [{ uid, engr, name, grade, points }] (unread), summary: Summary, stones: [StoneView] }` |
 | `readBook(account, char, uid)` | `{ ok, engr, points, total, equipMax }` |
-| `equip(account, char, slot, engr, nodes?)` | `{ ok, slot, id, nodes }` (nodes defaults to the max allowed; 3/6/9/12) |
-| `unequip(account, char, slot)` | `{ ok }` |
+| `equip(account, char, slot, engr, nodes?)` / `unequip(account, char, slot)` | `{ ok, slot, id, nodes }` / `{ ok }` |
+| `learned(char)` / `equipMax(char, engr)` | learned map (migrates `char.books`/`char.library`) / 0–12 |
 | `summary(char)` | `Summary` |
-| `stoneView(stone)` | `StoneView` |
-| `facet(account, char, stoneUid, line: 0\|1\|2, { rng })` | `{ ok, success, chance, next, done, cost, stone: StoneView, share: null \| StoneShare, notes }` — costs silver per tap (Legendary 1,200 · Relic 1,680 · Ancient 2,200) |
-| `bestStone(account)` | `StoneShare \| null` (roster best by positive nodes) |
+| `stoneView(stone, equipped?)` / `facet(account, char, stoneUid, line, { rng })` | `StoneView` / `{ ok, success, chance, next, done, cost: { silver }, stone: StoneView, share: StoneShare\|null, notes }` (silver per tap: Legendary 1,200 · Relic 1,680 · Ancient 2,200) |
+| `bestStone(account)` | best finished `StoneShare` |
 ```js
-Summary = { list: [{ id, name, desc, nodes, level: 0..3, negative, cls, sources: [{ kind: 'book'|'accessory'|'stone'|'class', name, v }] }],
-  threes, fiveByThree: bool, label: '5x3'|'3 3 3 2 1'…, negatives: [{ id, name, level }] }
-StoneView = { uid, name, grade, facets: 6..10, chance: 0.25..0.75, done, equipped,
-  lines: [{ id, name, negative, slots: [1|-1|0 …], success, fail, left, nodes, level }] ×3,
-  score: [a, b, neg], label: '97', is97: bool, cost: { silver } }
-StoneShare = { kind: 'stone', label: '97', score, lines: [name…], grade, is97, t, char: { name, cls } }
+Summary = { list: [{ id, name, desc, nodes, level, negative, cls, sources: [{ kind: 'book'|'accessory'|'stone'|'class', name, v }] }],
+  threes, fiveByThree, label: '5x3'|'3 3 2 1'…, negatives: [{ id, name, level }] }
+StoneView = { uid, name, grade, facets, chance, done, equipped, lines: [{ id, name, negative, slots: [1|-1|0], success, fail, left, nodes, level }] ×3,
+  score: [a, b, neg], label: '97'|'10/7'…, is97, cost: { silver } }
+StoneShare = { kind: 'stone', label, score, lines: [name], grade, is97, t, char }
 ```
 
-## `cards` — collection, packs, awakening, deck, sets (`cards.js`, catalog `src/data/cards.js`)
-37 cards (grades 2–5), 5 sets: **Tides of Light** (6: damage up to +15% at 30 awakening), **Pip Parade** (6:
-+silver / +xp), **Horns of the Legion** (5: crit & crit damage), **Storm & Ember** (6: elemental resistance,
-damage-over-time), **Wardens of Brighthold** (5: HP, heal/shield, damage taken).
+## `cards` (`cards.js`, catalog `src/data/cards.js`)
+37 cards (grades 2–5) · sets **Tides of Light** (6: light res, damage +4/7/10/15% at 0/12/18/30 awakening), **Pip Parade**
+(6: silver & xp), **Horns of the Legion** (5: crit +3%, crit damage up to +25%), **Storm & Ember** (6: elemental res,
+DoT +10/20%, damage +6% at 30), **Wardens of Brighthold** (5: HP, heal/shield, damage taken). In a set chain only the best
+reached bonus applies. Awakening n→n+1 costs 1/2/3/4/5 duplicates + grade × 800 × (n+1) silver.
 | function | returns |
 |---|---|
-| `view(account)` | `CardsView` |
-| `openPack(account, packId = 'card_pack', { rng })` | `{ ok, pack, cards: [{ id, name, grade, isNew, dupes, awaken }], choose: null \| [cardId ×3] }` — consumes one pack item; the Legendary Card Selector returns `choose` (resolve with `choose`) |
-| `choose(account, index)` | `{ ok, card }` resolves the pending selector (`roster.cardChoice`) |
-| `awaken(account, cardId)` | `{ ok, id, awaken, cost: { dupes, silver } }` — dupes 1/2/3/4/5, silver grade × 800 × (level + 1) |
-| `setDeck(account, slot: 0..5, cardId \| null)` | `{ ok, deck }` (a card can sit in one slot only) |
-| `autoDeck(account)` | `{ ok, deck, set }` — fills the deck with the set giving the most value |
-| `mods(account)` | `{ mods: { dmgAdd, crit, critDmg, dmgTaken, hpMaxMul, healMul, shieldMul, silverGain, xpGain, elemRes, dotMul, seedSense }, active: [{ set, name, desc }] }` |
-| `CARDS`, `CARD_SETS`, `CARD_PACKS` | catalog re-exports |
-```js
-CardsView = { deck: [cardId|null ×6], deckAwaken,
-  collection: [{ id, name, grade, kind: 'npc'|'pip'|'boss'|'legend', sets: [setId], owned, dupes, awaken, maxAwaken: 5,
-    canAwaken, awakenCost: { dupes, silver } | null, inDeck, source, flavor, icon: 'card:<id>' }],
-  sets: [{ id, name, cards: [{ id, name, owned, inDeck, awaken }], inDeck, awk,
-    bonuses: [{ n, awk, desc, active, reached }] }],
-  mods, active: [{ set, name, desc }],
-  packs: [{ id, name, count }], choice: null | { pack, options: [{ id, name, grade }] },
-  owned, total }
-```
+| `view(account)` | `{ deck, deckAwaken, collection: [{ id, name, grade, kind, sets, owned, dupes, awaken, maxAwaken, canAwaken, awakenCost, inDeck, source, flavor, icon }], sets: [{ id, name, cards: [{ id, name, owned, inDeck, awaken }], inDeck, awk, bonuses: [{ n, awk, desc, active, reached }] }], mods, active, packs: [{ id, name, count }], choice: null \| { pack, options: [{ id, name, grade }] }, owned, total }` |
+| `openPack(account, packId = 'card_pack', { rng })` | `{ ok, pack, cards: [{ id, name, grade, isNew, dupes, awaken }], choose: null \| [id ×3] }` (packs: `card_pack`, `card_pack_epic`, `card_pack_pip`, `card_pack_legend` = selector) |
+| `choose(account, index)` / `addCard(account, id, n)` | resolve the selector / add directly |
+| `awaken(account, id)` / `setDeck(account, slot, id\|null)` / `autoDeck(account)` | `{ ok, id, awaken, cost }` / `{ ok, deck }` / `{ ok, deck, set }` |
+| `mods(account)` (= `cardMods`) | `{ mods: { dmgAdd, crit, critDmg, dmgTaken, hpMaxMul, healMul, shieldMul, silverGain, xpGain, elemRes, dotMul, seedSense }, active: [{ set, name, desc }] }` |
+| `cardIcon(id)` | portrait icon id |
 
-## `gems` — 11 sockets, fusion (`gems.js`)
-A socketed gem is the gem Item plus `skill` (skill id). **Ruinstone** = +damage%, **Swiftstone** = −cooldown% for its
-skill (`gear.gemValue`). One Ruinstone and one Swiftstone per skill.
+## `gems` (`gems.js`)
 | function | returns |
 |---|---|
-| `view(account, char)` | `{ sockets: [{ idx, gem: Item\|null, skill, skillName, type, level, value, desc }] ×11, bag: [Item], fusable: [{ type, level, count, can, cost }], skills: [{ id, name, ruin, swift }], mods }` |
-| `socket(account, char, gemUid, idx, skillId)` | `{ ok, replaced: Item\|null }` (replaced gem returns to the bag) |
-| `unsocket(account, char, idx)` | `{ ok, gem }` |
-| `assign(account, char, idx, skillId)` | `{ ok }` re-target a socketed gem |
-| `fuse(account, char, type: 'ruin'\|'swift', level: 1..9, { count = 1 })` | `{ ok, made: [Item], cost }` — 3 gems of a level → 1 of the next (always succeeds), costs silver `level × 2,000` each |
-| `openPouch(account, char, pouchId = 'gem_pouch', { rng })` | `{ ok, gem: Item }` (`gem_pouch` Lv.1–3, `gem_pouch_hi` Lv.3–5) |
-| `mods(char)` | `{ [skillId]: { dmg: 0.24, cdr: 0.16, ruin: lv, swift: lv } }` |
+| `view(account, char)` | `{ sockets: [{ idx, gem, skill, skillName, type, level, value, desc }] ×11, bag: [Item], fusable: [{ type, level, count, cost, can }], skills: [{ id, name, ruin, swift }], mods }` |
+| `socket(account, char, gemUid, idx, skillId)` / `unsocket(account, char, idx)` / `assign(account, char, idx, skillId)` | `{ ok, replaced }` / `{ ok, gem }` / `{ ok }` — one Ruinstone + one Swiftstone per skill |
+| `fuse(account, char, type, level, { count })` / `fuseUids(account, char, [uid ×3])` | `{ ok, made: [Item], cost }` — 3 → 1, always succeeds, silver `level × 2,000` |
+| `openPouch(account, char, 'gem_pouch'\|'gem_pouch_hi', { rng })` | `{ ok, gem }` (Lv.1–3 / Lv.3–5) |
+| `mods(char)` (= `gemMods`) | `{ [skillId]: { dmg, cdr, ruin, swift } }` (Ruinstone 3…40%, Swiftstone 2…20%) |
+| `skillList(char)`, `sockets(char)`, `fuseCost(level)` | helpers |
 
-## `market` — AI auction house & crystal exchange (`market.js`)
-Order books for every tradable item (materials, battle items, trade goods, food, engraving books `book:<engr>`, gems
-`gem:<ruin|swift>:<lv>`) plus unique accessory listings. Prices are **gold per bundle** (`unit` items per bundle:
-stones ×10, trade goods ×100, most others ×1). Reference prices drift with deterministic supply/demand noise over real
-time and react to your trades; SimPlayers (named via `social/names.js simName`) relist every 10 minutes.
+## `market` (`market.js`)
+Order books (gold per **bundle**; `unit` = 1 if the item is worth ≥ 5 g, 10 if ≥ 0.5 g, 100 if ≥ 0.05 g, else 1,000;
+prices below 100 g have 0.1 g steps) for every tradable ITEMS id, cooking, `book:<engr>` and `gem:<type>:<lv>`; unique
+accessory listings. Reference prices drift with deterministic noise over real time (+ a weekly post-reset demand bump)
+and move with your trades (decaying over ~6 h); SimPlayer listings (named with `simName`) relist every 10 minutes.
 | function | returns |
 |---|---|
 | `categories()` | `[{ id: 'honing'\|'battle'\|'trade'\|'food'\|'book'\|'gem'\|'accessory', name, items: [id] }]` |
-| `browse(account, { cat, q, now })` | `[{ id, name, grade, icon, cat, unit, price, ref, change24, volume24, have }]` (price = cheapest ask per bundle) |
-| `book(account, id, now)` | `{ id, name, grade, icon, cat, unit, ref, price, change24, have, asks: [{ key, seller, price, qty, you }], history: [{ t, price, vol }] (24 h, hourly), suggest }` |
-| `history(id, { now, hours = 168, step = 3600e3 })` | `[{ t, price, vol }]` (for charts) |
-| `quote(account, id, qty, now)` | `{ ok, qty, cost, avg, fills: [{ seller, price, qty }] }` (no side effects) |
-| `buy(account, char, id, qty, { now, maxPrice })` | `{ ok, bought, spent, avg, fills, rows }` — cheapest first; gold only |
-| `list(account, char, id, qty, price, { now, uid })` | `{ ok, listing }` — takes the goods (stackables in bundles of `unit`; unique items by `uid`: accessories, gems, books). **5% fee** on sale (research *Market Contacts* −1%). Listings **expire after 24 h** (items return by mail). |
-| `listings(account, now)` | `[Listing]` your listings (sales processed first) |
-| `cancel(account, char, listingId, now)` | `{ ok, returned: [Row] }` |
-| `tick(account, now)` | `[{ kind: 'sold'\|'expired', text, gold? }]` — processes your listings (proceeds & returns arrive by **mail**) |
-| `accessories(account, { slot, engr, now })` | `[{ key, seller, price, item: Item }]` (SimPlayer unique listings, relisted every 10 min) |
-| `buyAccessory(account, char, key, now)` | `{ ok, item, spent }` |
-| `exchange(now)` | `{ buy, sell, history: [{ t, buy }] }` — gold per 100 crystals (buy = what 100 crystals cost; sell = what you get for 100) |
-| `buyCrystals(account, hundreds, now)` / `sellCrystals(account, hundreds, now)` | `{ ok, crystals, gold }` |
-| `fee(account)` | `0.05` minus perks |
-| `price(id, now)` | reference price per bundle |
-| `ITEMS_MARKET` | `{ [id]: { id, name, grade, icon, cat, unit, base, vol } }` |
+| `browse(account, { cat, q, now, char })` | `[{ id, name, grade, icon, cat, unit, price (cheapest ask), ref, change24, volume24, have }]` |
+| `book(account, id, now, char)` | `{ id, name, grade, icon, cat, unit, ref, price, change24, have, asks: [{ key, seller, price, qty, you }], history (24 h), suggest }` |
+| `history(id, { now, hours = 168, step = 1 h })` / `price(id, now)` / `refPrice(account, id, now)` | `[{ t, price, vol }]` / reference price (pure) / including your trades |
+| `quote(account, id, qty, now)` / `buy(account, char, id, qty, { now, maxPrice })` | `{ ok, qty, cost, avg, fills }` / `{ ok, bought, spent, avg, fills, rows }` (cheapest first; gold) |
+| `list(account, char, id, qty, price, { now, uid })` | `{ ok, listing }` — stackables in bundles; books/gems/accessories by `uid`. **5% fee** on sale (−1% with *Market Contacts*), **listings expire after 3 days** |
+| `listings(account, now)` / `cancel(account, char, id, now)` | `[Listing]` / `{ ok, returned: [Row] }` |
+| `tick(account, now)` | `[{ kind: 'sold'\|'expired', text, gold?, id }]` — proceeds and expired goods arrive **by mail** |
+| `accessories(account, { slot, engr, now })` / `buyAccessory(account, char, key, now)` / `accessoryPrice(item)` | `[{ key, seller, price, item, you }]` / `{ ok, item, spent }` / fair price |
+| `exchange(now, { hours })` / `buyCrystals(account, hundreds, now)` / `sellCrystals(account, hundreds, now)` | `{ buy, sell, history: [{ t, buy }] }` (gold per 100 crystals) / `{ ok, crystals, gold }` |
+| `fee(account)`, `ITEMS_MARKET`, `FEE`, `EXPIRY` | |
 ```js
-Listing = { id, itemId, name, grade, icon, unit, qty (bundles left), sold, price (per bundle), t, expires, left,
-  status: 'active'|'sold'|'expired', item?: Item }
+Listing = { id, itemId, name, grade, icon, unit, qty (bundles left), sold, price (per bundle), t, expires, left, status: 'active'|'sold'|'expired'|'cancelled', proceeds, item? }
 ```
 
-## `stronghold` — Brightwater Isle (`stronghold.js`, data `src/data/stronghold.js`)
-Buildings (Manor, Workshop, Research Hall, Crew Barracks, Garden, Pet Ranch), 13 research projects, 19 workshop
-recipes, 8 dispatch missions (10 min – 4 h), action energy (5,000 max, +180/h). Real time.
+## `stronghold` (`stronghold.js`, data `src/data/stronghold.js`)
+Buildings (Manor caps the others; level L needs stronghold level (L−1)·3), 13 research projects (tiers by Research Hall
+level 1/3/6), 19 workshop recipes, crew & 8 dispatch missions (10 min – 4 h, success = 25% + 75% × crew power / mission
+power, role match ×1.25), garden & pet ranch yields, action energy (5,000, +180/h). All real time.
 | function | returns |
 |---|---|
 | `view(account, now)` | `StrongholdView` |
-| `upgradeBuilding(account, id, now)` | `{ ok, building, level, levelUps }` |
-| `researchList(account, now)` / `startResearch(account, id, now)` | rows below / `{ ok, research, t1 }` |
-| `recipes(account, now)` / `recipeQuote(account, recipeId, qty, now)` | `[Quote & { can }]` / `Quote = { recipe, name, cat, qty, cost, costRows, energy, mins, out, outRows, locked }` |
-| `craft(account, recipeId, qty, now)` / `cancelCraft(account, jobId, now)` / `collectCrafts(account, char, now)` | `{ ok, job }` / `{ ok, refunded }` / `{ ok, rows, jobs }` |
-| `missions(account, now)` | `[{ id, name, tag, mins, crew, power, xp, rewards: [{ id, min, max, chance }], freeCrew }]` |
-| `dispatchChance(account, missionId, crewIds, now)` | 0.1..0.98 |
-| `dispatch(account, missionId, crewIds, now)` / `collectDispatch(account, char, jobId, { rng, now })` | `{ ok, job }` / `{ ok, success, rows, mission, levelUps }` |
-| `recruitCrew(account, { pay: 'contract'\|'silver', rng, now })` | `{ ok, crew }` |
+| `buildingInfo(account, id, now)` / `upgradeBuilding(account, id, now)` | `{ id, name, desc, level, max, effect, next }` / `{ ok, building, level, levelUps }` |
+| `researchList(account, now)` / `startResearch(account, id, now)` / `perks(account)` | rows / `{ ok, research, t1 }` / summed perks `{ chaosLoot, honeSilver, craftSpeedBattle, lifeEnergy, dispatchSlots, atk, hp, guardianLoot, marketFee, dispatchChance, foodYield, fusionCost, craftSlots }` |
+| `recipes(account, now)` / `recipeQuote(account, recipe, qty, now)` / `craft(account, recipe, qty, now)` / `cancelCraft(account, jobId, now)` / `collectCrafts(account, char, now)` | `[Quote & { can }]` / `{ recipe, name, cat, qty, cost, costRows, energy, mins, out, outRows, locked }` / `{ ok, job }` / `{ ok, refunded }` / `{ ok, rows, jobs }` |
+| `missions(account, now)` / `dispatchChance(account, mission, crewIds, now)` / `dispatch(account, mission, crewIds, now)` / `collectDispatch(account, char, jobId, { rng, now })` / `recruitCrew(account, { pay, rng, now })` | … / 0.1–0.98 / `{ ok, job }` / `{ ok, success, rows, mission, levelUps }` / `{ ok, crew }` |
 | `collectGarden(account, now)` / `stationPet(account, petId, now)` / `collectRanch(account, { rng, now })` | `{ ok, rows }` |
-| `rush(account, 'research'\|'craft'\|'dispatch', jobId, now)` | `{ ok, cost: { crystals } }` (1 crystal per started 10 min) |
-| `perks(account)` | `{ chaosLoot, honeSilver, craftSpeedBattle, lifeEnergy, dispatchSlots, atk, hp, guardianLoot, marketFee, dispatchChance, foodYield, fusionCost, craftSlots }` (sums) |
-| `energy(account, now)` | `{ now, max, perHour }` |
-| `tick(account, now)` | `[{ kind: 'research', id, name, text }]` |
+| `rush(account, 'research'\|'craft'\|'dispatch', jobId, now)` | `{ ok, cost: { crystals } }` (1 per started 10 min) |
+| `energy(account, now)` / `addXp(account, n, now)` / `tick(account, now)` / `craftSlots` / `dispatchSlots` / `crewCap` | `{ now, max, perHour }` / levels gained / `[{ kind: 'research', id, name, text }]` |
 ```js
 StrongholdView = { level, xp, xpNext, max, energy, energyMax,
-  buildings: [{ id, name, desc, level, max, effect: { text, … } | null,
-    next: null | { level, cost, costRows, reqStronghold, can, why, effect } }],
+  buildings: [{ id, name, desc, level, max, effect: { text, … } | null, next: null | { level, cost, costRows, reqStronghold, can, why, effect } }],
   research: [{ id, name, tier, desc, perk, cost, costRows, energy, mins, done, active, locked, available, left }],
-  researching: null | { id, name, t0, t1, left, pct },
-  perks, crafts: [{ id, recipe, name, qty, t0, t1, left, pct, done, out: [Row] }], craftSlots,
-  dispatch: [{ id, mission, name, crew: [crewId], chance, t0, t1, left, done }], dispatchSlots,
-  crew: [{ id, name, role, power, xp, busy }], crewCap,
-  garden: { level, ready: [Row], since }, ranch: { level, pets: [petId], slots }, notes: [Notification] }
+  researching: null | { id, name, t0, t1, left, pct }, perks,
+  crafts: [{ id, recipe, name, qty, t0, t1, left, pct, done, out: [Row] }], craftSlots,
+  dispatch: [{ id, mission, name, crew, chance, t0, t1, left, done }], dispatchSlots,
+  crew: [{ id, name, role, power, xp, busy }], crewCap, garden: { level, ready: [Row], since }, ranch: { level, pets, slots }, notes }
 ```
 
-## `lifeskills` — trade skills (`lifeskills.js`, data `src/data/lifeskills.js`)
-Foraging `forage`, Logging `log`, Mining `mine`, Hunting `hunt`, Fishing `fish`, Archaeology `dig`. Levels 1–30,
-Life Energy 10,000 (+300/h real time, research *Restful Breeze* +5%).
+## `lifeskills` (`lifeskills.js`, data `src/data/lifeskills.js`)
+`forage log mine hunt fish dig`, levels 1–30 (`xpToNext(lv) = 80·lv^1.55 + 120`), Life Energy 10,000 (+300/h real time;
+*Restful Breeze* +5%), drops unlock at levels 1/5/10 (rare: Sunbloom, Elder Heartwood, Starsteel, Pristine Pelt, Sea
+Pearl, Relic Idol; Glimmer Ore = `gem_ore`), tools tier 1–4 (yield +0/10/20/35%, rare ×1/1.25/1.5/2, 500 uses).
 | function | returns |
 |---|---|
-| `view(account, now)` | `{ energy, energyMax, perHour, skills: [{ id, name, verb, level, xp, xpNext, energy (cost), tool: { tier, name, dur, max } \| null, drops: [{ id, name, grade, icon, rare, level, unlocked }] }] }` |
-| `gather(account, char, skill, { rng, now, node })` | `{ ok, rows, xp, level, levelUp, energy, rare }` (fish/dig: use the minigames below; `gather` resolves them as an average catch) |
-| `fishCast(account, { rng, now })` | `{ ok, cast: { id, biteAt (s), window (s), perfect (s), rare: bool, energy } }` — spend energy on cast; the float bobs at `biteAt` s |
-| `fishReel(account, char, cast, reactAt, { rng })` | `{ ok, result: 'perfect'\|'good'\|'early'\|'late', rows, xp, levelUp }` — reactAt = seconds after the cast when the player pulled; in `[biteAt, biteAt + window]` succeeds, the first `perfect` s is a perfect catch (×1.5, rare ×2) |
-| `digStart(account, { rng, now })` | `{ ok, dig: { id, speed (cycles/s), zone: [a, b], perfect: [c, d], energy } }` — a meter sweeps 0→1→0 |
-| `digStop(account, char, dig, pos 0..1, { rng })` | `{ ok, result: 'perfect'\|'good'\|'poor', rows, xp, levelUp }` |
-| `eat(account, foodId, now)` | `{ ok, energy }` (food1 +500, food2 +700, food3 +1,000, food4 +1,500, life_tonic +1,000) |
-| `buyTool(account, skill, tier)` | `{ ok, tool }` (silver; tier 1–4: yield +0/10/20/35%, rare ×1/1.25/1.5/2, 500 uses) |
-| `energy(account, now)` | `{ now, max, perHour }` |
+| `view(account, now)` | `{ energy, energyMax, perHour, skills: [{ id, name, verb, level, xp, xpNext, energy, anim, tool: { tier, name, dur, max }, drops: [{ id, name, grade, icon, rare, level, unlocked }] }] }` |
+| `gather(account, char, skill, { rng, now })` | `{ ok, rows, xp, level, levelUp, energy, rare }` |
+| `fishCast(account, { rng, now })` / `fishReel(account, char, cast, reactAt, { rng, now })` | `{ ok, cast: { id, biteAt (s), window (s), perfect (s), rare, energy } }` / `{ ok, result: 'perfect'\|'good'\|'early'\|'late', rows, xp, levelUp }` — pull in `[biteAt, biteAt + window]`; the first `perfect` seconds = ×1.5 yield, rare ×2 |
+| `digStart(account, { rng, now })` / `digStop(account, char, dig, pos 0..1, { rng, now })` | `{ ok, dig: { id, speed (cycles/s), zone: [a, b], perfect: [c, d], energy } }` / `{ ok, result: 'perfect'\|'good'\|'poor', rows, xp, levelUp }` |
+| `eat(account, foodId, now)` / `buyTool(account, skill, tier, now)` / `energy(account, now)` | `{ ok, energy }` (food1 500, food2 700, food3 1,000, food4 1,500, life_tonic 1,000) / `{ ok, tool }` / `{ now, max, perHour }` |
 
-## `collectibles` — Pip Seeds & co, Adventure Tome (`collectibles.js`, data `src/data/collectibles.js`)
-Catalogs: 120 Pip Seeds (`seed:<zone>:<n>`, zones `solhaven goldmeadow thornwood ashen_ridge pipsprout islands`),
-8 Island Souls, 6 Giant's Hearts, 10 Masterpieces, 8 Omnium Stars, 10 Sea Bounties, 6 World Tree Leaves, 12 Vistas —
-each `{ id, name, zone, hint, source }` (world/content owners place them by id). Reward tiers per type (skill point
-potions, card packs, roster xp, pets, mounts, titles; the Sunbloom Pip Wagon legendary mount at 120 seeds).
+## `collectibles` (`collectibles.js`, data `src/data/collectibles.js`)
+120 Pip Seeds `seed:<zone>:<n>` (solhaven 16, goldmeadow 24, thornwood 22, ashen_ridge 18, pipsprout 28, islands 12),
+8 Island Souls `soul:<island>` (islands: Lanternfall Isle, Brinehollow, Gilded Atoll, Whistlewind Rock, Ember Reef,
+Mirrorwater Isle, Hushwater Atoll, Skyreach Spire — `ISLANDS[id] = { id, name, focus, gimmick, soul }`), 6 Giant's Hearts,
+10 Masterpieces, 8 Omnium Stars, 10 Sea Bounties, 6 World Tree Leaves, 12 Vistas — each `{ id, name, zone, hint, source }`.
+Reward tiers per type (skill point potions, card packs, roster xp, pets, mounts, titles; Sunbloom Pip Wagon at 120 seeds).
 | function | returns |
 |---|---|
-| `view(account)` | `{ types: [TypeView], tome: [TomeRegion], seedsByZone: { zone: { have, total } } }` |
-| `collect(account, char, type, id)` | `{ ok, isNew, type, id, name, have, total, ready: [n] }` — type `'seeds'\|'souls'\|'hearts'\|'masterpieces'\|'stars'\|'bounties'\|'leaves'\|'vistas'` (also records the tome) |
-| `claim(account, char, type, n)` | `{ ok, rows }` (claim reward tier `n`) |
-| `tomeRecord(account, region, kind, id)` | `{ ok, isNew, pct }` — kind `'bosses'\|'npcs'\|'lore'\|'cuisine'` (seeds & vistas are recorded by `collect`) |
-| `tomeClaim(account, char, region, pct)` | `{ ok, rows }` (tiers at 30/60/90/100%) |
-| `zoneList(zone)` | `[{ id, type, name, hint }]` everything placeable in a zone |
-| `COLLECTIBLES`, `TOME`, `ISLANDS` | catalogs (`ISLANDS[id] = { id, name, gimmick, soul, focus }`) |
+| `view(account)` | `{ types: [TypeView], tome: [TomeRegion], seedsByZone: { zone: { name, have, total } } }` |
+| `collect(account, char, type, id)` | `{ ok, isNew, type, id, name, have, total, ready: [n], zoneDone, notes }` |
+| `claim(account, char, type, n)` | `{ ok, rows }` |
+| `tomeRecord(account, region, 'bosses'\|'npcs'\|'lore'\|'cuisine', id, char?)` / `tomePct(account, region)` / `tomeClaim(account, char, region, 0.3\|0.6\|0.9\|1)` | `{ ok, isNew, pct }` / 0..1 / `{ ok, rows }` (seeds & vistas count automatically) |
+| `find(id)` / `zoneList(zone)` | `{ …, type }` / `[{ id, type, name, hint }]` everything placeable in a zone (for world owners) |
 ```js
-TypeView = { id, name, icon, have, total, pct,
-  tiers: [{ n, rows: [Row], claimed, ready }], next: null | { n, rows },
-  items: [{ id, name, zone, hint, source, found }] }
-TomeRegion = { id, name, pct, sections: [{ kind, name, have, total, entries: [{ id, name, found, hint }] }],
-  rewards: [{ pct, rows: [Row], claimed, ready }] }
+TypeView = { id, name, icon, have, total, pct, tiers: [{ n, rows, claimed, ready }], next: null | { n, rows }, items: [{ id, name, zone, hint, source, found }] }
+TomeRegion = { id, name, pct, sections: [{ kind: 'bosses'|'npcs'|'seeds'|'vistas'|'lore'|'cuisine', name, have, total, entries: [{ id, name, found, hint }] }], rewards: [{ pct, rows, claimed, ready }] }
 ```
+Regions: `solhaven goldmeadow thornwood ashen_ridge pipsprout glass_sea`; Solhaven's NPC entries use `data/npcs.js` ids.
 
-## `rapport` — 8 NPCs (`rapport.js`, data `src/data/rapport.js`)
-`brannoc`, `seraphine`, `mirelle`, `wren`, `maren`, `tumbleroot` (Solhaven — ids match `data/npcs.js` `rapport`),
-`bramblebeard` (Pipsprout Hollow), `morwenna` (Brinehollow). Stages Neutral → Amicable (1,000) → Friendly (3,000) →
-Trusted (6,000) → Honored (10,000) → Devoted (16,000). 6 songs and 6 emotes per NPC per day.
+## `rapport` (`rapport.js`, data `src/data/rapport.js`)
+`brannoc seraphine mirelle wren maren tumbleroot` (Solhaven; = `data/npcs.js` `rapport` ids), `bramblebeard`
+(Pipsprout), `morwenna` (Brinehollow). Stages Neutral 0 → Amicable 1,000 → Friendly 3,000 → Trusted 6,000 → Honored
+10,000 → Devoted 16,000. 6 songs + 6 emotes per NPC per day; song 40 / emote 15 / gifts 60–600 points × preference
+(love 2, like 1.5, neutral 1, dislike 0.5). Songs: `homeward tides rest valor sunrise` (same ids as features.js).
 | function | returns |
 |---|---|
-| `view(account, now)` | `[RapportView]` |
-| `one(account, npcId, now)` | `RapportView` |
-| `song(account, char, npcId, songId, now)` / `emote(account, char, npcId, emoteId, now)` | `{ ok, gain, pts, stage, stageUp, line, left }` (`why: 'limit'` after 6/day; unknown song → `'song'`) |
-| `gift(account, char, npcId, giftId, n = 1, now)` | same shape; gifts have no daily limit, preference ×2 love / ×1.5 like / ×1 neutral / ×0.5 dislike |
-| `claim(account, char, npcId, stage)` | `{ ok, rows }` (stage 1..5 rewards; cards, songs, emotes, Giant's Heart/Masterpiece, titles, mounts) |
-| `SONGS`, `EMOTES`, `RAPPORT_NPCS`, `STAGES` | catalogs |
+| `view(account, now)` / `one(account, npc, now)` | `[RapportView]` / `RapportView` |
+| `song(account, char, npc, songId, now)` / `emote(account, char, npc, emoteId, now)` / `gift(account, char, npc, giftId, n, now)` | `{ ok, gain, pts, stage, stageName, stageUp, line, left, notes }` |
+| `claim(account, char, npc, stage 1..5)` | `{ ok, rows }` (cards, songs, emotes, masterpieces/hearts/stars/leaves, titles, mounts, pets) |
 ```js
-RapportView = { id, name, title, zone, personality, icon: 'npc:<id>', pts,
-  stage: { idx: 0..5, name, min, next: number|null }, pct (to next stage),
-  today: { songs, songsMax: 6, emotes, emotesMax: 6 },
-  likes: { songs: [id], emotes: [id], gifts: { giftId: 'love'|'like'|'neutral'|'dislike' } },
-  rewards: [{ stage, name, rows: [Row], claimed, ready }], line }
+RapportView = { id, name, title, zone, personality, icon: 'npc:<id>', pts, stage: { idx, name, min, next }, pct,
+  today: { songs, songsMax: 6, emotes, emotesMax: 6 }, likes: { songs, emotes, gifts: { gift1..4: 'love'|'like'|'neutral'|'dislike' } },
+  rewards: [{ stage, name, rows, claimed, ready }], line }
 ```
 
-## `tasks` — Wayfarer's Tasks, weekly tasks, reputation, event calendar (`tasks.js`, data `src/data/tasks.js`)
-Each day 6 of ~20 task templates are offered (deterministic per roster & day); accept up to 3. Weekly: 5 offered,
-accept 3. Completing grants rewards + **Wayfarer reputation** (levels 1–10 with rewards).
+## `tasks` — Wayfarer's Tasks, reputation, the tracking hub, event calendar (`tasks.js`, data `src/data/tasks.js`)
+Daily: 6 of 21 templates offered (deterministic per roster & day), accept 3. Weekly: 5 of 9 offered, accept 3. Rewards +
+Wayfarer reputation (100 / 400 per task; levels 1–10 with rewards; level 10 = Wayfarer's Sunstag + title).
 | function | returns |
 |---|---|
-| `view(account, now)` | `TasksView` |
-| `accept(account, taskId, now)` / `abandon(account, taskId, now)` | `{ ok }` |
-| `claim(account, char, taskId, now)` | `{ ok, rows, rep }` |
-| `claimRep(account, char, level)` | `{ ok, rows }` |
-| `track(account, char, event, data)` | `[Notification]` — see Hook-in; also routes to titles, achievements, guild missions |
-| `calendar(now, { hours = 6 })` | `[CalEvent]` upcoming + live, sorted by start |
-| `live(now)` | `[CalEvent]` live now |
-| `compass(account, now)` | `{ now, live: [CalEvent], next: [CalEvent] (≤ 8), resets: { daily, weekly } (ms timestamps) }` |
-| `eventWindow(kind, now)` | the current/next `CalEvent` of that kind |
+| `view(account, now)` | `{ day, week, daily: { offered: [Task], accepted, max, done }, weekly: {…}, rep: { level, pts, next, max, rewards: [{ level, rows, claimed, ready }] } }` |
+| `accept` / `abandon(account, id, now)` / `claim(account, char, id, now)` / `claimRep(account, char, level)` | `{ ok }` / `{ ok, rows, rep, notes }` / `{ ok, rows }` |
+| `track(account, char, event, data)` | `[Notification]` — tasks → titles/achievements → guild missions → leaderboards. `data.now` overrides the clock. |
+| `calendar(now, { hours = 6 })` / `live(now)` / `eventWindow(kind, now)` / `compass(account, now)` | `[CalEvent]` / live ones / the live-or-next window / `{ now, live, next (≤ 8), resets: { daily, weekly } }` |
+| `state(account, now)` | normalised state (rolls offers) |
 ```js
-Notification = { kind: 'task'|'taskDone'|'weekly'|'rep'|'title'|'achievement'|'guild'|'research'|'sold'|'expired'|…, text, id? }
-TasksView = { day, week,
-  daily: { offered: [Task], accepted: [taskId], max: 3, done },
-  weekly: { offered: [Task], accepted: [taskId], max: 3, done },
-  rep: { level, pts, next, max: 10, rewards: [{ level, rows, claimed, ready }] } }
-Task = { id, tpl, name, desc, event, need, n, done, claimed, accepted, rows: [Row], rep }
-CalEvent = { id, kind: 'fieldboss'|'chaosgate'|'island'|'ghostship', name, where, start, end, live, left,
-  island?: { id, name, focus }, rows?: [{ id, name }] }   // left = ms until start (upcoming) or until end (live)
+Task = { id, tpl, name, desc, event, need, n, done, claimed, accepted, rows, rep }
+CalEvent = { id: '<kind>:<start>', kind: 'fieldboss'|'chaosgate'|'island'|'ghostship', name, where, start, end, live, left (ms), rows, island?: { id, name, focus } }
 ```
-Schedule (UTC): Field Boss (*Old Thunderhoof*) every hour at :00 (10 min), Chaos Gate at :30 (10 min), Adventure
-Island every 2 h at :00 (15 min; island rotates), Ghost Ship on Thursdays & Sundays at 12:00, 16:00, 20:00, 23:00
-(20 min).
+Schedule (UTC): Field Boss *Old Thunderhoof* every hour at :00 (10 min, zone rotates), Chaos Gate at :30 (10 min),
+Adventure Island every 2 h at :00 (15 min; island rotates among the five focus islands), Ghost Ship Thu & Sun at 12, 16,
+20, 23 h (20 min). Events systems emit themselves: `hone transfer quality facet read card awaken fuse buy sell sold craft
+dispatch research build gather collect tome song emote gift rapport donate shop taskDone`.
 
 ## `guild` (`guild.js`, data `src/data/guilds.js`)
-12 AI guilds (deterministic levels/members/mottos), join / leave / create, daily donations, research perks, weekly
-missions, guild shop (`S.shops`, shop id `'guild'`, bloodstones).
 | function | returns |
 |---|---|
-| `list(account, now)` | `[{ id, name, tag, level, members, max, motto, focus, leader, recruiting, joined }]` |
-| `view(account, now)` | `null \| GuildView` |
-| `join(account, id, now)` / `leave(account, now)` / `create(account, { name, motto }, now)` | `{ ok, guild }` (create costs 20,000 silver; leaving has a 1-day re-join cooldown) |
-| `donate(account, char, kind: 'silver'\|'gold', tier = 0, now)` | `{ ok, bloodstones, xp }` (once per kind per day) |
-| `claimMission(account, char, missionId, now)` | `{ ok, rows }` |
-| `setResearch(account, id)` | `{ ok }` (guild research focus; applies when you lead your own guild) |
-| `perks(account)` | `{ xpGain, silverGain, lifeXp, shopDiscount, restGain }` |
-```js
-GuildView = { id, name, tag, level, xp, xpNext, members, max, motto, rank: 'Member'|'Officer'|'Master', own,
-  bloodstones, contribution,
-  donations: { silver: { cost, bloodstones, xp, done }, gold: [{ tier, cost, bloodstones, xp, done }] },
-  research: [{ id, name, desc, level, max, perk, active }],
-  missions: [{ id, name, desc, progress, need, done, claimed, rows: [Row] }],
-  roster: [{ name, cls, ilvl, rank, online, contribution, you }] }
-```
+| `list(account, now)` | `[{ id, name, tag, level, members, max, motto, focus, leader, recruiting, joined }]` (12 AI guilds + your own) |
+| `view(account, now)` | `null \| { id, name, tag, level, xp, xpNext, members, max, motto, rank, own, bloodstones, contribution, donations: { silver: { cost, bloodstones, xp, done }, gold: [{ tier, cost, bloodstones, xp, done }] }, research: [{ id, name, desc, level, max, perk, active }], missions: [{ id, name, desc, progress, need, done, claimed, rows, mine }], roster: [{ name, cls, ilvl, rank, online, contribution, you }] }` |
+| `join(account, id, now)` / `leave(account, now)` / `create(account, { name, motto }, now)` | `{ ok, guild }` (1-day re-join cooldown; founding costs 20,000 silver) |
+| `donate(account, char, 'silver'\|'gold', tier, now)` | `{ ok, bloodstones, xp }` (silver 10k → 40; gold 100/500/1,000 → 100/400/700; one of each per day) |
+| `claimMission(account, char, id, now)` / `setResearch(account, id)` / `perks(account)` | `{ ok, rows }` / `{ ok }` / `{ xpGain, silverGain, lifeXp, shopDiscount, restGain }` |
 
-## `shops` — vendors (`shops.js`, data `src/data/shops.js`)
-Shop ids: `general` (silver: potions, battle items, gifts, tools), `raid` (Horn of the Tyrant: Horned Tyrant transfer
-entries, relic accessories, honing mats), `pvp` (Proving Tokens), `guild` (bloodstones), `harbor` (pirate coins:
-ship skins, crew contracts, treasure maps), `island` (Glass Sea Tokens), `card` (gold / card packs), `crystal`
-(crystals: cosmetics, bound honing bundles, pets, a mount).
+## `shops` (`shops.js`, data `src/data/shops.js`)
+`general` (silver), `raid` (horns: **Horned Tyrant reforging** entries `transfer_<slot>`, Relic Accessory Chest, solar
+mats, card), `pvp`, `guild` (bloodstones, needs a guild; guild research discount), `harbor` (pirate coins), `island`
+(Glass Sea Tokens), `card` (gold), `crystal` (crystals: outfits, pets, mount, bound honing bundles).
 | function | returns |
 |---|---|
-| `list()` | `[{ id, name, npc, currency }]` |
-| `view(account, char, shopId, now)` | `{ id, name, npc, desc, currency, currencies: { [cur]: amount }, items: [ShopItem] }` |
-| `buy(account, char, shopId, key, n = 1, now)` | `{ ok, rows, spent: Cost, left }` (transfer entries run `honing.transfer`) |
+| `list()` / `view(account, char, shopId, now)` | `[{ id, name, npc, currency }]` / `{ id, name, npc, desc, currency, currencies, items: [ShopItem] }` |
+| `buy(account, char, shopId, key, n = 1, now)` | `{ ok, rows, spent, left }` |
 ```js
-ShopItem = { key, id, name, grade, icon, kind, desc, qty (per purchase), price: { currency, amount },
-  limit: null | { period: 'daily'|'weekly'|'total', max, left }, can, why, req? }
+ShopItem = { key, id, name, grade, icon, kind, desc, qty, price: { currency, amount }, cost?, costRows? (reforge),
+  limit: null | { period: 'daily'|'weekly'|'total', max, left }, can, why, req?, bound? }
 ```
 
 ## `mail` (`mail.js`)
 | function | returns |
 |---|---|
-| `inbox(account, now)` | `{ unread, list: [Mail] }` (newest first; expired mail pruned) |
-| `read(account, id)` | `{ ok, mail }` |
-| `claim(account, char, id)` / `claimAll(account, char)` | `{ ok, rows }` |
-| `remove(account, id)` | `{ ok }` (refuses unclaimed attachments: `why: 'attachments'`) |
+| `inbox(account, now)` / `read(account, id)` | `{ unread, list: [Mail] }` (expired pruned) / `{ ok, mail }` |
+| `claim(account, char, id)` / `claimAll(account, char)` / `remove(account, id)` | `{ ok, rows }` / `{ ok }` (`why: 'attachments'` if unclaimed) |
 | `send(account, { from, subject, body, kind, bundle, days = 30, t })` | `Mail` |
-| `welcome(account, char)` | `[Mail]` newly sent (idempotent per roster / per powerpass character) |
-| `compensation(account, { reason, bundle })` | `Mail` (tongue-in-cheek apology letter) |
+| `welcome(account, char, t)` | `[Mail]` — once per roster: Brannoc's welcome + a compensation letter; once per Powerpass character: the **Powerpass Starter Crate** (`POWERPASS_CRATE`: 1.05M silver, 4,500 gold, 40k sunshards, 6k guardian / 3k destruction stones, 260 leapstones, 150 fusion, 40 Horns of the Tyrant, solar boosters, card packs, gem pouches) |
+| `compensation(account, { reason, bundle, t })` | `Mail` ("Please accept our sincere apologies for the unscheduled maintenance of the Glass Sea…") |
 ```js
-Mail = { id, from, subject, body, kind: 'system'|'market'|'event'|'guild'|'gift'|'compensation'|'rapport',
-  t, read, claimed, expires, left, attachments: [Row], hasItems }
+Mail = { id, from, subject, body, kind: 'system'|'market'|'event'|'guild'|'gift'|'compensation'|'rapport', t, read, claimed, expires, left, attachments: [Row], hasItems }
 ```
 
-## `titles` — titles & achievements (`titles.js`, data `src/data/titles.js`)
+## `titles` (`titles.js`, data `src/data/titles.js`)
+41 titles, 30 achievements (first guardian, +15/+20 hone, Artisan, the Lucky, 97 stone, all seeds in a zone, 100 PvP
+wins, Legion NM/HM, horns, Inferno 50/100, 100 chaos, 100 fish, souls, tome, Devoted, market gold, donations, sailing…).
 | function | returns |
 |---|---|
-| `view(account)` | `{ active, titles: [{ id, name, desc, color, owned, active }], achievements: [{ id, name, desc, cat, progress, need, done, title, rows }] }` |
-| `setActive(account, id \| null)` | `{ ok }` |
-| `track(account, char, event, data)` | `[Notification]` (called by `tasks.track`) |
-| `mods(account)` | stat mods of the active title (`{}` for most) |
+| `view(account)` | `{ active, titles: [{ id, name, desc, color, owned, active, mods }], achievements: [{ id, name, desc, cat, progress, need, done, title, rows }] }` |
+| `setActive(account, id\|null)` / `grantTitle(account, id)` / `mods(account)` | `{ ok }` / `{ ok, isNew }` / active title's stat mods |
+| `track(account, char, event, data)` | called by `tasks.track` |
 
 ## `boards` — local leaderboards (`boards.js`)
-Weekly boards with deterministic SimPlayer competitors plus your records (global boards can replace them later).
+Boards `legion_nm`, `legion_hm` (fastest clear, weekly), `guardian` (today's guardian, daily), `inferno` (deepest floor),
+`pvp` (rating), `honing_luck` (lowest-chance first-tap success), `best_stone`, `seeds` — 30 deterministic SimPlayer
+entries per period + your best (auto-submitted from tracked events).
 | function | returns |
 |---|---|
-| `list()` | `[{ id, name, desc, unit: 'time'\|'floor'\|'rating'\|'luck'\|'stone'\|'count', better: 'lower'\|'higher' }]` |
-| `view(account, boardId, now)` | `{ id, name, week, unit, entries: [{ rank, name, cls, guild, value, display, you, sim }], you: { rank, value, display } \| null }` |
-| `submit(account, char, boardId, value, now)` | `{ ok, improved, best, rank }` |
-Boards: `legion_nm`, `legion_hm` (fastest clear), `guardian` (today's guardian, fastest kill), `inferno` (deepest floor),
-`pvp` (rating), `honing_luck` (lowest chance hit), `best_stone`, `seeds`.
+| `list()` / `view(account, id, now)` | `[{ id, name, desc, unit, better }]` / `{ id, name, desc, unit, week, period, entries: [{ rank, name, cls, guild, value, display, you, sim }], you: { rank, value, display } \| null, guardian? }` |
+| `submit(account, char, id, value, now)` / `display(unit, value)` / `todaysGuardian(now)` | `{ ok, improved, best, rank }` |
 
-## `partyfinder` — SimPlayer party listings (`partyfinder.js`)
+## `mods` (`mods.js`)
 | function | returns |
 |---|---|
-| `listings(account, char, { content, now })` | `[{ id, content, title, desc, leader: { name, cls, ilvl, title, guild, persona }, members: [{ name, cls, ilvl, support, seed }], size, max, minIlvl, created }]` (refreshes every 2 min) |
-| `join(account, char, listingId, now)` | `{ ok, content, sims: [seed…], members }` — spawn the others with `party.addSim(makeSim(seed), …)` |
-| `contents()` | `[{ id: 'chaos:3'\|'guardian:sandmaw'\|'abyss:oratory'\|'raid:gorrath:normal'…, name, ilvl, max }]` |
+| `statContext(account, char)` | `{ rosterLevel, research: { atk }, cardBonus: { dmgAdd }, extra: { crit, critDmg, dmgTaken, hpMaxMul, healMul, shieldMul, elemRes, dotMul, … }, skills: { [skillId]: { dmg, cdr, ruin, swift } }, econ }` |
+| `applyMods(stats, mods)` | stats with mods applied (`hpMaxMul` scales hpMax, `*Mul` multiplies, others add; recomputes `power`) |
+| `econMods(account)` | `{ silverGain, xpGain, chaosLoot, guardianLoot, marketFee, lifeEnergy, lifeXp, shopDiscount, restGain, seedSense }` |
 
-## `mods` — stat & economy aggregation (`mods.js`)
-| function | returns |
-|---|---|
-| `statContext(account, char)` | `{ rosterLevel, research: { atk }, cardBonus: { dmgAdd }, extra: Mods, skills: { [skillId]: { dmg, cdr } }, econ: { silverGain, xpGain, chaosLoot, guardianLoot, marketFee, lifeEnergy, seedSense } }` |
-| `applyMods(stats, mods)` | the stats object with `mods` applied (stats.js conventions) |
-| `econMods(account)` | the `econ` part |
+## `common` & `rolls` (helpers other owners may use)
+`rngOf(r)`, `seeded(rng, fn)` (Math.random → rng while fn runs), `hash01(...)`, `itemInfo(id)` → `{ id, name, grade, icon,
+kind, desc, value, tradable, bound }`, `iconFor(id)`, `bundleRows(bundle)`, `grantBundle(account, char, bundle)`,
+`merge/scale/addTo`, `missing/canPay/pay/discount/costRows`, `CURRENCIES`, `emit(account, char, event, data)` /
+`onTrack(fn)` (the event hub), `rolls.rollTable(table, rng, { mul, mulBy, times, into })`, `rolls.generate('acc:5'|
+'stone:6'|'bracelet:5'|'book:4'|'gem:2-5'|'card:<id>'|'card@4')`, `rolls.expectTable`, `rolls.previewTable`.
 
 ## Top level (`index.js`)
-`tick(account, char, now)` → `[Notification]` (market, stronghold research, life energy, rapport day roll, calendar)
-· `track` (= `tasks.track`) · `statContext` (= `mods.statContext`) · every module as a namespace.
+`tick(account, char, now)` → `[Notification]` (market sales/expiries, stronghold research, life energy, daily task board,
+events going live — hooks.js calls it every 10 s) · `track` · `statContext` · `applyMods` · `simulateEconomy` · namespaces.
+
+---
+
+## `hooks.js` — session glue (imported by `src/game/plugins.js`)
+Registers with `src/game/registry.js` (top level only registers; work happens in `init`/handlers):
+
+**Windows** (data in the exact shapes the `src/ui/windows/*` classes document) and **actions**:
+| window | data from | actions handled |
+|---|---|---|
+| `honing` | `honing.view` → `{ items, item, iLvlFrom, iLvlTo, gains, chance: { base, bonus, boosters, total }, maxBonus, energy, mats, cost, currencies, boosters, maxed, result, resultKey, support, expected, transfer, stats }` | `hone:select { uid }` · `hone:tap { uid, boosters }` · `hone:booster` |
+| `stone` | ability stones (bag + equipped; facets as 1 / 0 / null) + `view`, `best` | `stone:select { uid }` · `stone:facet { uid, line }` · `stone:share { uid }` (sets `session.shareCard`) |
+| `cards` | `{ deck, cards (owned), sets: [{ id, name, cards, bonuses: [{ need, awaken, text }] }], packs, choice, active }` | `cards:equip { id, slot }` · `cards:unequip { slot }` · `cards:awaken { id }` · `cards:open { pack }` · `cards:auto` |
+| `gems` | `{ sockets: [{ gem, skill: { id, name, icon } }], gems, skills, fuseCost, fuseCosts, currencies, fusable, mods }` | `gems:socket { uid, slot }` · `gems:unsocket { slot }` · `gems:target { slot, skill }` · `gems:fuse { uids }` |
+| `market` | `{ tab, cats (+ subs for gems/accessories), cat, sub, q, results: [{ id, name, icon, grade, kind, bundle, lowest, avg, history, trend, stock?, recent?, asks? }], selected, sellable, listings: [{ id, item, price, qty, sold, left (s) }], fee, exchange: { rate, sell, history }, currencies }` | `market:search { q, cat, sub }` · `market:select { id }` · `market:buy { id, qty }` (`acc#<key>` = accessory) · `market:list { uid ('mat:<id>' for stackables), price, qty }` · `market:cancel { id }` · `market:exchange { dir, amount }` |
+| `stronghold` | `{ level, xp, xpMax, energy, buildings, research (state locked/available/active/done), craft: { slots, queue, recipes }, dispatch: { slots, crew, missions, active }, garden, ranch, perks }` (times in seconds) | `sh:upgrade` · `sh:research` · `sh:craft { id, qty }` · `sh:cancel` · `sh:collect` · `sh:dispatch { id }` (auto-picks the strongest free crew) · `sh:claim { id }` · `sh:garden` · `sh:ranch` · `sh:recruit { pay }` · `sh:rush { kind, id }` |
+| `compass` | `{ events: [{ id: kind, name, kind: 'field_boss'\|'chaos_gate'\|'adventure_island'\|'ghost_ship', where, times (local minutes), dur, active, left, next, rewards }], tracked }` | `compass:track { id, on }` · `compass:go { id }` |
+| `tome` / `collectibles` | `{ tab, selected, regions: [{ id, name, pct (0–100), cats, rewards: [{ pct (0–100), name, icon, grade, count, claimed }] }], collectibles: [{ id, name, icon, have, total, tiers: [{ n, …row, claimed }], items }], seedsByZone }` | `tome:region { id }` · `tome:claim { region, pct }` · `collect:claim { id: type, n }` |
+| `rapport` | `{ selected, npcs: [{ id, name, title, icon, stage, points, max, daily, songs: [{ id, name, locked }], emotes, gifts: [Item uid 'mat:giftN'], rewards, likes, line }] }` | `rapport:select` · `rapport:song { npc, id }` · `rapport:emote { npc, id }` · `rapport:gift { npc, uid }` · `rapport:claim { npc, stage }` |
+| `mail` | `{ mails: [{ id, from, subject, body, date, read, kind, attachments: [Item], claimed, expires }], unread }` | `mail:open` · `mail:claim` · `mail:claimAll` · `mail:delete` |
+| `guild` | `{ guild: null \| { …, members, research, missions: [{ id, name, n, need, reward }], donations }, browse }` | `guild:donate { kind, tier? }` · `guild:join` · `guild:create { name, tag }` · `guild:leave` · `guild:research` · `guild:mission` |
+| `leaderboards` | `{ board, boards, rows: [{ rank, name, cls, value (display), sub, you }], you, note }` | `lb:board { board }` · `title:leaderboards` (opens it from the title screen) |
+| `engravings` | `{ active: [{ id, nodes, neg, sources }], equipped, books (learned, nodes = equip max), maxBook: 12, summary, learned, unread }` | `engr:equip { slot, id }` · `engr:unequip { slot }` |
+| `vendor` | systems shops as `{ name, title, npc, shop, items: [{ id: key, item, price: { cur, amount }, limit, stock }], currencies }` | `vendor:buy { id, qty }` (only while a systems shop is open) · `shop:open { id }` |
+
+**Services** (NPC `action`): `honing`, `market`, `cards`, `gems`, `mail`, `guild` (open their windows), `tasks`
+(Wayfarer's Board dialog: accept / claim / reputation rewards), `songs` (Lyra teaches `tides`/`rest`/`valor` for silver),
+`shop:general`, `rapport`. **NPC choices**: blacksmith → raid vendor (Horned Tyrant reforging) & quality upgrade; cards →
+card shop & stone faceting; pvp / guild / harbor (+ island tokens) shops; bank → crystal shop; any rapport NPC's
+"Spend time together" opens the rapport window on them.
+
+**Inventory use** (`inv:use`, falls through to the session when not handled): card packs (selector → choice dialog),
+gem pouches, food & Life Energy Tonic, Skill Point Potion (+1 skill point), Relic Accessory Chest, Adventurer's Chest,
+Treasure Map (dig: treasure rewards), Crew Contract, engraving books (read).
+
+**Bus → systems**: see Hook-in step 3. Open-world kills (`mode.kind` city/field/island/stronghold) also roll
+`loot.fieldDrop`. First `zone` event per character sends the welcome letters (+ Powerpass crate).
+**HUD**: `badges.mail` = unread letters; accepted daily/weekly tasks appear in `quests` (kind `daily`/`weekly`).
+**Exports**: `contentRewards(session, c, r)`, `moreRewards(session, offer)`, and every window data builder
+(`honingData`, `marketData`, …) for tests and other owners.

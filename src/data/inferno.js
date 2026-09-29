@@ -22,7 +22,7 @@ export const INFERNO = {
 };
 
 /** enemy HP / damage multipliers by floor (× the normalised reference at iLvl 1415) */
-export const floorHp = f => 1 + (f - 1) * 0.035 + Math.pow(f / 100, 2) * 1.6;
+export const floorHp = f => 2 + (f - 1) * 0.05 + Math.pow(f / 100, 2) * 2;
 export const floorAtk = f => 1 + (f - 1) * 0.016;
 /** boss HP budget in "attack-power seconds" (a solo hero with 0 boons deals ≈ 18–22 ap/s over a fight) */
 export const bossHpAp = f => 1250 + f * 42;
