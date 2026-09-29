@@ -153,8 +153,10 @@ export class MapWin extends Win {
     const R = rng(7);
     x.strokeStyle = 'rgba(190,230,255,.12)';
     for (let i = 0; i < 70; i++) { const px = R() * W, py = R() * H; x.beginPath(); x.moveTo(px, py); x.quadraticCurveTo(px + 6, py - 3, px + 12, py); x.quadraticCurveTo(px + 18, py + 3, px + 24, py); x.stroke(); }
-    // land
-    for (const [cx, cy, rx, ry, seed] of LAND) {
+    // land: the continent, plus islands where the game says they are (fallback: the built-in chart)
+    const isles = w.regions ? regions.filter(r => r.kind === 'island' || r.kind === 'stronghold' || r.kind === 'hollow')
+      .map((r, i) => [r.x, r.y, r.kind === 'hollow' ? 0.05 : r.kind === 'stronghold' ? 0.042 : 0.028, r.kind === 'hollow' ? 0.058 : r.kind === 'stronghold' ? 0.048 : 0.032, 11 + i * 4]) : null;
+    for (const [cx, cy, rx, ry, seed] of isles ? [LAND[0], ...isles] : LAND) {
       const pts = blob(cx * W, cy * H, rx * W, ry * H, seed);
       x.save();
       x.shadowColor = 'rgba(120,220,230,.35)'; x.shadowBlur = 14;

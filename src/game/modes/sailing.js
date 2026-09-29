@@ -451,6 +451,8 @@ export class SailingMode {
   update(dt) {
     const sh = this.sh, s = this.s;
     this.voyage.t += dt;
+    // map travel: announce the destination pier once we are alongside
+    if (this.bound && Math.hypot(this.bound.x - sh.x, this.bound.z - sh.z) < 36) { s.ui?.banner?.(this.bound.name, { kind: 'zone', sub: 'Press G to dock', dur: 3 }); this.game.audio?.sfx?.('ship_bell', {}); this.bound = null; }
     // repair channel
     if (sh.repair) { const r = sh.repair; r.t += dt; this.heal(this.stats.repair / SKILLS.repair.dur * dt); if (r.t >= SKILLS.repair.dur) { sh.repair = null; this.say('Hull patched.', 'success'); } }
     this.updateStorm(dt);
@@ -957,6 +959,16 @@ export class SailingMode {
     }
     this.course = { x: p.x, z: p.z, path, total: Math.max(1, pathLen(sh, path || [p])), steer: false };
   }
+  /** map travel: a routed course to a port (island id, 'solhaven', 'stronghold', 'pipsprout'); the ship sails itself */
+  travelTo(id) {
+    const p = PORTS[id] || PORTS[ISLAND_BY_ZONE[id]?.id] || Object.values(PORTS).find(x => x.name.toLowerCase() === String(id).toLowerCase());
+    if (!p) { this.say(`No chart for “${id}”.`, 'warn'); return false; }
+    if (Math.hypot(p.x - this.sh.x, p.z - this.sh.z) < 36) { this.s.ui?.toast?.(`${p.name} is right here — press G to dock.`, 'info'); return true; }
+    this.bound = p;
+    this.setCourse({ x: p.x, z: p.z }, { route: true });
+    this.s.ui?.banner?.(`Course set: ${p.name}`, { kind: 'info', sub: 'The Dawnrunner sails herself — hold right mouse to take the helm, G at the pier to dock.', dur: 3.2 });
+    return true;
+  }
   releaseSteer() { const c = this.course; if (c?.steer) this.course = { x: c.x, z: c.z, path: null, total: Math.max(1, Math.hypot(c.x - this.sh.x, c.z - this.sh.z)), steer: false }; }
   nearestWater(x, z) { return this.L.nav.nearest(x, z, 80); }
   marker(x, z, name, title = null) {
@@ -1189,10 +1201,16 @@ export async function dockAt(session, portId, o = {}) {
   session.bus.emit('zone', { id: p.zone, kind: g.zone?.kind || p.kind });
   if (o.wreck) session.ui?.toast?.('The crew patched the hull enough to limp home. Durability 50%.', 'warn');
 }
+/**
+ * launch({ kind: 'sail', from?, to? }) — board the Dawnrunner. `from` = the port you leave from (default: the port of
+ * the current zone, else the last port). `to` = a port id (island id, 'solhaven', 'stronghold', 'pipsprout'): the
+ * ship takes a routed course there by itself (map travel). Already at sea: just sets the course.
+ */
 async function launchSail(session, c = {}) {
-  const g = session.game;
-  if (g.mode instanceof SailingMode) { session.ui?.toast?.('You are already at sea.', 'info'); return; }
+  const g = session.game, to = c.to && c.to !== 'sea' ? c.to : null;
+  if (g.mode instanceof SailingMode) { if (to) g.mode.travelTo(to); else session.ui?.toast?.('You are already at sea.', 'info'); return; }
   const from = c.from && c.from !== 'sea' ? c.from : zonePort(g.zone?.id) || seaState(session.account).last || 'solhaven';
+  if (to && to === from && PORTS[to]?.kind === 'island' && g.mode?.kind === 'island') { session.ui?.toast?.(`You are already on ${PORTS[to].name}.`, 'info'); return; }
   const port = PORTS[from] || PORTS.solhaven;
   await session.loadZone('glass_sea', { kind: 'sea', region: SEA_NAME });
   session.spawnMe({ x: port.x, z: port.z, facing: port.facing });
@@ -1200,6 +1218,7 @@ async function launchSail(session, c = {}) {
   g.mode = mode; mode.enter();
   session.inWorld();
   seaState(session.account).last = port.id;
+  if (to && to !== port.id) setTimeout(() => { if (g.mode === mode) mode.travelTo(to); }, 1200);
 }
 
 // ------------------------------------------------------------------------------------------------ harbour master

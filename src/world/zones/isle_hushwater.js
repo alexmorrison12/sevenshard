@@ -96,7 +96,7 @@ export async function build(zone, o = {}) {
     water: { glint: 1.1, glowArea: [0, -4, 27] },
     particles: 'fireflies',
   }, o);
-  zone.onEnv(env => { zone.sea.ocean.uniforms.uGlow.value = (env.night || 0) * 0.42 + 0.05; });
+  zone.onEnv(env => { zone.sea.ocean.uniforms.uGlow.value = (env.night || 0) * 0.28 + 0.04; });
   const f = zone.spots?.falls; if (f) zone.falls = buildFalls(zone, f[0], f[2]);
 }
 registerZone('isle_hushwater', { name: 'Hushwater Lagoon', kind: 'island', size: 200 }, build);

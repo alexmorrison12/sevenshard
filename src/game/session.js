@@ -33,6 +33,7 @@ import { warmHeroes } from '../models/hero/index.js';
 import { legionRaceNews } from './meta/index.js';
 import { infernoMenu } from './modes/inferno.js';
 import { travel as fieldTravel } from './modes/field.js';
+import { ISLANDS as SEA_ISLANDS, PORTS as SEA_PORTS } from '../data/islands.js';
 import { SocialContext } from './social/context.js';
 import { sunView, rank as sunRank, resetTree as sunReset, sunState, unlocked as sunUnlocked } from './progression/sunheart.js';
 import { SUNHEART_POINTS } from '../data/sunheart.js';
@@ -453,6 +454,24 @@ export class Session {
     if (k === 'guardian') return this.launch({ kind: 'guardian', boss: a });
     if (k === 'raid') return this.launch({ kind: 'raid', raid: a, gate: +b, trial: o.trial });
   }
+  /** World-map regions: Valemont's towns and fields (triports) + every port and island projected from the sea chart */
+  worldRegions() {
+    const here = this.game.zone?.id, ch = this.char;
+    const seaXY = (x, z) => ({ x: +(0.475 + (x + 548) / 1308 * 0.47).toFixed(3), y: +(0.56 + (z - 30) * 0.00075).toFixed(3) });
+    const pipsOpen = !!this.account.roster.unlocked?.pipsprout || (ch?.quests?.done || []).includes('g8_hollow');
+    const regions = [
+      { id: 'solhaven', name: 'Solhaven', kind: 'city', x: 0.335, y: 0.615, level: 'Capital', triport: true },
+      { id: 'goldmeadow', name: 'Goldmeadow', kind: 'field', x: 0.215, y: 0.62, level: 'Lv 1–25', triport: true },
+      { id: 'thornwood', name: 'Thornwood', kind: 'forest', x: 0.19, y: 0.4, level: 'Lv 25–40', triport: true },
+      { id: 'ashen_ridge', name: 'Ashen Ridge', kind: 'mountain', x: 0.3, y: 0.235, level: 'Lv 40–50', triport: true },
+    ];
+    const pp = SEA_PORTS?.pipsprout, st = SEA_PORTS?.stronghold;
+    if (pp) regions.push({ id: 'pipsprout', name: 'Pipsprout Hollow', kind: 'hollow', ...seaXY(pp.x, pp.z), level: 'Pip Seeds', unlocked: pipsOpen, triport: pipsOpen });
+    if (st) regions.push({ id: 'stronghold', name: 'Brightwater Isle', kind: 'stronghold', ...seaXY(st.x, st.z), level: 'Stronghold' });
+    for (const i of SEA_ISLANDS || []) regions.push({ id: i.id, name: i.name, kind: 'island', ...seaXY(i.x, i.z), level: i.title || 'Island' });
+    for (const r of regions) { r.current = r.id === here || (r.id === 'stronghold' && here === 'stronghold') || SEA_ISLANDS?.some(i => i.id === r.id && i.zone === here); if (r.unlocked == null) r.unlocked = true; }
+    return regions;
+  }
   /** World map travel (Lost Ark triports): towns and fields by triport, the stronghold by ferry, islands by ship */
   async mapTravel(id) {
     if (!id || !this.char || this.guestMode) return;
@@ -650,7 +669,7 @@ export class Session {
         return { cls: c.cls, points: c.skillPts, bar: c.bar, skills: kit.skills.map(s => { const lv = c.skills[s.id]?.lv || 1; const built = hero?.skills[s.id] || s; const v = hero ? skillView(hero, built, '') : { id: s.id, name: s.name }; return { ...v, level: lv, learned: true, lvlReq: 1, tripods: (s.tripods || []).map((tier, ti) => tier.map((tp, i) => { const t = typeof tp === 'string' ? { id: tp.split(':')[0], name: tp.split(':')[0] } : tp; return { id: t.id, name: t.name || t.id, desc: t.desc || '', icon: `tripod:${t.icon || t.id}`, unlock: [4, 7, 10][ti], picked: (c.skills[s.id]?.tri || [])[ti] === i }; })) }; }) };
       }
       case 'engravings': { const n = engravingNodes(c); return { active: Object.entries(n).map(([id, nodes]) => ({ id, nodes, neg: id.startsWith('neg_') })), equipped: [c.books?.[0] || null, c.books?.[1] || null], books: Object.entries(c.library || {}).map(([id, nodes]) => ({ id, nodes })), maxBook: 12 }; }
-      case 'map': return { ...this.minimap(), zone: { name: this.game.zone?.name } };
+      case 'map': return { ...this.minimap(), zone: { name: this.game.zone?.name }, world: { regions: this.worldRegions() } };
       case 'sunheart': return sunView(c);
     }
     return null;

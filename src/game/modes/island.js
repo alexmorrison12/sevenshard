@@ -646,9 +646,11 @@ class RaiderAI extends MobAI {
   }
 }
 function longboat() {
-  const g = new THREE.Group(), wood = new THREE.MeshLambertMaterial({ color: 0x5a3a24 }), dark = new THREE.MeshLambertMaterial({ color: 0x2a1a10 });
+  const g = new THREE.Group(), wood = new THREE.MeshLambertMaterial({ color: 0x6a4428, side: THREE.DoubleSide }), dark = new THREE.MeshLambertMaterial({ color: 0x2a1a10 });
   const hull = new THREE.Mesh(new THREE.SphereGeometry(1, 18, 8, 0, TAU, Math.PI / 2, Math.PI / 2), wood);
   hull.scale.set(1.25, 0.75, 3.4); hull.position.y = 0.42; g.add(hull);
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(1, 20), new THREE.MeshLambertMaterial({ color: 0x8a6440 }));
+  floor.rotation.x = -Math.PI / 2; floor.scale.set(1.0, 2.9, 1); floor.position.y = 0.12; g.add(floor);
   const rim = new THREE.Mesh(new THREE.TorusGeometry(1, 0.09, 6, 28), dark); rim.scale.set(1.25, 3.4, 1); rim.rotation.x = Math.PI / 2; rim.position.y = 0.42; g.add(rim);
   for (let k = 0; k < 3; k++) { const th = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.08, 0.3), dark); th.position.set(0, 0.3, -1.3 + k * 1.3); g.add(th); }
   g.userData.oars = [];

@@ -569,8 +569,8 @@ BUILD.stormcrown = ({ kit, flags, palms, flora, ox, oz, H, W, lod, spots, rng })
 // ---------------------------------------------------------------- Hushwater Lagoon
 BUILD.hushwater = ({ kit, flags, palms, flora, ox, oz, H, W, lod, spots, rng, night }) => {
   // mermaid rock in the lagoon, the jetty from the south beach, pearl-bed markers, a waterfall cleft
-  const [a, b] = W(0, -9.2), y = H(0, -9.2);
-  boulder(kit, a, y - 0.4, b, { s: 1.75, seed: 5, tint: 0x7a8a90, moss: 0x3a7a5a, flat: 0.55, block: lod === 'full' });
+  const [a, b] = W(0, -10), y = H(0, -10);
+  boulder(kit, a, y - 0.4, b, { s: 1.45, seed: 5, tint: 0x8a9aa0, moss: 0x3a7a5a, flat: 0.55, block: lod === 'full' });
   crystal(kit, a + 1.1, y + 0.4, b - 0.8, { s: 0.7, color: 0x60f0e0, intensity: 2.2, n: 4, seed: 3, light: true, block: false });
   spots.mermaid = [a, y + 1.4, b];
   for (let i = 0; i < 8; i++) { const [c, d] = W(0, 14 - i * 2.6); kit.add('planks', box(2.6, 0.22, 2.8, 1.5), M(c, 0.45, d), { tint: 0xb0906a, ao: false }); if (i % 2 === 0) for (const s of [-1, 1]) kit.add('timber', cyl(0.12, 0.12, 2.2, 6, 1), M(c + s * 1.3, -0.4, d), { ao: false }); }
