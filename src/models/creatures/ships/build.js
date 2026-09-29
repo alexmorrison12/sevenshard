@@ -12,8 +12,11 @@ export const V3 = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 const WHITE = [1, 1, 1];
 
 export class WoodBuilder {
-  constructor() { this.P = []; this.N = []; this.C = []; this.UV = []; this.A = []; this.V = []; this.I = []; }
+  constructor() { this.P = []; this.N = []; this.C = []; this.UV = []; this.A = []; this.V = []; this.I = []; this.marks = []; this._m = 0; }
   get count() { return this.P.length / 3; }
+  /** Triangle accounting: mark('section') after each section; report() → { section: tris } */
+  mark(name) { const n = this.I.length / 3; this.marks.push([name, n - this._m]); this._m = n; }
+  report() { const o = {}; for (const [k, v] of this.marks) o[k] = (o[k] || 0) + v; return o; }
   /**
    * Append a geometry. o: { color: [r,g,b] (linear) | fn(p, n) → [r,g,b], uv: 'box' (planar in metres by normal) |
    * 'keep' | fn(p, n, u, v) → [u, v], e: emissive, d: plank detail (default 1), metal, anim, piv: [x,y,z] }

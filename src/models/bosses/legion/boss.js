@@ -14,6 +14,7 @@ import { BossAcc } from './acc.js';
 import { bossMaterials } from './material.js';
 import { Particles, PRESETS, Trail } from './fxlite.js';
 import { compileAction, warp, sample, SpringChain, armIK, weaponQ } from './anim.js';
+import { metaOf } from './meta.js';
 
 const IDENT = new THREE.Matrix4();
 const CACHE = new Map();
@@ -152,6 +153,7 @@ export class Boss {
     for (const [name, p] of Object.entries(def.breakable || {})) this.sockets.parts[name] = mk(name, p.bone, p.pos);
     for (const k of ['head', 'mouth', 'chest', 'handR', 'handL', 'weapon', 'weaponTip']) this.sockets[k] ||= this.sockets.chest || this.sockets.head;
     this.height = def.meta.height; this.radius = def.meta.radius;
+    this.meta = entry.meta || (entry.meta = metaOf(id, def));   // BOSSES-style metadata (name, title, actions: {dur, hits…})
     // particles + debris (world space)
     this.fxAdd = new Particles(def.particles?.add ?? 700, { additive: true, soft: 1.5 });
     this.fxAlpha = new Particles(def.particles?.alpha ?? 260, { additive: false, soft: 1.2 });
@@ -468,7 +470,7 @@ export class Boss {
         default: {
           const n = tr.ch;
           if (n === '$air') sp.air = Math.max(sp.air, o.v * we);
-          else if (n === '$gripL') ik.grip = Math.max(ik.grip, o.v * we);
+          else if (n === '$gripL') ik.grip += (o.v - ik.grip) * we;
           else if (n === '$shake') sp.shake = Math.max(sp.shake, o.v * we);
           else if (n === '$eyes') sp.eyes *= 1 + (o.v - 1) * we;
           else sp.num[n] = (sp.num[n] ?? 0) + o.v * we;

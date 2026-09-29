@@ -1,6 +1,6 @@
 // Skill & magic sounds: elements, holy/dark, songweaver notes, buffs, portals, awakenings, identity. Bus 'sfx'.
 import { CHIME, TUBE, METAL } from '../kit.js';
-import { whoosh, choir, mtof, brass, shatter, crackles, zap, boom } from './common.js';
+import { whoosh, choir, mtof, brass, shatter, crackles, zap, boom, VOWEL } from './common.js';
 
 const PENTA = [0, 2, 4, 7, 9];
 
@@ -171,6 +171,143 @@ export const MAGIC = {
       k.bell({ f: f * 2, vol: 0.03, d: 0.4, partials: CHIME });
       k.sparkle({ t: 0.03, dur: 0.3, n: 3, lo: 5000, hi: 9500, vol: 0.02 });
       return 0.7;
+    },
+  },
+  // light arcane bolt launch (Starcaller basic attacks: fires often, stays small)
+  cast: {
+    max: 6, burst: 3, range: 45, rev: 0.1,
+    fn: (k) => {
+      const p = k.vary(1, 0.08);
+      k.tone({ type: 'triangle', fc: [[0, 900 * p], [0.12, 2400 * p]], env: [[0, 0], [0.01, 1], [0.18, 0]], vol: 0.09 });
+      k.tone({ fc: [[0, 450 * p], [0.12, 1200 * p]], env: [[0, 0], [0.01, 1], [0.16, 0]], vol: 0.06 });
+      whoosh(k, { dur: 0.16, f0: 1500 * p, fPeak: 5000 * p, f1: 2500 * p, q: 1.6, vol: 0.2, peakAt: 0.3 });
+      k.sparkle({ t: 0.04, dur: 0.18, n: 3, lo: 4500, hi: 9000, vol: 0.02 });
+      return 0.35;
+    },
+  },
+  // frost blast: icy whoosh, crystal crackle, a cold hiss
+  frost: {
+    max: 4, range: 55, rev: 0.14, hall: 0.08,
+    fn: (k) => {
+      const p = k.vary(1, 0.06);
+      whoosh(k, { dur: 0.32, f0: 2200 * p, fPeak: 6200 * p, f1: 3000 * p, q: 1.3, vol: 0.34, peakAt: 0.35 });
+      shatter(k, { t: 0.08, n: 14, dur: 0.35, vol: 0.04, lo: 3000, hi: 9500, hiss: 0.6 });
+      k.thump({ t: 0.06, f0: 150, f1: 80, sweep: 0.04, d: 0.12, vol: 0.2 });
+      k.nz({ t: 0.06, color: 'pink', type: 'bandpass', f: 1100, q: 1.2, a: 0.002, d: 0.08, vol: 0.25 });
+      k.nz({ t: 0.1, type: 'highpass', f: 6000, env: [[0, 0], [0.05, 1], [0.6, 0]], vol: 0.08 });
+      return 0.8;
+    },
+  },
+  // Stormfist chi: an energy palm — a round "whoomp", air burst and a crackle of lightning
+  chi: {
+    clip: 1.5, max: 4, range: 55, rev: 0.12,
+    fn: (k) => {
+      const p = k.vary(1, 0.08);
+      k.tone({ fc: [[0, 190 * p], [0.12, 85 * p]], env: [[0, 0], [0.004, 1], [0.25, 0]], vol: 0.35 });
+      k.nz({ color: 'pink', type: 'lowpass', fc: [[0, 3000], [0.25, 500]], a: 0.002, d: 0.28, vol: 0.4 });
+      zap(k, { t: 0.01, dur: 0.14, vol: 0.08, f: 1300 * p });
+      k.nz({ type: 'bandpass', f: 1900 * p, q: 1.2, a: 0.0006, d: 0.03, vol: 0.35 });
+      k.sparkle({ t: 0.03, dur: 0.2, n: 4, lo: 4000, hi: 9000, vol: 0.02 });
+      return 0.5;
+    },
+  },
+  // Void Rift: a black hole — everything is sucked into a swirling, falling roar over a rising sub
+  void: {
+    clip: 1.4, max: 2, range: 80, rev: 0.14, hall: 0.25, pri: 2, labDur: 3.5,
+    fn: (k) => {
+      const D = 2.1, p = k.pan(0); k.lfo(0, D, 1.4, 0.7, p.pan);
+      k.nz({ type: 'bandpass', fc: [[0, 3200], [D, 180]], q: 1.4, env: [[0, 0], [0.3, 1], [D * 0.8, 0.8], [D, 0]], vol: 0.45, dest: p });
+      k.nz({ color: 'brown', type: 'lowpass', f: 260, env: [[0, 0], [0.4, 1], [D, 0]], vol: 0.45 });
+      k.tone({ fc: [[0, 38], [D, 62]], env: [[0, 0], [0.5, 1], [D, 0]], vol: 0.3 });
+      for (const f of [110, 116.5, 164.8]) k.tone({ type: 'sawtooth', f, env: [[0, 0], [0.6, 1], [D, 0]], vol: 0.018, dest: k.filter('lowpass', 700, 1) });
+      k.sparkle({ t: 0.2, dur: D - 0.4, n: 10, lo: 2000, hi: 7000, vol: 0.018 });
+      return D + 0.3;
+    },
+  },
+  // vanish: a shadow poof — sucked-in air, a soft pop, a thin shimmer
+  vanish: {
+    max: 4, range: 45, rev: 0.12,
+    fn: (k) => {
+      k.nz({ type: 'bandpass', fc: [[0, 600], [0.14, 3800]], q: 1.2, env: [[0, 0], [0.13, 1], [0.15, 0]], vol: 0.35 });
+      k.nz({ t: 0.14, color: 'pink', type: 'lowpass', f: 900, a: 0.001, d: 0.12, vol: 0.4 });
+      k.thump({ t: 0.14, f0: 140, f1: 70, sweep: 0.03, d: 0.1, vol: 0.2 });
+      k.tone({ t: 0.14, type: 'triangle', fc: [[0, 3000], [0.2, 5200]], env: [[0, 0], [0.01, 1], [0.25, 0]], vol: 0.025 });
+      return 0.5;
+    },
+  },
+  // a bigger fire eruption (boss soulfire pulses): whoomph, roar, crackle
+  fire_burst: {
+    clip: 1.4, max: 3, range: 70, rev: 0.14, pri: 2,
+    fn: (k) => {
+      const p = k.vary(1, 0.08);
+      k.nz({ color: 'brown', type: 'lowpass', fc: [[0, 2000 * p], [0.6, 320 * p]], q: 0.8, a: 0.006, d: 0.75, vol: 0.7 });
+      k.thump({ f0: 120 * p, f1: 50 * p, sweep: 0.1, d: 0.4, vol: 0.45 });
+      whoosh(k, { dur: 0.5, f0: 2600 * p, fPeak: 1800 * p, f1: 500 * p, q: 1, vol: 0.3, peakAt: 0.1 });
+      k.tone({ type: 'sawtooth', fc: [[0, 70], [0.8, 55]], env: [[0, 0], [0.05, 1], [0.8, 0]], vol: 0.03, dest: k.filter('lowpass', 400, 1) }); // soulfire drone
+      crackles(k, 14, 0.03, 0.9, 0.18);
+      return 1.1;
+    },
+  },
+  // Gorrath's ghost phase: a spectral slam — impact, an eerie "oo" wail riding it, a ghostly swell afterwards
+  ghost_slam: {
+    clip: 1.4, max: 3, range: 100, ref: 8, rev: 0.12, hall: 0.4, pri: 2, duck: [0.2, 0.8], labDur: 3,
+    fn: (k) => {
+      boom(k, { vol: 0.5, d: 1.3, f0: 115, f1: 38 });
+      k.nz({ type: 'highpass', f: 2600, a: 0.0006, d: 0.05, vol: 0.3 });
+      k.voice({ t: 0.02, pitch: [[0, 360], [0.25, 420], [0.9, 190]], amp: [[0, 0], [0.05, 1], [0.5, 0.6], [0.95, 0]], formants: [[0, VOWEL.oo], [0.9, VOWEL.oh]], q: [5, 7, 9], fg: [1, 0.4, 0.15], vib: [5.5, 45], breath: 0.25, vol: 0.18 });
+      k.nz({ t: 0.05, type: 'bandpass', fc: [[0, 800], [1.0, 3000]], q: 2, env: [[0, 0], [0.4, 1], [1.2, 0]], vol: 0.14 });
+      k.sparkle({ t: 0.1, dur: 0.9, n: 8, lo: 2500, hi: 7000, vol: 0.02 });
+      return 1.6;
+    },
+  },
+  // ghostly wail: layered formant voices gliding and trembling, breathy, drenched in hall
+  ghost_wail: {
+    max: 2, range: 150, ref: 12, rev: 0.1, hall: 0.55, pri: 2, duck: [0.25, 2], labDur: 4,
+    fn: (k) => {
+      for (const [dt, s, pan] of [[0, 1, -0.4], [0.12, 1.26, 0.4], [0.25, 0.75, 0]]) {
+        k.voice({ t: dt, pitch: [[0, 380 * s], [0.6, 700 * s], [1.6, 520 * s], [2.4, 300 * s]], amp: [[0, 0], [0.4, 0.8], [1.2, 1], [2.4, 0]],
+          formants: [[0, VOWEL.oo], [1.0, VOWEL.oh], [2.4, VOWEL.oo]], q: [5, 7, 9], fg: [1, 0.45, 0.18], vib: [5.2, 55], jitter: 25, jitterHz: 7, breath: 0.35, vol: 0.14, dest: k.pan(pan) });
+      }
+      k.nz({ color: 'pink', type: 'bandpass', fc: [[0, 1200], [2.4, 600]], q: 1.5, env: [[0, 0], [0.8, 1], [2.5, 0]], vol: 0.1 });
+      k.tone({ f: 55, env: [[0, 0], [0.8, 1], [2.6, 0]], vol: 0.14 });
+      return 3;
+    },
+  },
+  // ---- loops for holding / channelling skills: audio.loop('channel' | 'spin' | 'fire_loop', { pos }) ----
+  channel: {
+    loop: { dur: 4, xf: 0.6 }, max: 3, range: 40, rev: 0.1, labDur: 3,
+    fn: (k, o) => {
+      const D = o.dur ?? 2, env = o.loop ? [[0, 1], [D, 1]] : [[0, 0], [0.2, 1], [D - 0.3, 1], [D, 0]];
+      const main = k.gain(0); k.envPts(main.gain, env);
+      const am = k.gain(0.8, main); k.lfo(0, D, 0.5, 0.15, am.gain);
+      const lp = k.filter('lowpass', 2400, 0.7, am);
+      for (const [f, v] of [[220, 0.16], [220.7, 0.12], [330.4, 0.08], [441.3, 0.06], [661, 0.035], [880.6, 0.02]]) k.osc('sine', f, 0, D, k.gain(v, lp));
+      const sh = k.gain(0.3, main); k.lfo(0, D, 3.1, 0.15, sh.gain);
+      k.noiseSrc(0, D, k.filter('bandpass', 3200, 6, sh));
+      return D;
+    },
+  },
+  spin: {
+    loop: { dur: 2.4, xf: 0.3 }, max: 3, range: 50, rev: 0.1, labDur: 3,
+    fn: (k, o) => {
+      const D = o.dur ?? 1.2, n = Math.max(2, Math.round(D / 0.3)), p = k.pan(0); k.lfo(0, D, n / D / 2, 0.6, p.pan, 'triangle');
+      for (let i = 0; i < n; i++) whoosh(k, { t: i * (D / n), dur: D / n * 1.15, f0: 600, fPeak: 2300, f1: 700, q: 1.2, vol: 0.4, peakAt: 0.5, dest: p });
+      k.nz({ color: 'brown', type: 'lowpass', f: 320, env: o.loop ? [[0, 1], [D, 1]] : [[0, 0], [0.2, 1], [D - 0.2, 1], [D, 0]], vol: 0.22 });
+      return D;
+    },
+  },
+  fire_loop: {
+    loop: { dur: 4, xf: 0.6 }, max: 3, range: 60, rev: 0.12, labDur: 3,
+    fn: (k, o) => {
+      const D = o.dur ?? 2.6, loop = !!o.loop;
+      const main = k.gain(0); k.envPts(main.gain, loop ? [[0, 1], [D, 1]] : [[0, 0], [0.12, 1], [D - 0.4, 0.9], [D, 0]]);
+      const rg = k.gain(0.75, main); k.wobble(0, D, 9, 0.25, rg.gain);
+      const lp = k.filter('lowpass', 1000, 0.8, rg); k.wobble(0, D, 5, 350, lp.frequency);
+      k.noiseSrc(0, D, lp, 'brown');
+      const hiss = k.gain(0.16, main); k.wobble(0, D, 13, 0.08, hiss.gain);
+      k.noiseSrc(0, D, k.filter('bandpass', 2600, 0.6, hiss), 'white');
+      crackles(k, Math.floor(D * 9), 0, D - 0.05, 0.15, main);
+      return D;
     },
   },
   shield: {

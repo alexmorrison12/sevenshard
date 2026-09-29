@@ -4,7 +4,8 @@
 // Output: bind joints, neutral-frame rotations and skinned "pieces" (see makePiece).
 import { SDF, ADD, SUB, rotEuler, rotAlign, mulR, surfaceNets, sdfAO, norm3, refineVerts } from './sdf.js';
 import { BONES, B, NB, PARENTS, BONE_CHAIN, CH_TORSO, CH_ARM_L, CH_ARM_R, CH_LEG_L, CH_LEG_R, CH_HEAD, CH_HAND_L, CH_HAND_R } from './rig.js';
-import { buildHeadPrims, headDef, faceMapping } from './head.js';
+import { buildHeadPrims, headDef, faceMapping, eyeCenter } from './head.js';
+import { eyePiece } from './eyes.js';
 import { SLOT } from './palette.js';
 import { simplify } from './simplify.js';
 
@@ -41,7 +42,7 @@ const RAW = { m: HERO_M, f: HERO_F };
 
 // LOD mesh budgets (vertex targets before assembly)
 export const LOD = {
-  full: { body: 3600, head: 1500, hand: 420, hBody: 0.019, hHead: 0.0066, hHand: 0.0066, ring: 1, hair: 1 },
+  full: { body: 3600, head: 2600, hand: 420, hBody: 0.019, hHead: 0.0046, hHand: 0.0066, ring: 1, hair: 1 },
   crowd: { body: 1150, head: 380, hand: 90, hBody: 0.03, hHead: 0.011, hHand: 0.011, ring: 0.5, hair: 0.4 },
 };
 
@@ -133,6 +134,8 @@ export function buildJoints(P) {
   J.braidL1 = v3(J.head, [-0.085 * hs, 0.02 * hs, -0.02 * hs]); J.braidL2 = v3(J.braidL1, [0, -0.13 * hs, 0]);
   J.braidR1 = v3(J.head, [0.085 * hs, 0.02 * hs, -0.02 * hs]); J.braidR2 = v3(J.braidR1, [0, -0.13 * hs, 0]);
   J.beard1 = v3(J.head, [0, -0.04 * hs, -0.09 * hs]); J.beard2 = v3(J.beard1, [0, -0.1 * hs, -0.02 * hs]);
+  // eyelid bones at the eyeball centres (shared by every face preset of the sex)
+  for (const sg of [-1, 1]) { const e = eyeCenter(hd, sg); J[sg < 0 ? 'lidL' : 'lidR'] = [J.head[0] + e[0] * hs, J.head[1] + e[1] * hs, J.head[2] + e[2] * hs]; }
   // front flaps / sash tails (hang from the belt, front and back): skirt bones
   J.skirtF = v3(J.hips, [0, -0.02, -0.12]); J.skirtF2 = v3(J.skirtF, [0, -0.22, -0.01]);
   J.skirtB = v3(J.hips, [0, -0.02, 0.12]); J.skirtB2 = v3(J.skirtB, [0, -0.22, 0.01]);
@@ -496,7 +499,8 @@ export function getHead(base, face = 0) {
   for (let v = 0; v < pc.n; v++) { pc.coord[v] = pc.pos[v * 3 + 1]; pc.ang[v] = Math.atan2(pc.pos[v * 3], -(pc.pos[v * 3 + 2] - J.head[2])); }
   const faceMap = faceMapping(Ph, J);
   headShading(pc, headZ.fn, head, Ph, J, faceMap);
-  const out = { piece: pc, sdf: head, faceMap, def: hd, key, ms: performance.now() - t0 };
+  const eyes = eyePiece(base, hd, key);
+  const out = { piece: pc, eyes, sdf: head, faceMap, def: hd, key, ms: performance.now() - t0 };
   HEAD_CACHE.set(key, out);
   return out;
 }

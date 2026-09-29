@@ -13,9 +13,22 @@ import { lambert } from '../engine/materials.js';
 export function startLegionLab({ createBoss, BOSSES, bossStats, title = 'Legion Bosses' }) {
 
 const q = Object.fromEntries(new URLSearchParams(location.search));
-const lab = createLab({ title, view: q.view === 'cine' ? 'orbit' : (q.view || 'iso'), ground: 'stone', light: q.light || 'dusk', size: 80 });
+const lab = createLab({ title, view: q.view === 'cine' ? 'orbit' : (q.view || 'iso'), ground: 'stone', light: q.light && q.light !== 'blood' ? q.light : 'dusk', size: 80 });
 const { scene, camera, controls } = lab;
 lab.renderer.grade.bloom = 0.6;
+// 'blood' = the Legion colosseum preset used by both raid gates (src/world/env.js), replicated here for tuning
+const BLOOD = { sun: 0xff8a6a, sunI: 2.3, dir: [-0.55, 0.62, 0.45], sky: 0xa04a5a, gnd: 0x2a0c0c, hemi: 0.95, fog: 0x5a1418, bg: 0x220608,
+  grade: { exposure: 1.04, saturation: 1.14, contrast: 1.14, vignette: 0.46, warm: 0.08, cool: 0.04, lift: [0.035, 0.0, 0.01], gain: [1.05, 0.95, 0.92], bloom: 0.85, bloomRadius: 0.6, bloomThreshold: 0.8 } };
+function applyBlood() {
+  const L = BLOOD;
+  lab.hemi.color.set(L.sky); lab.hemi.groundColor.set(L.gnd); lab.hemi.intensity = L.hemi;
+  lab.sun.color.set(L.sun); lab.sun.intensity = L.sunI; lab.sun.position.set(...L.dir).normalize().multiplyScalar(50);
+  scene.background = new THREE.Color(L.bg);
+  Object.assign(lab.renderer.grade, L.grade);
+  if (lab.ground) lab.ground.material.color.set(0x7a4a44);
+}
+if (q.light === 'blood') applyBlood();
+
 
 // ---- hero capsule (1.85 m) for scale
 const hero = new THREE.Group();
@@ -89,6 +102,7 @@ lab.panel.slider('turn rad/s', -1.5, 1.5, state.turn, v => { state.turn = v; });
 lab.panel.check('patrol circle', false, v => { patrol = v; if (!v) { boss.root.position.set(0, 0, 0); boss.root.rotation.y = face; } });
 lab.panel.slider('facing°', 0, 360, face * 180 / Math.PI, v => { face = v * Math.PI / 180; boss.root.rotation.y = face; });
 lab.panel.check('hero (1.85 m)', q.hero !== '0', v => { hero.visible = v; });
+lab.panel.button('blood light (raid)', () => applyBlood());
 lab.panel.label('Camera');
 lab.panel.buttons(['iso', 'cine', 'close', 'front', 'side', 'back', 'top', 'orbit'], v => view(v));
 let flash = 0;

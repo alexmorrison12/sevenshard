@@ -11,5 +11,6 @@ import { SHADE } from './shade.js';
 import { AWAKEN } from './awaken.js';
 import { BOSS } from './boss.js';
 import { AMBIENT } from './ambient.js';
+import { GAME } from './game.js';
 
-export const PRESETS = { ...AMBIENT, ...BOSS, ...WARRIOR, ...FIGHTER, ...GUNNER, ...MYSTIC, ...SHADE, ...AWAKEN };
+export const PRESETS = { ...AMBIENT, ...BOSS, ...WARRIOR, ...FIGHTER, ...GUNNER, ...MYSTIC, ...SHADE, ...AWAKEN, ...GAME };

@@ -48,13 +48,13 @@ export class Raid extends Track {
     this.tempo(phase === 2 ? 156 : 150, 4);
     this.form = first ? ['onslaught', 'chant', 'titan', 'heroes', 'bridge', 'onslaught', 'titan'] : phase === 2 ? ['titan', 'chant', 'onslaught', 'heroes', 'titan', 'bridge'] : ['onslaught', 'heroes', 'chant', 'titan', 'bridge'];
     this.ach = this.rng.pick(ONS_CH); this.cch = this.rng.pick(CHANT_CH);
-    this.si = 0; this.sb = 0; this.pending = 0;
+    this.si = 0; this.sb = 0; this.nextPhase = 0;
   }
-  setPhase(name) { const p = name === 'raid_ghost' ? 2 : 1; if (p !== this.phase || this.pending) this.pending = p; }
+  setPhase(name) { const p = name === 'raid_ghost' ? 2 : 1; if (p !== this.phase || this.nextPhase) this.nextPhase = p; }
   chs(type) { return type === 'titan' ? TYRANT_CH : type === 'chant' ? this.cch : type === 'heroes' ? HERO_RAID_CH : type === 'bridge' ? ['Fm', 'Db', 'Bbm', 'C'] : this.ach; }
   playBar(bar, t) {
     const I = this.inst, s = this.spb, B = this.barDur;
-    if (this.pending) { const p = this.pending; this.transition(t, p); this.setup(p); return B; }
+    if (this.nextPhase) { const p = this.nextPhase; this.transition(t, p); this.setup(p); return B; }
     const type = this.form[this.si], sb = this.sb, len = type === 'bridge' ? 4 : 8;
     const raw = this.chs(type)[sb % 8], list = (Array.isArray(raw) ? raw : [raw]).map((c) => tc(c, this.sh));
     const G = this.phase === 2, sh = this.sh;

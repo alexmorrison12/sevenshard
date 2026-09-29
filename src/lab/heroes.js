@@ -127,6 +127,9 @@ const CAMS = {
   wide: { pos: [0, 2.6, 13], at: [0, 0.9, 0], fov: 38 },
   row: { pos: [0, 1.5, 11.8], at: [0, 0.95, 0], fov: 40 },
   side: { pos: [5.6, 1.35, 0.4], at: [0, 1.0, -0.4], fov: 30 },
+  // exact creation-screen framings (src/game/stage.js MenuStage.preview)
+  cbody: { pos: [0.6, 1.3, 6.2], at: [0.3, 0.95, 0], fov: 32 },
+  cface: { pos: [0.6, 1.66, 1.3], at: [0.3, 1.62, 0], fov: 28 },
   top: { pos: [0.01, 7.5, 0.6], at: [0, 0.8, -0.2], fov: 32 },
   iso2: { pos: [0, 5.85, 3.3], at: [0, 0.9, -0.3], fov: 34 },
 };
@@ -158,5 +161,7 @@ window.__hero = {
   stats() { return heroes.map(h => ({ ms: +h._ms.toFixed(1), tris: h.stats.tris, draws: h.stats.drawCalls, height: +h.height.toFixed(3) })); },
 };
 if (Q.nopanel) lab.panel.hide();
+// creation-screen lights (key + rim point lights, as in MenuStage.preview)
+if (Q.studio) { const key = new THREE.PointLight(0xffe8c8, 25, 12); key.position.set(2.2, 2.6, 3); const rim = new THREE.PointLight(0x8ab4ff, 30, 12); rim.position.set(-2.5, 2.4, -2); lab.scene.add(key, rim); }
 rebuild();
 if (Q.act) setTimeout(() => { if (Q.at != null) window.__hero.at(Q.act, Number(Q.at)); else window.__hero.play(Q.act, { loop: Q.loop === '1' }); }, 50);

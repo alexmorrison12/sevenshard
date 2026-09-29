@@ -70,6 +70,8 @@ function loopRegion(d, a0, L, X) {
 export function bakeZones(noise, sr, spec) {
   return cached(spec.key, sr, async () => {
     const { lo, hi, step, stereo = true, att = 0.35, loop = 1.2, xf = 0.3, rms = 0.2, seed = 7, oneShot = false } = spec;
+    // band-limited patches may render at a lower rate (half the memory; they play through the resampler anyway)
+    sr = spec.rate ? Math.min(sr, spec.rate) : sr;
     const roots = []; for (let m = lo; m <= hi; m += step) roots.push(m);
     const T = att + loop + 0.05, gapT = 0.1, slot = T + gapT;
     const nch = stereo ? 2 : 1;

@@ -5,6 +5,8 @@ import { baseStats } from '../unit.js';
 import { CLASSES } from '../../data/classes/index.js';
 import { refFor } from '../ai/mob.js';
 import { ENGRAVINGS, engravingLevels } from '../../data/engravings.js';
+import { SETS } from '../../data/items.js';
+import { sunMods } from '../progression/sunheart.js';
 
 export const STAT_KEYS = ['crit', 'spec', 'swift', 'dom', 'endur', 'expert'];
 
@@ -25,6 +27,8 @@ export function heroStats(char, ctx = {}) {
   const cs = { crit: 0, spec: 0, swift: 0, dom: 0, endur: 0, expert: 0 };
   for (const it of Object.values(char.equip || {})) if (it?.stats) for (const k of STAT_KEYS) cs[k] += it.stats[k] || 0;
   if (ilvl >= 1000 && !Object.values(char.equip || {}).some(i => i?.slot === 'necklace')) { cs.crit += 400; cs.swift += 300; }
+  const sun = sunMods(char);
+  cs.crit += sun.critStat || 0; cs.spec += sun.specStat || 0; cs.swift += sun.swiftStat || 0;
   const q = char.equip?.weapon?.quality ?? 70;
   let apMul = 1 + (q / 100) * 0.1;            // weapon quality: up to +10% damage (as "additional damage")
   let hpMul = 1;
@@ -60,6 +64,25 @@ export function heroStats(char, ctx = {}) {
       else st[k] = (st[k] ?? 0) + m[k];
     }
   }
+  // Sunheart Passive (everything except the flat combat stats handled above)
+  for (const [k, v] of Object.entries(sun)) {
+    if (k.endsWith('Stat')) continue;
+    if (k.endsWith('Mul')) st[k] = (st[k] ?? 1) * (1 + v);
+    else st[k] = (st[k] ?? 0) + v;
+  }
+  // gear set bonuses (e.g. Horned Tyrant 2/4/6)
+  const setCount = {};
+  for (const sl of ['weapon', 'head', 'shoulder', 'chest', 'pants', 'gloves']) { const it = char.equip?.[sl]; if (it?.set) setCount[it.set] = (setCount[it.set] || 0) + 1; }
+  st.sets = setCount;
+  for (const [set, n] of Object.entries(setCount)) for (const b of SETS[set]?.bonus || []) {
+    if (n < b.n) continue;
+    for (const k in b.mods || {}) { if (k.endsWith('Mul')) st[k] = (st[k] ?? 1) * (1 + b.mods[k]); else st[k] = (st[k] ?? 0) + b.mods[k]; }
+    if (b.special) st[b.special] = true;
+  }
+  // bracelet special lines
+  for (const l of char.equip?.bracelet?.lines || []) if (l.mods) for (const k in l.mods) { if (k.endsWith('Mul')) st[k] = (st[k] ?? 1) * (1 + l.mods[k]); else st[k] = (st[k] ?? 0) + l.mods[k]; }
+  // class engraving flags (e.g. Bloodfrenzy super armor)
+  for (const id of Object.keys(lv)) { const ce = cls.engravings?.find(x => x.id === id); if (ce?.superArmor) st.superArmor = Math.max(st.superArmor || 0, ce.superArmor); }
   if (st.defMul) { st.def = Math.round(st.def * st.defMul); delete st.defMul; }
   if (st.mpRegenMul) { st.mpRegen *= st.mpRegenMul; delete st.mpRegenMul; }
   // special engraving multipliers resolved per hit

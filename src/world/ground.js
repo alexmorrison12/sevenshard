@@ -30,6 +30,7 @@ export class Ground {
     this.noise = new Simplex(seed * 7 + 3);
     this.plazas = [];
     this.emitColor = new THREE.Color(1.0, 0.35, 0.1);
+    this.tint = new THREE.Color(1, 1, 1);          // multiplies the final ground colour (zone mood)
   }
   // ---------------- height ----------------
   sculpt(fn) {
@@ -162,7 +163,7 @@ export class Ground {
       uAlb: { value: GL.albedo }, uNrm: { value: GL.normal }, uCtrlA: { value: this.ctrlA }, uCtrlB: { value: this.ctrlB }, uCtrlC: { value: this.ctrlC }, uInfo: { value: this.infoTex },
       uCtrlXf: { value: this.ctrlInfo }, uIdx: { value: idx.map(Number) }, uTile: { value: tiles }, uNoise: { value: noiseTex() },
       uPlaza: { value: pz }, uPlazaP: { value: pp }, uPlazaR: { value: pr }, uEmit: { value: this.emitColor }, uEmitPulse: { value: 1 },
-      uHB: { value: 0.55 }, uWetCol: { value: new THREE.Color(0.55, 0.62, 0.72) }, uGlowCol: { value: new THREE.Color(1.6, 0.8, 0.3) },
+      uHB: { value: 0.55 }, uGTint: { value: this.tint }, uWetCol: { value: new THREE.Color(0.55, 0.62, 0.72) }, uGlowCol: { value: new THREE.Color(1.6, 0.8, 0.3) },
     };
     this.uniforms = u;
     const mat = lambert({ color: 0xffffff }, {
@@ -178,7 +179,7 @@ precision highp sampler2DArray;
 uniform sampler2DArray uAlb; uniform sampler2DArray uNrm; uniform sampler2D uCtrlA; uniform sampler2D uCtrlB; uniform sampler2D uCtrlC; uniform sampler2D uInfo; uniform sampler2D uNoise;
 uniform vec4 uCtrlXf; uniform float uIdx[12]; uniform float uTile[12];
 uniform vec4 uPlaza[4]; uniform vec4 uPlazaP[4]; uniform vec4 uPlazaR[4];
-uniform vec3 uEmit; uniform float uEmitPulse; uniform float uHB; uniform vec3 uWetCol; uniform vec3 uGlowCol;
+uniform vec3 uEmit; uniform float uEmitPulse; uniform float uHB; uniform vec3 uWetCol; uniform vec3 uGlowCol; uniform vec3 uGTint;
 varying float vAO; varying vec3 vNrmW;
 float gSpecMask = 0.0;
 `)
@@ -269,7 +270,7 @@ col = mix(col, col * 0.55, wet * 0.8);
 nacc.xy *= 1.0 - wet * 0.7;
 gSpecMask = wet * 1.6 + wear * 0.12;
 col *= mix(1.0, aoAcc, 0.6) * vAO * mix(0.45, 1.0, inf.r);
-diffuseColor.rgb *= col;
+diffuseColor.rgb *= col * uGTint;
 totalEmissiveRadiance += uEmit * emAcc * uEmitPulse * (0.8 + 0.4 * sin(uTime * 1.6 + vWPos.x * 0.21 + vWPos.z * 0.17));
 totalEmissiveRadiance += uGlowCol * inf.a * diffuseColor.rgb * 0.9;
 vec3 gNT = nacc;

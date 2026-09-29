@@ -13,7 +13,7 @@ const NZ = new Simplex(31);
 // style names per race+sex (index = opts.hair)
 export const HAIR_STYLES = {
   m: ['swept', 'short', 'long', 'ponytail', 'topknot', 'mohawk', 'backbraid', 'bald'],
-  f: ['long', 'ponytail', 'bun', 'braids', 'bob', 'pigtails', 'buns', 'swept'],
+  f: ['fem_long', 'fem_ponytail', 'fem_bun', 'fem_braids', 'fem_bob', 'fem_pigtails', 'fem_buns', 'fem_swept'],
 };
 export const BEARD_STYLES = ['none', 'goatee', 'full', 'braided', 'mustache', 'chops'];
 

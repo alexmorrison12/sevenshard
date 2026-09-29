@@ -17,9 +17,19 @@ import { GUARDIANS, RAIDS } from '../data/raids.js';
 import { ITEMS, SLOT_NAMES } from '../data/items.js';
 import { makeGear, honeChance, honeCost, hone, BOOSTER_CAP } from './systems/gear.js';
 import { refFor } from './ai/mob.js';
+import { AllyAI } from './ai/ally.js';
+if (typeof window !== 'undefined') window.__AllyAI = AllyAI;
 import { dayId, fmt, uid } from '../core/util.js';
 import { openLobby, NetBadge } from '../net/lobby.js';
 import { CITY_NPCS } from '../data/npcs.js';
+import { Emitter } from '../core/events.js';
+import { PLUGINS, LAUNCHERS, SERVICES, WINDOWS, ACTIONS, ZONE_MODES } from './registry.js';
+import './plugins.js';
+import { TouchControls } from './touch.js';
+import { SocialContext } from './social/context.js';
+import { sunView, rank as sunRank, resetTree as sunReset, sunState, unlocked as sunUnlocked } from './progression/sunheart.js';
+import { SUNHEART_POINTS } from '../data/sunheart.js';
+import { pickLine } from './social/chatter.js';
 
 const q = Object.fromEntries(new URLSearchParams(location.search));
 const NEWS = [
@@ -37,7 +47,14 @@ export class Session {
     this.ui = this.game.ui; this.game.session = this;
     this.stage = new MenuStage(this.game);
     this.char = null; this.hub = null; this.screen = null;
+    this.bus = new Emitter();
+    this.touch = new TouchControls(this.game);
+    this.social = new SocialContext(this);
+    this.game.invitedSims = this.invited = [];
+    const coarse = matchMedia?.('(pointer: coarse)').matches && !matchMedia?.('(pointer: fine)').matches;
+    if (coarse || q.touch) { this.ui.setTouch?.(true, { skills: true }); this.touch.enable(true); }
     this.applyVolumes();
+    for (const pl of PLUGINS) { try { pl.init?.(this); } catch (e) { console.error('[plugin init]', pl.id, e); } }
     window.__session = this; window.__game = this.game;
     this.game.hooks.frame.push(dt => this.tick(dt));
   }
@@ -83,6 +100,7 @@ export class Session {
     this.draft = { cls: 'reaver', sex: 'm', look: { face: 0, hair: 0, hairColor: 0x3a2616, skin: 1, eyes: 0x3a6ab0, height: 1, build: 0.5, marks: 0, markColor: 0x9a1c1c }, name: '', step: 'class' };
     const sp = this.game.zone?.anchors?.spawn || { x: 0, z: 0 };
     this.stage.preview(this.draft, { x: sp.x, z: sp.z });
+    if (!this._demoHover) { this._demoHover = true; document.addEventListener('pointerover', e => { if (this.screen !== 'create') return; const el = e.target.closest?.('.ss-cc-sk, .ss-cc-awk'); if (!el || el === this._demoEl) return; this._demoEl = el; const n = el.querySelector('b')?.textContent; if (n) this.stage.demoByName(n); }); }
     this.ui.screen('create', { ...this.draft, classes: CLASS_LIST.map(c => c.id), taken: this.account.chars.map(c => c.name) });
   }
 
@@ -92,6 +110,8 @@ export class Session {
   }
   async route(type, p) {
     const A = this.account;
+    const ext = ACTIONS[type] || ACTIONS[type.split(':')[0] + ':'];
+    if (ext && await ext(this, type, p)) return;
     switch (type) {
       // title
       case 'title:enter': return this.charSelect();
@@ -126,6 +146,9 @@ export class Session {
       case 'hud:menu': return this.menu(p.id);
       case 'hud:escape': return this.ui.toggle('gamemenu', { items: gameMenuItems() });
       case 'gamemenu': return this.gameMenu(p.id);
+      case 'touch:skill': return this.touch.key(p.key, p.phase);
+      case 'touch': this.touch?.enable(!!p.on); return;
+      case 'hud:interact': { const t = this.findInteractable(); if (t) this.interact(t); return; }
       case 'hud:skill': return this.game.player?.cast(p.slot);
       case 'hud:item': return this.game.hero?.useItem(p.slot, this.game.player.aim);
       case 'hud:awaken': return this.game.player?.awaken();
@@ -136,6 +159,9 @@ export class Session {
       // character & inventory
       case 'inv:equip': case 'inv:use': return this.useItem(p.uid, p.slot);
       case 'char:unequip': this.account.unequip(this.char, p.slot); return this.refreshChar();
+      // vendors
+      case 'vendor:buy': return this.buy(p.id, p.qty || 1);
+      case 'vendor:sell': case 'inv:sell': return this.sell(p.uid);
       // skills
       case 'skills:level': if (A.levelSkill(this.char, p.id, p.delta)) this.refreshChar(); return this.refreshWindow('skills');
       case 'skills:tripod': if (A.setTripod(this.char, p.id, p.tier, p.index)) this.refreshChar(); return this.refreshWindow('skills');
@@ -143,6 +169,9 @@ export class Session {
       // engravings
       case 'engr:equip': { const b = (this.char.library || {})[p.id]; this.char.books[p.slot] = { id: p.id, nodes: Math.min(12, b || 12) }; A.save(); this.refreshChar(); return this.refreshWindow('engravings'); }
       case 'engr:unequip': this.char.books[p.slot] = null; this.char.books = this.char.books.filter(Boolean); A.save(); this.refreshChar(); return this.refreshWindow('engravings');
+      // Sunheart Passive
+      case 'sunheart:rank': { const r = sunRank(this.char, p.id, p.delta || 1); if (!r.ok) this.ui.toast({ points: 'Not enough Sunheart points.', tier: 'Spend more points in the tiers below first.', max: 'Already at max rank.', locked: 'The Sunheart awakens at item level 1400.', dependent: 'Higher tiers depend on this rank.' }[r.why] || 'Can\u2019t do that.', 'warn'); A.save(); this.refreshChar(); return this.refreshWindow('sunheart'); }
+      case 'sunheart:reset': sunReset(this.char, p.tree); A.save(); this.refreshChar(); return this.refreshWindow('sunheart');
       // settings
       case 'settings:change': return this.setting(p.key, p.value);
       case 'dialog:choice': return;
@@ -162,9 +191,10 @@ export class Session {
     const zoneId = c.zone === 'prologue' && !CLASSES[c.cls] ? 'solhaven' : (c.zone === 'prologue' ? 'solhaven' : (c.zone || 'solhaven'));
     await this.loadZone(zoneId, { region: 'Valemont', kind: 'city' });
     this.spawnMe(this.game.zone.anchors.spawn);
-    this.game.mode = this.hub = new CityMode(this.game, { seed: dayId() });
+    this.game.mode = this.hub = this.zoneMode(zoneId);
     this.hub.enter();
     this.inWorld();
+    this.bus.emit('zone', { id: zoneId, kind: this.game.zone?.kind || 'city' });
     if (this.hostMode && !this.game.net) this.startHosting();
     if (c.level < 10 && !c.flags?.welcomed) { (c.flags ||= {}).welcomed = true; this.ui.dialog({ name: 'Seraphine', title: 'Oracle of the Shards' }, ['Shardbearer! You made it out of Brighthold alive.', 'The Legion is moving. The Rift Nexus in the east plaza leads to where the fighting is — and the harbour to everything else.', { text: 'Speak with the townsfolk (G), and when you are ready, step onto a rift portal.', choices: [{ id: 'ok', text: 'I’m ready.', kind: 'talk' }] }]); }
   }
@@ -174,6 +204,7 @@ export class Session {
     const zone = await buildZone(id, { quality: this.game.renderer.quality, onProgress: f => this.ui.screen('loading', { pct: 5 + f * 85 }) });
     zone.name = zone.name || ZONES[id]?.name || id; zone.id = id;
     this.game.setZone(zone);
+    this.relayLevel(this.game.level);
     this.ui.screen('loading', { pct: 100 });
     if (performance.now() - t0 < 500) await new Promise(r => setTimeout(r, 300));
     return zone;
@@ -197,7 +228,8 @@ export class Session {
     if (!h) return h;
     h.cls = this.char?.cls; h.level = this.char?.level; h.xp = this.char?.xp || 0; h.xpMax = xpForLevel(this.char?.level || 1);
     h.currencies = { silver: this.account.count('silver'), gold: this.account.count('gold'), crystals: this.account.count('crystals') };
-    const it = this.hub?.interactable?.();
+    for (const pl of PLUGINS) if (pl.hud) { try { pl.hud(h); } catch (e) { console.error('[plugin hud]', pl.id, e); } }
+    const it = this.findInteractable();
     h.interact = it ? { key: 'G', label: it.portal ? 'Enter' : it.data?.npcDef?.object ? 'Use' : 'Talk', name: it.name } : null;
     h.zone = { name: this.game.zone?.name || '', sub: this.game.mode?.kind === 'city' ? 'Valemont' : '' };
     h.minimap = this.minimap();
@@ -231,9 +263,12 @@ export class Session {
   // ---------------------------------------------------------------- per frame
   tick(dt) {
     const g = this.game, inp = g.input;
+    this.touch?.update();
+    this.social?.update(); this.social?.tick();
     if (this.screen !== 'game' || !g.hero) return;
     this.char.played = (this.char.played || 0) + dt;
-    if (inp.hit('interact') && !this.ui.wantsKeyboard) { const t = this.hub?.interactable?.(); if (t) this.interact(t); }
+    for (const pl of PLUGINS) if (pl.update) { try { pl.update(dt); } catch (e) { console.error('[plugin update]', pl.id, e); } }
+    if (inp.hit('interact') && !this.ui.wantsKeyboard) { const t = this.findInteractable(); if (t) this.interact(t); }
     if (inp.hit('chat') && !this.ui.wantsKeyboard) this.ui.chat.focus?.();
     // death overlay
     const me = g.hero.u;
@@ -249,7 +284,27 @@ export class Session {
   }
 
   // ---------------------------------------------------------------- hub interactions
+  findInteractable() {
+    for (const pl of PLUGINS) { const t = pl.interactable?.(); if (t) return t; }
+    return this.game.mode?.interactable?.() || this.hub?.interactable?.() || null;
+  }
+  /** mode for an open-world zone: registered by id or kind, else a hub */
+  zoneMode(zoneId) {
+    const z = this.game.zone, f = ZONE_MODES[zoneId] || ZONE_MODES[z?.kind];
+    if (f) { try { const m = f(this, z, {}); if (m) return m; } catch (e) { console.error('[zone mode]', zoneId, e); } }
+    return new CityMode(this.game, { seed: dayId() });
+  }
+  /** publish level events on the session bus (quests, tasks, collectibles, achievements listen here) */
+  relayLevel(L) {
+    L.on('death', ({ unit, killer }) => {
+      const me = this.game.hero?.u;
+      if (unit.kind === 'mob' || unit.kind === 'boss') this.bus.emit('kill', { unit, killer, mine: killer === me || (killer?.party && killer.party === me?.party), zone: this.game.zone?.id });
+      if (unit === me) this.bus.emit('death', { unit });
+    });
+  }
   async interact(t) {
+    for (const pl of PLUGINS) if (pl.interact?.(t)) return;
+    if (this.game.mode?.interact?.(t)) return;
     const me = this.game.hero.u;
     if (t.portal) {
       if (t.portal.startsWith('portal:')) return this.contentMenu(t.portal.split(':')[1]);
@@ -258,24 +313,29 @@ export class Session {
       if (t.portal.startsWith('triport')) return this.ui.toast('Triport attuned: Solhaven.', 'success');
       return;
     }
-    const n = t.data.npcDef; if (!n) return;
+    const n = t.data?.npcDef; if (!n) return;
     me.faceTo(t.pos.x, t.pos.z); t.faceTo(me.pos.x, me.pos.z);
+    this.bus.emit('talk', { npc: n.id, unit: t });
     t.model?.play?.('wave', { dur: 1.4 });
     const line = n.lines?.[Math.floor(Math.random() * n.lines.length)] || '…';
     const choices = [];
-    const svc = SERVICES[n.action];
+    const svc = SERVICE_LABELS[n.action];
     if (svc) choices.push({ id: 'svc', text: svc, kind: 'shop' });
     if (n.rapport) choices.push({ id: 'rapport', text: 'Spend time together (Rapport)', kind: 'talk' });
+    for (const pl of PLUGINS) if (pl.npcChoices) { try { choices.unshift(...(pl.npcChoices(n.id) || [])); } catch (e) { console.error('[plugin choices]', pl.id, e); } }
     choices.push({ id: 'bye', text: 'Farewell.', kind: 'leave' });
     const pick = await this.ui.dialog({ id: n.id, name: n.name, title: n.title }, [{ text: line, choices }]);
-    if (pick === 'svc') this.service(n.action, n);
+    for (const pl of PLUGINS) if (pl.onNpcChoice?.(n.id, pick, t)) return;
+    if (pick === 'svc') this.service(n.action, n, t);
+    else if (pick && pick !== 'bye' && pick !== 'rapport') this.bus.emit('npcChoice', { npc: n.id, choice: pick, unit: t });
     if (pick === 'rapport') this.ui.toast('Rapport with ' + n.name + ' grows warmer. (Songs and emotes: B / .)', 'success');
   }
-  service(action, n) {
+  service(action, n, unit) {
+    if (SERVICES[action]) return SERVICES[action](this, n, unit);
     switch (action) {
       case 'content': return this.contentMenu('chaos');
       case 'honing': return this.honingMenu();
-      case 'shop:general': return this.ui.open('vendor', this.vendorData('general', n));
+      case 'shop:general': this.vendorOpen = { ...this.vendorData('general', n), kind: 'general' }; return this.ui.open('vendor', this.vendorOpen);
       case 'tasks': return this.ui.toast('Wayfarer’s Tasks refresh daily at 10:00 UTC.', 'info');
       default: this.ui.toast(`${n.name}: this service opens soon.`, 'info');
     }
@@ -301,6 +361,7 @@ export class Session {
   }
   async launch(c) {
     this.lastContent = c;
+    if (LAUNCHERS[c.kind]) { this.hub = null; await LAUNCHERS[c.kind](this, c); this.bus.emit('zone', { id: this.game.zone?.id, kind: c.kind }); return; }
     const A = this.account, ch = this.char;
     this.hub = null;
     const done = r => this.contentDone(c, r);
@@ -330,6 +391,8 @@ export class Session {
   contentDone(c, r) {
     const A = this.account, ch = this.char;
     if (this.game.net?.result) this.game.net.result({ ...r, kind: c.kind, content: c });
+    this.bus.emit('clear', { content: c, result: r });
+    if (r.cleared && sunUnlocked(ch)) { const pts = SUNHEART_POINTS[c.kind] || 1; sunState(ch).points += pts; setTimeout(() => this.ui.toast(`+${pts} Sunheart point${pts > 1 ? 's' : ''}`, 'success'), 2200); }
     const loot = [], cur = { silver: 0, gold: 0, xp: 0 };
     if (r.cleared) {
       if (c.kind === 'chaos') {
@@ -340,14 +403,20 @@ export class Session {
         A.give('shards', 1500 * t * m);
         (ch.daily ||= {}).chaos = (ch.daily.chaos || 0) + 1; if (r.rested > 1 && ch.rest) ch.rest.chaos = Math.max(0, ch.rest.chaos - 20);
       } else {
-        const gold = c.kind === 'raid' ? (c.gate === 0 ? 1200 : 2400) * (c.hard ? 1.5 : 1) : 0;
-        if (gold && !c.trial) { cur.gold = gold; A.give('gold', gold); }
+        let gold = c.kind === 'raid' ? (c.gate === 0 ? 1200 : 2400) * (c.hard ? 1.5 : 1) : 0;
+        const wk = `${c.raid || c.boss}:${c.gate ?? 0}:${c.hard ? 'h' : 'n'}`;
+        ch.weekly ||= {}; ch.weekly.raids ||= {};
+        if (gold && ch.weekly.raids[wk]) { gold = 0; this.ui.toast('Weekly raid gold already claimed on this character — practice runs still drop materials.', 'info'); }
+        if (gold && !c.trial) { cur.gold = gold; A.give('gold', gold); ch.weekly.raids[wk] = Date.now(); }
         cur.silver = 25000; A.give('silver', cur.silver);
         const give = (id, n) => { A.give(id, n); loot.push({ id, name: ITEMS[id].name, count: n, icon: `item:${id}`, grade: ITEMS[id].grade }); };
         give('leapstone', c.kind === 'raid' ? 12 : 8); give('destruction_stone', 120); give('guardian_stone', 300);
         if (c.kind === 'raid') give('horn_shard', c.hard ? 12 : 8);
       }
-      cur.xp = 1200 * (c.kind === 'raid' ? 3 : c.kind === 'guardian' ? 2 : 1); A.addXp(ch, cur.xp);
+      cur.xp = 1200 * (c.kind === 'raid' ? 3 : c.kind === 'guardian' ? 2 : 1);
+      const ups = A.addXp(ch, cur.xp);
+      if (ups?.length) { const lv = ups[ups.length - 1]; setTimeout(() => { this.ui.banner('Level Up', { kind: 'levelup', level: lv, sub: `You reached level ${lv}` }); this.game.audio?.stinger?.('level_up'); this.bus.emit('levelup', { level: lv }); }, 600); }
+      for (const it of loot) this.ui.hud?.loot?.({ name: it.name, grade: it.grade, count: it.count, icon: it.icon, kind: 'material' });
       A.roster.stats.kills += r.kills || 1;
     }
     const me = r.meter?.find(x => x.you) || r.meter?.[0];
@@ -361,11 +430,25 @@ export class Session {
       dps: (r.meter || []).map(m => ({ name: m.name, cls: m.cls, dmg: m.dmg, dps: m.dps, crit: m.critPct, back: m.backPct, counters: m.counters, stagger: m.stagger, deaths: m.deaths, you: !!m.you, support: CLASSES[m.cls]?.role === 'support' })),
     });
     this.game.audio?.music?.(r.cleared ? 'victory' : 'defeat');
+    // Lost Ark's "More Rewards" chest after a raid gate: pay gold for extra materials
+    if (r.cleared && c.kind === 'raid' && !c.trial && !this.guestMode) setTimeout(() => this.moreRewards(c), 1400);
+  }
+  async moreRewards(c) {
+    const A = this.account, cost = c.gate === 0 ? 300 : 500;
+    const ok = await this.ui.confirm({ title: 'More Rewards', text: `Open the More Rewards chest for ${cost} gold? It holds Horns of the Tyrant, leapstones and a chance at a relic accessory or an engraving recipe.`, ok: `Open (${cost} gold)`, cancel: 'Leave it' });
+    if (!ok) return;
+    if (!A.take('gold', cost)) { this.ui.toast('Not enough gold.', 'error'); return; }
+    const got = [];
+    const give = (id, n) => { A.give(id, n); got.push(`${n} × ${ITEMS[id]?.name || id}`); };
+    give('horn_shard', c.hard ? 10 : 6); give('leapstone', 8);
+    if (Math.random() < 0.3) { const acc = (await import('./systems/gear.js')).makeAccessory(['necklace', 'earring', 'ring'][Math.floor(Math.random() * 3)], 5); A.addItem(this.char, acc); got.push(acc.name); }
+    this.game.audio?.sfx?.('chest_open', {});
+    this.ui.toast(`More Rewards: ${got.join(', ')}.`, 'loot');
   }
   async returnToHub() {
     await this.loadZone('solhaven', { kind: 'city', region: 'Valemont' });
     this.spawnMe(this.game.zone.anchors['portal:chaos'] ? { x: this.game.zone.anchors['portal:chaos'].x + 2, z: this.game.zone.anchors['portal:chaos'].z + 3 } : this.game.zone.anchors.spawn);
-    this.game.mode = this.hub = new CityMode(this.game, { seed: dayId() }); this.hub.enter();
+    this.game.mode = this.hub = this.zoneMode('solhaven'); this.hub.enter();
     this.inWorld();
   }
 
@@ -386,6 +469,7 @@ export class Session {
     const res = hone(it, {}, (k, n) => A.has(k, n), (k, n) => A.take(k, n));
     if (!res.ok) { this.ui.toast(res.why === 'max' ? 'This piece is fully honed.' : `Not enough ${ITEMS[res.need]?.name || res.need}.`, 'error'); return; }
     A.roster.stats.honeTaps++;
+    this.bus.emit('hone', { success: res.success, item: it, chance: res.chance, energy: res.energy });
     this.game.audio?.sfx?.('honing_hammer', {});
     setTimeout(() => {
       if (res.success) { A.roster.stats.honeWins++; this.game.audio?.sfx?.('honing_success', {}); this.ui.banner(`+${res.hone} SUCCESS`, { kind: 'success', sub: it.name }); }
@@ -407,6 +491,7 @@ export class Session {
   refreshWindow(id) { if (this.ui.isOpen?.(id)) { const d = this.windowData(id); if (d) this.ui.update(id, d); } }
   windowData(id) {
     const c = this.char, A = this.account; if (!c) return null;
+    if (WINDOWS[id]) { try { return WINDOWS[id](this); } catch (e) { console.error('[window]', id, e); return null; } }
     const st = this.game.hero?.u.st || heroStats(c);
     switch (id) {
       case 'character': return { name: c.name, cls: c.cls, level: c.level, iLvl: Math.floor(itemLevel(c)), title: c.title, roster: A.roster.level, gear: c.equip,
@@ -419,8 +504,28 @@ export class Session {
       }
       case 'engravings': { const n = engravingNodes(c); return { active: Object.entries(n).map(([id, nodes]) => ({ id, nodes, neg: id.startsWith('neg_') })), equipped: [c.books?.[0] || null, c.books?.[1] || null], books: Object.entries(c.library || {}).map(([id, nodes]) => ({ id, nodes })), maxBook: 12 }; }
       case 'map': return { ...this.minimap(), zone: { name: this.game.zone?.name } };
+      case 'sunheart': return sunView(c);
     }
     return null;
+  }
+  buy(id, qty = 1) {
+    const v = this.vendorOpen || this.vendorData('general', { name: 'Vendor' });
+    const row = v.items.find(r => r.id === id); if (!row) return;
+    const cost = row.price.amount * qty;
+    if (!this.account.take(row.price.cur, cost)) { this.ui.toast(`Not enough ${row.price.cur}.`, 'error'); this.game.audio?.sfx?.('ui_error', {}); return; }
+    this.account.give(id, qty);
+    const slot = this.char.items.find(it => it.id === id); if (slot) slot.count += qty;
+    const hi = this.game.hero?.items.find(it => it.id === id); if (hi) hi.count += qty;
+    this.game.audio?.sfx?.('coin', {});
+    this.ui.toast(`Bought ${qty} × ${ITEMS[id]?.name || id}.`, 'success');
+    this.refreshWindow('inventory'); if (this.ui.isOpen?.('vendor')) this.ui.update('vendor', this.vendorData(v.kind || 'general', v));
+  }
+  sell(uidv) {
+    const c = this.char; if (!c) return;
+    if (String(uidv).startsWith('mat:')) { const id = uidv.slice(4); const n = this.account.count(id); const val = (ITEMS[id]?.value || 1) * n; if (!n || !ITEMS[id]?.value) return; this.account.take(id, n); this.account.give('silver', val); this.ui.toast(`Sold ${n} × ${ITEMS[id].name} for ${fmt(val)} silver.`, 'success'); }
+    else { const it = this.account.removeItem(c, uidv); if (!it) return; const val = Math.max(50, Math.round((it.iLvl || 100) * (it.grade + 1) * 2)); this.account.give('silver', val); (this.buyback ||= []).unshift({ ...it, price: { cur: 'silver', amount: val } }); this.ui.toast(`Sold ${it.name} for ${fmt(val)} silver.`, 'success'); }
+    this.game.audio?.sfx?.('coin', {});
+    this.refreshWindow('inventory');
   }
   useItem(uidv, slot) {
     const c = this.char; const it = c.inv.find(x => x.uid === uidv); if (!it) return;
@@ -451,7 +556,22 @@ export class Session {
   command(p) {
     const cmd = p.cmd.toLowerCase();
     const EM = ['wave', 'bow', 'dance', 'cheer', 'clap', 'laugh', 'cry', 'salute', 'point', 'flex', 'sit', 'sleep', 'shrug', 'facepalm', 'kneel', 'think', 'heart', 'angry', 'yes', 'no'];
-    if (EM.includes(cmd)) { this.game.hero?.u.model?.play?.(cmd, { dur: 2.5, loop: cmd === 'dance' || cmd === 'sit' || cmd === 'sleep' }); return; }
+    if (EM.includes(cmd)) {
+      const me = this.game.hero?.u; me?.model?.play?.(cmd, { dur: 2.5, loop: cmd === 'dance' || cmd === 'sit' || cmd === 'sleep' });
+      const npc = me && this.L?.units.filter(u => u.kind === 'npc' && u.distTo(me) < 8).sort((a, b) => a.distTo(me) - b.distTo(me))[0];
+      this.bus.emit('emote', { id: cmd, npc: npc?.data.npcDef?.id || null });
+      // the city answers: nearby adventurers sometimes mirror your emote
+      if (me) for (const u of this.L.units) if (u.data.sim && u.distTo(me) < 10 && Math.random() < 0.35) setTimeout(() => u.model?.play?.(cmd, { dur: 2.5 }), 300 + Math.random() * 900);
+      return;
+    }
+    if (['w', 'whisper', 't', 'tell', 'msg'].includes(cmd)) {
+      const [to, ...rest] = String(p.args || '').split(' '); const text = rest.join(' ').trim();
+      if (!to || !text) return;
+      this.ui.chat.add({ channel: 'whisper', to, text, you: true });
+      const sim = this.L?.units.find(u => u.name.toLowerCase() === to.toLowerCase() && u.data.sim);
+      if (sim) setTimeout(() => this.ui.chat.add({ channel: 'whisper', from: sim.name, text: /bot|ai|real/i.test(text) ? 'beep boop. i mean, no?' : pickLine('reply') }), 1200 + Math.random() * 2500);
+      return;
+    }
     if (cmd === 'host') { if (!this.game.net) { this.hostMode = true; this.startHosting(); } return; }
     if (cmd === 'stuck') { const sp = this.game.zone.anchors.spawn; const u = this.game.hero.u; u.pos.x = sp.x; u.pos.z = sp.z; return; }
     this.ui.chat.add({ channel: 'system', text: `Unknown command /${cmd}.` });
@@ -506,7 +626,7 @@ export class Session {
   }
   openBoards() { this.ui.toast('Leaderboards open soon in this build.', 'info'); }
 }
-const SERVICES = { honing: 'Hone my gear', market: 'Browse the market', storage: 'Open roster storage', guild: 'Guild services', cards: 'Cards & engravings', 'shop:general': 'Browse goods', songs: 'Learn songs', pvp: 'Enter the Proving Grounds', sail: 'Set sail', stronghold: 'Ferry to Brightwater Isle', tasks: 'Read the notices', gems: 'Gems', wardrobe: 'Wardrobe', mounts: 'Mounts', content: 'Open the Rift Nexus', mail: 'Read mail', partyfinder: 'Find a party', story: 'Ask about the Shards', rapport: null };
+const SERVICE_LABELS = { honing: 'Hone my gear', market: 'Browse the market', storage: 'Open roster storage', guild: 'Guild services', cards: 'Cards & engravings', 'shop:general': 'Browse goods', songs: 'Learn songs', pvp: 'Enter the Proving Grounds', sail: 'Set sail', stronghold: 'Ferry to Brightwater Isle', tasks: 'Read the notices', gems: 'Gems', wardrobe: 'Wardrobe', mounts: 'Mounts', content: 'Open the Rift Nexus', mail: 'Read mail', partyfinder: 'Find a party', story: 'Ask about the Shards', rapport: null };
 const TIPS = ['Hit a boss while it glows blue with a counter skill to stun it.', 'Stand behind bosses: Back Attack skills deal more damage from behind.', 'Press Space to dash through danger. Knocked down? Space stands you back up.', 'Artisan’s Energy fills with every failed honing attempt. At 100% success is guaranteed.', 'Supports decide raids. Stay close to your Songweaver and Oathkeeper.', 'The Pips hid 120 seeds across Solmara. Some are in plain sight.', 'Rest bonus builds up for dailies you skip. Your chaos rewards double while it lasts.'];
 const gameMenuItems = () => [{ id: 'host', label: 'Play Together: Host', glyph: 'users' }, { id: 'settings', label: 'Settings', glyph: 'gear' }, { id: 'charselect', label: 'Character Select', glyph: 'user' }, { id: 'title', label: 'Title Screen', glyph: 'door' }];
 function gearTier(c) { const s = c.equip?.chest?.set || c.equip?.weapon?.set; return s === 'horned' ? 2 : s === 'vanguard' ? 1 : 0; }

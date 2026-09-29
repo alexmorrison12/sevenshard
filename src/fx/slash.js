@@ -53,33 +53,40 @@ void main() {
   float u = vUv.x, v = vUv.y, T = vT;
   float sweep = max(vX.x, 0.01);
   int flags = int(vX.w + 0.5);
-  float head = clamp(T / sweep, 0.0, 1.0);
-  float hs = 0.04 + 0.06 * (1.0 - head);
-  float reveal = 1.0 - smoothstep(head - hs, head + 0.01, u);
-  if (head >= 1.0) reveal = 1.0;
+  float head = clamp(T / sweep, 0.0, 1.0) * 1.12;
+  float hs = 0.05 + 0.06 * (1.0 - head);
+  float uu = u + (vUv.y - 1.0) * 0.1;                  // slanted front: the blade edge leads the sweep
+  float reveal = 1.0 - smoothstep(head - hs, head + 0.01, uu);
+  if (head >= 1.1) reveal = 1.0;
   float ed = 1.0 - v;                                   // 0 at the blade (outer) edge
   float age = T * vC.w;
   float n = fbm2(vec2(u * vLen * 0.55 - age * 7.0, ed * 2.6 + vX.z * 13.0));
   float n2 = vn2(vec2(u * vLen * 1.7 - age * 11.0, ed * 6.0 + vX.z * 7.0));
-  float core = exp(-ed * ed / 0.018);
-  float body = pow(max(1.0 - ed, 0.0), 1.35);
-  float streak = smoothstep(0.25, 0.85, n) * 0.7 + n2 * 0.3;
+  float core = exp(-ed * ed / 0.0045);                  // razor-thin white-hot edge
+  float band = exp(-ed * ed / 0.045);                   // bright coloured band behind it
+  float body = pow(max(1.0 - ed, 0.0), 1.5);
+  float streak = smoothstep(0.28, 0.82, n) * 0.75 + n2 * 0.25;
   float ends = smoothstep(0.0, 0.07, u) * smoothstep(1.0, 0.9, u);
   // dissolve: tail first, noisy
   float dp = clamp((T - sweep * 0.7) / max(1.0 - sweep * 0.7, 0.05), 0.0, 1.0);
   float keep = smoothstep(dp * 1.25 - 0.12, dp * 1.25, n * 0.45 + u * 0.55 + (1.0 - ed) * 0.1);
-  float headGlow = exp(-sq((u - head) * vLen / 0.7)) * step(head, 0.999);
-  float a = (body * (0.35 + 0.65 * streak) + core * 0.9) * reveal * ends * keep;
-  a *= 1.0 - smoothstep(0.82, 1.0, T) * 0.6;
+  float headGlow = exp(-sq((uu - head) * vLen / 0.45)) * step(head, 1.1) * (0.3 + 0.7 * vUv.y);
+  float mask = reveal * ends * keep;
+  float fadeT = 1.0 - smoothstep(0.78, 1.0, T) * 0.7;
   vec3 C = vC.rgb;
-  vec3 hot = vec3(1.0) + C * 0.25;
-  vec3 rgb = C * a * (0.55 + 0.9 * streak) + hot * (core * a * 1.4 + headGlow * reveal * ends * 1.8 * (1.0 - T));
-  if ((flags & 2) != 0) {             // dark slash: black body occludes, coloured rim glows
-    float dk = body * (0.5 + 0.5 * streak) * reveal * ends * keep * (1.0 - smoothstep(0.7, 1.0, T));
-    gl_FragColor = vec4(C * (core * 1.6 + streak * body * 0.35) * reveal * ends * keep + C * headGlow * 2.0 * reveal, dk * 0.85);
+  float pk = max(max(C.r, C.g), C.b);
+  vec3 Cb = C / max(pk, 1e-3) * min(pk, 1.2);           // body colour capped so the tone map keeps it saturated
+  if ((flags & 2) != 0) {             // dark slash: black body occludes, coloured rim burns
+    float dk = body * (0.55 + 0.45 * streak) * mask * (1.0 - smoothstep(0.7, 1.0, T));
+    gl_FragColor = vec4(C * (core * 1.4 + band * 0.7 + streak * body * 0.25) * mask + C * headGlow * 1.6 * reveal, dk * 0.85);
     return;
   }
-  gl_FragColor = vec4(rgb, 0.0);
+  vec3 rgb = Cb * (body * (0.35 + 0.8 * streak)) * mask * fadeT
+           + C * band * 0.6 * mask * fadeT
+           + mix(vec3(1.0), Cb, 0.25) * core * mask * 1.25 * fadeT
+           + mix(vec3(1.0), Cb, 0.4) * headGlow * reveal * ends * 1.4 * (1.0 - T);
+  float a = body * 0.2 * mask * fadeT;                  // slight darkening under the body: contrast on bright ground
+  gl_FragColor = vec4(rgb, a);
 }`;
 
 function stripGeo(nu, nv) {

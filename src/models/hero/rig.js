@@ -12,6 +12,7 @@ export const BONES = [
   'cape0', 'cape1', 'cape2', 'cape3',
   'hairA', 'hairB', 'hairC', 'braidL1', 'braidL2', 'braidR1', 'braidR2', 'beard1', 'beard2',
   'skirtF', 'skirtF2', 'skirtB', 'skirtB2',
+  'lidL', 'lidR',
 ];
 export const B = Object.fromEntries(BONES.map((n, i) => [n, i]));
 export const NB = BONES.length;
@@ -25,6 +26,7 @@ const PARENT = {
   hairA: 'head', hairB: 'hairA', hairC: 'hairB', braidL1: 'head', braidL2: 'braidL1', braidR1: 'head', braidR2: 'braidR1',
   beard1: 'head', beard2: 'beard1',
   skirtF: 'hips', skirtF2: 'skirtF', skirtB: 'hips', skirtB2: 'skirtB',
+  lidL: 'head', lidR: 'head',
 };
 export const PARENTS = BONES.map(n => PARENT[n] === null ? -1 : B[PARENT[n]]);
 
@@ -32,7 +34,7 @@ export const PARENTS = BONES.map(n => PARENT[n] === null ? -1 : B[PARENT[n]]);
 export const CH_TORSO = 0, CH_ARM_L = 1, CH_ARM_R = 2, CH_LEG_L = 3, CH_LEG_R = 4, CH_HEAD = 5, CH_HAND_L = 6, CH_HAND_R = 7;
 export const BONE_CHAIN = BONES.map(n => {
   if (/^(hips|spine|chest|neck|clav|cape|skirt)/.test(n)) return CH_TORSO;
-  if (n === 'head' || /^(hair|braid|beard)/.test(n)) return CH_HEAD;
+  if (n === 'head' || /^(hair|braid|beard|lid)/.test(n)) return CH_HEAD;
   if (/L\d?$/.test(n) && /^(uarm|farm)/.test(n)) return CH_ARM_L;
   if (/R\d?$/.test(n) && /^(uarm|farm)/.test(n)) return CH_ARM_R;
   if (/^(hand|idx|fng|thb)L/.test(n) || n === 'handL') return CH_HAND_L;

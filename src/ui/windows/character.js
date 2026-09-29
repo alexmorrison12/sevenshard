@@ -9,7 +9,7 @@
 import { h, esc, fmtInt, fmt2, clear } from '../core/util.js';
 import { iconUrl } from '../core/icon.js';
 import { slot } from '../core/kit.js';
-import { cls as clsInfo, STATS, COMBAT_STATS, STAT_DESC, engr, engrLevel, qualityColor, grade } from '../core/data.js';
+import { cls as clsInfo, STATS, COMBAT_STATS, STAT_DESC, engr, engrLevel, engrIcon, qualityColor, grade } from '../core/data.js';
 import { Win } from '../core/windows.js';
 
 const LEFT = [['head', 'Head'], ['shoulder', 'Shoulders'], ['chest', 'Chest'], ['pants', 'Pants'], ['gloves', 'Gloves'], ['weapon', 'Weapon']];
@@ -85,7 +85,7 @@ export class CharacterWin extends Win {
     for (const x of list) {
       const E = engr(x.id), neg = x.neg || E.neg, lv = x.level ?? engrLevel(x.nodes);
       const r = h('div', 'ss-cp-engr ss-ptr' + (neg ? ' is-neg' : ''), e);
-      r.innerHTML = `<i style="background-image:url('${iconUrl('engr:' + x.id, 26)}')"></i><span>${esc(E.name)}</span><em class="ss-lvl">Lv ${lv}</em>`;
+      r.innerHTML = `<i style="background-image:url('${iconUrl(engrIcon(x.id), 26)}')"></i><span>${esc(E.name)}</span><em class="ss-lvl">Lv ${lv}</em>`;
       r._tip = { title: `${E.name} · Lv ${lv}`, lines: [E.desc, x.nodes != null ? `${x.nodes} / 15 nodes` : null], color: neg ? '#ff8a7a' : null };
     }
     if (d.cards) {

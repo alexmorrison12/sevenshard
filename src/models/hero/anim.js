@@ -58,6 +58,7 @@ class Spring {
   }
 }
 
+const LIDS = [B.lidL, B.lidR];
 const LEGS_MASK = new Float32Array(NB);
 for (const n of ['thighL', 'shinL', 'footL', 'toeL', 'thighR', 'shinR', 'footR', 'toeR', 'hips']) LEGS_MASK[B[n]] = 1;
 
@@ -271,6 +272,9 @@ export class Animator {
     }
     if (yaw) hb.quaternion.premultiply(_qy);
     if (P.ikw > 0.01) this.solveLegs(P);
+    // eyelids: blink / closed (face 1 or 3), otherwise open
+    this.lidK = damp(this.lidK || 0, (P.face === 1 || P.face === 3) ? 1 : 0, 38, dt);
+    for (const b of LIDS) { eulerQuat(_q, -1.0 * this.lidK, 0, 0, YXZ); bones[b].quaternion.multiplyQuaternions(this.Npi[b], _q).multiply(this.N[b]); }
     this.secondary(P, dt, s);
     // weapon-driven hands
     const mesh = this.c.mesh;

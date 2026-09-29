@@ -100,11 +100,29 @@ export function pinRail(wb, x, y, z, w, d, wood, rope) {
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) wb.add(box(0.1, h, 0.1), M(x + sx * w / 2, y + h / 2, z + sz * d / 2), { color: wood, d: 0.8 });
   wb.add(box(w + 0.12, 0.08, 0.12), M(x, y + h, z - d / 2), { color: wood, d: 0.8 });
   wb.add(box(w + 0.12, 0.08, 0.12), M(x, y + h, z + d / 2), { color: wood, d: 0.8 });
-  for (let i = 0; i < 5; i++) for (const sz of [-1, 1]) {
-    const px = x - w / 2 + 0.1 + i * (w - 0.2) / 4;
-    wb.add(cyl(0.018, 0.018, 0.2, 4), M(px, y + h - 0.06, z + sz * d / 2), { uv: 'keep', color: wood, d: 0.4 });
+  for (let i = 0; i < 3; i++) for (const sz of [-1, 1]) {
+    const px = x - w / 2 + 0.15 + i * (w - 0.3) / 2;
+    wb.add(cyl(0.02, 0.02, 0.22, 4, true), M(px, y + h - 0.06, z + sz * d / 2), { uv: 'keep', color: wood, d: 0.4 });
   }
   if (rope) for (const sz of [-1, 1]) wb.add(torus(0.12, 0.03, 4, 10).scale(1, 1.6, 1), M(x + 0.15 * sz, y + h - 0.2, z + sz * (d / 2 + 0.05)), { uv: 'box', color: rope, d: 0.2 });
 }
 
 export { hh };
+
+/** Rudder hung on the sternpost (swings about Y: anim −2). o: { wood, bottom, iron, w0, w1 } */
+export function rudder(wb, H, o) {
+  const yb = H.c.keel + 0.12, yt = H.c.knuckle + 0.3;
+  const pb = V3(0, yb, H.zStern(yb) + 0.05), pt = V3(0, yt, H.zStern(yt) + 0.05);
+  const n = 5, fwd = [], aft = [];
+  for (let i = 0; i <= n; i++) { const p = V3().lerpVectors(pb, pt, i / n); fwd.push([p.z, p.y]); }
+  for (let i = n; i >= 0; i--) { const t = i / n, p = V3().lerpVectors(pb, pt, t); aft.push([p.z + lerp(o.w0 ?? 0.8, o.w1 ?? 0.36, t), p.y + (i === 0 ? 0.06 : 0)]); }
+  const shape = new THREE.Shape([...fwd, ...aft].map(([z, y]) => new THREE.Vector2(z, y)));
+  const g = new THREE.ExtrudeGeometry(shape, { depth: 0.16, bevelEnabled: false });
+  const m = new THREE.Matrix4().makeBasis(V3(0, 0, 1), V3(0, 1, 0), V3(-1, 0, 0)).setPosition(0.08, 0, 0);
+  const piv = [0, (yb + yt) / 2, (pb.z + pt.z) / 2];
+  wb.add(g, m, { uv: 'box', color: (p) => (p.y < -0.03 ? o.bottom : o.wood), anim: -2, piv, d: 0.8 });
+  for (let i = 1; i <= 3; i++) {
+    const p = V3().lerpVectors(pb, pt, i / 4);
+    wb.add(box(0.2, 0.05, 0.42), M(0, p.y, p.z + 0.14), { color: o.iron, metal: 0.3, d: 0, anim: -2, piv });
+  }
+}

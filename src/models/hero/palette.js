@@ -6,8 +6,9 @@ export const SLOT = {
   SKIN2: 18, STRAW: 19, LINEN: 20, BELT: 21, BOOT: 22, GLOVE: 23, PANTS: 24, SHIRT: 25, TABARD: 26, HOOD: 27,
   LIP: 28, BLADE: 29, HILT: 30, EYE: 31,
   RUNE: 32, HORN: 33, CHAIN: 34, RIBBON: 35, FEATHER: 36, COAT: 37, COAT2: 38, SASH: 39,
+  SCLERA: 40, IRIS: 41, LASH: 42, LIPS: 43, BROWHAIR: 44,
 };
-export const NSLOT = 40;
+export const NSLOT = 45;
 
 // detail channels in the tiling detail texture: 0 mail, 1 leather, 2 cloth, 3 metal/hair streaks
 export const DET = {

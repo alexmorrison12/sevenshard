@@ -42,7 +42,7 @@ export class Sea extends Track {
     S.tr = type === 'chorus' ? this.lift : 0;
     S.ch = type === 'verse' ? VERSE_CH : type === 'chorus' ? CHORUS_CH : type === 'jig' ? r.pick(JIG_CH) : type === 'break' ? ['Dm', 'C', 'Dm', 'A'] : ['Dm', 'A'];
     if (type === 'jig') S.mel = genPhrase(r, { scale: this.scale, chordAt: (b) => S.ch[Math.min(7, Math.floor(b / 6))], bars: 8, bpb: 6, lo: 67, hi: 86, cells: [[1, 1, 1, 1, 1, 1], [2, 1, 2, 1], [1, 1, 1, 3], [3, 1, 1, 1]], cad: [[3, 3], [6]], rest: 0 });
-    S.lead = this.cycle % 2 ? 'whistle' : 'acc';
+    S.lead = this.cycle % 2 ? 'acc' : 'whistle'; // the first cycle's verses belong to the accordion
     this.S = S;
   }
   trans(c, k) { return transpose(c, k); }

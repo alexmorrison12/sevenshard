@@ -72,6 +72,7 @@ if (q.toast) { ui.toast('Your party has entered the Legion Raid.', 'party'); ui.
 
 // windows
 if (q.win) for (const w of q.win.split(',')) ui.open(w, mockWindows[w] ? mockWindows[w]() : {});
+if (q.hone) setTimeout(() => ui.get('honing')?.play(q.hone, { hone: 17, energy: 0.4186 }), 600);
 if (q.dialog) ui.dialog(mockWindows.npc(), mockWindows.script()).then(r => console.log('[dialog] →', r));
 if (q.modal === 'confirm') ui.confirm({ title: 'Leave the Raid?', text: 'You will lose your progress in Gate 2 and cannot re-enter this week.', ok: 'Leave', danger: true });
 if (q.modal === 'delete') ui.confirm({ title: 'Delete Character', text: 'This cannot be undone. Every item on Ashveil will be destroyed.', ok: 'Delete', danger: true, match: 'Ashveil' });

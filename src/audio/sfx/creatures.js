@@ -85,6 +85,21 @@ export const CREATURES = {
       return e;
     },
   },
+  // mid-size beast roar (Demonbound's Howl, hounds, elites)
+  roar: {
+    clip: 1.3, max: 2, range: 90, ref: 8, rev: 0.16, hall: 0.2, pri: 2, duck: [0.2, 1.2], labDur: 3,
+    fn: (k) => roar(k, { T0: 0.08, len: 1.4, s: k.vary(1.4, 0.06) }),
+  },
+  // Gorrath lowers his horns and charges: a snorting bellow over thundering hooves
+  charge_roar: {
+    clip: 1.3, max: 1, range: 250, ref: 18, rev: 0.16, hall: 0.3, pri: 3, duck: [0.4, 2.2], labDur: 4,
+    fn: (k) => {
+      const e = roar(k, { T0: 0.15, len: 1.9, s: k.vary(0.9, 0.04), big: true });
+      for (let i = 0; i < 8; i++) k.thump({ t: 0.5 + i * 0.19 + k.rnd(-0.02, 0.02), f0: 95, f1: 40, sweep: 0.05, d: 0.22, vol: 0.32 });
+      k.nz({ t: 0.4, color: 'brown', type: 'lowpass', f: 200, env: [[0, 0], [0.3, 1], [1.8, 0.6], [2.2, 0]], vol: 0.3 });
+      return e;
+    },
+  },
   pip_squeak: {
     max: 4, burst: 2, range: 35, rev: 0.06, jitter: 0.06,
     fn: (k) => {

@@ -16,12 +16,12 @@ import { orb } from './parts2.js';
 import { sstep, clamp01, mix, bell, TAU } from '../kit/rig.js';
 
 const PAL = {
-  sprout: { body: 0x96d468, body2: 0x6aaa4a, belly: 0xf4f0c8, leaf: 0x4eb03a, leaf2: 0x9ae05a, stem: 0x5a9a3a, petal: 0xffd24a, petal2: 0xff9a3a, cheek: 0xff8f8f, iris: 0x4a2a14 },
-  elder: { body: 0x7aa664, body2: 0x547a44, belly: 0xe4dcb4, leaf: 0x6a9a3a, leaf2: 0xa8c870, stem: 0x6a5230, petal: 0xc8a8ff, petal2: 0x8a6ad8, cheek: 0xf08a8a, iris: 0x3a2a1a, moss: 0x8a9e62, moss2: 0x5e7a3e, wood: 0x6a4a2c, bud: 0xff8ab0 },
-  child: { body: 0xb4ec84, body2: 0x80c460, belly: 0xfaf6d8, leaf: 0x62c848, leaf2: 0xb0f070, stem: 0x6ab84a, petal: 0xffb0cc, petal2: 0xff7aa8, cheek: 0xff8a9a, iris: 0x4a2a14 },
-  merchant: { body: 0x96d468, body2: 0x6aaa4a, belly: 0xf4f0c8, leaf: 0x4eb03a, leaf2: 0x9ae05a, stem: 0x5a9a3a, petal: 0x7ad0ff, petal2: 0x3a8ae0, cheek: 0xff8f8f, iris: 0x4a2a14, straw: 0xe8c878, band: 0xc83a2a, pack: 0x8a5a36, roll: 0x3a7ac8, coin: 0xf0c040 },
+  sprout: { body: 0x88c85e, body2: 0x5e9e44, belly: 0xf4f0c8, leaf: 0x4eb03a, leaf2: 0x9ae05a, stem: 0x5a9a3a, petal: 0xffd24a, petal2: 0xff9a3a, cheek: 0xff8f8f, iris: 0x4a2a14 },
+  elder: { body: 0x7aa664, body2: 0x547a44, belly: 0xe4dcb4, leaf: 0x6a9a3a, leaf2: 0xa8c870, stem: 0x6a5230, petal: 0xc8a8ff, petal2: 0x8a6ad8, cheek: 0xf08a8a, iris: 0x3a2a1a, moss: 0xb4c49a, moss2: 0x7a9458, wood: 0x6a4a2c, bud: 0xff8ab0 },
+  child: { body: 0x9cd872, body2: 0x70b054, belly: 0xf4f0d0, leaf: 0x56bc40, leaf2: 0x9ce466, stem: 0x6ab84a, petal: 0xffb0cc, petal2: 0xff7aa8, cheek: 0xff8a9a, iris: 0x4a2a14 },
+  merchant: { body: 0x88c85e, body2: 0x5e9e44, belly: 0xf4f0c8, leaf: 0x4eb03a, leaf2: 0x9ae05a, stem: 0x5a9a3a, petal: 0x7ad0ff, petal2: 0x3a8ae0, cheek: 0xff8f8f, iris: 0x4a2a14, straw: 0xe8c878, band: 0xc83a2a, pack: 0x8a5a36, roll: 0x3a7ac8, coin: 0xf0c040 },
   guard: { body: 0x8ac65e, body2: 0x5e9a44, belly: 0xf0ecc4, leaf: 0x4eb03a, leaf2: 0x9ae05a, stem: 0x5a9a3a, petal: 0xff6a4a, petal2: 0xc83a2a, cheek: 0xff8f8f, iris: 0x3a2414, acorn: 0x8a5a2a, acorn2: 0xc08a4a, wood: 0x7a5a36, thorn: 0xe0d8b0 },
-  farmer: { body: 0xa2d670, body2: 0x72aa4e, belly: 0xf6f0c4, leaf: 0x4eb03a, leaf2: 0x9ae05a, stem: 0x5a9a3a, petal: 0xfff080, petal2: 0xffc040, cheek: 0xff8f8f, iris: 0x4a2a14, hat: 0x5aa83a, hat2: 0x8ad05a, cloth: 0xd84a3a, wood: 0x8a6a42, stone: 0x9a9a92 },
+  farmer: { body: 0x92c866, body2: 0x669e46, belly: 0xf6f0c4, leaf: 0x4eb03a, leaf2: 0x9ae05a, stem: 0x5a9a3a, petal: 0xfff080, petal2: 0xffc040, cheek: 0xff8f8f, iris: 0x4a2a14, hat: 0x5aa83a, hat2: 0x8ad05a, cloth: 0xd84a3a, wood: 0x8a6a42, stone: 0x9a9a92 },
 };
 
 // ------------------------------------------------------------------------------------------------ shared Pip body
@@ -75,11 +75,11 @@ function pipPaint(v, cfg) {
 }
 // big sparkly eye on its own bone (blink = scale y). dome + iris ring + 2 glints
 function pipEye(acc, S, bone, p, dir, r, c) {
-  const g = eyeGeo(r, [{ a: 0.55, c: 0 }, { a: 1.0, c: 1 }], 16, 1.6);
+  const g = eyeGeo(r, [{ a: 0.55, c: 0 }, { a: 1.0, c: 1 }], 12, 1.6);
   const M = eyeMatrix(S, p, dir, r, 0.42, 0, 1.12);
   const cp = col(0x0c0806), ci = col(c.iris), cr = col(0x201410);
   acc.add(g, { matrix: M, skin: rigid(bone), dtl: [0, 0, 0, 0], color: (q, n, uv) => uv[0] === 0 ? cp : uv[0] === 1 ? ci : cr, emis: (q, uv) => uv[0] === 1 ? 0.12 : 0 });
-  for (const [gx, gy, gr, e] of [[-0.36, 0.38, 0.3, 1.4], [0.3, -0.34, 0.14, 1.0]]) {
+  for (const [gx, gy, gr, e] of [[-0.36, 0.38, 0.3, 0.55], [0.3, -0.34, 0.14, 0.4]]) {
     const gp = new THREE.Vector3(gx * r, gy * r, r * 0.97).applyMatrix4(M);
     acc.add(new THREE.SphereGeometry(r * gr, 7, 5), { matrix: new THREE.Matrix4().makeTranslation(gp.x, gp.y, gp.z).multiply(new THREE.Matrix4().makeScale(1, 1, 0.5)), skin: rigid(bone), color: 0xffffff, emis: e, dtl: [0, 0, 0, 0] });
   }
@@ -93,7 +93,7 @@ function pipParts(acc, S, R, cfg) {
     const pts = []; for (let i = 0; i <= 6; i++) { const t = i / 6 - 0.5; pts.push([t * 0.06, 0.322 - 0.012 * (1 - 4 * t * t) + 0.004, -0.206 + Math.abs(t) * 0.012]); }
     const sm = sweep(pts.map(p => S.project(p.slice(), 0, 3).p), taper(7, 0.0045, 0.0045), { radial: 4 });
     acc.add(sm, { skin: rigid(b('mouth')), color: 0x4a2014, dtl: [0, 0, 0, 0] });
-    const mo = new THREE.SphereGeometry(0.03, 10, 6, 0, TAU, 0, Math.PI / 2);
+    const mo = new THREE.SphereGeometry(0.038, 10, 6, 0, TAU, 0, Math.PI / 2);
     const m = new THREE.Matrix4().makeRotationX(-Math.PI / 2).premultiply(new THREE.Matrix4().makeScale(1, 0.8, 0.45)).setPosition(0, 0.318, -0.2);
     const dk = col(0x5a1414), tg = col(0xff7a8a);
     acc.add(mo, { matrix: m, skin: rigid(b('mouthO')), dtl: [0, 0, 0, 0], color: (p) => (p.y < 0.306 ? tg : dk) });
@@ -106,8 +106,8 @@ function pipParts(acc, S, R, cfg) {
     const leaves = V === 'child' ? [[1, 1.0]] : [[-1, 1.0], [1, 0.85]];
     const lc = col(c.leaf), lc2 = col(c.leaf2), lv = col(c.stem);
     for (const [s, k] of leaves) {
-      const L = (V === 'elder' ? 0.13 : 0.12) * k * (V === 'child' ? 1.15 : 1);
-      const g = leafGeo(0.05 * k, L, 0.012, 0.45, 0.25, { nu: 6, nv: 6, pw: 0.7, tipW: 0.003, bendX: 0 });
+      const L = (V === 'elder' ? 0.16 : 0.155) * k * (V === 'child' ? 1.15 : 1);
+      const g = leafGeo(0.065 * k, L, 0.012, 0.45, 0.25, { nu: 6, nv: 6, pw: 0.7, tipW: 0.003, bendX: 0 });
       const m = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(0.15, 0, -s * 1.05, 'YXZ')); m.setPosition(0.004, 0.635, 0.015);
       acc.add(g, { matrix: m, skin: rigid(b('sprout2')), dtl: [0, 0, 0.12, 0], color: (p, n, uv) => { const u = (uv[0] % 1) * 2, t = uv[1]; const vein = 1 - sstep(0.04, 0.1, u); return lerp3(lerp3(lc, lc2, t * 0.7 + (uv[0] >= 1 ? 0.15 : 0)), lv, vein * 0.5 * (1 - t)); } });
     }
@@ -116,31 +116,19 @@ function pipParts(acc, S, R, cfg) {
       for (let i = 0; i < 4; i++) { const a = i * 1.57 + 0.4; const g = leafGeo(0.012, 0.025, 0.005, 0.3, 0.1, { nu: 3, nv: 3 }); acc.add(g, { matrix: new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(0.9, a, 0, 'YXZ')).setPosition(0.004, 0.655, 0.015), skin: rigid(b('sprout2')), color: c.leaf, dtl: [0, 0, 0, 0] }); }
     }
   }
-  // petal collar around the neck line
-  {
-    const n = 10, pc = col(c.petal), pc2 = col(c.petal2);
-    for (let i = 0; i < n; i++) {
-      const a = i / n * TAU + 0.3;
-      const g = leafGeo(0.036, 0.055, 0.008, 0.3, 0.3, { nu: 4, nv: 4, pw: 0.5, tipW: 0.012 });
-      const m = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(-2.0, a + Math.PI, 0, 'YXZ'));
-      const r = 0.175;
-      m.setPosition(Math.sin(a) * r, 0.305, Math.cos(a) * r - 0.005);
-      acc.add(g, { matrix: m, skin: (p) => ({ si: [b('chest'), b('head'), 0, 0], sw: [0.6, 0.4, 0, 0] }), dtl: [0, 0, 0.1, 0], color: (p, nn, uv) => lerp3(pc, pc2, sstep(0.3, 1, uv[1]) * 0.6) });
-    }
-  }
   // ---- variant props
   if (V === 'elder') {
     const mc = col(c.moss), mc2 = col(c.moss2);
     // moss beard: hanging tufts from the chin line
-    for (let i = 0; i < 9; i++) {
-      const t = i / 8 - 0.5, x = t * 0.2, z = -0.18 + Math.abs(t) * 0.1;
-      const L = 0.13 - Math.abs(t) * 0.1 + (i % 2) * 0.02;
-      const p0 = [x, 0.31, z];
-      const g = sweep([p0, [x * 1.05, 0.31 - L * 0.5, z - 0.03], [x * 1.1, 0.31 - L, z - 0.02]], [0.028, 0.022, 0.006], { radial: 5 });
+    for (let i = 0; i < 11; i++) {
+      const t = i / 10 - 0.5, x = t * 0.27, z = -0.19 + t * t * 0.28;
+      const L = 0.2 - Math.abs(t) * 0.16 + (i % 2) * 0.03;
+      const p0 = [x, 0.33, z];
+      const g = sweep([p0, [x * 1.08, 0.33 - L * 0.5, z - 0.045], [x * 1.12, 0.33 - L, z - 0.03]], [0.04, 0.034, 0.01], { radial: 5 });
       acc.add(g, { skin: (p) => ({ si: [b('head'), b('chest'), 0, 0], sw: [0.7, 0.3, 0, 0] }), color: (p, n, uv) => lerp3(mc, mc2, uv[1] * 0.8), dtl: [0.5, 0, 0.2, 0] });
     }
     // bushy brows
-    for (const s of [-1, 1]) acc.add(sweep([[s * 0.045, 0.45, -0.19], [s * 0.08, 0.462, -0.185], [s * 0.12, 0.45, -0.165]], [0.012, 0.018, 0.008], { radial: 5 }), { skin: rigid(b('head')), color: c.moss, dtl: [0.5, 0, 0.2, 0] });
+    for (const s of [-1, 1]) acc.add(sweep([[s * 0.035, 0.455, -0.19], [s * 0.08, 0.475, -0.185], [s * 0.135, 0.455, -0.155]], [0.016, 0.026, 0.01], { radial: 5 }), { skin: rigid(b('head')), color: c.moss, dtl: [0.5, 0, 0.2, 0] });
     // twig staff in the right hand: gnarled, with a leaf and a glowing seed at the top
     const st = sweep(bez([0.262, 0.0, -0.05], [0.25, 0.4, -0.08], [0.275, 0.78, -0.06], 7), taper(7, 0.014, 0.011), { radial: 5, capStart: true });
     acc.add(st, { skin: rigid(b('handR')), color: c.wood, dtl: [0, 0, 0.2, 0.5] });
@@ -442,7 +430,7 @@ export const pip = {
   variants: ['sprout', 'elder', 'child', 'merchant', 'guard', 'farmer'],
   config(variant, opts) {
     const v = PAL[variant] ? variant : 'sprout';
-    return { variant: v, pal: PAL[v], shapeKey: 'body', scale: v === 'child' ? 0.72 : v === 'elder' ? 1.04 : 1, h: 0.0165, hg: { 2: 0.012, 3: 0.012 }, mat: { dfreq: 5, furAxis: 1, rim: 0.45, rimColor: 0xfffbe0, spec: 0.18, shine: 16, wrap: 0.6 }, ao: { dist: 0.022, str: 0.6 }, grad: { top: 0.15, bottom: 0.25, y0: 0, y1: 0.3, low: 0.15 } };
+    return { variant: v, pal: PAL[v], shapeKey: 'body', scale: v === 'child' ? 0.72 : v === 'elder' ? 1.04 : 1, h: 0.024, hg: { 2: 0.017, 3: 0.017 }, mat: { dfreq: 5, furAxis: 1, rim: 0.32, rimColor: 0xfffbe0, spec: 0.14, shine: 16, wrap: 0.55 }, ao: { dist: 0.022, str: 0.6 }, grad: { top: 0.08, bottom: 0.25, y0: 0, y1: 0.3, low: 0.15 } };
   },
   rig: pipRig, sculpt: pipSculpt, paint: pipPaint, parts: pipParts,
   sockets: PIP_SOCKETS,
@@ -454,8 +442,8 @@ export const pip = {
 // ------------------------------------------------------------------------------------------------ pip_pet
 const PET_PAL = {
   sprout: { ...PAL.child, scarf: 0xe84a4a },
-  bloom: { ...PAL.child, body: 0xf4c8e0, body2: 0xd898c0, belly: 0xfff4fa, petal: 0xfff080, petal2: 0xffc040, scarf: 0x4a8ae8 },
-  sky: { ...PAL.child, body: 0xa8dcff, body2: 0x78b0e0, belly: 0xf4faff, petal: 0xffffff, petal2: 0xd8e8ff, scarf: 0xffc040 },
+  bloom: { ...PAL.child, body: 0xe4a8c8, body2: 0xc47ca6, belly: 0xfaecf2, petal: 0xfff080, petal2: 0xffc040, scarf: 0x4a8ae8 },
+  sky: { ...PAL.child, body: 0x8cc4ec, body2: 0x5e96c8, belly: 0xeef6fc, petal: 0xffffff, petal2: 0xd8e8ff, scarf: 0xffc040 },
   ember: { ...PAL.child, body: 0xffb870, body2: 0xe08840, belly: 0xfff4e0, petal: 0xff6a4a, petal2: 0xc83a2a, scarf: 0x3a3a48 },
 };
 export const pip_pet = {
@@ -463,16 +451,19 @@ export const pip_pet = {
   variants: ['sprout', 'bloom', 'sky', 'ember'],
   config(variant) {
     const v = PET_PAL[variant] ? variant : 'sprout';
-    return { variant: v, pal: { ...PET_PAL[v] }, petScarf: true, shapeKey: 'body', scale: 0.7, h: 0.0165, hg: { 2: 0.012, 3: 0.012 }, mat: { dfreq: 5, furAxis: 1, rim: 0.45, rimColor: 0xfffbe0, spec: 0.18, shine: 16, wrap: 0.6 }, ao: { dist: 0.022, str: 0.6 }, grad: { top: 0.15, bottom: 0.25, y0: 0, y1: 0.3, low: 0.15 } };
+    return { variant: v, pal: { ...PET_PAL[v] }, petScarf: true, shapeKey: 'body', scale: 0.7, h: 0.038, hg: { 2: 0.026, 3: 0.026 }, mat: { dfreq: 5, furAxis: 1, rim: 0.32, rimColor: 0xfffbe0, spec: 0.14, shine: 16, wrap: 0.55 }, ao: { dist: 0.022, str: 0.6 }, grad: { top: 0.08, bottom: 0.25, y0: 0, y1: 0.3, low: 0.15 } };
   },
   rig: pipRig, sculpt: pipSculpt, paint: pipPaint,
   parts(acc, S, R, cfg) {
     pipParts(acc, S, R, { ...cfg, variant: 'child' });
-    // a little scarf with a knot and a tail (pet marker)
+    // a ribbon bow tied at the base of the sprout (pet marker)
     const b = (n) => R.index(n), sc = col(cfg.pal.scarf);
-    const ring = new THREE.TorusGeometry(0.17, 0.028, 5, 18);
-    acc.add(ring, { matrix: new THREE.Matrix4().makeRotationX(Math.PI / 2 + 0.1).setPosition(0, 0.285, -0.005), skin: rigid(b('chest')), color: sc, dtl: [0, 0, 0.2, 0.6] });
-    acc.add(sweep([[0.08, 0.29, -0.15], [0.12, 0.24, -0.17], [0.13, 0.18, -0.16]], [0.03, 0.028, 0.02], { radial: 5, flat: 0.5 }), { skin: rigid(b('chest')), color: sc, dtl: [0, 0, 0.2, 0.6] });
+    for (const s of [-1, 1]) {
+      const loop = new THREE.TorusGeometry(0.042, 0.015, 4, 10);
+      acc.add(loop, { matrix: new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(0.3, 0, s * 0.35)).setPosition(s * 0.046, 0.58, 0.02), skin: rigid(b('head')), color: sc, dtl: [0, 0, 0.15, 0.4] });
+      acc.add(sweep([[s * 0.008, 0.566, 0.035], [s * 0.03, 0.54, 0.05], [s * 0.04, 0.525, 0.05]], [0.012, 0.011, 0.006], { radial: 4, flat: 0.5 }), { skin: rigid(b('head')), color: sc, dtl: [0, 0, 0.15, 0.4] });
+    }
+    orb(acc, [0, 0.572, 0.025], 0.016, rigid(b('head')), cfg.pal.scarf, 0, 0);
   },
   sockets: PIP_SOCKETS,
   height: 0.62, radius: 0.24,
@@ -491,7 +482,7 @@ const SEED_PAL = {
 export const pip_seed = {
   name: 'Pip Seed',
   variants: ['gold', 'jade', 'rose'],
-  config(variant) { const v = SEED_PAL[variant] ? variant : 'gold'; return { variant: v, pal: SEED_PAL[v], h: 0.012, mat: { dfreq: 8, rim: 0.6, rimColor: 0xfff0c0, spec: 0.3, shine: 30 }, castShadow: true }; },
+  config(variant) { const v = SEED_PAL[variant] ? variant : 'gold'; return { variant: v, pal: SEED_PAL[v], scale: 1.4, h: 0.012, mat: { dfreq: 8, rim: 0.6, rimColor: 0xfff0c0, spec: 0.3, shine: 30 }, castShadow: true }; },
   rig(R) { R.add('base', null, [0, 0.0, 0]); R.add('float', 'base', [0, 0.32, 0]); R.add('sprout', 'float', [0, 0.36, 0]); R.add('motes', 'float', [0, 0.32, 0]); },
   sculpt(S, cfg) {
     const c = cfg.pal;
@@ -516,8 +507,8 @@ export const pip_seed = {
     // halo of motes
     for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; orb(acc, [Math.cos(a) * 0.14, 0.32 + Math.sin(a * 2) * 0.03, Math.sin(a) * 0.14], 0.009, rigid(b('motes')), c.mote, 3.5, 0); }
     // soft ground glow disc under it (fake bounce light)
-    const disc = new THREE.CircleGeometry(0.16, 16); disc.rotateX(-Math.PI / 2);
-    acc.add(disc, { matrix: new THREE.Matrix4().makeTranslation(0, 0.005, 0), skin: rigid(b('base')), color: c.glow, emis: 0.9, dtl: [0, 0, 0, 0] });
+    const disc = new THREE.CircleGeometry(0.1, 14); disc.rotateX(-Math.PI / 2);
+    acc.add(disc, { matrix: new THREE.Matrix4().makeTranslation(0, 0.005, 0), skin: rigid(b('base')), color: c.glow, emis: 0.3, dtl: [0, 0, 0, 0] });
   },
   sockets: { head: ['sprout', [0, 0.46, 0]], mouth: ['float', [0, 0.33, -0.06]], center: ['float', [0, 0.32, 0]], back: ['float', [0, 0.36, 0.05]] },
   height: 0.46, radius: 0.15,

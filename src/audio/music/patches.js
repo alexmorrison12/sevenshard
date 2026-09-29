@@ -27,7 +27,7 @@ const ZONES = {
   // 7-voice string section: detuned saws, independent vibrato + drift, spread across the stereo field, body EQ,
   // rosin hiss. One patch covers basses → violins (the lowpass tracks pitch).
   strings: {
-    lo: 28, hi: 100, step: 4, att: 0.3, loop: 1.2, xf: 0.3, rms: 0.2, stereo: false,
+    lo: 28, hi: 100, step: 4, att: 0.28, loop: 1.0, xf: 0.26, rms: 0.2, stereo: false,
     voice: (k, out, f, t0, T) => supersaw(k, out, f, t0, T, {
       spread: 4.2, vib: [5.4, 8], drift: 3, lpMul: 12, lpMin: 3200, lpMax: 12500, hiss: 0.014,
       eq: [['highpass', 38, 0.7, 0], ['peaking', 290, 1.0, 2.5], ['peaking', 2800, 1.0, 1.5], ['highshelf', 7500, 0.7, -4]],
@@ -35,7 +35,7 @@ const ZONES = {
   },
   // warm synth pad (night / stronghold / cutscenes): saws + sub triangle, dark, slowly breathing filter
   pad: {
-    lo: 36, hi: 88, step: 5, att: 0.3, loop: 2.0, xf: 0.5, rms: 0.2, stereo: false,
+    lo: 36, hi: 88, step: 5, att: 0.3, loop: 2.0, xf: 0.28, rms: 0.2, stereo: false, rate: 24000,
     voice: (k, out, f, t0, T) => {
       const g = k.gain(1, out), lp = k.biq('lowpass', clamp(f * 3, 700, 3200), 0.7, 0, g);
       k.lfo(0.5, clamp(f * 0.8, 150, 900), lp.frequency, t0, t0 + T);
@@ -46,7 +46,7 @@ const ZONES = {
   },
   // dark synth pad for the rift / void: detuned saws through a resonant low-pass, slow beating
   darkpad: {
-    lo: 28, hi: 76, step: 5, att: 0.3, loop: 2.0, xf: 0.5, rms: 0.2, stereo: false,
+    lo: 28, hi: 76, step: 5, att: 0.3, loop: 2.0, xf: 0.28, rms: 0.2, stereo: false, rate: 24000,
     voice: (k, out, f, t0, T) => {
       const lp = k.biq('lowpass', clamp(f * 4, 400, 2400), 2.2, 0, out);
       k.lfo(0.5, clamp(f * 1.2, 150, 800), lp.frequency, t0, t0 + T);
@@ -56,7 +56,7 @@ const ZONES = {
   },
   // brass section (trombones/trumpets): baked "blat" attack (filter opens), bright sustain; play from `ls` for swells
   brass: {
-    lo: 34, hi: 82, step: 4, att: 0.4, loop: 1.0, xf: 0.3, rms: 0.2, stereo: false,
+    lo: 34, hi: 82, step: 4, att: 0.36, loop: 0.9, xf: 0.26, rms: 0.2, stereo: false,
     voice: (k, out, f, t0, T) => {
       const ws = k.ctx.createWaveShaper(); const c = new Float32Array(1024); for (let i = 0; i < 1024; i++) { const x = i / 511.5 - 1; c[i] = Math.tanh(1.6 * x) / Math.tanh(1.6); } ws.curve = c; ws.connect(out);
       const pre = k.gain(1.1, ws);
@@ -72,7 +72,7 @@ const ZONES = {
   },
   // horn section (French horns): mellow, round; slower filter bloom
   horns: {
-    lo: 36, hi: 79, step: 4, att: 0.4, loop: 1.0, xf: 0.3, rms: 0.2, stereo: false,
+    lo: 36, hi: 79, step: 4, att: 0.36, loop: 1.0, xf: 0.26, rms: 0.2, stereo: false, rate: 24000,
     voice: (k, out, f, t0, T) => {
       const lp = k.biq('lowpass', f, 1.1, 0, k.biq('lowpass', 3400, 0.6, 0, k.biq('peaking', 420, 1, 3, out)));
       lp.frequency.setValueAtTime(f * 1.1, t0); lp.frequency.linearRampToValueAtTime(clamp(f * 5, 500, 5000), t0 + 0.09);
@@ -107,15 +107,15 @@ function choirVoice(vowel) {
     k.noiseSrc('white', t0, t1, k.gain(0.035, src));
   };
 }
-ZONES.choir_ah = { lo: 40, hi: 88, step: 4, att: 0.3, loop: 1.2, xf: 0.3, rms: 0.2, stereo: false, voice: choirVoice('ah') };
-ZONES.choir_oo = { lo: 40, hi: 88, step: 4, att: 0.3, loop: 1.2, xf: 0.3, rms: 0.2, stereo: false, voice: choirVoice('oo') };
+ZONES.choir_ah = { lo: 40, hi: 88, step: 4, att: 0.28, loop: 1.1, xf: 0.26, rms: 0.2, stereo: false, rate: 24000, voice: choirVoice('ah') };
+ZONES.choir_oo = { lo: 40, hi: 88, step: 4, att: 0.28, loop: 1.1, xf: 0.26, rms: 0.2, stereo: false, rate: 24000, voice: choirVoice('oo') };
 
 // ---------------------------------------------------------------- tuned percussion (one-shot zones)
 function additive(k, out, f, t0, P, { a = 0.001, d = 2, click = 0, clickF = 3000, trem = 0 } = {}) {
   const dest = trem ? k.gain(1 - trem, out) : out;
   if (trem) k.lfo(5.2, trem, dest.gain, t0, t0 + d * 1.2);
   for (const [r, amp, dm] of P) {
-    const ff = f * r; if (ff > 17000) continue;
+    const ff = f * r; if (ff > Math.min(17000, k.ctx.sampleRate * 0.45)) continue;
     const g = k.gain(0, dest), dd = d * dm;
     g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(amp, t0 + a); g.gain.setTargetAtTime(0, t0 + a, dd / 6.9);
     k.osc('sine', ff, t0, t0 + dd + 0.1, g);
@@ -123,20 +123,20 @@ function additive(k, out, f, t0, P, { a = 0.001, d = 2, click = 0, clickF = 3000
   if (click) { const g = k.gain(0, out); g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(click, t0 + 0.0008); g.gain.setTargetAtTime(0, t0 + 0.001, 0.006); k.noiseSrc('white', t0, t0 + 0.06, k.biq('bandpass', clickF, 1.5, 0, g)); }
 }
 const BELLS = {
-  celesta: { lo: 60, hi: 108, step: 3, T: 2.2, P: [[1, 1, 1], [2, 0.28, 0.45], [3, 0.08, 0.3], [4.2, 0.05, 0.2]], d: 1.8, click: 0.05 },
-  glock: { lo: 72, hi: 108, step: 3, T: 2.6, P: [[1, 1, 1], [2.76, 0.4, 0.5], [5.4, 0.18, 0.3], [8.93, 0.08, 0.2]], d: 2.4, click: 0.08, clickF: 6000 },
-  tubular: { lo: 48, hi: 84, step: 3, T: 5, P: [[1, 1, 1], [2.02, 0.55, 0.75], [2.99, 0.4, 0.55], [4.16, 0.3, 0.4], [5.43, 0.12, 0.3]], d: 5, click: 0.05, clickF: 2000 },
-  musicbox: { lo: 72, hi: 108, step: 3, T: 1.8, P: [[1, 1, 1], [3.0, 0.3, 0.3], [5.2, 0.14, 0.2], [8.1, 0.06, 0.15]], d: 1.5, click: 0.12, clickF: 7000 },
-  marimba: { lo: 45, hi: 96, step: 3, T: 1.2, P: [[1, 1, 1], [4.0, 0.3, 0.22], [9.9, 0.06, 0.1]], d: 0.8, click: 0.18, clickF: 1500 },
-  xylo: { lo: 65, hi: 108, step: 3, T: 0.8, P: [[1, 1, 1], [3.0, 0.35, 0.25], [6.0, 0.12, 0.12]], d: 0.5, click: 0.25, clickF: 4000 },
-  vibes: { lo: 53, hi: 89, step: 3, T: 3.5, P: [[1, 1, 1], [4.0, 0.22, 0.35], [10, 0.04, 0.15]], d: 3, click: 0.04, trem: 0.35 },
+  celesta: { lo: 60, hi: 108, step: 5, T: 1.4, P: [[1, 1, 1], [2, 0.28, 0.45], [3, 0.08, 0.3], [4.2, 0.05, 0.2]], d: 1.8, click: 0.05 },
+  glock: { lo: 72, hi: 108, step: 5, T: 1.7, P: [[1, 1, 1], [2.76, 0.4, 0.5], [5.4, 0.18, 0.3], [8.93, 0.08, 0.2]], d: 2.4, click: 0.08, clickF: 6000 },
+  tubular: { lo: 48, hi: 84, step: 4, T: 3.2, rate: 24000, P: [[1, 1, 1], [2.02, 0.55, 0.75], [2.99, 0.4, 0.55], [4.16, 0.3, 0.4], [5.43, 0.12, 0.3]], d: 5, click: 0.05, clickF: 2000 },
+  musicbox: { lo: 72, hi: 108, step: 5, T: 1.4, P: [[1, 1, 1], [3.0, 0.3, 0.3], [5.2, 0.14, 0.2], [8.1, 0.06, 0.15]], d: 1.5, click: 0.12, clickF: 7000 },
+  marimba: { lo: 45, hi: 96, step: 5, T: 1.0, rate: 24000, P: [[1, 1, 1], [4.0, 0.3, 0.22], [9.9, 0.06, 0.1]], d: 0.8, click: 0.18, clickF: 1500 },
+  xylo: { lo: 65, hi: 108, step: 5, T: 0.7, P: [[1, 1, 1], [3.0, 0.35, 0.25], [6.0, 0.12, 0.12]], d: 0.5, click: 0.25, clickF: 4000 },
+  vibes: { lo: 53, hi: 89, step: 5, T: 2.2, rate: 24000, P: [[1, 1, 1], [4.0, 0.22, 0.35], [10, 0.04, 0.15]], d: 3, click: 0.04, trem: 0.35 },
 };
 for (const [name, b] of Object.entries(BELLS)) {
-  ZONES[name] = { lo: b.lo, hi: b.hi, step: b.step, oneShot: true, T: b.T, stereo: false, rms: 0, voice: (k, out, f, t0) => additive(k, out, f, t0, b.P, b) };
+  ZONES[name] = { lo: b.lo, hi: b.hi, step: b.step, oneShot: true, T: b.T, rate: b.rate, stereo: false, rms: 0, voice: (k, out, f, t0) => additive(k, out, f, t0, b.P, { ...b, d: Math.min(b.d, b.T * 1.3) }) };
 }
 // timpani: 5 modal partials with a small pitch drop at the strike, felt-mallet thud
 ZONES.timpani = {
-  lo: 36, hi: 55, step: 3, oneShot: true, T: 3.2, stereo: false,
+  lo: 36, hi: 55, step: 3, oneShot: true, T: 2.5, stereo: false, rate: 24000,
   voice: (k, out, f, t0) => {
     for (const [ratio, amp, dm] of [[1, 1, 1], [1.504, 0.42, 0.65], [1.742, 0.22, 0.5], [2.0, 0.28, 0.55], [2.245, 0.1, 0.4]]) {
       const g = k.gain(0, out), d = 2.6 * dm;
@@ -188,7 +188,7 @@ const HITS = {
   triangle: { n: 2, len: 2.2, voice: (k, out, i, t0) => { for (const [r, a, d] of [[1, 0.5, 1.6], [2.71, 0.4, 1.3], [4.98, 0.3, 1.0], [7.4, 0.2, 0.8]]) { const g = k.gain(0, out); env(g, t0, a, 0.001, d); k.osc('sine', 1850 * r * (1 + i * 0.01), t0, t0 + d + 0.1, g); } } },
   // crash cymbal: three noise bands + inharmonic shimmer, stereo
   crash: {
-    n: 3, len: 4, stereo: true,
+    n: 2, len: 3.2, stereo: true,
     voice: (k, out, i, t0) => {
       for (const [p, type, f, q, d, v] of [[-0.4, 'highpass', 3800, 0.7, 2.8, 1], [0.4, 'bandpass', 5200, 1.4, 1.1, 0.8], [0, 'bandpass', 9000, 1.2, 1.8, 0.6], [0.2, 'bandpass', 2600, 2, 0.6, 0.3]]) {
         const g = k.gain(0, k.pan(p, out)); env(g, t0, v, 0.003, d * k.rng.range(0.85, 1.15));
@@ -199,9 +199,9 @@ const HITS = {
   },
   // suspended-cymbal swell (reverse crash): peaks at the very end — play with offset (len − dur) to fit any length
   swell: {
-    n: 1, len: 6, stereo: true, norm: true,
+    n: 1, len: 5, stereo: true, norm: true,
     voice: (k, out, i, t0) => {
-      const T = 6, g = k.gain(0, out);
+      const T = 5, g = k.gain(0, out);
       g.gain.setValueAtTime(0.0005, t0); g.gain.exponentialRampToValueAtTime(1, t0 + T - 0.03); g.gain.linearRampToValueAtTime(0, t0 + T);
       for (const p of [-0.5, 0.5]) { const hp = k.biq('highpass', 1600, 0.7, 0, k.pan(p, g)); hp.frequency.setValueAtTime(1500, t0); hp.frequency.exponentialRampToValueAtTime(5200, t0 + T); k.noiseSrc('white', t0, t0 + T, hp); }
       const r = k.gain(0.35, g); const bp = k.biq('bandpass', 700, 0.8, 0, r); bp.frequency.setValueAtTime(500, t0); bp.frequency.exponentialRampToValueAtTime(3000, t0 + T); k.noiseSrc('pink', t0, t0 + T, bp);
@@ -209,9 +209,9 @@ const HITS = {
   },
   // cinematic low boom: sub drop + chest thud + short dark tail
   boom: {
-    n: 2, len: 3.5, stereo: true,
+    n: 2, len: 2.8, stereo: true,
     voice: (k, out, i, t0) => {
-      const g = k.gain(0, out); env(g, t0, 1, 0.004, 2.8); const o = k.osc('sine', 62, t0, t0 + 3.2, g); o.frequency.setValueAtTime(64 - i * 4, t0); o.frequency.exponentialRampToValueAtTime(31, t0 + 1.2);
+      const g = k.gain(0, out); env(g, t0, 1, 0.004, 2.4); const o = k.osc('sine', 62, t0, t0 + 3.2, g); o.frequency.setValueAtTime(64 - i * 4, t0); o.frequency.exponentialRampToValueAtTime(31, t0 + 1.2);
       const t = k.gain(0, out); env(t, t0, 0.8, 0.002, 0.35); k.noiseSrc('brown', t0, t0 + 0.5, k.biq('lowpass', 260, 0.8, 0, t));
       const s = k.gain(0, out); env(s, t0, 0.35, 0.001, 0.08); k.noiseSrc('pink', t0, t0 + 0.2, k.biq('bandpass', 900, 0.8, 0, s));
       for (const p of [-0.6, 0.6]) { const r = k.gain(0, k.pan(p, out)); env(r, t0 + 0.02, 0.18, 0.05, 2.2); k.noiseSrc('brown', t0, t0 + 3, k.biq('lowpass', 140, 0.7, 0, r)); }
@@ -219,9 +219,9 @@ const HITS = {
   },
   // riser: noise + detuned saw sweep, peaks at the end (play with offset like `swell`)
   riser: {
-    n: 1, len: 5, stereo: true,
+    n: 1, len: 4, stereo: true,
     voice: (k, out, i, t0) => {
-      const T = 5, g = k.gain(0, out);
+      const T = 4, g = k.gain(0, out);
       g.gain.setValueAtTime(0.001, t0); g.gain.exponentialRampToValueAtTime(1, t0 + T - 0.02); g.gain.linearRampToValueAtTime(0, t0 + T);
       const bp = k.biq('bandpass', 400, 1.5, 0, g); bp.frequency.setValueAtTime(300, t0); bp.frequency.exponentialRampToValueAtTime(7000, t0 + T);
       for (const p of [-0.6, 0.6]) k.noiseSrc('white', t0, t0 + T, k.pan(p, bp));
@@ -235,7 +235,7 @@ const HITS = {
 const _ = (e) => ({ noise: e.noise, sr: e.ctx.sampleRate });
 export function zoneSpec(name) {
   const z = ZONES[name]; if (!z) throw new Error('unknown patch ' + name);
-  if (z.oneShot) return { key: 'z:' + name, lo: z.lo, hi: z.hi, step: z.step, stereo: z.stereo ?? false, att: z.T, loop: 0, xf: 0, oneShot: true, voice: (k, out, f, t0, T, m) => z.voice(k, out, f, t0, T, m) };
+  if (z.oneShot) return { key: 'z:' + name, lo: z.lo, hi: z.hi, step: z.step, stereo: z.stereo ?? false, rate: z.rate, att: z.T, loop: 0, xf: 0, oneShot: true, voice: (k, out, f, t0, T, m) => z.voice(k, out, f, t0, T, m) };
   return { key: 'z:' + name, ...z };
 }
 // → { value } when already baked, else { promise }

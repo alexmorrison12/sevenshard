@@ -23,10 +23,11 @@ import { TouchLayer } from './hud/touch.js';
 
 export { Win, glyph, iconUrl, placeholderIcon, data, MENU };
 
-/** Default window hotkeys (KeyboardEvent.code). The game owns QWER ASDF Z X V C G T Space 1-4 Alt. */
+/** Default window hotkeys (KeyboardEvent.code), matching src/engine/input.js DEFAULT_BINDS. The game owns
+ *  QWER ASDF Z X V C G T Space 1-4 Alt; Enter focuses chat, Esc closes / opens the game menu, F12 or Ctrl+Z = photo mode. */
 export const HOTKEYS = {
-  character: 'KeyP', inventory: 'KeyI', skills: 'KeyK', engravings: 'KeyN', cards: 'KeyY', map: 'KeyM', guild: 'KeyU',
-  market: 'KeyB', stronghold: 'KeyH', tome: 'KeyJ', partyfinder: 'KeyO',
+  character: 'KeyP', inventory: 'KeyI', skills: 'KeyK', engravings: 'KeyN', map: 'KeyM', guild: 'KeyU', partyfinder: 'KeyO',
+  tome: 'KeyL', quests: 'KeyJ', compass: 'KeyH', meter: 'KeyY', songs: 'KeyB', emotes: 'Period',
 };
 
 class UI {
@@ -130,7 +131,12 @@ class UI {
   isOpen(id) { return this.windows.isOpen(id); }
   /** The live window instance (e.g. ui.get('character').portrait to mount a 3D portrait canvas). */
   get(id) { return this.windows.get(id); }
-  _menu(id) { if (this.windows.has(id)) this.toggle(id); }
+  /** Menu button / hotkey: tell the game first; if its handler didn't open/close/update that window, toggle it here. */
+  _menu(id, extra) {
+    const before = this.windows.stamp(id);
+    this.emit('hud:menu', { id, ...extra });
+    if (this.windows.has(id) && this.windows.stamp(id) === before) this.toggle(id);
+  }
   _winChanged(id, on) { this.hud.menu.setOpen(id, on); }
 
   // ------------------------------------------------------------------ modals & dialog
@@ -185,7 +191,8 @@ class UI {
     return getComputedStyle(t).pointerEvents !== 'none';
   }
   _key(e) {
-    if (e.defaultPrevented) return;
+    // Note: the game's input layer preventDefault()s every bound key (to stop browser scrolling etc.), so
+    // defaultPrevented is not a "handled" signal here. Text fields and modal/dialog/screen states gate instead.
     const t = e.target;
     const field = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
     if (this.modals.open) { if (e.key === 'Escape') { this.modals.closeTop(); e.preventDefault(); } return; }
@@ -197,18 +204,18 @@ class UI {
       e.preventDefault();
       if (this.tip.anchor) this.tip.hide();
       if (this.windows.closeTop()) return;
-      if (this.windows.has('gamemenu')) this.toggle('gamemenu');
+      const before = this.windows.stamp('gamemenu');
       this.emit('hud:escape', {});
+      if (this.windows.has('gamemenu') && this.windows.stamp('gamemenu') === before) this.toggle('gamemenu');
       return;
     }
-    if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ') { e.preventDefault(); this.setHudVisible(!this.hudVisible); return; }
+    if (((e.ctrlKey || e.metaKey) && e.code === 'KeyZ') || e.code === 'F12') { e.preventDefault(); this.setHudVisible(!this.hudVisible); return; }
     if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
     if (e.key === 'Enter') { e.preventDefault(); this.chat.focus(); return; }
     if (e.key === '/') { e.preventDefault(); this.chat.focus('/'); return; }
     for (const id in this.hotkeys) if (this.hotkeys[id] === e.code) {
       e.preventDefault();
-      this.emit('hud:menu', { id, key: true });
-      if (this.windows.has(id)) this.toggle(id);
+      this._menu(id, { key: true });
       return;
     }
   }

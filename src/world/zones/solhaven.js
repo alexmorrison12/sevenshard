@@ -375,10 +375,8 @@ export async function build(zone, { quality = 1, props = 1 } = {}) {
   const dust = buildParticles('dust', { quality });
   zone.root.add(dust);
   const shafts = buildShafts([
-    { x: -6, y: 0, z: 2, w: 5, h: 16, rot: 0.6, tilt: -0.55, alpha: 0.22 },
-    { x: 8, y: 0, z: -6, w: 4, h: 14, rot: 0.6, tilt: -0.55, alpha: 0.18 },
-    { x: -30, y: 0, z: 46, w: 5, h: 14, rot: 0.6, tilt: -0.55, alpha: 0.2 },
-    { x: 34, y: 0, z: -2, w: 4, h: 12, rot: 0.6, tilt: -0.55, alpha: 0.16 },
+    { x: -7, y: 0, z: 1, w: 4, h: 14, rot: 0.6, tilt: -0.55, alpha: 0.12 },
+    { x: 7, y: 0, z: -5, w: 3.5, h: 12, rot: 0.6, tilt: -0.55, alpha: 0.1 },
   ]);
   if (shafts) zone.root.add(shafts);
   zone.onUpdate((dt, t, focus) => { pool.update(dt, t, focus); dust.userData.update(focus); grass.update(focus); });

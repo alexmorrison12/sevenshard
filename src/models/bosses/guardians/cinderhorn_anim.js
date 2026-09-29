@@ -188,6 +188,17 @@ export function cinderhornSpec(J) {
       ctl.ch.heat = Math.max(ctl.ch.heat, 1.6 * roar);
     } },
 
+    channel: { dur: 2.0, loop: true, fin: 0.5, fadeOut: 0.5, fn(ctl, a, w) {
+      // braces low and builds heat: seams blaze brighter with every heave, magma bubbling at the jaw
+      const P = ctl.P, b = ctl.b, t = a.t, beat = Math.pow(0.5 + 0.5 * Math.sin(t / 2.0 * TAU - 1.2), 2), sh = Math.sin(t * 29) * 0.02;
+      P.move(b.body, sh * w, (-0.22 + 0.06 * beat) * w, 0); P.rot(b.body, -0.04 * w, 0, sh * w);
+      P.rx(b.neck, (-0.15 + 0.1 * beat) * w); P.rx(b.head, (0.1 + 0.15 * beat) * w);
+      ctl.ch.heat = Math.max(ctl.ch.heat, 0.9 + 1.2 * beat);
+      ctl.ch.jaw = Math.max(ctl.ch.jaw, (0.2 + 0.3 * beat) * w);
+      ctl.ch.throat = Math.max(ctl.ch.throat, (0.8 + 0.6 * beat) * w);
+      for (const L of ctl.gait.legs) L.homeOff.set(L.side * 0.2 * w, 0, 0);
+    } },
+
     intro: { dur: 6.0, fin: 0.01, fout: 0.6,
       pre(ctl, a) { const t = a.t; ctl.ch.burrow = 1 - sm((t - 0.4) / 1.3); ctl.burrowLatch = 0; },
       fn(ctl, a, w) {

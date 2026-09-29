@@ -13,7 +13,7 @@
   --ss-bg-lift: rgba(22, 29, 47, .9);
   --ss-bg-deep: rgba(5, 7, 13, .94);
   --ss-bg-well: rgba(3, 5, 10, .55);
-  --ss-panel: linear-gradient(180deg, rgba(27, 35, 57, .93) 0%, rgba(13, 18, 31, .92) 34%, rgba(8, 11, 20, .94) 100%);
+  --ss-panel: linear-gradient(180deg, rgba(27, 35, 57, .95) 0%, rgba(13, 18, 31, .95) 34%, rgba(8, 11, 20, .96) 100%);
   --ss-hover: rgba(120, 150, 220, .10);
   --ss-select: rgba(201, 164, 90, .14);
   /* hairlines */

@@ -152,6 +152,6 @@ export default finalize({
   defaultBar: ['heavenly_blessing', 'light_shock', 'holy_bulwark', 'rite_of_mending', 'sword_of_justice', 'godsent_law', 'wrath_of_heaven', 'sacred_chain'],
   engravings: [
     { id: 'blessed_aura', name: 'Blessed Aura', desc: 'Aegis of Dawn also shields the party (120% of Attack Power) and its protection lasts 12 s. Healing and shields +10%.', mods: { healMul: 0.1, shieldMul: 0.1 } },
-    { id: 'judgment', name: 'Judgment', desc: 'Sanctity fills 50% faster. Sacred Punishment deals +60% damage and grants you +15% damage for 10 s. Damage +10%.', mods: { identityGain: 0.5, dmgMul: 0.1 } },
+    { id: 'judgment', name: 'Judgment', desc: 'Sanctity fills 50% faster. Sacred Punishment deals +60% damage and grants you +15% damage for 10 s. Damage +10%; your shields and heals −30%.', mods: { identityGain: 0.5, dmgMul: 0.1, healMul: -0.3, shieldMul: -0.3 } },
   ],
 });

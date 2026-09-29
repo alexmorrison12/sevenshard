@@ -21,7 +21,7 @@ import { Ribbons } from './ribbons.js';
 import { Meshes } from './meshes.js';
 import { Numbers } from './numbers.js';
 import { Task, Handle, NOOP } from './tasks.js';
-import { col, v3, dirOf, dir3 } from './util.js';
+import { col, v3, dirOf, dir3, hasCol } from './util.js';
 import * as prims from './prims.js';
 import { PRESETS } from './presets/index.js';
 
@@ -105,7 +105,7 @@ export class FX {
     this.ps.flush();
     this.anchors.flush();
     const s = this.screen, k = Math.exp(-dt * 7);
-    s.shake = Math.max(0, s.shake - dt * 1.6); s.flash *= Math.exp(-dt * 9); s.radial *= Math.exp(-dt * 5); s.aberration *= k;
+    s.shake = Math.max(0, s.shake - dt * 1.6); s.flash *= Math.exp(-dt * 14); s.radial *= Math.exp(-dt * 5); s.aberration *= k;
   }
   /** Convenience: push this frame's screen feedback into an IsoCam + Renderer (takes the max with their own values). */
   applyScreen(renderer, isoCam) {
@@ -201,7 +201,7 @@ export class FX {
     T.prev.copy(T.pos);
     this._dir(p.dir ?? p.facing, T.dir);
     T.right.set(-T.dir.z, 0, T.dir.x);
-    T.tint = p.color !== undefined ? col(p.color, 1, T.tintArr || (T.tintArr = [0, 0, 0])) : null;
+    T.tint = hasCol(p.color) ? col(p.color, 1, T.tintArr || (T.tintArr = [0, 0, 0])) : null;
     try { recipe.init?.(T); } catch (e) { console.error('[fx] init', recipe.name, e); T.end(); this.taskPool.push(T); return NOOP; }
     if (!T.alive) { this.taskPool.push(T); return NOOP; }
     this.tasks.push(T);
@@ -259,7 +259,10 @@ export class FX {
     this.screen.shakeQueued = Math.min(1, (this.screen.shakeQueued || 0) + a);
     if (this.onShake) { try { this.onShake(a, pos); } catch (e) { /* ignore */ } }
   }
-  flash(a, c = null) { const s = this.screen; s.flash = Math.min(1.2, Math.max(s.flash, a)); if (c) { const k = col(c, 1, _tmpC); s.flashCol.setRGB(k[0], k[1], k[2]); } else s.flashCol.setRGB(1, 0.92, 0.75); }
+  flash(a, c = null) {       // brief full-screen flash (whitened colour, capped so the frame never washes out)
+    const s = this.screen; s.flash = Math.min(0.35, Math.max(s.flash, a));
+    if (c) { const k = col(c, 1, _tmpC), m = Math.max(k[0], k[1], k[2], 1e-3); s.flashCol.setRGB(0.55 + 0.45 * k[0] / m, 0.55 + 0.45 * k[1] / m, 0.55 + 0.45 * k[2] / m); } else s.flashCol.setRGB(1, 0.92, 0.75);
+  }
   radialBlur(a, pos) {
     const s = this.screen; s.radial = Math.min(1, Math.max(s.radial, a));
     if (pos && this.camera) { _v.copy(pos).project(this.camera); s.radialX = _v.x * 0.5 + 0.5; s.radialY = _v.y * 0.5 + 0.5; } else { s.radialX = 0.5; s.radialY = 0.5; }

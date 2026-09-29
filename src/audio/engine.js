@@ -7,7 +7,7 @@
 //         reflections ("room") plus a quieter feed into the hall
 // Buses: music, sfx, ambience, ui (ui follows the sfx volume unless set separately).
 import { Kit } from './kit.js';
-import { SFX } from './sfx/index.js';
+import { SFX, ALIAS } from './sfx/index.js';
 import { MusicEngine, TRACKS } from './music/index.js';
 import { Ambience } from './ambience.js';
 import { makeNoise, makeIR, safetyCurve, ksBuffer, loopify, clamp, fromDb, driveCurve } from './util.js';
@@ -202,6 +202,7 @@ export class Engine {
   // play(name, { pos, vol = 1, pitch|rate = 1, pan, delay }) → Voice handle | null
   play(name, o = {}) {
     if (!this.ctx) return null;
+    name = ALIAS[name] || name;
     const rec = SFX[name];
     if (!rec) {
       if (!this._warned.has(name)) { this._warned.add(name); console.warn('[audio] unknown sound', name); }
@@ -256,6 +257,7 @@ export class Engine {
   // ---------------------------------------------------------------- loops
   // loop(name, { pos, vol }) → { stop(fade), setPos(p), setVol(v) }. Works before init (starts when audio starts).
   loop(name, o = {}) {
+    name = ALIAS[name] || name;
     const rec = SFX[name];
     if (!rec || !rec.loop) { if (!this._warned.has('loop:' + name)) { this._warned.add('loop:' + name); console.warn('[audio] unknown loop', name); } return new LoopHandle(this, null, o); }
     const h = new LoopHandle(this, name, o);

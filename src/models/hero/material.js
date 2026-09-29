@@ -62,7 +62,7 @@ varying vec4 vDet; varying vec4 vMat; varying vec2 vFace; varying vec3 vOP; vary
 `;
 const FRAG_PARS = /* glsl */`
 uniform sampler2D uDetail; uniform sampler2D uFace; uniform sampler2D uMarks; uniform vec2 uFaceTile; uniform vec3 uEye; uniform float uEyeGlow;
-uniform vec3 uBrow; uniform vec3 uInk; uniform vec4 uTint; uniform float uGlow; uniform vec4 uCast; uniform vec3 uSclera;
+uniform vec3 uBrow; uniform vec3 uInk; uniform vec3 uLip; uniform vec4 uTint; uniform float uGlow; uniform vec4 uCast; uniform vec3 uSclera;
 uniform vec4 uMarkCol; uniform vec4 uRune; uniform float uDemon; uniform float uEnv; uniform vec3 uEnvSky; uniform vec3 uEnvGnd;
 varying vec4 vDet; varying vec4 vMat; varying vec2 vFace; varying vec3 vOP; varying vec3 vON;
 `;
@@ -79,6 +79,7 @@ export function makeUniforms() {
     uEyeGlow: { value: 0.35 },
     uBrow: { value: new THREE.Color(0x3a2a1a) },
     uInk: { value: new THREE.Color(0x2a1810) },
+    uLip: { value: new THREE.Color(0xb86a60) },
     uSclera: { value: new THREE.Color(0xe8e2d8) },
     uTint: { value: new THREE.Vector4(1, 1, 1, 0) },
     uGlow: { value: 1.5 },
@@ -123,16 +124,13 @@ export function makeHeroMaterial(U, opts = {}) {
             float mk = texture2D(uMarks, vFace).r * uMarkCol.a;
             c = mix(c, uMarkCol.rgb, mk * 0.92);
             c = mix(c, uBrow, f.a);
-            c = mix(c, uSclera, f.g * (1.0 - f.b));
-            c = mix(c, uEye, f.b * (1.0 - f.g));
-            c = mix(c, vec3(1.0), f.g * f.b);
+            c = mix(c, uLip, f.g);
+            c = mix(c, vec3(0.9, 0.88, 0.84), f.b);
             c = mix(c, uInk, f.r);
             diffuseColor.rgb = c;
-            eyeEmit = f.b * (1.0 - f.g) * (1.0 - f.r);
           }
         }`)
       .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
-        totalEmissiveRadiance += uEye * eyeEmit * uEyeGlow;
         totalEmissiveRadiance += diffuseColor.rgb * vMat.y * uGlow * (0.85 + 0.15 * sin(uTime * 3.0 + vOP.y * 14.0));
         totalEmissiveRadiance += uCast.rgb * uCast.a * vMat.z * 2.0;
         totalEmissiveRadiance += uRune.rgb * uRune.a * vMat.w * (0.8 + 0.2 * sin(uTime * 4.0 + vOP.y * 9.0));

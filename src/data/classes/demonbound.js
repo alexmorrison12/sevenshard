@@ -6,12 +6,12 @@ import { hasEngr, evs, addEv, phase, finalize } from './common.js';
 const DM = 'demon', DK = 'dark', BL = 'crimson';
 const bleed = { id: 'bleed', dur: 5, power: 1 };
 
-// Unleashed (class engraving): demon skills +25% damage and each cast feeds the form 0.8 s (up to its full duration).
+// Unleashed (class engraving): demon skills +20% damage and each cast feeds the form 0.5 s (up to its full duration).
 const unleash = C(0, run => {
   if (!hasEngr(run.u.kit, 'unleashed')) return;
-  run.mult *= 1.25;
+  run.mult *= 1.2;
   const st = run.u.kit.identity.state, max = run.u.kit.cls.identity.dur;
-  if (st.form > 0) st.form = Math.min(max, st.form + 0.8);
+  if (st.form > 0) st.form = Math.min(max, st.form + 0.5);
 });
 
 // Demon skills (Q W E R during Demonform). Built at level 1: coefficients are ~2× a normal skill's.
@@ -165,7 +165,7 @@ export default finalize({
   ],
   defaultBar: ['demonic_slash', 'ruining_rush', 'leaping_blow', 'howl', 'thrust_of_destruction', 'demolition', 'blood_massacre', 'soul_chain'],
   engravings: [
-    { id: 'unleashed', name: 'Unleashed', desc: 'Demon skills deal +25% damage, and each one feeds Demonform 0.8 s (up to its full duration). Demon gauge +20% faster.', mods: { identityGain: 0.2 } },
-    { id: 'restraint', name: 'Restraint', desc: 'Never transform. All skills deal +30% damage.', mods: {} },
+    { id: 'unleashed', name: 'Unleashed', desc: 'Demon skills deal +20% damage, and each one feeds Demonform 0.5 s (up to its full duration). Demon gauge +20% faster.', mods: { identityGain: 0.2 } },
+    { id: 'restraint', name: 'Restraint', desc: 'Never transform. All skills deal +30% damage; Damage +10% and Mana Regeneration +25%.', mods: { dmgMul: 0.1, mpRegenMul: 0.25 } },
   ],
 });

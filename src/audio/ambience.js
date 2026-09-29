@@ -5,33 +5,52 @@ import { Kit } from './kit.js';
 import { EVENTS, ENV, makeBird, birdSong } from './sfx/env.js';
 import { RNG, clamp } from './util.js';
 
-// kind → bed levels (0..1)
+// kind → bed levels (0..1). ambience(kind, { mix: { gulls: 0.8 } }) overrides single beds (e.g. near the harbour).
 export const KINDS = {
-  city: { tavern: 0.55, birds: 0.25, wind: 0.08 },
-  meadow: { birds: 0.8, wind: 0.3, crickets: 0.15 },
-  forest: { birds: 0.45, wind: 0.2 },
-  sea: { water: 0.9, wind: 0.55 },
+  city: { crowd: 0.55, gulls: 0.3, bells: 0.5, birds: 0.15, wind: 0.08 },
+  city_quiet: { crowd: 0.36, birds: 0.45, gulls: 0.15, wind: 0.12 },
+  city_night: { crowd: 0.18, crickets: 0.7, nightbirds: 0.4, bells: 0.35, wind: 0.14 },
+  meadow: { birds: 0.8, wind: 0.3, insects: 0.5 },
+  forest: { darkbirds: 0.75, creaks: 0.8, wind: 0.35, birds: 0.15 },
+  night: { crickets: 0.8, nightbirds: 0.45, wind: 0.15 },
+  sea: { waves: 0.72, wind: 0.4, hull: 0.6, gulls: 0.2 },
   cave: { cave: 0.9, wind: 0.05 },
-  lava: { lava: 0.9, cave: 0.35 },
-  snow: { wind: 1 },
-  desert: { wind: 0.7 },
-  void: { cave: 0.7 },
-  stronghold: { birds: 0.6, water: 0.35, wind: 0.15 },
+  lava: { lava: 0.75, cave: 0.35 },
+  snow: { howl: 0.75, wind: 0.3 },
+  desert: { sand: 0.8, wind: 0.5 },
+  void: { drones: 0.8, whispers: 0.55, cave: 0.2 },
+  stronghold: { birds: 0.55, water: 0.4, waves: 0.18, gulls: 0.12, wind: 0.12 },
 };
+export const AMBIENCE_ALIAS = { none: null, silence: null, solhaven: 'city', town: 'city', harbor: 'city', harbour: 'city', dungeon: 'cave', rift: 'void', field: 'meadow', ocean: 'sea' };
 export const AMBIENCE_NAMES = Object.keys(KINDS);
 
-// trim: calibrated so each bed at level 1 sits at ≈ birds -30 · wind -31 · water -30 · crickets -33 · fire -28 ·
-// tavern -27 · cave -32 · lava -27 LUFS (integrated, ambience bus at volume 1).
+// trim: calibrated (lab __lab.ambCal) so each bed alone at level 1 sits at its design loudness (integrated LUFS,
+// ambience bus at volume 1): wind -31 · birds -30 · water -30 · crickets -33 · cave -32 · lava -27 · crowd -28 · gulls -30 ·
+// bells -28 · waves -26 · hull -31 · insects -34 · darkbirds -31 · nightbirds -32 · creaks -31 · howl -28 · sand -31 ·
+// drones -29 · whispers -32.
 const BEDS = {
-  birds: { trim: 1.48, rev: 0.12, hall: 0.12, birds: true, live: 'forest' },
+  birds: { trim: 1.446, rev: 0.12, hall: 0.12, birds: true, live: 'forest' },
   wind: { trim: 0.363, live: 'wind' },
-  water: { trim: 0.91, loop: 'water', rev: 0.05 },
-  crickets: { trim: 0.63, loop: 'crickets', rev: 0.08, events: [['frog', 2.5, 8, 0.6]] },
+  water: { trim: 0.849, loop: 'water', rev: 0.05 },
+  crickets: { trim: 0.609, loop: 'crickets', rev: 0.08, events: [['frog', 2.5, 8, 0.6]] },
   fire: { trim: 0.63, loop: 'fireCrackle', events: [['firePop', 2, 7, 0.5]] },
   tavern: { trim: 0.52, loop: 'tavern', rev: 0.15, events: [['laugh', 7, 18, 0.5], ['clink', 3, 10, 0.6]] },
-  cave: { trim: 0.41, live: 'cave', hall: 0.6, events: [['drip', 0.6, 3, 0.8], ['stoneKnock', 8, 25, 0.5], ['rumble', 25, 60, 0.6]] },
-  lava: { trim: 0.63, loop: 'lava', rev: 0.1, events: [['lavaBurst', 2, 6, 0.7]] },
+  cave: { trim: 0.415, live: 'cave', hall: 0.6, events: [['drip', 0.6, 3, 0.8], ['stoneKnock', 8, 25, 0.5], ['rumble', 25, 60, 0.6]] },
+  lava: { trim: 0.602, loop: 'lava', rev: 0.1, events: [['lavaBurst', 2, 6, 0.7], ['rumble', 18, 40, 0.5]] },
   waterfall: { trim: 0.75, live: 'waterfall', rev: 0.1 },
+  crowd: { trim: 1.423, loop: 'crowd', rev: 0.08, events: [['call', 6, 16, 0.55], ['cart', 14, 35, 0.6], ['hammer', 10, 25, 0.4], ['laugh', 12, 30, 0.3]] },
+  gulls: { trim: 2.042, hall: 0.15, events: [['gull', 4, 12, 0.7]] },
+  bells: { trim: 1.603, hall: 0.4, events: [['bell_far', 35, 80, 0.8]] },
+  waves: { trim: 0.447, loop: 'waves', rev: 0.04 },
+  hull: { trim: 2.399, rev: 0.1, events: [['hull_creak', 2.5, 7, 0.7], ['slosh', 1.5, 4, 0.6], ['rope', 6, 14, 0.5]] },
+  insects: { trim: 4.416, live: 'insects', events: [['bee', 8, 20, 0.6]] },
+  darkbirds: { trim: 1.995, hall: 0.2, events: [['crow', 6, 16, 0.6], ['owl', 14, 32, 0.45]] },
+  nightbirds: { trim: 1.175, hall: 0.25, events: [['owl', 8, 20, 0.6]] },
+  creaks: { trim: 2.065, rev: 0.1, events: [['tree_creak', 5, 14, 0.7], ['snap', 8, 20, 0.5], ['leaves', 6, 15, 0.5]] },
+  howl: { trim: 1.365, live: 'howl', events: [['ice_crack', 20, 50, 0.4]] },
+  sand: { trim: 3.981, live: 'sand', events: [['sand_gust', 6, 14, 0.6]] },
+  drones: { trim: 0.462, live: 'drones', hall: 0.4, events: [['void_pulse', 10, 22, 0.6]] },
+  whispers: { trim: 6.31, hall: 0.5, events: [['whisper', 3, 9, 0.6]] },
 };
 
 const LIVE = {
@@ -72,6 +91,42 @@ const LIVE = {
     for (const p of [-0.6, 0.6]) k.noiseSrc(0, D, k.filter('lowpass', 170, 0.7, k.gain(0.26, k.pan(p))), 'brown');
     const hum = k.gain(0.03); k.wobble(0, D, 0.1, 0.02, hum.gain);
     k.noiseSrc(0, D, k.filter('bandpass', 380, 6, hum), 'pink');
+  },
+  // meadow grasshoppers: gated high chirr in two drifting groups
+  insects(k) {
+    const D = 1e5;
+    for (const [p, f, r] of [[-0.6, 5200, 43], [0.6, 6300, 51]]) {
+      const g = k.gain(0.04, k.pan(p)); k.wobble(0, D, 0.15, 0.03, g.gain);
+      const am = k.gain(0.5, g); k.lfo(0, D, r, 0.5, am.gain, 'square');
+      k.noiseSrc(0, D, k.filter('bandpass', f, 4, am), 'white');
+    }
+  },
+  // snow storm: resonant whistling wind, two bands wandering in pitch, strong gusts
+  howl(k) {
+    const D = 1e5;
+    for (const [p, f] of [[-0.5, 520], [0.5, 780]]) {
+      const g = k.gain(0.1, k.pan(p)); k.wobble(0, D, 0.12, 0.09, g.gain);
+      const bp = k.filter('bandpass', f, 9, g); k.wobble(0, D, 0.08, f * 0.45, bp.frequency);
+      k.noiseSrc(0, D, bp, 'pink');
+    }
+    const body = k.gain(0.2); k.wobble(0, D, 0.2, 0.15, body.gain); k.noiseSrc(0, D, k.filter('lowpass', 500, 0.6, body), 'pink');
+  },
+  // desert: hissing sand grains riding the gusts, a dry low wind
+  sand(k) {
+    const D = 1e5;
+    for (const p of [-0.7, 0.7]) {
+      const g = k.gain(0.05, k.pan(p)); k.wobble(0, D, 0.3, 0.045, g.gain);
+      const am = k.gain(0.6, g); k.wobble(0, D, 30, 0.4, am.gain); // grains
+      k.noiseSrc(0, D, k.filter('bandpass', 5500, 0.9, am), 'white');
+    }
+  },
+  // void: slowly beating low sines + a moving noise wash
+  drones(k) {
+    const D = 1e5;
+    for (const [f, v, p] of [[55, 0.1, -0.3], [55.4, 0.08, 0.3], [82.5, 0.06, -0.5], [110.7, 0.04, 0.5], [164.3, 0.02, 0]]) { const g = k.gain(v, k.pan(p)); k.wobble(0, D, 0.07, v * 0.6, g.gain); k.osc('sine', f, 0, D, g); }
+    const w = k.gain(0.05); k.wobble(0, D, 0.1, 0.035, w.gain);
+    const bp = k.filter('bandpass', 320, 3, w); k.wobble(0, D, 0.06, 180, bp.frequency);
+    k.noiseSrc(0, D, bp, 'pink');
   },
 };
 
@@ -116,7 +171,7 @@ class Bed {
       const k = new Kit(a, ctx, this.g, now + 0.02, { seed: this.rng.next() * 1e9 | 0 });
       LIVE[def.live](k); this.kits.push(k);
     }
-    this.next = (def.events || []).map(([, lo, hi]) => now + this._iv(lo, hi) * this.rng.next());
+    this.next = (def.events || []).map(([, lo, hi]) => now + 0.5 + this._iv(lo, hi) * this.rng.next() * 0.5); // first within half an interval
     if (def.birds) this.birds = [];
   }
   _stop() {
@@ -172,13 +227,15 @@ class Bed {
   }
 }
 
+export { BEDS };
 export class Ambience {
   constructor(a) { this.a = a; this.beds = {}; this.kind = null; }
-  // kind: a KINDS name (null/'' = silence); o.vol scales the whole preset
+  // kind: a KINDS name (null/'' = silence); o.vol scales the whole preset; o.mix overrides single beds (0..1)
   set(kind, o = {}) {
+    if (kind in AMBIENCE_ALIAS) kind = AMBIENCE_ALIAS[kind];
     if (kind && !KINDS[kind]) { console.warn('[audio] unknown ambience', kind); return; }
     this.kind = kind || null;
-    const want = kind ? KINDS[kind] : {}, vol = o.vol ?? 1;
+    const want = { ...(kind ? KINDS[kind] : {}), ...(o.mix || {}) }, vol = o.vol ?? 1;
     for (const name of new Set([...Object.keys(want), ...Object.keys(this.beds)])) this.level(name, (want[name] || 0) * vol);
   }
   level(name, v) {
@@ -192,7 +249,8 @@ export class Ambience {
 }
 
 // Pre-bake the loop buffers a kind needs (offline renders / loading screens).
-export function prepareAmbience(a, kind) {
-  const lv = KINDS[kind] || {};
+export function prepareAmbience(a, kind, mix = null) {
+  if (kind in AMBIENCE_ALIAS) kind = AMBIENCE_ALIAS[kind];
+  const lv = { ...(KINDS[kind] || {}), ...(mix || {}) };
   return Promise.all(Object.keys(lv).filter((b) => BEDS[b] && BEDS[b].loop).map((b) => a.bake('amb:' + BEDS[b].loop, ENV[BEDS[b].loop])));
 }

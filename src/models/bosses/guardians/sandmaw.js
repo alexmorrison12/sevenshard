@@ -159,7 +159,7 @@ function dress({ acc, facc, S, b }) {
 export const sandmaw = {
   info: {
     name: 'Sandmaw', title: 'the Dune Devourer', height: 9.8, radius: 3.2, length: 16, burrowDepth: 17,
-    parts: [],
+    parts: ['mandible'],
     actions: {
       idle: { dur: 5, hits: [], loop: true },
       intro: { dur: 6.0, hits: [1.0, 4.4] },
@@ -169,6 +169,8 @@ export const sandmaw = {
       tail_sweep: { dur: 2.6, hits: [1.35] },
       sand_spit: { dur: 2.3, hits: [0.95, 1.3, 1.65] },
       sandstorm: { dur: 4.2, hits: [1.4, 2.0, 2.6, 3.2] },
+      roar: { dur: 2.4, hits: [1.0] },
+      channel: { dur: 2.4, hits: [1.2], loop: true },
       groggy: { dur: 3.5, hits: [], loop: true },
       death: { dur: 4.0, hits: [], hold: true },
     },
@@ -183,4 +185,5 @@ export const sandmaw = {
     base: ['seg4', [0, 0, 0.3]],
   },
 };
+sandmaw.breakable = { mandible: { bone: 'petal0', socket: 'mouth' } };
 sandmaw.spec = sandmawSpec({ NS, SEGS, HEAD, TIP, FWD, spineAt });

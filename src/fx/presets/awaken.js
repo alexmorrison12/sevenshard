@@ -19,15 +19,15 @@ function casterPos(fx, p, c, out) { const u = p.unit ?? p.caster ?? p.attach; if
 // ------------------------------------------------------------------ generic activation
 K.awaken_aura = (fx, p) => {
   const c = ctx(fx, p), s = c.s, col = tc(c.tint, 0xffd07a, 1.4), pos = vec(c.x, c.y, c.z), up = vec(c.x, c.y + 1.2, c.z);
-  fx.at(GEN.bigFlash, up, 0.8 * s, col);
-  fx.at(BIG_RAYS, up, 0.5 * s, col);
-  decal(fx, { pos, radius: 3.2 * s, kind: 'arcane', dur: 1.6, color: [col[0] * 1.5, col[1] * 1.5, col[2] * 1.5], hot: 0.5 });
-  lightPillar(fx, c.x, c.y, c.z, 1.1 * s, 12 * s, [col[0] * 1.4, col[1] * 1.4, col[2] * 1.4], 0.9, 3);
+  fx.at(GEN.bigFlash, up, 0.45 * s, col);
+  fx.at(BIG_RAYS, up, 0.45 * s, col);
+  decal(fx, { pos, radius: 3.2 * s, kind: 'arcane', dur: 1.6, color: [col[0] * 1.1, col[1] * 1.1, col[2] * 1.1], hot: 0.5 });
+  lightPillar(fx, c.x, c.y, c.z, 0.75 * s, 12 * s, [col[0], col[1], col[2]], 0.9, 3);
   shockwave(fx, { pos, radius: 6 * s, color: [col[0] * 1.5, col[1] * 1.5, col[2] * 1.5], dur: 0.55, height: 2.6 });
   const o = fx.o(s, col);
   for (let i = 0; i < fx.n(50); i++) fx.spawn(CONV, c.x, c.y + fx.r(0.2, 2.2), c.z, fx.r(2.5, 4), fx.r(0, TAU), fx.r(3, 6), o);
   risingRing(fx, c.x, c.y, c.z, 1.4 * s, EMB_UP, 40, col, s, [3, 7]);
-  fx.flash(0.18, col); fx.radialBlur(0.55, up); fx.shake(0.25, pos);
+  fx.flash(0.12, col); fx.radialBlur(0.5, up); fx.shake(0.25, pos);
 };
 K.awakening = K.awaken_aura;
 
@@ -48,7 +48,7 @@ K.awk_world_split = {
     T.dur = 2.2;
     const o = fx.o(c.s, col);
     for (let i = 0; i < fx.n(60); i++) { o.dt = fx.r(0, 0.3); fx.spawn(CONV, T.v.o.x, T.v.o.y + fx.r(0.2, 3), T.v.o.z, fx.r(2.5, 5), fx.r(0, TAU), fx.r(3, 6), o); }
-    decal(fx, { pos: T.v.o, radius: 3.5 * c.s, kind: 'demon', dur: 2, color: [col[0] * 1.4, col[1] * 1.4, col[2] * 1.4], hot: 0.5 });
+    decal(fx, { pos: T.v.o, radius: 3.5 * c.s, kind: 'demon', dur: 2, color: [col[0] * 0.9, col[1] * 0.9, col[2] * 0.9], hot: 0.3 });
     fx.telegraph({ shape: 'rect', pos: T.v.o, dir: T.v.f, length: T.v.L, width: 3.6 * c.s, color: 'red', dur: 0.4, detonate: false, intensity: 0.7 });
     fx.radialBlur(0.45);
   },
@@ -57,7 +57,7 @@ K.awk_world_split = {
     if (T.once('slash', 0.32)) {
       slash(fx, { pos: o0, dir: v.f, style: 'v', radius: 7 * s, width: 3.2 * s, color: [col[0] * 1.8, col[1] * 1.8, col[2] * 1.8], intensity: 1, dur: 0.5, arc: 2.5, height: 0.5, forward: 1.5 });
       slash(fx, { pos: o0, dir: v.f, style: 'v', radius: 6.2 * s, width: 0.9 * s, color: [2.6, 2.3, 2.1], intensity: 1, dur: 0.38, arc: 2.4, height: 0.5, forward: 1.5, glow: false, sparks: false });
-      fx.flash(0.35, col); fx.aberr(0.6); fx.shake(0.5, o0);
+      fx.flash(0.16, col); fx.aberr(0.6); fx.shake(0.5, o0);
     }
     if (T.once('split', 0.42)) {
       decal(fx, { pos: o0, dir: v.f, radius: 2.4 * s, length: v.L, kind: 'fissure', dur: 7, color: [col[0] * 1.3, col[1] * 1.3, col[2] * 1.3], hot: 2.2 });
@@ -67,8 +67,8 @@ K.awk_world_split = {
     const n = 10;
     for (let i = 0; i < n; i++) if (T.once('e' + i, 0.45 + i * 0.05)) {
       const u = (i + 0.5) / n, x = o0.x + v.f.x * v.L * u, z = o0.z + v.f.z * v.L * u, y = fx.gy(x, z, o0.y);
-      fx.meshes.pillars.spawn(x, y, z, 0.9 * s, 6 * s, 0.7, 3, [col[0] * 1.5, col[1] * 1.5, col[2] * 1.5], 0.05);
-      fx.at(GEN.flash, _a.set(x, y + 1, z), 2.4 * s, col);
+      fx.meshes.pillars.spawn(x, y, z, 0.8 * s, 6 * s, 0.7, 3, [col[0], col[1], col[2]], 0.05);
+      fx.at(GEN.flash, _a.set(x, y + 1, z), 1.6 * s, col);
       fx.meshes.debris(x, y + 0.3, z, 5, s, 7, { gy: y, glow: [col[0] * 1.2, col[1] * 1.2, col[2] * 1.2] });
       fx.sphere(GEN.spark, 16, _a, 4, 12, s, hue(col, [0, 0, 0]), UP, 0.9);
       fx.radial(PHYS.dustBig, 5, _a.set(x, y, z), 2, 5, 0.3, 1.2, s, null, 0.4, 0.3);
@@ -78,7 +78,7 @@ K.awk_world_split = {
     if (T.once('end', 1.0)) {
       const x = o0.x + v.f.x * v.L, z = o0.z + v.f.z * v.L;
       groundSmash(fx, x, fx.gy(x, z, o0.y), z, 4 * s, col, { decal: 'crater', shake: 0.9, rocks: 18 });
-      fx.flash(0.3, col);
+      fx.flash(0.14, col);
     }
   },
 };
@@ -93,11 +93,11 @@ K.awk_radiant_sword = {
     T.v.g = vec(x, y, z); T.v.col = tc(c.tint, 0xffd07a, 1.8);
     T.v.sword = { pos: vec(x, y + 26, z), quat: new THREE.Quaternion().setFromAxisAngle(UP, Math.atan2(-c.f.x, -c.f.z)), scale: 11 * c.s, alive: true, tint: [2.2, 1.9, 1.2], alpha: 0 };
     fx.meshes.props.add('sword', T.v.sword);
-    T.v.dec = fx.decal({ pos: T.v.g, radius: c.R, kind: 'holy', dur: Infinity, color: T.v.col, hot: 0.2 });
-    T.v.tele = fx.telegraph({ shape: 'circle', pos: T.v.g, radius: c.R, color: 'yellow', intensity: 0.8 });
+    T.v.dec = fx.decal({ pos: T.v.g, radius: c.R, kind: 'holy', dur: Infinity, color: [T.v.col[0] * 0.75, T.v.col[1] * 0.75, T.v.col[2] * 0.75], hot: 0.2 });
+    T.v.tele = fx.telegraph({ shape: 'circle', pos: T.v.g, radius: c.R, color: 'yellow', intensity: 0.45, fill: false });
     T.v.trail = fx.ribbons.trail({ attach: T.v.sword.pos, color: [2.4, 2.1, 1.4], width: 2.6 * c.s, life: 0.35, kind: 'energy' });
     T.dur = 2.6;
-    lightPillar(fx, x, y, z, c.R * 0.5, 24, [1.4, 1.2, 0.7], 0.8, 0);
+    lightPillar(fx, x, y, z, 0.7 * c.s, 24, [0.9, 0.75, 0.4], 0.8, 0);
   },
   tick(T, dt) {
     const fx = T.fx, v = T.v, c = v.c, g = v.g, s = c.s;
@@ -112,18 +112,18 @@ K.awk_radiant_sword = {
     if (T.once('impact', fall)) {
       v.trail.stopped = true;
       const up = _a.set(g.x, g.y + 1.5, g.z);
-      fx.at(GEN.bigFlash, up, 1.6 * s, [1.4, 1.25, 0.9]);
-      fx.at(BIG_RAYS, up, 1.2 * s, v.col);
+      fx.at(GEN.bigFlash, up, 0.65 * s, [1.2, 1.05, 0.75]);
+      fx.at(BIG_RAYS, up, 0.65 * s, v.col);
       shockwave(fx, { pos: g, radius: c.R * 1.6, color: v.col, dur: 0.7, height: 3 * s });
-      shockwave(fx, { pos: g, radius: c.R * 1.1, color: [2.4, 2.3, 2.0], dur: 0.5, wall: false, dust: false, delay: 0.06 });
-      decal(fx, { pos: g, radius: c.R * 0.9, kind: 'sun', dur: 4, color: v.col });
+      shockwave(fx, { pos: g, radius: c.R * 1.1, color: [1.6, 1.5, 1.2], dur: 0.5, wall: false, dust: false, delay: 0.06 });
+      decal(fx, { pos: g, radius: c.R * 0.9, kind: 'sun', dur: 4, color: [v.col[0] * 0.8, v.col[1] * 0.8, v.col[2] * 0.8] });
       decal(fx, { pos: g, radius: 2.4 * s, kind: 'crater', dur: 7, color: [1.6, 1.3, 0.6] });
-      lightPillar(fx, g.x, g.y, g.z, 2.2 * s, 26, [2.2, 1.9, 1.2], 1.2, 0);
+      lightPillar(fx, g.x, g.y, g.z, 1.3 * s, 26, [1.4, 1.2, 0.75], 1.2, 0);
       fx.sphere(HOLY.spark, 80, up, 6, 18, s, v.col);
       fx.sphere(FEATHER, 40, _b.set(g.x, g.y + 3, g.z), 2, 6, s, null, UP, 1.3);
       fx.radial(HOLY.mote, 60, g, 3, 9, 0.5, 3, s, v.col, 0.5, 0.2);
       fx.meshes.debris(g.x, g.y + 0.5, g.z, 16, s, 9, { gy: g.y, glow: [2, 1.6, 0.7] });
-      fx.flash(0.5, [1.2, 1.05, 0.8]); fx.shake(0.9, g); fx.radialBlur(0.6, up);
+      fx.flash(0.2, [1.2, 1.05, 0.8]); fx.shake(0.9, g); fx.radialBlur(0.55, up);
       v.tele.stop();
     }
     if (T.age > fall && T.age < 2.2) {
@@ -145,8 +145,8 @@ K.awk_heavenly_dragon = {
     const x = p.target ? c.tx : c.x, z = p.target ? c.tz : c.z;
     T.v.g = vec(x, fx.gy(x, z, c.y), z); T.v.col = tc(c.tint, 0x8ab8ff, 2.0);
     T.v.head = vec(x, 30, z);
-    T.v.trail = fx.ribbons.trail({ attach: T.v.head, color: T.v.col, width: 2.6 * c.s, life: 0.6, kind: 'energy' });
-    T.v.trail2 = fx.ribbons.trail({ attach: T.v.head, color: [2.2, 2.5, 3.0], width: 0.6 * c.s, life: 0.7 });
+    T.v.trail = fx.ribbons.trail({ attach: T.v.head, color: [T.v.col[0] * 0.55, T.v.col[1] * 0.55, T.v.col[2] * 0.55], width: 1.8 * c.s, life: 0.6, kind: 'energy' });
+    T.v.trail2 = fx.ribbons.trail({ attach: T.v.head, color: [1.3, 1.5, 1.9], width: 0.4 * c.s, life: 0.7 });
     T.v.tele = fx.telegraph({ shape: 'circle', pos: T.v.g, radius: c.R, color: 'blue', dur: 1.1, detonate: true });
     T.dur = 2.2;
   },
@@ -160,21 +160,21 @@ K.awk_heavenly_dragon = {
       const n = T.rate('s', 150);
       for (let i = 0; i < n; i++) { fx.rdir(_a); fx.spawn(STORM.spark, v.head.x, v.head.y, v.head.z, _a.x * 6, _a.y * 6, _a.z * 6, fx.o(s, null)); }
       if (T.rate('b', 30)) fx.spawn(STORM.bolt, v.head.x + fx.r(-1, 1), v.head.y + fx.r(-1, 1), v.head.z + fx.r(-1, 1), 0, 0, 0, fx.o(s * 2, null));
-      if (T.rate('g', 30)) fx.at(STORM.glow, v.head, s * 3.4, null);
+      if (T.rate('g', 20)) fx.at(STORM.glow, v.head, s * 2.2, null);
       if (T.rate('k', 6)) { const a = fx.r(0, TAU), r = fx.r(c.R * 0.5, c.R * 1.4); skyBolt(fx, g.x + Math.cos(a) * r, g.y, g.z + Math.sin(a) * r, 0.7 * s, v.col, { decal: false, shake: 0.08 }); }
     }
     if (T.once('crash', dive)) {
       v.trail.stopped = true; v.trail2.stopped = true;
       skyBolt(fx, g.x, g.y, g.z, 2.6 * s, v.col, { dur: 0.6, shake: 0.9 });
-      fx.at(GEN.bigFlash, _a.set(g.x, g.y + 1.5, g.z), 1.6 * s, [0.8, 0.9, 1.4]);
-      fx.at(BIG_RAYS, _a, 1.2 * s, v.col);
+      fx.at(GEN.bigFlash, _a.set(g.x, g.y + 1.5, g.z), 0.7 * s, [0.8, 0.9, 1.4]);
+      fx.at(BIG_RAYS, _a, 0.7 * s, v.col);
       shockwave(fx, { pos: g, radius: c.R * 1.7, color: v.col, dur: 0.7, height: 3 * s });
       shockwave(fx, { pos: g, radius: c.R * 1.2, color: [2, 2.3, 2.8], dur: 0.5, wall: false, dust: false, delay: 0.08 });
       decal(fx, { pos: g, radius: c.R, kind: 'electric', dur: 4, color: v.col, hot: 1.2 });
       decal(fx, { pos: g, radius: c.R * 0.5, kind: 'crater', dur: 7, color: [0.6, 0.8, 2.0] });
       for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; fx.lightning({ from: _b.set(g.x, g.y + 1, g.z).clone(), to: vec(g.x + Math.cos(a) * c.R, g.y + 0.2, g.z + Math.sin(a) * c.R), color: v.col, width: 0.5 * s, dur: 0.45, strands: 3 }); }
       fx.meshes.debris(g.x, g.y + 0.3, g.z, 16, s, 10, { gy: g.y, glow: [0.8, 1.2, 2.4] });
-      fx.flash(0.45, [0.7, 0.8, 1.3]); fx.radialBlur(0.6); fx.aberr(0.8);
+      fx.flash(0.2, [0.7, 0.8, 1.3]); fx.radialBlur(0.55); fx.aberr(0.8);
     }
     if (T.age > dive && T.age < 2) { if (T.rate('a', 7)) { const a = fx.r(0, TAU), r = fx.r(0, c.R); skyBolt(fx, g.x + Math.cos(a) * r, g.y, g.z + Math.sin(a) * r, 0.6 * s, v.col, { decal: false, shake: 0.06 }); } }
   },
@@ -208,7 +208,7 @@ K.awk_bullet_hell = {
     if (T.once('final', 1.45)) {
       shockwave(fx, { pos: vec(p.x, gy, p.z), radius: c.R, color: v.col, dur: 0.6, height: 2.4 });
       for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; explosionAt(fx, p.x + Math.sin(a) * c.R * 0.55, gy, p.z + Math.cos(a) * c.R * 0.55, 0.9 * s, i * 0.02); }
-      fx.flash(0.25, [1, 0.8, 0.5]); fx.shake(0.7, p);
+      fx.flash(0.12, [1, 0.8, 0.5]); fx.shake(0.7, p);
     }
   },
 };
@@ -237,10 +237,10 @@ K.awk_stellar_collapse = {
     }
     if (T.once('boom', 1.52)) {
       for (let k = 0; k < 3; k++) shockwave(fx, { pos: g, radius: c.R * (1.8 + k * 0.6), color: [2.4, 1.0, 0.35], dur: 0.7 + k * 0.15, delay: k * 0.1, height: 3.2 - k });
-      fx.at(BIG_RAYS, _a.set(g.x, g.y + 2, g.z), 1.6 * c.s, [1, 0.6, 0.3]);
+      fx.at(BIG_RAYS, _a.set(g.x, g.y + 2, g.z), 0.8 * c.s, [1, 0.6, 0.3]);
       for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; explosionAt(fx, g.x + Math.cos(a) * c.R * 0.8, g.y, g.z + Math.sin(a) * c.R * 0.8, 1.3 * c.s, 0.08 + i * 0.03); }
       decal(fx, { pos: g, radius: c.R * 1.3, kind: 'scorch', dur: 12, hot: 2 });
-      fx.flash(0.6, [1.2, 0.75, 0.45]); fx.shake(1, g); fx.aberr(1); fx.radialBlur(0.7);
+      fx.flash(0.22, [1.2, 0.75, 0.45]); fx.shake(1, g); fx.aberr(1); fx.radialBlur(0.6);
     }
   },
   end(T) { T.v.tele.stop(); },
@@ -267,19 +267,19 @@ K.awk_grand_finale = {
     }
     if (T.once('burst', 1.0)) {
       const up = _a.set(p.x, gy + 2, p.z);
-      fx.at(GEN.bigFlash, up, 2 * s, [1.4, 1.25, 0.9]);
-      fx.at(BIG_RAYS, up, 1.6 * s, v.col);
-      lightPillar(fx, p.x, gy, p.z, 2.5 * s, 30, [2.2, 1.9, 1.3], 1.6, 0);
+      fx.at(GEN.bigFlash, up, 0.7 * s, [1.2, 1.05, 0.8]);
+      fx.at(BIG_RAYS, up, 0.8 * s, v.col);
+      lightPillar(fx, p.x, gy, p.z, 1.3 * s, 30, [1.4, 1.2, 0.8], 1.6, 0);
       shockwave(fx, { pos: vec(p.x, gy, p.z), radius: c.R * 1.4, color: v.col, dur: 0.8, height: 3.2 });
       shockwave(fx, { pos: vec(p.x, gy, p.z), radius: c.R, color: [1.9, 0.9, 1.6], dur: 0.6, wall: false, delay: 0.1 });
       fx.sphere(MUSIC.noteGold, 60, up, 4, 11, s, null);
       fx.sphere(FEATHER, 30, up, 2, 6, s, null);
       fx.radial(HEAL.petal, 50, vec(p.x, gy + 3, p.z), 2, 7, 0, 2, s, null, 0.5);
-      fx.flash(0.5, [1.2, 1.1, 0.85]); fx.radialBlur(0.5, up); fx.shake(0.4, p);
+      fx.flash(0.2, [1.2, 1.1, 0.85]); fx.radialBlur(0.5, up); fx.shake(0.4, p);
     }
     if (T.age > 1.0 && v.bub >= 0) {
       const k = Math.min(1, (T.age - 1) / 0.3) * T.k;
-      fx.meshes.bubbles.set(v.bub, p.x, gy, p.z, c.R * 0.8, v.col, k * 0.8, Math.max(0, 1 - (T.age - 1) / 0.5), 1);
+      fx.meshes.bubbles.set(v.bub, p.x, gy, p.z, c.R * 0.8, v.col, k * 0.5, Math.max(0, 1 - (T.age - 1) / 0.5), 1);
       const n = T.rate('m', 60);
       for (let i = 0; i < n; i++) { const a = fx.r(0, TAU), r = Math.sqrt(Math.random()) * c.R * 0.8; fx.spawn(HOLY.mote, p.x + Math.cos(a) * r, gy + 0.1, p.z + Math.sin(a) * r, 0, fx.r(1, 3), 0, fx.o(s, v.col)); }
     }
@@ -317,8 +317,8 @@ K.awk_thousand_cuts = {
     if (T.once('final', 1.55)) {
       slash(fx, { pos: g, dir: c.f, style: 'x', radius: c.R * 1.1, width: c.R * 0.4, color: [v.col[0] * 1.3, v.col[1] * 1.3, v.col[2] * 1.3], intensity: 1, dur: 0.45 });
       shockwave(fx, { pos: g, radius: c.R * 1.6, color: v.col, dur: 0.6, height: 2.6, delay: 0.1 });
-      fx.at(GEN.bigFlash, _a.set(g.x, g.y + 1.5, g.z), 1.3 * s, [1, 0.8, 1.2], { dt: 0.1 });
-      fx.flash(0.3, [0.9, 0.7, 1.1]); fx.shake(0.8, g); fx.aberr(0.6);
+      fx.at(GEN.bigFlash, _a.set(g.x, g.y + 1.5, g.z), 0.6 * s, [1, 0.8, 1.2], { dt: 0.1 });
+      fx.flash(0.15, [0.9, 0.7, 1.1]); fx.shake(0.8, g); fx.aberr(0.6);
     }
   },
 };
@@ -348,12 +348,12 @@ K.awk_abyssal_gate = {
       for (let i = 0; i < 7; i++) { const a = i / 7 * TAU, r = i ? c.R * 0.55 : 0; const x = g.x + Math.cos(a) * r, z = g.z + Math.sin(a) * r; fx.meshes.pillars.spawn(x, g.y, z, 1.1 * s, 9 * s, 1.1, 2, [2.2, 0.1, 0.3], 0.06, 1, i * 0.04); }
       fx.meshes.spikeRings(g.x, g.y, g.z, [[c.R * 0.35, 10, 2], [c.R * 0.7, 16, 1.5], [c.R, 22, 1.1]], 1, { color: [0.3, 0.02, 0.06], glow: [1.8, 0.1, 0.3], fres: 0.5, life: [1.3, 1.8], speed: 30 });
       shockwave(fx, { pos: g, radius: c.R * 1.8, color: v.col, dur: 0.7, height: 3.2 * s });
-      fx.at(GEN.bigFlash, _a.set(g.x, g.y + 2, g.z), 1.6 * s, [1, 0.15, 0.4]);
-      fx.at(BIG_RAYS, _a, 1.3 * s, v.col);
+      fx.at(GEN.bigFlash, _a.set(g.x, g.y + 2, g.z), 0.6 * s, [1, 0.15, 0.4]);
+      fx.at(BIG_RAYS, _a, 0.7 * s, v.col);
       fx.sphere(DARK.flame, 80, _a, 3, 10, s, null, UP, 1.2);
       fx.sphere(PHYS.blood, 40, _a, 4, 9, s, null, UP, 1.0);
       decal(fx, { pos: g, radius: c.R * 0.8, kind: 'crater', dur: 9, color: [1.8, 0.2, 0.4] });
-      fx.flash(0.4, [0.9, 0.1, 0.3]); fx.shake(1, g); fx.aberr(0.8); fx.radialBlur(0.5);
+      fx.flash(0.16, [0.9, 0.1, 0.3]); fx.shake(1, g); fx.aberr(0.8); fx.radialBlur(0.5);
     }
     if (T.once('close', 1.8)) v.gate.stop();
   },

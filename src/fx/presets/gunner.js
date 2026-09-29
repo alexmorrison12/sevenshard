@@ -124,7 +124,11 @@ K.target_down = {                    // rifle: crosshair decal + three precise h
 };
 K.catastrophe = {                    // artillery: shells rain over the area
   name: 'catastrophe', fade: 0.1, group: 'Pistoleer',
-  init(T) { const fx = T.fx, c = ctx(fx, T.p, T.v.c = {}, 5, 10, 8); T.v.i = 0; T.dur = 1.6; fx.telegraph({ shape: 'circle', pos: vec(c.tx, c.ty, c.tz), radius: c.R, color: 'orange', dur: 0.5, detonate: false }); },
+  init(T) {
+    const fx = T.fx, c = ctx(fx, T.p, T.v.c = {}, 5, 10, 8); T.v.i = 0; T.dur = 1.6;
+    if (!T.p.target) { c.tx = c.x; c.tz = c.z; c.ty = c.y; }     // no aim point → centred on pos
+    fx.telegraph({ shape: 'circle', pos: vec(c.tx, c.ty, c.tz), radius: c.R, color: 'orange', dur: 0.5, detonate: false });
+  },
   tick(T) {
     const fx = T.fx, c = T.v.c;
     while (T.v.i < 10 && T.age > 0.5 + T.v.i * 0.09) {

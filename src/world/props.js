@@ -438,7 +438,12 @@ export function logPile(kit, x, y, z, ry = 0, { n = 3, len = 2.4 } = {}) {
   kit.block(rect(x, z, n * 0.4, len, ry), 0.25);
 }
 export function coalPile(kit, x, y, z, s = 1) {
-  kit.add('dark', blob(0.6 * s, 1, d => 1 + Math.sin(d.x * 9 + d.z * 7) * 0.08, [1.2, 0.45, 1]), M(x, y, z), { tint: 0x1c1818, cast: false });
+  const r = new RNG(Math.round(x * 31 + z * 17));
+  for (let i = 0; i < 14; i++) {
+    const a = r.range(0, TAU), d = Math.sqrt(r.next()) * 0.55 * s, sz = r.range(0.1, 0.2) * s;
+    kit.add('rock', blob(sz, 0, null, [1, 0.7, 1]), M(x + Math.cos(a) * d, y + (0.3 - d * 0.4) * s * 0.9, z + Math.sin(a) * d, r.range(0, 6)), { tint: 0x2a2626, ao: false, cast: false });
+  }
+  kit.add('rock', blob(0.55 * s, 1, dd => 1 + Math.sin(dd.x * 9 + dd.z * 7) * 0.1, [1.2, 0.42, 1]), M(x, y, z), { tint: 0x232020, cast: false });
 }
 export function flowerPot(kit, x, y, z, { s = 1, color = 0xe04060 } = {}) {
   const pts = [[0.0, 0], [0.18, 0.0], [0.24, 0.36], [0.28, 0.42], [0.22, 0.42]].map(([r, h]) => new THREE.Vector2(r * s, h * s));

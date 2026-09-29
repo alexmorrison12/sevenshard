@@ -67,13 +67,12 @@ export class Pile {
       const hx = s.h[0], hy = s.h[1], hz = s.h[2];
       const q = this.q[i];
       if (per && per.tilt) q.setFromEuler(_e.set(per.tilt[0], per.tilt[1] + (per.yawRand ?? 1) * (hash(i * 13 + 1, seed) - 0.5) * 2.4, per.tilt[2], 'YXZ'));
-      else if (hy >= hx && hy >= hz) { // upright piece: topple it in a random direction, random roll around its axis
-        const ang = hash(i * 13 + 2, seed) * TAU;
-        _b.set(Math.cos(ang), 0, Math.sin(ang));
-        q.setFromUnitVectors(Y, _b);
-        q.premultiply(_q.setFromAxisAngle(_b, (hash(i * 13 + 3, seed) - 0.5) * 2.5));
-      } else { // flat / wide piece: tip over forward or back, random yaw
-        q.setFromEuler(_e.set((hash(i * 13 + 4, seed) < 0.5 ? -1 : 1) * (1.1 + hash(i * 13 + 5, seed) * 0.45), hash(i * 13 + 6, seed) * TAU, (hash(i * 13 + 7, seed) - 0.5) * 0.8, 'YXZ'));
+      else { // lie the piece on its broad side: thinnest axis → vertical (random side up), random yaw, slight tilt
+        const sg = hash(i * 13 + 4, seed) < 0.5 ? -1 : 1;
+        if (hx <= hy && hx <= hz) _b.set(sg, 0, 0); else if (hz <= hy) _b.set(0, 0, sg); else _b.set(0, sg, 0);
+        q.setFromUnitVectors(_b, Y);
+        q.premultiply(_q.setFromAxisAngle(Y, hash(i * 13 + 6, seed) * TAU));
+        q.premultiply(_q.setFromAxisAngle(_ax.set(1, 0, 0), (hash(i * 13 + 7, seed) - 0.5) * 0.35));
       }
       // lowest point of the rotated box → rest on the ground
       let minY = 1e9;

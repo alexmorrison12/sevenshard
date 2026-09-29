@@ -65,6 +65,13 @@ export class Boss {
 
   /** state: { speed (m/s along facing), turn (rad/s), dead, groggy, enraged, fly (0..1), burrowed (0..1), ghost } */
   update(dt, state = {}) {
+    // Flight altitude: the model lifts itself by flyHeight × fly unless the game lifts the root (e.g. a `hover` leap
+    // while fly is set). An external lift is detected once (root rises > 1 m above its last grounded height while
+    // flying) and from then on the model only poses; opts.selfLift true/false forces either behaviour.
+    const fly = +state.fly || 0, y = this.root.position.y;
+    if (fly < 0.05 || this._groundY === undefined) this._groundY = y;
+    else if (y - this._groundY > 1.0) this.externalLift = true;
+    this.ctl.selfLift = this.opts.selfLift ?? !this.externalLift;
     if (this.ctl.update(dt, state)) {
       if (this.entry.def.spec.material) this.entry.def.spec.material(this.ctl, this.U, dt);
       this._syncMaterials(dt);
@@ -86,7 +93,13 @@ export class Boss {
     if (this.tintFade > 0 && dt > 0) { U.uTintAmt.value = Math.max(0, U.uTintAmt.value - dt / this.tintFade * this._tint0); if (U.uTintAmt.value <= 0) this.tintFade = 0; }
   }
   /** play(action, { dur }) → { dur, hits: [seconds] } */
-  play(action, opts = {}) { return this.ctl.play(action, opts); }
+  play(action, opts = {}) {
+    // a giant's death should never be rushed by generic callers (e.g. a 1.2 s unit death): keep ≥ 80 % of canonical
+    if (action === 'death' && opts.dur) { const d = this.info.actions.death?.dur; if (d && opts.dur < d * 0.8) opts = { ...opts, dur: d * 0.8 }; }
+    return this.ctl.play(action, opts);
+  }
+  /** metadata alias (BOSSES[id]) — the encounter brain reads model.meta.actions */
+  get meta() { return this.info; }
   /** end a looping action (fly / sing / groggy …) or everything */
   stop(action) { this.ctl.stop(action); }
   /** 'counter' | 'enrage' | 'ghost', 0..1 */

@@ -43,7 +43,7 @@ export class Minimap {
     this.compass = mk('compass', 'Event Compass', () => ui.emit('hud:compass', {}));
     mk('minus', 'Zoom out', () => { this.range = clamp(this.range * 1.35, 30, 400); this.dirty = true; this.draw(); });
     mk('plus', 'Zoom in', () => { this.range = clamp(this.range / 1.35, 30, 400); this.dirty = true; this.draw(); });
-    mk('map', 'World Map (M)', () => ui.toggle('map'));
+    mk('map', 'World Map (M)', () => ui._menu('map'));
     this.range = 110; // metres across the view
     this.dpr = 1; this.dirty = true; this.m = null; this._clockT = -1e9;
     frame.addEventListener('click', e => { const p = this.toWorld(e); if (p) ui.emit('hud:minimap', p); });

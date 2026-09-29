@@ -324,8 +324,63 @@ export const mockWindows = {
     buyback: [{ uid: 'bb1', name: 'Worn Recruit Blade', kind: 'weapon', grade: 1, icon: 'item:weapon:reaver:t0', price: { cur: 'silver', amount: 84 } }],
     currencies: { silver: 8425310, gold: 41280, crystals: 1250 },
   }),
+  honing: () => ({
+    items: [GEAR.weapon, GEAR.head, GEAR.shoulder, GEAR.chest, GEAR.pants, GEAR.gloves], item: GEAR.weapon,
+    iLvlFrom: 1415, iLvlTo: 1420, gains: [{ label: 'Attack Power', from: 48210, to: 51120 }],
+    chance: { base: 0.1, bonus: 0.03 }, maxBonus: 0.1, energy: 0.3721,
+    mats: [
+      { id: 'destruction_stone', name: 'Destruction Stone Crystal', icon: 'item:destruction_stone', grade: 3, need: 1080, have: 4812 },
+      { id: 'leapstone', name: 'Great Honor Leapstone', icon: 'item:leapstone', grade: 4, need: 26, have: 318 },
+      { id: 'fusion', name: 'Superior Oreha Fusion', icon: 'item:fusion', grade: 5, need: 18, have: 96 },
+      { id: 'shards', name: 'Honor Shard', icon: 'item:shards', grade: 3, need: 11200, have: 8400 },
+    ],
+    cost: { silver: 64800, gold: 540 }, currencies: { silver: 8425310, gold: 41280 },
+    boosters: [
+      { id: 'solar_grace', name: 'Solar Grace', icon: 'item:solar_grace', grade: 2, have: 41, max: 12, add: 0.0083 },
+      { id: 'solar_blessing', name: 'Solar Blessing', icon: 'item:solar_blessing', grade: 3, have: 17, max: 6, add: 0.0167 },
+      { id: 'solar_protection', name: 'Solar Protection', icon: 'item:solar_protection', grade: 4, have: 5, max: 2, add: 0.05 },
+    ],
+  }),
+  nexus: () => ({
+    iLvl: 1415.83, selected: 'raid:gorrath',
+    cats: [{ id: 'chaos', label: 'Chaos Dungeon' }, { id: 'guardian', label: 'Guardian Hunt' }, { id: 'abyss', label: 'Abyssal Dungeon' }, { id: 'raid', label: 'Legion Raid' }, { id: 'inferno', label: 'Inferno Descent' }],
+    content: [
+      { id: 'chaos:1', cat: 'chaos', name: 'Demon Rift I', sub: 'Chaos Dungeon', iLvl: 1100, players: '1–4', icon: 'boss:gatekeeper', cleared: true, note: '2 / 2 today' },
+      { id: 'chaos:3', cat: 'chaos', name: 'Demon Rift III', sub: 'Chaos Dungeon', iLvl: 1400, players: '1–4', icon: 'boss:gatekeeper', note: '0 / 2 today' },
+      { id: 'chaos:4', cat: 'chaos', name: 'Demon Rift IV', sub: 'Chaos Dungeon', iLvl: 1500, players: '1–4', icon: 'boss:gatekeeper' },
+      { id: 'guardian:rimewing', cat: 'guardian', name: 'Rimewing', sub: 'Guardian Hunt', iLvl: 1100, players: '1–4', icon: 'boss:rimewing', desc: 'An ice wyvern that breathes cones of frost and dives from the clouds.' },
+      { id: 'guardian:kurai', cat: 'guardian', name: 'Kurai the Pyrefox', sub: 'Guardian Hunt', iLvl: 1460, players: '1–4', icon: 'boss:kurai' },
+      { id: 'abyss:oratory', cat: 'abyss', name: 'The Sunken Oratory', sub: 'Abyssal Dungeon', iLvl: 1325, players: '4', gates: [{ name: 'The Drowned Choir', boss: 'nerissa', cleared: true }, { name: 'Oracle of the Deep', boss: 'deep_oracle' }] },
+      { id: 'raid:gorrath', cat: 'raid', name: 'Gorrath, the Horned Tyrant', sub: 'Legion Raid', iLvl: 1415, players: '8', icon: 'boss:gorrath',
+        desc: 'The first Legion Commander waits in the burning keep of the Ashen Ridge. Break his horns, survive the rift carve, and claim the Tyrant set.',
+        modes: [{ id: 'normal', label: 'Normal', iLvl: 1415 }, { id: 'hard', label: 'Hard', iLvl: 1445 }, { id: 'trial', label: 'Trial' }],
+        gates: [{ name: 'Skarn & Vesk', boss: 'skarn', cleared: true }, { name: 'Gorrath', boss: 'gorrath' }],
+        rewards: [{ name: 'Tyrant Horn', icon: 'item:relic_shard', grade: 5, count: 3 }, { name: 'Gold', icon: 'currency:gold', grade: 4, count: 1500 }, { name: 'Great Honor Leapstone', icon: 'item:leapstone', grade: 4, count: 20 }, { name: 'Horned Tyrant Accessory', icon: 'item:necklace', grade: 5 }] },
+      { id: 'inferno', cat: 'inferno', name: 'Inferno Descent', sub: 'Roguelite · 100 floors', iLvl: 0, players: '1–4', icon: 'boss:varkhul', note: 'Deepest floor: 37' },
+    ],
+    party: { size: 3, members: [{ name: 'Ashveil', cls: 'reaver' }, { name: 'Brightwen', cls: 'oathkeeper' }, { name: 'Kestrel', cls: 'pistoleer' }] }, aiFill: true,
+  }),
+  meter: () => ({
+    title: 'Gorrath · Gate 2', time: 312.4,
+    rows: [{ name: 'Ashveil', cls: 'reaver', dmg: 812e6, you: true }, { name: 'Kestrel', cls: 'pistoleer', dmg: 745e6 }, { name: 'Vexa', cls: 'bladedancer', dmg: 690e6 }, { name: 'Thornlight', cls: 'stormfist', dmg: 655e6 }, { name: 'Grimholt', cls: 'demonbound', dmg: 610e6, dead: true }, { name: 'Moonpetal', cls: 'starcaller', dmg: 580e6 }, { name: 'Brightwen', cls: 'oathkeeper', dmg: 88e6, support: true }, { name: 'Lyra', cls: 'songweaver', dmg: 71e6, support: true }],
+    skills: [{ name: 'Hell Blade', icon: 'skill:reaver:hell_blade', dmg: 210e6, crit: 0.71 }, { name: 'Worldsplitter', icon: 'skill:reaver:awakening', dmg: 160e6, crit: 1 }, { name: 'Mountain Cleave', icon: 'skill:reaver:mountain_cleave', dmg: 120e6, crit: 0.55 }, { name: 'Red Dust', icon: 'skill:reaver:red_dust', dmg: 90e6, crit: 0.61 }],
+    log: [{ t: 290, text: 'Gorrath begins Rift Carve!', kind: 'mech' }, { t: 292, text: 'Ashveil countered Gorrath.', kind: 'buff' }, { t: 301, text: 'Grimholt was slain by Rift Carve.', kind: 'death' }, { t: 305, text: 'Brightwen healed the party for 84,210.', kind: 'heal' }],
+  }),
+  songs: () => ({ items: [{ id: 'homeward', name: 'Hymn of Homeward', desc: 'Return to the last city you visited.', glyph: 'anchor', cdLeft: 824 }, { id: 'tides', name: 'Serenade of Tides', desc: 'Summon the Dawnrunner to the nearest shore.', glyph: 'ship' }, { id: 'rest', name: 'Lullaby of Rest', glyph: 'leaf', locked: true, desc: 'Soothe nearby creatures to sleep.' }, { id: 'valor', name: 'Ballad of Valor', glyph: 'sword', desc: 'Your party deals more damage for a while.' }, { id: 'sunrise', name: 'Song of Sunrise', glyph: 'sparkle', desc: 'Rapport: warms hearts in Solhaven.' }] }),
+  emotes: () => ({}),
+  compass: () => {
+    const now = new Date(), m = now.getHours() * 60 + now.getMinutes();
+    const at = d => (m + d + 1440) % 1440;
+    return { tracked: ['thunderhoof'], events: [
+      { id: 'thunderhoof', name: 'Old Thunderhoof', kind: 'field_boss', where: 'Goldmeadow · Stormbreak Hill', iLvl: 1100, times: [at(-300), at(-60), at(8), at(128)], rewards: [{ name: 'Leapstone', icon: 'item:leapstone', grade: 4, count: 30 }, { name: 'Card Pack', icon: 'item:card_pack', grade: 4 }] },
+      { id: 'chaosgate', name: 'Chaos Gate', kind: 'chaos_gate', where: 'Ashen Ridge', iLvl: 1370, active: true, left: 412, times: [at(-5), at(55)], rewards: [{ name: 'Map', icon: 'item:map', grade: 5 }, { name: 'Gold', icon: 'currency:gold', grade: 4, count: 300 }] },
+      { id: 'lantern', name: 'Lantern Isle', kind: 'adventure_island', where: 'The Glass Sea', times: [at(-120), at(95)], rewards: [{ name: 'Island Soul', icon: 'item:island_soul', grade: 6 }, { name: 'Pirate Coin', icon: 'item:coin_pirate', grade: 3, count: 400 }] },
+      { id: 'ghost', name: 'The Wailing Brig', kind: 'ghost_ship', where: 'Southern Glass Sea', iLvl: 1250, times: [at(180)], rewards: [{ name: 'Sea Bounty', icon: 'item:sea_bounty', grade: 5 }] },
+      { id: 'pvp', name: 'Crucible Rumble', kind: 'pvp', where: 'Solhaven · Proving Gate', times: [at(35), at(275)] },
+    ] };
+  },
   gamemenu: () => ({}),
-  map: () => ({}),
+  map: () => ({ view: new URLSearchParams(location.search).get('view') || 'world' }),
   inventory: () => ({ items: inventory(), slots: 60, currencies: { silver: 8425310, gold: 41280, crystals: 1250 } }),
   lootDrops: () => [
     { name: 'Destruction Stone Crystal', grade: 3, count: 42, kind: 'material', icon: 'item:destruction_stone' },

@@ -6,7 +6,7 @@
 import { h, btn, esc, clear } from '../core/util.js';
 import { glyph } from '../core/glyphs.js';
 import { iconUrl } from '../core/icon.js';
-import { engr, engrLevel } from '../core/data.js';
+import { engr, engrLevel, engrIcon } from '../core/data.js';
 import { Win } from '../core/windows.js';
 
 export class EngravingsWin extends Win {
@@ -33,7 +33,7 @@ export class EngravingsWin extends Win {
       const r = h('div', 'ss-eg-row ss-ptr' + (neg ? ' is-neg' : '') + (lv === 0 ? ' is-off' : ''), this.act);
       let pips = '';
       for (let g = 0; g < 3; g++) { pips += '<span>'; for (let k = 0; k < 5; k++) pips += `<i class="${g * 5 + k < n ? 'on' : ''}"></i>`; pips += '</span>'; }
-      r.innerHTML = `<i class="ss-eg-ic" style="background-image:url('${iconUrl('engr:' + engrIcon(a.id), 36)}')"></i>
+      r.innerHTML = `<i class="ss-eg-ic" style="background-image:url('${iconUrl(engrIcon(a.id), 36)}')"></i>
         <div class="ss-eg-tx"><div class="ss-eg-name">${esc(E.name)}<em>Lv ${lv}</em></div><div class="ss-eg-pips">${pips}<b>${n}/15</b></div><div class="ss-eg-desc">${esc(E.desc || '')}</div></div>`;
       r._tip = { title: `${E.name} · Lv ${lv}`, color: neg ? '#ff8a7a' : null, lines: [E.desc, ...(a.sources || []).map(s => `${s.name}: +${s.v}`), lv < 3 ? `${(lv + 1) * 5 - n} more node${(lv + 1) * 5 - n > 1 ? 's' : ''} to Lv ${lv + 1}` : 'Maximum level'] };
     }
@@ -56,12 +56,9 @@ export class EngravingsWin extends Win {
       const E = engr(bk.id);
       const r = h('div', 'ss-eg-lrow', this.lib);
       const on = equipped.findIndex(e => e && e.id === bk.id);
-      r.innerHTML = `<i class="ss-eg-ic sm" style="background-image:url('${iconUrl('engr:' + engrIcon(bk.id), 26)}')"></i><div class="ss-eg-ltx"><b>${esc(E.name)}</b><span><u style="width:${Math.min(100, (bk.nodes || 0) / 20 * 100)}%"></u></span><em>${bk.nodes || 0}/20</em></div>`;
+      r.innerHTML = `<i class="ss-eg-ic sm" style="background-image:url('${iconUrl(engrIcon(bk.id), 26)}')"></i><div class="ss-eg-ltx"><b>${esc(E.name)}</b><span><u style="width:${Math.min(100, (bk.nodes || 0) / 20 * 100)}%"></u></span><em>${bk.nodes || 0}/20</em></div>`;
       if (on >= 0) h('span', 'ss-eg-on', r, `Slot ${on + 1}`);
       else for (let i = 0; i < 2; i++) { const b = btn('ss-btn ss-btn--sm', r, `${i + 1}`, () => this.ui.emit('engr:equip', { slot: i, id: bk.id }), `Equip ${E.name} in slot ${i + 1}`); b.disabled = !(bk.nodes > 0); }
     }
   }
 }
-/** Map UI engraving ids to the icon set's ids (negatives are neg_*). */
-function engrIcon(id) { return { atk_reduction: 'neg_atk', atk_speed_reduction: 'neg_speed', def_reduction: 'neg_def', move_speed_reduction: 'neg_move' }[id] || id; }
-export { engrIcon };

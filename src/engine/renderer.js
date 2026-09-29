@@ -145,14 +145,18 @@ export class Renderer {
     this.resize();
   }
   /** Keep ~55+ fps by nudging the render scale (never below 0.55). */
+  /** forget recent frame timings (call after loading a zone so its hitch doesn't downscale the image) */
+  resetAdapt() { this._acc = 0; this._n = 0; this._grace = 2; }
   adapt(dt) {
+    if (this._grace > 0) { this._grace -= dt; return; }
+    if (dt > 0.1) return;                       // a hitch (shader compile, zone build) is not sustained load
     this._acc = (this._acc || 0) + dt; this._n = (this._n || 0) + 1;
     if (this._acc < 1.5) return;
     const fps = this._n / this._acc; this._acc = 0; this._n = 0; this.fps = fps;
     if (this.fixedScale) return;
     const old = this.scale;
     if (fps < 50 && this.scale > 0.55) this.scale = Math.max(0.55, this.scale - 0.1);
-    else if (fps > 58 && this.scale < 1) this.scale = Math.min(1, this.scale + 0.05);
+    else if (fps > 57 && this.scale < 1) this.scale = Math.min(1, this.scale + 0.1);
     if (old !== this.scale) this.resize();
   }
   render(dt, time) {

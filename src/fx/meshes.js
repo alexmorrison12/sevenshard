@@ -146,7 +146,7 @@ void main() {
   vec3 col = vC.rgb * (0.42 + 0.5 * wrap) * (0.55 + 0.45 * uLight);
   col += vX.rgb * fres * vX.w;
   col += vX.rgb * smoothstep(0.6, 1.0, vLocal.y / 1.3) * 0.45;
-  col += vX.rgb * vHeat * 1.4;
+  col += vX.rgb * vHeat * 0.7;
   float glint = pow(max(dot(reflect(-uSunDir, n), v), 0.0), 40.0);
   col += vec3(1.4) * glint;
   col = mix(col, vec3(dot(col, vec3(0.3, 0.5, 0.2))), uDesat);
@@ -310,8 +310,8 @@ void main() {
   float a; vec3 rgb;
   if (style < 0.5) {                              // light pillar: soft fade at the top, streaks rising
     float vf = smoothstep(0.0, 0.05, v) * pow(max(1.0 - v, 0.0), 1.2);
-    a = vf * (0.35 * core + 0.2 + 0.45 * smoothstep(0.4, 0.9, n) * core);
-    rgb = C * a * 1.4 + vec3(1.0) * pow(max(core, 0.0), 4.0) * vf * 0.5;
+    a = vf * (0.28 * core + 0.1 + 0.35 * smoothstep(0.4, 0.9, n) * core);
+    rgb = C * a * 1.1 + C * pow(max(core, 0.0), 5.0) * vf * 0.35;
   } else if (style < 1.5) {                       // loot beam: tall, thin, pulsing, fades high up
     float vf = smoothstep(0.0, 0.03, v) * pow(max(1.0 - v, 0.0), 1.8);
     float pulse = 0.8 + 0.2 * sin(uFxTime * 3.0 + v * 6.0);
@@ -469,7 +469,7 @@ void main() {
   float fres = pow(max(1.0 - nv, 0.0), 1.8);
   float streak = vn2(vec2(vL.x * 8.0, vL.y * 3.0 - uFxTime * 3.0));
   vec3 C = vTint.rgb;
-  vec3 col = C * (0.45 + fres * 1.6 + streak * 0.35) + vec3(1.0) * pow(max(nv, 0.0), 6.0) * 0.6;
+  vec3 col = C * (0.14 + fres * 1.5 + streak * 0.25) + C * pow(max(nv, 0.0), 8.0) * 0.35;
   gl_FragColor = vec4(col * vTint.a, 0.0);
 }`;
 const SOLID_FRAG = /* glsl */`

@@ -13,8 +13,8 @@ import { glyph } from './glyphs.js';
 const KEY = 'ss.ui.win.v1';
 
 export class Win {
-  static id = 'win'; static title = 'Window'; static glyph = null; static width = 420; static height = null;
-  /** default position: 'center' | 'left' | 'right' | { x, y } (virtual px) */
+  static id = 'win'; static title = 'Window'; static glyph = null; static width = 420; static height = null; static bare = false;
+  /** default position: 'center' | 'left' | 'right' | { x|right, y|bottom } (virtual px) */
   static pos = 'center';
   constructor(ui, mgr) {
     this.ui = ui; this.mgr = mgr;
@@ -86,6 +86,7 @@ export class WindowManager {
     this.defs = new Map(); this.inst = new Map();
     this.z = 10; this.pos = store.get(KEY, {});
     this.data = new Map(); // last data per window (so menu clicks open instantly with what we had)
+    this.ops = new Map();  // per-window change counter: lets the UI tell whether the game already handled a hotkey
   }
   register(...classes) { for (const C of classes) this.defs.set(C.id, C); }
   has(id) { return this.defs.has(id); }
@@ -95,9 +96,12 @@ export class WindowManager {
     return w;
   }
   isOpen(id) { const w = this.inst.get(id); return !!(w && w.isOpen); }
+  stamp(id) { return this.ops.get(id) || 0; }
+  _op(id) { this.ops.set(id, (this.ops.get(id) || 0) + 1); }
   open(id, data) {
     const w = this.get(id);
     if (!w) { console.warn('[ui] unknown window', id); return null; }
+    this._op(id);
     if (data !== undefined) this.data.set(id, data);
     const d = this.data.get(id) ?? null;
     const was = w.isOpen;
@@ -110,6 +114,7 @@ export class WindowManager {
     return w;
   }
   update(id, data) {
+    this._op(id);
     this.data.set(id, data);
     const w = this.inst.get(id);
     if (w && w.isOpen) { w.data = data; try { w.render(data || {}); } catch (e) { console.error('[ui] render', id, e); } }
@@ -117,6 +122,7 @@ export class WindowManager {
   close(id) {
     const w = this.inst.get(id);
     if (!w || !w.isOpen) return false;
+    this._op(id);
     w.isOpen = false; w.el.style.display = 'none';
     w.hidden();
     this.ui.emit('window:close', { id });
@@ -147,7 +153,7 @@ export class WindowManager {
     const p = this.ui.touch ? 'center' : C.pos;
     if (p === 'left') { x = 150; y = Math.max(60, (H - hh) / 2 - 30); }
     else if (p === 'right') { x = W - ww - 240; y = Math.max(60, (H - hh) / 2 - 30); }
-    else if (p && typeof p === 'object') { x = p.x; y = p.y; }
+    else if (p && typeof p === 'object') { x = p.right != null ? W - ww - p.right : p.x; y = p.bottom != null ? H - hh - p.bottom : p.y; }
     else { x = (W - ww) / 2; y = Math.max(40, (H - hh) / 2 - 20); }
     // cascade over other open windows at the same spot
     for (const o of this.inst.values()) if (o !== w && o.isOpen && Math.abs(o.x - x) < 8 && Math.abs(o.y - y) < 8) { x += 28; y += 28; }

@@ -193,7 +193,7 @@ export const PRESETS = {
   steam(add, alpha, p, k, o) {
     const s = o.scale ?? 1, d = o.dir || [0, -0.3, -1], v = rnd(1.4, 2.6) * s;
     alpha.emit(p[0], p[1], p[2], d[0] * v + rnd(-0.25, 0.25) * s, d[1] * v + rnd(-0.1, 0.3) * s, d[2] * v + rnd(-0.25, 0.25) * s,
-      rnd(0.8, 1.3), rnd(0.12, 0.2) * s, rnd(0.6, 0.95) * s, [0.85, 0.82, 0.8, 0.38], [0.7, 0.68, 0.7, 0], 0.5 * s, 2.2);
+      rnd(0.7, 1.1), rnd(0.1, 0.16) * s, rnd(0.5, 0.8) * s, [0.8, 0.78, 0.76, 0.26], [0.7, 0.68, 0.7, 0], 0.5 * s, 2.2);
   },
   ghost(add, alpha, p, k, o) {
     const s = o.scale ?? 1, c = o.col ?? [0.9, 0.8, 3.2];

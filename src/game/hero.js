@@ -8,6 +8,7 @@ import { eff, applyStatus, removeStatus, heal, resolveHit } from './combat.js';
 import { CLASSES } from '../data/classes/index.js';
 import { makeIdentity } from './identity.js';
 import { facingOf } from '../core/util.js';
+import { gemValue } from './systems/gear.js';
 
 export const SLOT_KEYS = ['Q', 'W', 'E', 'R', 'A', 'S', 'D', 'F'];
 
@@ -26,10 +27,16 @@ export class HeroKit {
     this.rebuild();
     this.basicStage = 0; this.basicT = 0; this.basicQueued = false;
     this.dashCd = 0; this.standCd = 0; this.dashCharges = 1;
-    this.awakenUses = this.cls.awakening.uses ?? 3;
+    this.awakenUses = (this.cls.awakening.uses ?? 3) + (stats.awakenUses || 0);
+    if (stats.cheat) u.data.cheatDeath = true;                 // Crisis Evasion
+    if (stats.superArmor) u.baseSuperArmor = stats.superArmor; // Bloodfrenzy
+    if (stats.tyrant) u.data.tyrant = true;                    // Horned Tyrant 6-set
     this.items = o.items || [{ id: 'hp_potion', count: 10, cd: 0 }, { id: 'destruction_bomb', count: 5, cd: 0 }, { id: 'flame_grenade', count: 5, cd: 0 }, { id: 'time_stop', count: 2, cd: 0 }];
     this.identity = makeIdentity(this);
-    u.data.onHitLanded = (evs, h, ctx) => this.identity.onHit?.(evs, h, ctx);
+    u.data.onHitLanded = (evs, h, ctx) => {
+      this.identity.onHit?.(evs, h, ctx);
+      if (u.data.tyrant) for (const ev of evs) if (ev.tgt.kind === 'boss' && Math.random() < 0.06) applyStatus(this.level, ev.tgt, 'brand', { dur: 6, src: u });
+    };
   }
   rebuild() {
     const c = this.char;
@@ -39,6 +46,16 @@ export class HeroKit {
       this.skills[k.id] = buildSkill(k, s.lv, s.tri);
     }
     this.awaken = buildSkill(this.cls.awakening, 1, []);
+    const st = this.u?.st || {};
+    if (st.awakenCdr) this.awaken.cd *= 1 - st.awakenCdr;
+    // gems: Ruinstones raise a skill's damage, Swiftstones cut its cooldown
+    for (const g of c.gems || []) {
+      const d = g && this.skills[g.skill]; const gem = g?.gem || g; if (!d || !gem?.gem) continue;
+      const v = gemValue(gem.gem, gem.level || 1) / 100;
+      if (gem.gem === 'ruin') d.mult *= 1 + v; else d.cd *= 1 - v;
+    }
+    // Mana Flow and friends: flat mana cost reduction
+    if (st.mpCostMul) for (const d of Object.values(this.skills)) d.mp = Math.round(d.mp * st.mpCostMul);
     this.bar = (c.bar && c.bar.length ? c.bar : this.cls.defaultBar).slice(0, 8);
     while (this.bar.length < 8) this.bar.push(null);
   }
@@ -62,6 +79,8 @@ export class HeroKit {
       onEnd: (r, why) => { this.onSkillEnd(def, r, why, opts); },
     });
     run.speedMul *= 1 + (def.speedBonus || 0);
+    // Sunheart "Hyper Awakening Technique": every 30 s the next skill hits 40% harder
+    if (u.st.hyperTech && opts.kind === 'skill' && L.time >= (this.hyperT || 0)) { run.mult *= 1.4; this.hyperT = L.time + 30; L.emit('fx', { unit: u, preset: 'hyper_flash', x: u.pos.x, z: u.pos.z, ev: { color: 'gold', r: 2.5 } }); }
     if (def.domBonus) run.mult *= 1; // handled via executeBonus/domBonus in onDealt (kept for tooltips)
     u.skill = run;
     if (!opts.free) u.mp -= (def.mp || 0) * (this.identity.mpMul?.() ?? 1);

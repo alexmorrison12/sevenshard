@@ -39,7 +39,9 @@ void main() {
   float press = exp(-sq((x + ew * 2.2) / (ew * 1.3)));
   float life = pow(max(1.0 - T, 0.0), 1.3) * smoothstep(0.0, 0.04, T);
   vec3 C = vR2.rgb;
-  vec3 rgb = (C * (edge * 1.4 + wash * 0.45) + vec3(1.0) * pow(max(edge, 0.0), 3.0) * 0.6 * length(C) * 0.35) * life;
+  float pk = max(max(C.r, C.g), C.b);
+  vec3 Cb = C / max(pk, 1e-3) * min(pk, 1.25);
+  vec3 rgb = (Cb * (edge * 1.15 + wash * 0.35) + C * pow(max(edge, 0.0), 4.0) * 0.35) * life;
   float a = (flags & 1) != 0 ? press * 0.35 * life : 0.0;
   gl_FragColor = vec4(rgb, a);
 }`;
@@ -74,7 +76,9 @@ void main() {
   float life = pow(max(1.0 - T, 0.0), 1.6) * smoothstep(0.0, 0.05, T);
   vec3 C = vR2.rgb;
   float a = body * (0.3 + 0.7 * streak) * life;
-  gl_FragColor = vec4(C * a * 1.2 + vec3(1.0) * pow(max(body, 0.0), 6.0) * streak * life * 0.4, 0.0);
+  float pk = max(max(C.r, C.g), C.b);
+  vec3 Cb = C / max(pk, 1e-3) * min(pk, 1.2);
+  gl_FragColor = vec4(Cb * a + Cb * pow(max(body, 0.0), 6.0) * streak * life * 0.3, 0.0);
 }`;
 
 function annulusGeo(seg, rows) {

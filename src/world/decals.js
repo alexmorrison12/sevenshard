@@ -16,8 +16,8 @@ export class Decals {
     if (!this.list.length) return null;
     const A = decalAtlas();
     const pos = [], uv = [], tint = [], emit = [], tan = [], idx = [];
-    const N = 4; // grid per decal
     for (const d of this.list) {
+      const N = Math.max(4, Math.min(28, Math.ceil(d.size * Math.max(d.sx, d.sz) / 1.2))); // grid hugs the ground
       const slot = A.slots[d.kind] ?? 0;
       const su = (slot % 4) / 4, sv = Math.floor(slot / 4) / 4;
       const c = Math.cos(d.rot), s = Math.sin(d.rot);

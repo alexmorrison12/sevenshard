@@ -46,6 +46,7 @@ uniform sampler2D uDetail; uniform float uDFreq; uniform float uFurAxis; uniform
 uniform float uEmisK; uniform vec3 uColorMul; uniform vec3 uGlowCol; uniform float uCrackFreq; uniform float uCrackK;
 uniform float uCounter; uniform float uEnrage; uniform float uGhost; uniform vec3 uCounterCol; uniform vec3 uEnrageCol; uniform vec3 uGhostCol;
 uniform float uCharge; uniform float uBodyGlow; uniform float uEyeK; uniform float uDissolve; uniform float uUnit; uniform float uSpecK;
+uniform vec3 uSilCol; uniform float uSil;
 float gSpecMask = 0.0; vec3 gEmis = vec3( 0.0 );
 vec3 bvH3( vec3 p ) {
   p = vec3( dot( p, vec3( 127.1, 311.7, 74.7 ) ), dot( p, vec3( 269.5, 183.3, 246.1 ) ), dot( p, vec3( 113.5, 271.9, 124.6 ) ) );
@@ -128,6 +129,8 @@ const FRAG_FINAL = /* glsl */`
 {
   float ndv = saturate( dot( geometryNormal, geometryViewDir ) );
   float fres = pow( 1.0 - ndv, 2.2 );
+  // silhouette rim: a thin cool/pale edge that separates the boss from strongly tinted arenas
+  outgoingLight += uSilCol * uSil * pow( 1.0 - ndv, 4.0 ) * ( 0.6 + 0.4 * saturate( geometryNormal.y * 0.5 + 0.5 ) );
   if ( uCounter > 0.001 ) {
     // electric-blue windup: crisp fresnel rim + a bright band sweeping up the body, base colours stay readable
     float band = pow( 0.5 + 0.5 * sin( vRP.y * 9.0 / uUnit - uTime * 7.0 ), 10.0 );
@@ -163,6 +166,7 @@ export function bossUniforms(cfg = {}) {
     uGhostCol: { value: new THREE.Color(cfg.ghostCol ?? 0x7a6cff).multiplyScalar(1.6) },
     uCharge: { value: 0 }, uBodyGlow: { value: 0 }, uEyeK: { value: 1 }, uDissolve: { value: 0 },
     uHide: { value: new THREE.Vector4(0, 0, 0, 0) }, uUnit: { value: cfg.unit ?? 1 }, uSpecK: { value: 1 },
+    uSilCol: { value: new THREE.Color(cfg.silCol ?? 0x8fa8ff) }, uSil: { value: cfg.sil ?? 0.3 },
   };
 }
 

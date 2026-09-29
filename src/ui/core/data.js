@@ -84,7 +84,11 @@ export const ENGRAVINGS = {
   increase_mass: { name: 'Increase Mass', desc: 'Attack power up, attack speed down.' },
   cursed_doll: { name: 'Cursed Doll', desc: 'Attack power up, healing received down.' },
   grudge: { name: 'Grudge', desc: 'More damage to bosses, more damage taken.' },
-  // negatives
+  // negatives (the game uses neg_* ids; *_reduction kept as aliases)
+  neg_atk: { name: 'Atk. Power Reduction', neg: true, desc: 'Attack power down.' },
+  neg_speed: { name: 'Atk. Speed Reduction', neg: true, desc: 'Attack speed down.' },
+  neg_def: { name: 'Defense Reduction', neg: true, desc: 'Defense down.' },
+  neg_move: { name: 'Move Speed Reduction', neg: true, desc: 'Movement speed down.' },
   atk_reduction: { name: 'Atk. Power Reduction', neg: true, desc: 'Attack power down.' },
   atk_speed_reduction: { name: 'Atk. Speed Reduction', neg: true, desc: 'Attack speed down.' },
   def_reduction: { name: 'Defense Reduction', neg: true, desc: 'Defense down.' },
@@ -111,6 +115,8 @@ export function engr(id) {
   if (id && typeof id === 'object') return { name: id.name || engr(id.id).name, neg: id.neg ?? engr(id.id).neg, desc: id.desc || engr(id.id).desc };
   return ENGRAVINGS[id] || { name: pretty(id), desc: '' };
 }
+/** Engraving id → icon id (the icon set names negatives neg_*). */
+export function engrIcon(id) { return 'engr:' + ({ atk_reduction: 'neg_atk', atk_speed_reduction: 'neg_speed', def_reduction: 'neg_def', move_speed_reduction: 'neg_move' }[id] || id); }
 /** 0–15+ nodes → level 0–3 (5 / 10 / 15). */
 export const engrLevel = nodes => Math.min(3, Math.floor((nodes || 0) / 5));
 

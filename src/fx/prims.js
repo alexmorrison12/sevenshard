@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { S, R } from './textures.js';
 import { P } from './particles.js';
 import { GEN, PHYS, FIRE, FROST, HOLY, STORM, CHI, DARK, ARC, HEAL, MUSIC, WATER, POI, CRIM, AMB, FAM } from './ptypes.js';
-import { col, v3, TELE, GRADES, gradeOf, elemOf, TAU, DEG, lin, hue, UP } from './util.js';
+import { col, v3, TELE, GRADES, gradeOf, elemOf, TAU, DEG, lin, hue, UP, hasCol } from './util.js';
 import { SHAPE, DECAL, DECAL_DEF, TSTRIDE } from './ground.js';
 import { NOOP } from './tasks.js';
 
@@ -70,9 +70,9 @@ export function slash(fx, p) {
   const len = style === 'thrust' ? (p.length ?? R0) : R0;
   fx.slashes.spawn(_p, _A, _B, len, arc, W, c, dur, sweep, grow, vel, flags, delay);
   if (p.glow !== false) {
-    const g = hue(c, _c1); const k = p.dark ? 0.9 : 0.55;
+    const g = hue(c, _c1); const k = p.dark ? 0.7 : 0.26;
     g[0] *= k; g[1] *= k; g[2] *= k;
-    fx.slashes.spawn(_p, _A, _B, len * 1.03, arc, W * 1.9, g, dur * 1.2, sweep, grow * 1.2, vel, flags & 5, delay);
+    fx.slashes.spawn(_p, _A, _B, len * 1.04, arc, W * 1.5, g, dur * 1.15, sweep, grow * 1.2, vel, p.dark ? flags : flags & 5, delay);
   }
   // sparks flung off the blade edge
   if (p.sparks !== false && style !== 'thrust') {
@@ -111,7 +111,7 @@ export function burst(fx, p) {
   const [main, flash, extra] = BK[kind] || BK.spark;
   const life = p.life != null ? Math.max(0.3, Math.min(4, p.life / 0.5)) : 1;
   const ex = { life };
-  if (flash && p.flash !== false) fx.at(flash, pos, s * Math.min(2.5, 0.6 + n / 30), tint);
+  if (flash && p.flash !== false) fx.at(flash, pos, s * Math.min(1.3, 0.45 + n / 60), tint);
   if (kind === 'coin') {
     const o = fx.o(s, null); o.life = life;
     const m = fx.n(n);
@@ -141,7 +141,7 @@ export function shockwave(fx, p) {
   const gy = fx.gy(pos.x, pos.z, pos.y); _p.set(pos.x, gy, pos.z);
   fx.rings.ground(_p, Rr, dur, c, { ew: p.width ?? (0.14 + Rr * 0.025), trail: Rr * 0.4, ease: p.ease ?? 3, flags: p.pressure === false ? 0 : 1, delay, r0: p.from ?? 0 });
   if (p.wall ?? Rr >= 4) {
-    const k = p.wallIntensity ?? 0.7;
+    const k = p.wallIntensity ?? 0.42;
     _c1[0] = c[0] * k; _c1[1] = c[1] * k; _c1[2] = c[2] * k;
     fx.rings.walls(_p, Rr * 0.96, dur * 0.95, _c1, { h: p.height ?? Math.min(2.4, 0.5 + Rr * 0.16), delay, ease: p.ease ?? 3, r0: p.from ?? 0 });
   }
@@ -158,7 +158,10 @@ export function shockwave(fx, p) {
 }
 
 // ------------------------------------------------------------------ hit
-const HIT_CUT = P({ sprite: S.flare, ramp: R.wFlash, life: 0.14, size: 2.0, end: 1.25, ease: 2, i: 2.4, noGround: true });
+const HIT_CUT = P({ sprite: S.flare, ramp: R.wFlash, life: 0.1, size: 1.6, end: 1.2, ease: 2, i: 2.2, noGround: true });
+const HIT_FLASH = P({ sprite: S.flash, ramp: R.wFlash, life: 0.09, size: 1.0, end: 1.3, ease: 2, i: 2.2, noGround: true });
+const HIT_STAR = P({ sprite: S.star, ramp: R.wFlash, life: 0.11, size: 0.9, end: 1.35, i: 2.6, noGround: true });
+const HIT_RING = P({ sprite: S.ring, ramp: R.wFade, life: 0.22, size: 0.3, end: 5, ease: 2.5, i: 2.2, noGround: true });
 export function hit(fx, p) {
   const s = p.scale ?? 1, crit = !!p.crit;
   const E = elemOf(p.element), F = FAM[E.fam];
@@ -166,19 +169,20 @@ export function hit(fx, p) {
   // pull the impact out of the body toward the camera so it is never hidden
   _d.subVectors(fx.camPos, _C); const L = _d.length(); if (L > 1e-3) _C.addScaledVector(_d, Math.min(0.4 * s, L * 0.5) / L);
   const dir = p.dir ? fx.dir3(p.dir, _e) : _d.normalize();
-  const k = crit ? 1.7 : 1;
-  fx.at(F.flash, _C, s * k * 0.9, E.c);
-  fx.at(PHYS.hitStar, _C, s * k * 1.2, E.core, { rot: Math.random() * 3 });
-  fx.at(HIT_CUT, _C, s * k, E.c, { rot: Math.random() * 3.14 });
-  fx.sphere(F.spark, crit ? 26 : 13, _C, 4, crit ? 13 : 9, s, E.c, dir, 1.1);
-  if (F.chunk) fx.sphere(F.chunk, crit ? 8 : 3, _C, 1.5, 4, s * (F.chunk === PHYS.pebble ? 1 : 0.8), E.c, dir, 1.3);
-  if (F.smoke && E.fam !== 'spark') fx.sphere(F.smoke, 2, _C, 0.4, 1.2, s * 0.7, E.c);
+  const k = crit ? 1.45 : 1;
+  fx.at(HIT_FLASH, _C, s * k, E.c);
+  fx.at(HIT_STAR, _C, s * k, E.core, { rot: Math.random() * 3 });
+  fx.at(HIT_CUT, _C, s * k * 0.8, E.c, { rot: Math.random() * 3.14 });
+  fx.sphere(F.spark, crit ? 22 : 12, _C, 4, crit ? 12 : 8, s, E.c, dir, 1.1);
+  if (F.chunk && F.chunk !== HOLY.cross) fx.sphere(F.chunk, crit ? 6 : 3, _C, 1.5, 4, s * (F.chunk === PHYS.pebble ? 1 : 0.7), E.c, dir, 1.3);
+  else if (F.chunk === HOLY.cross) fx.sphere(HOLY.star, crit ? 8 : 4, _C, 1.5, 4, s * 0.8, E.c, dir, 1.3);
+  if (F.smoke && E.fam !== 'spark') fx.sphere(F.smoke, 2, _C, 0.4, 1.2, s * 0.6, E.c);
   if (crit) {
-    fx.at(GEN.starFlash, _C, s * 1.5, E.core, { rot: Math.random() });
-    fx.at(GEN.ringThin, _C, s * 0.35, E.c, { life: 0.6 });
-    fx.shake(0.1 * s, _C);
+    fx.at(GEN.starFlash, _C, s * 0.95, E.core, { rot: Math.random(), life: 0.8 });
+    fx.at(HIT_RING, _C, s, E.c);
+    fx.shake(0.08 * s, _C);
   }
-  if (p.back) fx.at(GEN.starFlash, _C, s * 2, lin(0xff9a30, 1.3), { rot: 0.4 });
+  if (p.back) fx.at(GEN.starFlash, _C, s * 1.2, lin(0xff9a30, 1.2), { rot: 0.4 });
 }
 
 // ------------------------------------------------------------------ death
@@ -336,17 +340,17 @@ void TSTRIDE;
 // ------------------------------------------------------------------ projectiles
 const PK = {};   // kind → { speed, color, size, init(T), tick(T), impact(fx, pos, dir, T) }
 const K = {
-  core: P({ sprite: S.flash, ramp: R.wPulse, life: 0.1, size: 0.55, i: 3.6, pingpong: true, noGround: true }),
-  glow: P({ sprite: S.glow, ramp: R.wPulse, life: 0.16, size: 1.3, i: 1.8, pingpong: true, noGround: true }),
-  halo: P({ sprite: S.glow, ramp: R.wPulse, life: 0.24, size: 2.4, i: 0.8, pingpong: true, noGround: true }),
-  roil: P({ sprite: [S.blob], ramp: R.wPulse, life: 0.3, size: 0.95, spin: 11, i: 2.3, noGround: true }),
+  core: P({ sprite: S.flash, ramp: R.wPulse, life: 0.1, size: 0.45, i: 2.4, pingpong: true, noGround: true }),
+  glow: P({ sprite: S.glow, ramp: R.wPulse, life: 0.16, size: 0.95, i: 1.25, pingpong: true, noGround: true }),
+  halo: P({ sprite: S.glow, ramp: R.wPulse, life: 0.24, size: 1.6, i: 0.45, pingpong: true, noGround: true }),
+  roil: P({ sprite: [S.blob], ramp: R.wPulse, life: 0.3, size: 0.85, spin: 11, i: 1.5, noGround: true }),
   swirl: P({ sprite: S.swirl, ramp: R.wConst, life: 1, size: 1.1, spin: -9, i: 1.9, noGround: true }),
   star: P({ sprite: S.star, ramp: R.wConst, life: 1, size: 0.85, spin: 7, i: 2.6, noGround: true }),
   dark: P({ pool: 'alpha', sprite: S.soft, ramp: R.wConst, life: 1, size: 0.8, color: [0.04, 0.0, 0.08], alpha: 0.95, noGround: true }),
-  tail: P({ sprite: [S.blob, S.glow], ramp: R.wHot, life: [0.18, 0.28], size: [0.5, 0.7], end: 0.35, spin: [-4, 4], drag: 4, i: [1.4, 2] }),
-  fireTail: P({ sprite: [S.blob, S.blob, S.flame1], ramp: R.fire, life: [0.2, 0.3], size: [0.6, 0.8], end: [0.35, 0.5], ease: 1.2, spin: [-5, 5], drag: 3.5, turb: 0.05, i: [1.8, 2.4] }),
+  tail: P({ sprite: [S.blob, S.glow], ramp: R.wHot, life: [0.16, 0.24], size: [0.38, 0.52], end: 0.3, spin: [-4, 4], drag: 4, i: [0.9, 1.3] }),
+  fireTail: P({ sprite: [S.blob, S.blob, S.flame1], ramp: R.fire, life: [0.18, 0.28], size: [0.5, 0.7], end: [0.35, 0.5], ease: 1.2, spin: [-5, 5], drag: 3.5, turb: 0.05, i: [1.3, 1.8] }),
   note: P({ sprite: [S.note1, S.note2], ramp: R.wConst, life: 1, size: 0.6, rot: 0, i: 2.2, noGround: true }),
-  mote: P({ sprite: S.dot, ramp: R.wInOut, life: [0.3, 0.5], size: [0.06, 0.1], end: 0.4, drag: 2.5, turb: 0.12, i: [4, 6] }),
+  mote: P({ sprite: S.dot, ramp: R.wInOut, life: [0.3, 0.5], size: [0.06, 0.1], end: 0.4, drag: 2.5, turb: 0.12, i: [3, 4.5] }),
   smoke: P({ pool: 'alpha', sprite: [S.smoke1, S.smoke2, S.smoke3], ramp: R.smoke, life: [0.6, 0.9], size: [0.3, 0.45], end: [2.4, 3.2], ease: 2, spin: [-0.8, 0.8], drag: 2, accY: 1.2, turb: 0.15, alpha: 0.7 }),
   wave: P({ sprite: S.glow, ramp: R.wInOut, life: 0.25, size: 1.2, end: 1.4, orient: 'flat', i: 1.2 }),
 };
@@ -360,7 +364,7 @@ function projDefaults(kind) {
     case 'holy': return { speed: 28, color: [2.2, 1.7, 0.8], size: 1, range: 20 };
     case 'dark': case 'shadow': return { speed: 24, color: [1.1, 0.3, 2.0], size: 1, range: 20 };
     case 'lightning': case 'lightning_bolt': return { speed: 40, color: [1.0, 1.4, 2.6], size: 1, range: 22 };
-    case 'lightning_dragon': case 'dragon': return { speed: 24, color: [0.9, 1.3, 2.8], size: 1.6, range: 14 };
+    case 'lightning_dragon': case 'dragon': return { speed: 24, color: [0.7, 1.0, 2.2], size: 1.4, range: 14 };
     case 'blade': case 'crescent': return { speed: 30, color: [2.4, 0.4, 0.4], size: 1, range: 10 };
     case 'chi': return { speed: 32, color: [0.8, 1.9, 2.4], size: 1, range: 18 };
     case 'glaive': return { speed: 22, color: [1.8, 0.2, 0.4], size: 1, range: 14 };
@@ -375,10 +379,14 @@ function projDefaults(kind) {
     default: return { speed: 30, color: [1.6, 1.3, 0.9], size: 1, range: 20 };
   }
 }
+const PK_ALIAS = { wind_blade: 'blade', spinning_blade: 'glaive', glaive_disc: 'glaive', disc: 'glaive', tracer: 'bullet', flame_slug: 'slug', rifle_round: 'bullet', round: 'bullet', music_note: 'note', frost_lance: 'lance', ice_lance: 'lance', fire_wave: 'wave', holy_wave: 'wave', arrow: 'bullet' };
+const PK_COLOR = { fire_wave: [2.6, 0.9, 0.2], holy_wave: [2.4, 1.9, 0.9], rifle_round: [2.6, 2.0, 1.2] };
 export const PROJECTILE = {
   name: 'projectile', fade: 0.08,
   init(T) {
-    const fx = T.fx, p = T.p, kind = p.kind || 'bolt', D = projDefaults(kind);
+    const fx = T.fx, p = T.p, kind0 = p.kind || 'bolt', kind = PK_ALIAS[kind0] || kind0, D = projDefaults(kind);
+    if (PK_COLOR[kind0] && !T.tint) D.color = PK_COLOR[kind0];
+    if (kind0 === 'rifle_round') D.size = 1.6;
     const v = T.v;
     v.kind = kind; v.start = new THREE.Vector3().copy(T.pos); v.vel = new THREE.Vector3(); v.end = new THREE.Vector3();
     v.size = p.scale ?? (p.size != null ? Math.max(0.5, Math.min(3.5, p.size / 0.35)) : D.size); v.col = T.tint ? [T.tint[0] * (p.intensity ?? 1.8), T.tint[1] * (p.intensity ?? 1.8), T.tint[2] * (p.intensity ?? 1.8)] : D.color;
@@ -455,16 +463,16 @@ export const PROJECTILE = {
       }
       case 'lightning_dragon': case 'dragon':
         v.path = new THREE.Vector3().copy(T.pos);
-        T.hold(K.halo, 0, 0, 0, { tint: [0.5, 0.7, 1.4], scale: s * 1.4 }); T.hold(K.glow, 0, 0, 0, { tint: [0.6, 0.8, 1.5], scale: s * 1.2 }); T.hold(K.core, 0, 0, 0, { tint: [1, 1, 1], scale: s });
-        v.trail = fx.ribbons.trail({ attach: T, color: c, intensity: 1, width: 1.3 * s, life: 0.32, kind: 'energy' });
-        v.trail2 = fx.ribbons.trail({ attach: T, color: [c[0] * 1.3, c[1] * 1.3, c[2] * 1.3], intensity: 1, width: 0.35 * s, life: 0.42 });
+        T.hold(K.halo, 0, 0, 0, { tint: [0.4, 0.6, 1.2], scale: s * 0.9 }); T.hold(K.glow, 0, 0, 0, { tint: [0.5, 0.7, 1.3], scale: s * 0.8 }); T.hold(K.core, 0, 0, 0, { tint: [1, 1, 1], scale: s * 0.7 });
+        v.trail = fx.ribbons.trail({ attach: T, color: [c[0] * 0.6, c[1] * 0.6, c[2] * 0.6], intensity: 1, width: 0.85 * s, life: 0.32, kind: 'energy' });
+        v.trail2 = fx.ribbons.trail({ attach: T, color: [c[0] * 0.9, c[1] * 0.9, c[2] * 0.9], intensity: 1, width: 0.22 * s, life: 0.42 });
         break;
       case 'note':
         T.hold(K.note, 0, 0, 0, { tint: h, scale: s }); T.hold(K.glow, 0, 0, 0, { tint: h, scale: s * 0.8 });
         v.trail = fx.ribbons.trail({ attach: T, color: c, intensity: 1, width: 0.3 * s, life: 0.2 });
         break;
       case 'water': case 'orb': case 'foxfire':
-        fx.meshes.props.add('orb', v.prop = { pos: T.pos, dir: null, alive: true, scale: s * 0.55, tint: kind === 'foxfire' ? [0.5, 0.7, 1.8] : [0.35, 0.8, 1.6] });
+        fx.meshes.props.add('orb', v.prop = { pos: T.pos, dir: null, alive: true, scale: s * 0.5, tint: kind === 'foxfire' ? [0.35, 0.5, 1.3] : [0.25, 0.6, 1.1] });
         T.hold(K.halo, 0, 0, 0, { tint: h, scale: s * 1.2 });
         v.trail = fx.ribbons.trail({ attach: T, color: c, intensity: 1, width: 0.6 * s, life: 0.25 });
         break;
@@ -507,7 +515,7 @@ export const PROJECTILE = {
       v.path.copy(T.pos);
       const w = Math.sin(T.age * 9) * 0.9 * s, wy = Math.cos(T.age * 7) * 0.5 * s;
       T.pos.set(v.path.x - T.dir.z * w, v.path.y + wy, v.path.z + T.dir.x * w);
-      if (T.rate('lb', 14)) { _q.copy(T.prev); fx.lightning({ from: _p.copy(T.pos), to: _q.addScaledVector(T.dir, -3 * s), width: 0.35 * s, dur: 0.12, impact: false, color: [0.7, 0.9, 2.2] }); }
+      if (T.rate('lb', 14)) { _q.copy(T.prev); fx.lightning({ from: _p.copy(T.pos), to: _q.addScaledVector(T.dir, -3 * s), width: 0.28 * s, dur: 0.1, impact: false, sparks: false, strands: 2, color: [0.6, 0.8, 1.8] }); }
     }
     // trail particles along the frame's path
     const kind = v.kind, d = T.dir, h = T.tint;
@@ -516,8 +524,8 @@ export const PROJECTILE = {
       const f = Math.random();
       _p.lerpVectors(T.pos, T.prev, f);
       if (kind === 'fire' || kind === 'fireball' || kind === 'lava' || kind === 'slug') fx.spawn(K.fireTail, _p.x + fx.r(-0.08, 0.08) * s, _p.y + fx.r(-0.08, 0.08) * s, _p.z + fx.r(-0.08, 0.08) * s, d.x * 4 + fx.r(-0.6, 0.6), fx.r(-0.3, 0.7), d.z * 4 + fx.r(-0.6, 0.6), fx.o(s * (kind === 'slug' ? 0.7 : 1)));
-      else if (kind === 'frost' || kind === 'ice' || kind === 'lance') fx.spawn(FROST.mist, _p.x, _p.y, _p.z, fx.r(-0.4, 0.4), fx.r(-0.2, 0.3), fx.r(-0.4, 0.4), fx.o(s * 0.8));
-      else if (kind === 'dark' || kind === 'shadow' || kind === 'glaive') fx.spawn(DARK.smoke, _p.x, _p.y, _p.z, fx.r(-0.4, 0.4), fx.r(-0.2, 0.5), fx.r(-0.4, 0.4), fx.o(s * 0.8));
+      else if (kind === 'frost' || kind === 'ice' || kind === 'lance') { if (Math.random() < 0.18) fx.spawn(FROST.mist, _p.x + fx.r(-0.2, 0.2), _p.y + fx.r(-0.2, 0.2), _p.z + fx.r(-0.2, 0.2), fx.r(-0.4, 0.4), fx.r(-0.2, 0.3), fx.r(-0.4, 0.4), fx.o(s * fx.r(0.35, 0.6))); else fx.spawn(K.tail, _p.x, _p.y, _p.z, d.x * 2 + fx.r(-0.3, 0.3), fx.r(-0.3, 0.3), d.z * 2 + fx.r(-0.3, 0.3), fx.o(s * 0.7, h)); }
+      else if (kind === 'dark' || kind === 'shadow' || kind === 'glaive') { if (Math.random() < 0.25) fx.spawn(DARK.wisp, _p.x + fx.r(-0.15, 0.15), _p.y + fx.r(-0.15, 0.15), _p.z + fx.r(-0.15, 0.15), fx.r(-0.6, 0.6), fx.r(-0.2, 0.6), fx.r(-0.6, 0.6), fx.o(s * fx.r(0.5, 0.8), kind === 'glaive' ? h : null)); else fx.spawn(K.tail, _p.x, _p.y, _p.z, d.x * 2 + fx.r(-0.3, 0.3), fx.r(-0.3, 0.3), d.z * 2 + fx.r(-0.3, 0.3), fx.o(s * 0.7, h)); }
       else if (kind === 'wave') { if (i < 1) fx.spawn(CRIM.ember, _p.x + fx.r(-1.5, 1.5) * T.right.x, fx.gy(_p.x, _p.z, _p.y - 0.8) + 0.1, _p.z + fx.r(-1.5, 1.5) * T.right.z, 0, fx.r(1, 3), 0, fx.o(s, h)); }
       else if (kind === 'grenade' || kind === 'rock') fx.spawn(K.smoke, _p.x, _p.y, _p.z, 0, 0.3, 0, fx.o(s * 0.6));
       else fx.spawn(K.tail, _p.x, _p.y, _p.z, d.x * 3 + fx.r(-0.3, 0.3), fx.r(-0.3, 0.3), d.z * 3 + fx.r(-0.3, 0.3), fx.o(s * 0.8, h));
@@ -527,7 +535,7 @@ export const PROJECTILE = {
       _p.lerpVectors(T.pos, T.prev, Math.random());
       if (kind === 'fire' || kind === 'fireball' || kind === 'lava' || kind === 'slug') fx.spawn(FIRE.ember, _p.x, _p.y, _p.z, -d.x * 2 + fx.r(-2, 2), fx.r(-0.5, 2.2), -d.z * 2 + fx.r(-2, 2), fx.o(s));
       else if (kind === 'frost' || kind === 'ice' || kind === 'lance') fx.spawn(FROST.flake, _p.x, _p.y, _p.z, fx.r(-1, 1), fx.r(-0.5, 0.8), fx.r(-1, 1), fx.o(s));
-      else if (kind === 'lightning' || kind === 'lightning_bolt' || kind === 'lightning_dragon' || kind === 'dragon') fx.spawn(STORM.bolt, _p.x + fx.r(-0.4, 0.4) * s, _p.y + fx.r(-0.4, 0.4) * s, _p.z + fx.r(-0.4, 0.4) * s, 0, 0, 0, fx.o(s * 0.6, null));
+      else if (kind === 'lightning' || kind === 'lightning_bolt' || kind === 'lightning_dragon' || kind === 'dragon') { if (i % 2 === 0) { const ob = fx.o(s * 0.55, null); ob.i = 0.4; fx.spawn(STORM.bolt, _p.x + fx.r(-0.4, 0.4) * s, _p.y + fx.r(-0.4, 0.4) * s, _p.z + fx.r(-0.4, 0.4) * s, 0, 0, 0, ob); } else fx.spawn(STORM.spark, _p.x, _p.y, _p.z, fx.r(-3, 3), fx.r(-2, 3), fx.r(-3, 3), fx.o(s, null)); }
       else if (kind === 'note') fx.spawn(MUSIC.sparkle, _p.x, _p.y, _p.z, fx.r(-1, 1), fx.r(0, 1), fx.r(-1, 1), fx.o(s, h));
       else fx.spawn(K.mote, _p.x, _p.y, _p.z, fx.r(-1.2, 1.2), fx.r(-1.2, 1.2), fx.r(-1.2, 1.2), fx.o(s, h));
     }
@@ -613,7 +621,7 @@ export const BEAM = {
   tick(T) {
     const fx = T.fx, b = T.v.b, kind = T.v.kind;
     if (b.dead) { T.stop(0.01); return; }
-    if (kind === 'lightning') {
+    if (kind === 'lightning' && T.p.sparks !== false) {
       const n = T.rate('s', 70);
       for (let i = 0; i < n; i++) { fx.rdir(_d); fx.spawn(STORM.spark, b.B.x, b.B.y, b.B.z, _d.x * 6, _d.y * 6 + 2, _d.z * 6, fx.o(1, null)); }
       if (T.rate('g', 16)) fx.at(STORM.glow, b.B, 1.2, null);
@@ -685,8 +693,8 @@ export function meteorImpact(fx, target, Rr = 3.5, tint = null) {
   const s = Rr / 3.5;
   const g = _C.set(target.x, fx.gy(target.x, target.z, target.y), target.z);
   const up = _q.set(g.x, g.y + 0.6 * s, g.z);
-  fx.at(GEN.bigFlash, up, s * 1.4, tint || [1, 0.65, 0.3], null, 0, 1, 0);
-  fx.at(GEN.flare, up, s * 3, tint || [1, 0.6, 0.3], { rot: 0 });
+  fx.at(GEN.bigFlash, up, Math.min(s, 2) * 0.6, tint || [1, 0.65, 0.3], null, 0, 1, 0);
+  fx.at(GEN.flare, up, Math.min(s, 2) * 1.6, tint || [1, 0.6, 0.3], { rot: 0 });
   shockwave(fx, { pos: g, radius: Rr * 2.4, color: tint ? [tint[0] * 2, tint[1] * 2, tint[2] * 2] : [2.2, 0.9, 0.3], dur: 0.6, height: 1.6 * s });
   for (let i = 0; i < fx.n(36); i++) {
     fx.rdir(_d, _u, 1.35); const sp = fx.r(3, 10) * s;

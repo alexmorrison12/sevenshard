@@ -14,11 +14,13 @@ const TUNE_B_CH = ['Em', 'Am', 'D', 'G', 'C', 'Am', 'B7', 'Em'];
 const MARKET_CH = [['G', 'D', 'Em', 'C', 'G', 'D', 'C', 'D'], ['G', 'Em', 'C', 'D', 'G', 'Em', 'Am', 'D']];
 const EVE_CH = [['Em', 'C', 'G', 'D', 'Em', 'C', 'Am', 'D'], ['C', 'G/B', 'Am', 'Em', 'F', 'C', 'Am', 'D']];
 const FORMS = [['A', 'B', 'square', 'market', 'B', 'evening', 'A'], ['A', 'market', 'B', 'evening', 'square', 'B'], ['B', 'A', 'evening', 'market', 'square', 'A']];
+const NIGHT_FORMS = [['evening', 'A', 'evening', 'B'], ['A', 'evening', 'B', 'evening'], ['evening', 'B', 'A', 'evening']];
 
 export class City extends Track {
-  constructor(e, n, t0, seed) {
-    super(e, n, t0, seed);
-    this.tempo(this.rng.range(180, 190), 6);
+  constructor(e, n, t0, seed, dest, night = false) {
+    super(e, n, t0, seed, dest);
+    this.night = night; this.mixKey = 'city';
+    this.tempo(night ? this.rng.range(160, 168) : this.rng.range(180, 190), 6);
     this.I('lute', Lute, { pan: 0.2, rev: 0.28 });
     this.I('lute2', Lute, { pan: -0.3, rev: 0.28, scale: 0.24 });
     this.I('rec', Wind, { kind: 'recorder', pan: -0.12, rev: 0.32 });
@@ -33,7 +35,7 @@ export class City extends Track {
     this.I('glock', Mallet, { kind: 'glock', pan: 0.35, rev: 0.5, scale: 0.18 });
     this.I('drum', HandDrum, { pan: 0.05, rev: 0.18 });
     this.scale = new Scale('G', 'major');
-    this.cycle = 0; this.form = ['intro', ...FORMS[0]]; this.si = 0; this.sb = 0;
+    this.cycle = 0; this.form = night ? NIGHT_FORMS[0].slice() : ['intro', ...FORMS[0]]; this.si = 0; this.sb = 0;
     this.make();
   }
   make() {
@@ -44,7 +46,7 @@ export class City extends Track {
     if (type === 'market') S.mel = genPhrase(r, { scale: this.scale, chordAt, bars: 8, bpb: 6, lo: 62, hi: 81, cells: [[3, 3], [2, 1, 2, 1], [1, 1, 1, 3], [2, 1, 3], [1, 1, 1, 1, 1, 1]], cad: [[6], [3, 3]], rest: 0.04 });
     if (type === 'evening') S.mel = genPhrase(r, { scale: this.scale, chordAt, bars: 8, bpb: 6, lo: 67, hi: 83, cells: [[6], [3, 3], [4, 2]], cad: [[6]], rest: 0.05 });
     if (type === 'A' && this.cycle + this.si > 1) S.orn = true;
-    S.lead = type === 'A' ? (this.cycle % 2 ? 'flute' : 'rec') : 'fid';
+    S.lead = type === 'A' ? (this.cycle % 2 || this.night ? 'flute' : 'rec') : 'fid';
     this.S = S;
   }
   strumPat(t, c, vel, kind) {
@@ -70,6 +72,7 @@ export class City extends Track {
   }
   drums(t, lvl, full) {
     const I = this.inst, s = this.spb, sb = this.sb;
+    if (this.night) { lvl *= 0.45; full = false; }
     I.drum.hit(t, 0.7 * lvl); I.drum.hit(t + 3 * s, 0.45 * lvl, { open: false });
     if (sb % 2 === 1) I.drum.hit(t + 5 * s, 0.35 * lvl, { open: false });
     if (full) { I.drum.tamb(t + 2 * s, 0.45 * lvl); I.drum.tamb(t + 5 * s, 0.38 * lvl); }
@@ -128,7 +131,7 @@ export class City extends Track {
     }
     if (++this.sb >= S.bars) {
       this.sb = 0;
-      if (++this.si >= this.form.length) { this.cycle++; this.form = this.rng.pick(FORMS).slice(); this.si = 0; }
+      if (++this.si >= this.form.length) { this.cycle++; this.form = this.rng.pick(this.night ? NIGHT_FORMS : FORMS).slice(); this.si = 0; }
       this.make();
     }
     return B;

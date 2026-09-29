@@ -9,7 +9,6 @@ import * as THREE from 'three';
 import { createLab } from './kit.js';
 import { G } from '../engine/materials.js';
 import { buildWater } from '../world/water.js';
-import { createShip } from '../models/creatures/ships.js';
 // Registry: sub-area labs (creatures_<area>.js) copy this file and swap ONLY this import for their own mini-index
 // that exports the same names (createCreature, CREATURES, creatureStats; createShip/SHIPS optional).
 import * as REG from '../models/creatures/wild/index.js';
@@ -74,9 +73,17 @@ function frameCam(h, center = new THREE.Vector3(0, 0, 0), how = Q.get('cam') || 
 }
 api.frame = frameCam;
 let shipObj = null;
+// simple scale stand-in: 16 m hull, deck at 2.1 m, short mast + sail (the real ships belong to another owner)
 function addShip(x = 0, z = 0, ry = 0) {
   if (shipObj) return shipObj;
-  const s = createShip('dawnrunner'); s.root.position.set(x, 0, z); s.root.rotation.y = ry; lab.add(s.root); shipObj = s; return s;
+  const root = new THREE.Group(), wood = new THREE.MeshLambertMaterial({ color: 0x6a4424 }), deck = new THREE.MeshLambertMaterial({ color: 0x9a7448 });
+  const hullG = new THREE.CylinderGeometry(2.6, 1.6, 16, 12, 1, false); hullG.rotateX(Math.PI / 2); hullG.scale(1, 0.75, 1);
+  const hull = new THREE.Mesh(hullG, wood); hull.position.y = 0.4; root.add(hull);
+  const d = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.2, 15), deck); d.position.y = 2.1; root.add(d);
+  for (const sx of [-1, 1]) { const rail = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.7, 15), wood); rail.position.set(sx * 2.3, 2.5, 0); root.add(rail); }
+  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.2, 8), wood); mast.position.y = 6; root.add(mast);
+  const sail = new THREE.Mesh(new THREE.PlaneGeometry(5, 4), new THREE.MeshLambertMaterial({ color: 0xe8dcc0, side: THREE.DoubleSide })); sail.position.set(0, 6.5, 0.3); root.add(sail);
+  root.position.set(x, 0, z); root.rotation.y = ry; lab.add(root); shipObj = { root }; return shipObj;
 }
 
 // ------------------------------------------------------------------------------------------------ single / lineup / strip
@@ -191,18 +198,19 @@ function buildMeadow() {
 // ------------------------------------------------------------------------------------------------ sea: a sea-bounty encounter around the ship
 function buildSea() {
   clear();
-  const ship = addShip(0, 0, 0);
+  addShip(0, 0, 0);
   const serp = createCreature('sea_serpent', { variant: Q.get('variant') || undefined });
-  const s = add(serp, -11, -3, -Math.PI / 2 + 0.3); s.script = ['attack', 'roar', 'attack2', 'attack_big', 'spit', 'hit'];
+  const s = add(serp, -8.5, -2, -Math.PI / 2 + 0.25); s.script = ['attack', 'roar', 'attack2', 'attack_big', 'spit', 'hit'];
   const tents = [];
   for (let k = 0; k < 3; k++) {
     const tc = createCreature('kraken_tentacle', { variant: k === 2 ? 'violet' : undefined, seed: k + 3 });
-    const it = add(tc, 5.5 + (k === 1 ? 1.5 : 0), -6 + k * 5, Math.PI / 2 + (k - 1) * 0.3); it.script = ['attack', 'grab', 'attack_big', 'hit', 'idle_alt'];
+    const it = add(tc, 4.2 + (k === 1 ? 0.8 : 0), -5 + k * 4.5, Math.PI / 2 + (k - 1) * 0.3); it.script = ['attack', 'grab', 'attack_big', 'hit', 'idle_alt'];
     tents.push(it);
   }
   for (let k = 0; k < 3; k++) { const g = createCreature('seagull', { seed: k + 9 }); const it = add(g, (k - 1) * 4, 4 + k, k); it.st = { speed: 4, turn: 0.7, fly: true }; it.gull = true; }
   for (let k = 0; k < 4; k++) { const f = createCreature('fish', { seed: k + 20 }); const it = add(f, -4 + k * 2.5, 9 + (k % 2), k * 1.3); it.st = { speed: 0.6, turn: 0.4 }; it.fish = true; }
-  lab.setView('iso', new THREE.Vector3(-3, 0, -2));
+  lab.setView('iso', new THREE.Vector3(-1.5, 0, 1));
+  lab.iso.zoom = lab.iso.dist = num('dist', 27); lab.iso.snap(new THREE.Vector3(-1.5, 0, 1));
   if (Q.get('view') === 'orbit') { lab.setView('orbit', new THREE.Vector3(-4, 2, -2)); lab.camera.position.set(-6, 16, 24); lab.controls.update(); }
   let T = 0;
   lab.onFrame((dt) => {

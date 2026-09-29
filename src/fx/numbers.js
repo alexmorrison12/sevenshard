@@ -40,11 +40,11 @@ void main() {
   float age = uFxTime - g0.w, life = g4.z, T = age / life;
   if (age < 0.0 || T > 1.0) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
   int anim = int(g2.w + 0.5);
-  float peak = anim == 1 ? 1.95 : anim == 3 ? 1.25 : anim == 4 ? 1.2 : 1.55;
-  float pop = age < 0.06 ? mix(0.35, peak, age / 0.06) : age < 0.2 ? mix(peak, 1.0, smoothstep(0.0, 1.0, (age - 0.06) / 0.14)) : 1.0;
+  float peak = anim == 1 ? 1.6 : anim == 3 ? 1.15 : anim == 4 ? 1.1 : 1.35;
+  float pop = age < 0.05 ? mix(0.4, peak, age / 0.05) : age < 0.17 ? mix(peak, 1.0, smoothstep(0.0, 1.0, (age - 0.05) / 0.12)) : 1.0;
   pop *= mix(1.0, 0.82, smoothstep(0.72, 1.0, T));
-  float riseAmt = anim == 2 ? 70.0 : anim == 1 ? 58.0 : 52.0;
-  float rise = riseAmt * (1.0 - exp(-age * 3.2)) + age * 10.0;
+  float riseAmt = anim == 2 ? 56.0 : anim == 1 ? 44.0 : 38.0;
+  float rise = riseAmt * (1.0 - exp(-age * 3.4)) + age * 8.0;
   float drift = g4.y * (1.0 - exp(-age * 2.6));
   float shake = anim == 1 ? sin(age * 70.0) * 3.0 * exp(-age * 9.0) : 0.0;
   vec2 corner = position.xy;                              // [-0.5, 0.5]
@@ -73,19 +73,21 @@ void main() {
 
 // style → fill gradient (top, bottom; linear HDR), size (virtual px per em), anim, tag
 const ST = {
-  normal: { top: lin(0xffffff, 1.0), bot: lin(0xc8ccd6, 0.95), size: 30, anim: 0 },
-  crit: { top: lin(0xfff27a, 1.35), bot: lin(0xff8a1a, 1.35), size: 42, anim: 1 },
-  back: { top: lin(0xffffff, 1.0), bot: lin(0xc8ccd6, 0.95), size: 32, anim: 0, tag: 'BACK ATTACK', tagTop: lin(0xffc070, 1.3), tagBot: lin(0xff6a10, 1.3) },
-  head: { top: lin(0xffffff, 1.0), bot: lin(0xc8ccd6, 0.95), size: 32, anim: 0, tag: 'HEAD ATTACK', tagTop: lin(0xffc070, 1.3), tagBot: lin(0xff6a10, 1.3) },
-  counter: { top: lin(0xbfe6ff, 1.4), bot: lin(0x3a8cff, 1.4), size: 40, anim: 1, tag: 'COUNTER!', tagTop: lin(0xd8f0ff, 1.5), tagBot: lin(0x4aa0ff, 1.5) },
-  heal: { top: lin(0xc8ffb0, 1.1), bot: lin(0x3adc5a, 1.1), size: 30, anim: 2, prefix: '+' },
-  shield: { top: lin(0xd0ffff, 1.1), bot: lin(0x30d0e8, 1.1), size: 28, anim: 2, prefix: '+' },
-  miss: { top: lin(0xd8d8d8, 0.8), bot: lin(0x8a8a90, 0.8), size: 26, anim: 4 },
-  immune: { top: lin(0xd8d8d8, 0.8), bot: lin(0x8a8a90, 0.8), size: 26, anim: 4 },
-  dot: { top: lin(0xffd8a8, 0.9), bot: lin(0xc07a40, 0.9), size: 22, anim: 0 },
-  hurt: { top: lin(0xff9a8a, 1.1), bot: lin(0xe01818, 1.1), size: 30, anim: 0 },
-  stagger: { top: lin(0xe8c8ff, 1.2), bot: lin(0x9a4aff, 1.2), size: 28, anim: 0 },
+  normal: { top: lin(0xffffff, 0.95), bot: lin(0xc4c8d2, 0.85), size: 25, anim: 0 },
+  crit: { top: lin(0xfff27a, 1.05), bot: lin(0xff8a1a, 1.05), size: 34, anim: 1 },
+  back: { top: lin(0xffffff, 0.95), bot: lin(0xc4c8d2, 0.85), size: 27, anim: 0, tag: 'BACK ATTACK', tagTop: lin(0xffc070, 1.1), tagBot: lin(0xff6a10, 1.1) },
+  head: { top: lin(0xffffff, 0.95), bot: lin(0xc4c8d2, 0.85), size: 27, anim: 0, tag: 'HEAD ATTACK', tagTop: lin(0xffc070, 1.1), tagBot: lin(0xff6a10, 1.1) },
+  counter: { top: lin(0xc8ecff, 1.1), bot: lin(0x3a8cff, 1.15), size: 34, anim: 1, tag: 'COUNTER!', tagTop: lin(0xd8f0ff, 1.2), tagBot: lin(0x4aa0ff, 1.2) },
+  heal: { top: lin(0xc8ffb0, 0.95), bot: lin(0x3adc5a, 0.95), size: 25, anim: 2, prefix: '+' },
+  shield: { top: lin(0xd0ffff, 0.95), bot: lin(0x30d0e8, 0.95), size: 23, anim: 2, prefix: '+' },
+  miss: { top: lin(0xd8d8d8, 0.75), bot: lin(0x8a8a90, 0.7), size: 22, anim: 4 },
+  immune: { top: lin(0xd8d8d8, 0.75), bot: lin(0x8a8a90, 0.7), size: 22, anim: 4 },
+  dot: { top: lin(0xffd8a8, 0.85), bot: lin(0xc07a40, 0.8), size: 19, anim: 0 },
+  hurt: { top: lin(0xff9a8a, 1.0), bot: lin(0xe01818, 1.0), size: 26, anim: 0 },
+  stagger: { top: lin(0xe8c8ff, 1.0), bot: lin(0x9a4aff, 1.0), size: 24, anim: 0 },
 };
+// fan-out slots for simultaneous numbers on one target (x, y in em): newest takes the next slot
+const FAN = [[0, 0], [1.15, 0.55], [-1.15, 0.55], [0.35, 1.1], [2.1, 0.15], [-2.1, 0.15], [-0.6, 1.6], [1.4, 1.6]];
 
 export class Numbers {
   constructor(fx, n = 6144) {
@@ -166,10 +168,10 @@ export class Numbers {
       if (now - R[b + 2] < 0.45 && Math.abs(R[b] - p.x) < 1.6 && Math.abs(R[b + 1] - p.z) < 1.6) near++;
     }
     const rb = this.rHead * 4; R[rb] = p.x; R[rb + 1] = p.z; R[rb + 2] = now; this.rHead = (this.rHead + 1) % 48;
-    const slot = near % 7;
-    const yOff = slot * size * 0.62 + (Math.random() - 0.5) * 6;
-    const drift = ((slot & 1) ? 1 : -1) * (8 + Math.random() * 26) * (slot ? 1 : Math.random() * 0.8);
-    const life = anim === 2 ? 1.25 : anim === 1 ? 1.2 : 1.0;
+    const slot = near % FAN.length, fan = FAN[slot];
+    const yOff = fan[1] * size + (Math.random() - 0.5) * 4;
+    const drift = fan[0] * size + (Math.random() - 0.5) * 10;
+    const life = anim === 2 ? 1.15 : anim === 1 ? 1.05 : 0.9;
     const len = this.fmt(value, st.prefix);
     this.writeRun(len, p.x, p.y, p.z, now, size, top, bot, anim, yOff, drift, life);
     const tag = o.tag ?? st.tag;

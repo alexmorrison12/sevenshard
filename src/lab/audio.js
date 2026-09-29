@@ -13,6 +13,8 @@ import * as INSTR from '../audio/music/instruments.js';
 import { bakeStats } from '../audio/music/bake.js';
 import * as PATCHES from '../audio/music/patches.js';
 import { MIX, TRACK_GAIN } from '../audio/music/mix.js';
+import { BEDS, KINDS } from '../audio/ambience.js';
+import { ENV as ENVMOD } from '../audio/sfx/env.js';
 import { mel } from '../audio/music/theory.js';
 import { renderSound, renderEvents, renderMusic, renderAmbience, renderLoop, renderPiece, analyze, timeline, toWav, spectrogram, blockPower } from '../audio/analysis.js';
 
@@ -61,7 +63,9 @@ const trackBtns = {};
 const mrow = el('div');
 for (const n of TRACK_NAMES) { const b = el('button', { onclick: () => { start(); audio.music(n, { fade: +fadeIn.value }); refreshTracks(); } }, n); trackBtns[n] = b; mrow.append(b); }
 mrow.append(el('button', { onclick: () => { audio.music(null, { fade: +fadeIn.value }); refreshTracks(); } }, '■ stop'));
-left.append(mrow, el('div', { class: 'row' }, el('label', {}, 'fade (s)'), fadeIn));
+left.append(mrow, el('div', { class: 'row' }, el('label', {}, 'fade (s)'), fadeIn,
+  el('button', { onclick: () => { start(); audio.music(audio.currentMusic === 'raid_ghost' ? 'raid' : 'raid_ghost'); refreshTracks(); } }, 'raid ⇄ ghost phase'),
+  el('button', { onclick: () => { start(); audio.music('victory', { then: 'city' }); refreshTracks(); } }, 'victory → city')));
 left.append(el('h2', {}, 'Stingers'), el('div', {}, ...STINGER_NAMES.map((n) => el('button', { onclick: () => { start(); audio.stinger(n); } }, n))));
 left.append(el('h2', {}, 'Songs (in-world performance)'), el('div', {}, ...SONG_NAMES.map((n) => el('button', { onclick: () => { start(); const s = audio.song(n); status.textContent = `song ${n}: ${s.toFixed(2)} s`; } }, n))));
 const schedPre = el('pre', {}, '');
@@ -147,7 +151,8 @@ const meters = {
     g.fillStyle = '#aab'; g.font = '11px monospace';
     g.fillText(`peak max ${this.peakMax.toFixed(1)} dBFS · limiter GR ${s.limiterGR} dB · voices ${s.voices} (max ${s.maxVoices}) · loops ${s.loops}`, 404, 22);
     const cap = this.cap ? ` · audio thread load avg ${(this.cap.averageLoad * 100).toFixed(1)}% peak ${(this.cap.peakLoad * 100).toFixed(1)}% underruns ${(this.cap.underrunRatio * 100).toFixed(2)}%` : '';
-    status.textContent = `ctx ${s.state} · ${E.ctx.sampleRate} Hz · latency ${s.latency} ms · tick ${s.tickMs} ms (max ${s.tickMax})${cap}`;
+    const bs = bakeStats();
+    status.textContent = `ctx ${s.state} · ${E.ctx.sampleRate} Hz · latency ${s.latency} ms · tick ${s.tickMs} ms (max ${s.tickMax}) · baked ${bs.mb} MB${cap}`;
     if (E.mu) {
       const m = E.mu.stats;
       schedPre.textContent = `music: ${audio.currentMusic} · ambience: ${audio.currentAmbience}\ntracks: ${E.mu.tracks.map((t) => t.name + (t.stopping ? '(fading)' : '') + (t.overlay ? '(overlay)' : '')).join(', ')}\nbars ${m.bars} · skipped ${m.skipped} · min lead ${isFinite(m.minLead) ? m.minLead.toFixed(3) : '-'} s · horizon ${m.horizon.toFixed(2)} s · max timer gap ${m.maxTimerGap.toFixed(3)} s`;
@@ -162,7 +167,9 @@ for (const [cat, names] of Object.entries(CATEGORIES)) {
   for (const n of names) row.append(el('button', { onclick: () => { start(); audio.sfx(n, { pos: use3d.checked ? pad.world() : undefined }); } }, n));
   right.append(row);
 }
-right.append(el('div', {}, el('button', { onclick: () => stressLive(24) }, 'stress: 24 overlapping'), el('button', { onclick: () => hitchTest(20).then((r) => { schedPre.textContent = JSON.stringify(r, null, 1); }) }, 'hitch test (20 s, 400 ms stalls)')));
+right.append(el('div', {}, el('button', { onclick: () => stressLive(24) }, 'stress: 24 overlapping'), el('button', { onclick: () => hitchTest(20).then((r) => { schedPre.textContent = JSON.stringify(r, null, 1); }) }, 'hitch test (20 s, 400 ms stalls)'),
+  el('button', { onclick: async () => { schedPre.textContent = 'measuring…'; const n = audio.currentMusic || 'title'; schedPre.textContent = JSON.stringify(await window.__lab.cpu(n, 30), null, 1); } }, 'CPU of current track (offline 30 s)'),
+  el('button', { onclick: async () => { schedPre.textContent = 'baking…'; schedPre.textContent = JSON.stringify(await window.__lab.loopSeams(), null, 1); } }, 'loop seams')));
 
 // ---------------------------------------------------------------- offline analysis
 right.append(el('h2', {}, 'Offline render + analysis'));
@@ -314,7 +321,37 @@ window.__lab = {
     const a = analyze(r.buf), cur = TRACK_GAIN[name] ?? 1;
     return { name, lufs: a.lufs, peak: a.peakDb, gain: +(cur * Math.pow(10, (target - a.lufs) / 20)).toFixed(3) };
   },
-  MIX, TRACK_GAIN,
+  MIX, TRACK_GAIN, BEDS, KINDS,
+  // Loop seam check for every baked loop (SFX loops + ambience beds): 2nd-difference at the wrap point relative to the
+  // buffer's typical 2nd-difference (a click would be >> 5; smooth continuation ≈ 0–3), and the level step across it.
+  async loopSeams() {
+    const oac = new OfflineAudioContext(2, 4800, 48000), a = new Engine(); a.init({ context: oac });
+    const items = LOOP_NAMES.map((n) => [n, a.bake(n)]);
+    for (const [bed, def] of Object.entries(BEDS)) if (def.loop) items.push(['amb:' + def.loop, a.bake('amb:' + def.loop, ENVMOD[def.loop])]);
+    const out = [];
+    for (const [n, p] of items) {
+      const b = await p, res = { n, dur: +b.duration.toFixed(2) };
+      for (let c = 0; c < b.numberOfChannels; c++) {
+        const d = b.getChannelData(c), N = d.length;
+        let s2 = 0; for (let i = 2; i < N; i++) { const dd = d[i] - 2 * d[i - 1] + d[i - 2]; s2 += dd * dd; }
+        const rms2 = Math.sqrt(s2 / (N - 2)) || 1e-12;
+        const seam = Math.max(Math.abs(d[N - 2] - 2 * d[N - 1] + d[0]), Math.abs(d[N - 1] - 2 * d[0] + d[1]));
+        const W = 2400; let e0 = 0, e1 = 0; for (let i = 0; i < W; i++) { e0 += d[N - 1 - i] ** 2; e1 += d[i] ** 2; }
+        res['seam' + c] = +(seam / rms2).toFixed(2); res['stepDb' + c] = +(10 * Math.log10((e1 + 1e-12) / (e0 + 1e-12))).toFixed(2);
+      }
+      out.push(res);
+    }
+    return out;
+  },
+  // ambience bed calibration: each bed alone at level 1 → integrated LUFS → new trim for `targets[bed]`
+  async ambCal(targets, seconds = 60) {
+    const res = {};
+    for (const [bed, target] of Object.entries(targets)) {
+      const b = await renderAmbience(null, seconds, { mix: { [bed]: 1 } }), a = analyze(b);
+      res[bed] = { lufs: a.lufs, mMax: a.mMax, trim: +((BEDS[bed].trim ?? 1) * Math.pow(10, (target - a.lufs) / 20)).toFixed(3) };
+    }
+    return res;
+  },
   // per-instrument stems: loudness of each instrument alone relative to the full mix while it plays
   async stems(name, seconds = 40, o = {}) {
     const oac = new OfflineAudioContext(2, 4800, 48000), a = new Engine(); a.init({ context: oac });

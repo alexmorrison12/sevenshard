@@ -260,6 +260,80 @@ export const COMBAT = {
       k.bell({ t: 0.27, f: 2900, vol: 0.02, d: 0.12, partials: METAL });
     },
   },
+  gunshot_heavy: {
+    clip: 1.8, clipIn: 1.3, max: 4, range: 80, rev: 0.18, pri: 2,
+    fn: (k) => {
+      const p = k.vary(1, 0.05);
+      shot(k, 0, 0.85 * p);
+      k.thump({ f0: 170 * p, f1: 52 * p, sweep: 0.05, d: 0.2, vol: 0.5 });
+      k.nz({ type: 'highpass', f: 1800, a: 0.0004, d: 0.035, vol: 0.4 });
+      k.nz({ t: 0.01, color: 'pink', type: 'lowpass', f: 1800, a: 0.006, d: 0.55, vol: 0.18 });
+      k.nz({ t: 0.09, type: 'bandpass', f: 2600, q: 3, a: 0.0005, d: 0.02, vol: 0.12 }); // action cycles
+      return 0.8;
+    },
+  },
+  // links whipping through the air, rattling, and snapping taut
+  chain: {
+    clip: 1.5, max: 3, range: 55, rev: 0.12,
+    fn: (k) => {
+      whoosh(k, { dur: 0.26, f0: 700, fPeak: 2400, f1: 900, q: 1.1, vol: 0.38, peakAt: 0.5 });
+      for (let i = 0; i < 12; i++) k.bell({ t: 0.04 + i * k.rnd(0.018, 0.03), f: k.rnd(1900, 3600), vol: k.rnd(0.02, 0.045), d: k.rnd(0.05, 0.12), partials: METAL, spread: 0.03 });
+      clang(k, { t: 0.3, f: 1250, vol: 0.06, d: 0.35, bright: 0.6 });
+      k.nz({ t: 0.3, type: 'bandpass', f: 1600, q: 2, a: 0.0005, d: 0.04, vol: 0.35 });
+      return 0.8;
+    },
+  },
+  // stone / bone spikes bursting from the ground (three stabs)
+  spike: {
+    clip: 1.5, max: 3, range: 60, rev: 0.12, pri: 2,
+    fn: (k) => {
+      for (const [t, v] of [[0, 1], [0.06, 0.8], [0.13, 0.9]]) {
+        k.nz({ t, type: 'bandpass', fc: [[0, 500], [0.1, 2600]], q: 1.6, a: 0.002, d: 0.12, vol: 0.4 * v });
+        k.nz({ t: t + 0.08, type: 'highpass', f: 2000, a: 0.0004, d: 0.02, vol: 0.4 * v });
+        k.thump({ t: t + 0.08, f0: 170, f1: 70, sweep: 0.04, d: 0.16, vol: 0.4 * v });
+      }
+      debris(k, { t: 0.1, n: 12, dur: 0.6, vol: 0.13 });
+      k.nz({ t: 0.1, color: 'brown', type: 'lowpass', f: 300, a: 0.01, d: 0.5, vol: 0.3 });
+      return 0.9;
+    },
+  },
+  punch_heavy: {
+    clip: 1.6, max: 4, range: 55, rev: 0.12, pri: 2,
+    fn: (k) => {
+      const p = k.vary(1, 0.08);
+      k.thump({ f0: 165 * p, f1: 48 * p, sweep: 0.06, d: 0.32, vol: 0.55 });
+      k.nz({ type: 'bandpass', f: 1600 * p, q: 1.1, a: 0.0006, d: 0.045, vol: 0.6 });
+      k.nz({ type: 'highpass', f: 2800, a: 0.0005, d: 0.018, vol: 0.3 });
+      k.nz({ color: 'pink', type: 'bandpass', f: 380 * p, q: 0.9, a: 0.002, d: 0.22, vol: 0.45 });
+      whoosh(k, { t: 0.01, dur: 0.3, f0: 1500, fPeak: 700, f1: 250, q: 0.9, vol: 0.18, color: 'pink', peakAt: 0.1 }); // air blast
+      return 0.6;
+    },
+  },
+  // demonic claws: a fast swipe with a tearing "rrrip"
+  claw: {
+    max: 4, range: 50, rev: 0.1,
+    fn: (k) => {
+      const f = k.vary(1, 0.1);
+      whoosh(k, { dur: 0.16, f0: 900 * f, fPeak: 3000 * f, f1: 1200 * f, q: 1.3, vol: 0.4, peakAt: 0.4 });
+      const rip = k.gain(0.5); k.lfo(0.05, 0.25, k.rnd(55, 75), 0.5, rip.gain, 'square');
+      k.nz({ t: 0.05, type: 'bandpass', fc: [[0, 3500 * f], [0.18, 1500 * f]], q: 1.2, env: [[0, 0], [0.01, 1], [0.18, 0]], vol: 0.45, dest: rip });
+      for (const t of [0.06, 0.1]) k.nz({ t, type: 'highpass', f: 2500, a: 0.0004, d: 0.012, vol: 0.3 });
+      k.thump({ t: 0.06, f0: 150, f1: 70, sweep: 0.04, d: 0.1, vol: 0.25 });
+      return 0.4;
+    },
+  },
+  // a giant's stomp: ground-shaking boom with a short crack and dust
+  stomp: {
+    clip: 1.4, max: 2, range: 120, ref: 10, rev: 0.14, hall: 0.12, pri: 2, duck: [0.25, 1], labDur: 3,
+    fn: (k) => {
+      boom(k, { vol: 0.62, d: 1.3, f0: 82, f1: 30 });
+      k.nz({ type: 'bandpass', f: 900, q: 1.2, a: 0.0008, d: 0.08, vol: 0.4 });
+      k.nz({ type: 'highpass', f: 2200, a: 0.0005, d: 0.03, vol: 0.3 });
+      debris(k, { t: 0.03, n: 14, dur: 0.9, vol: 0.12 });
+      k.nz({ t: 0.03, color: 'pink', type: 'bandpass', f: 500, q: 0.7, a: 0.03, d: 0.7, vol: 0.18 }); // dust
+      return 1.6;
+    },
+  },
   // ---- ground / blasts ----
   ground_crack: {
     clip: 1.5, max: 2, range: 80, rev: 0.12, pri: 2, duck: [0.2, 0.8], labDur: 3,

@@ -2,7 +2,7 @@
 import {
   PI, TAU, lg, rg, poly, circle, ellipse, star, glow, sparkle, slashAB, streak, ring, rays, burst, embers, backdrop, rgba,
   shade, mix, outline, fire, fireLayers, bolt, crystal, runeCircle, add, norm, glowPath, metalLG, metalRG, gem, note, ribbon,
-  bez, qbez, cracks, speedLines, blur, noBlur,
+  bez, qbez, cracks, speedLines, blur, noBlur, rocks,
 } from './core.js';
 import {
   greatsword, longsword, curvedBlade, glaive, pistol, rifle, harp, fist, palm, boot, claws, chain, featherWing, batWing,
@@ -311,6 +311,73 @@ const T = {
     gem(x, 50, 30, 10, '#ff6a2a', { n: 4, spark: false, glowA: 0.4 });
     gem(x, 30, 64, 10, '#6ad0ff', { n: 4, spark: false, glowA: 0.4 });
     gem(x, 70, 64, 10, '#ffd040', { n: 4, spark: false, glowA: 0.4 });
+  },
+  stance(x, R) {
+    tri(x, R, '#5a9aff');
+    for (const s of [-1, 1]) { x.save(); x.translate(50 + s * 34, 50); x.rotate(s > 0 ? -PI / 2 : PI / 2); arrowUp(x, 0, 0, 0.8, '#ffb0a0'); x.restore(); }
+    heater(x, 50, 50, 0.72, '#2a4a8a', 'silver', { trimMetal: 'silver' });
+    x.fillStyle = metalLG(x, 40, 60, 60, 70, 'gold'); poly(x, [[50, 34], [58, 46], [54, 46], [54, 62], [46, 62], [46, 46], [42, 46]]); x.fill(); outline(x, INK, 0.8);
+    x.strokeStyle = '#ffffff'; x.lineWidth = 2; x.beginPath(); x.moveTo(20, 84); x.lineTo(80, 84); x.stroke(); outline(x, INK, 0.4);
+  },
+  unstoppable(x, R) {
+    tri(x, R, '#ffb030');
+    burst(x, R, 50, 50, 12, 8, 34, '#ffc050');
+    for (const s of [-1, 1]) { chain(x, t => [50 + s * (10 + t * 30), 50 + s * t * 8], 6, 3, 'iron'); }
+    x.save(); x.translate(50, 50); x.scale(0.9, 0.9); star(x, 0, 0, 5, 7, 17); x.fillStyle = lg(x, -17, -17, 17, 17, [[0, '#ffffff'], [0.5, '#ffd060'], [1, '#a06010']]); x.fill(); outline(x, INK, 1); x.restore();
+  },
+  swift(x, R) {
+    tri(x, R, '#a0e040');
+    speedLines(x, R, 8, [6, 26, 40, 74], 0, '#e0ffb0', { len: 16, w: 1.4 });
+    for (let i = 0; i < 3; i++) { const px = 34 + i * 16; poly(x, [[px - 8, 30], [px + 8, 50], [px - 8, 70], [px - 2, 70], [px + 14, 50], [px - 2, 30]]); sym(x, '#c0f060', 1); }
+  },
+  mana_saver(x, R) {
+    tri(x, R, '#3a8aff');
+    x.save(); x.beginPath(); x.moveTo(46, 18); x.bezierCurveTo(52, 30, 64, 42, 64, 56); x.arc(46, 56, 18, 0, PI); x.bezierCurveTo(28, 42, 40, 30, 46, 18); x.closePath(); x.fillStyle = 'rgba(20,40,80,.8)'; x.fill(); x.clip();
+    x.fillStyle = rg(x, 40, 60, 1, 24, [[0, '#e0f0ff'], [0.4, '#4a9aff'], [1, '#12306a']]); x.fillRect(20, 50, 50, 30); x.restore();
+    x.beginPath(); x.moveTo(46, 18); x.bezierCurveTo(52, 30, 64, 42, 64, 56); x.arc(46, 56, 18, 0, PI); x.bezierCurveTo(28, 42, 40, 30, 46, 18); x.closePath(); outline(x, INK, 1.2);
+    downArrow(x, 74, 66, 0.95, '#80c0ff');
+  },
+  keen(x, R) { tri(x, R, '#ffb040'); at(x, 50, 52, 0, 1, (xx) => eye(xx, 58, '#ffb040', { open: 0.42, lw: 1.3 })); sparkle(x, 72, 30, 10, '#ffffff'); },
+  crushing(x, R) {
+    tri(x, R, '#b060ff');
+    poly(x, [[22, 74], [78, 74], [72, 90], [28, 90]]); x.fillStyle = lg(x, 22, 74, 78, 90, [[0, '#a8a0b8'], [1, '#3a3448']]); x.fill(); outline(x, INK, 1);
+    glowPath(x, xx => poly(xx, [[50, 74], [46, 80], [52, 84], [48, 90]], false), '#e0b0ff', 1);
+    burst(x, R, 50, 70, 10, 5, 18, '#d090ff', { sy: 0.6 });
+    at(x, 50, 30, PI / 2, 0.95, fist, { metal: 'steel', cuff: '#3a2a5a' });
+  },
+  aftershock(x, R) {
+    tri(x, R, '#ff8a30');
+    ring(x, 50, 58, 34, 14, '#ffb050', 2); ring(x, 50, 58, 20, 8, '#ffd080', 1.5);
+    burst(x, R, 50, 56, 10, 4, 16, '#ffb050', { sy: 0.6 });
+    rocks(x, R, 6, 50, 52, 26, { cols: ['#8a6a50', '#3a2a1a'], a0: PI, arc: PI, size: 2.6 });
+  },
+  back(x, R) {
+    tri(x, R, '#a070ff');
+    x.beginPath(); x.moveTo(32, 90); x.bezierCurveTo(30, 68, 36, 56, 42, 52); x.bezierCurveTo(36, 46, 38, 30, 50, 28); x.bezierCurveTo(62, 30, 64, 46, 58, 52); x.bezierCurveTo(64, 56, 70, 68, 68, 90); x.closePath();
+    x.fillStyle = lg(x, 30, 28, 70, 90, [[0, '#4a3a6a'], [1, '#100a1c']]); x.fill(); outline(x, INK, 1.2);
+    glowPath(x, xx => { xx.beginPath(); xx.moveTo(86, 30); xx.bezierCurveTo(96, 60, 80, 76, 56, 66); }, '#d0a0ff', 2);
+    x.save(); x.translate(56, 66); x.rotate(PI * 1.1); poly(x, [[0, -6], [8, 0], [0, 6]]); sym(x, '#e0c0ff', 1); x.restore();
+    burst(x, R, 52, 64, 8, 3, 12, '#e0b0ff');
+  },
+  head(x, R) {
+    tri(x, R, '#ff6a3a');
+    x.save(); x.translate(50, 58); x.beginPath(); x.moveTo(-22, 6); x.bezierCurveTo(-24, -26, 24, -26, 22, 6); x.lineTo(18, 22); x.lineTo(6, 26); x.lineTo(4, 6); x.lineTo(-4, 6); x.lineTo(-6, 26); x.lineTo(-18, 22); x.closePath();
+    x.fillStyle = rg(x, -8, -12, 1, 34, [[0, '#ffffff'], [0.3, '#b8c4d0'], [0.7, '#4a5462'], [1, '#14181e']]); x.fill(); outline(x, INK, 1.2);
+    x.fillStyle = '#05060a'; poly(x, [[-17, 8], [-5, 8], [-5, 13], [-15, 12]]); x.fill(); poly(x, [[17, 8], [5, 8], [5, 13], [15, 12]]); x.fill(); x.restore();
+    burst(x, R, 50, 36, 10, 4, 18, '#ffb050');
+    x.save(); x.translate(50, 18); x.rotate(PI); arrowUp(x, 0, 0, 0.9, '#ffd080'); x.restore();
+  },
+  scorched(x, R) {
+    tri(x, R, '#ff5a1a');
+    x.save(); add(x); x.fillStyle = rg(x, 50, 72, 2, 34, [[0, 'rgba(255,160,60,.8)'], [1, 'rgba(255,80,20,0)']]); ellipse(x, 50, 72, 36, 12); x.fill(); norm(x); x.restore();
+    for (const [px, h] of [[30, 28], [50, 40], [70, 30], [40, 22], [60, 24]]) fire(x, R, px, 76, h, 12, 0, { n: 3 });
+  },
+  vital(x, R) {
+    tri(x, R, '#ff4a6a');
+    x.strokeStyle = rgba('#ffd0d8', 0.95); x.lineWidth = 2; circle(x, 50, 52, 24); x.stroke(); circle(x, 50, 52, 12); x.stroke();
+    x.beginPath(); x.moveTo(50, 18); x.lineTo(50, 34); x.moveTo(50, 70); x.lineTo(50, 86); x.moveTo(16, 52); x.lineTo(32, 52); x.moveTo(68, 52); x.lineTo(84, 52); x.stroke();
+    for (const [a, s] of [[0.3, 1], [2.4, 0.8], [4.4, 0.9]]) { star(x, 50 + Math.cos(a) * 20, 52 + Math.sin(a) * 8 - 20, 5, 2.4 * s, 6 * s); x.fillStyle = '#ffe070'; x.fill(); outline(x, INK, 0.6); }
+    glow(x, 50, 52, 8, '#ff4a6a', 1);
   },
 };
 

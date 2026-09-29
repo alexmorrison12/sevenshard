@@ -220,9 +220,13 @@ export function buildPalette(g, app) {
   pal[SLOT.COAT] = mat(col.coat ?? col.primary ?? 0x4a3a2a, g.coatLeather ? 0.12 : 0, g.coatLeather ? DET.leather : DET.cloth);
   pal[SLOT.COAT2] = mat(col.coat2 ?? col.secondary ?? 0x2a2a2a, 0, DET.cloth);
   pal[SLOT.SASH] = mat(col.sash ?? col.secondary ?? 0xa02020, 0, DET.cloth);
+  pal[SLOT.SCLERA] = mat(0xf4efe9, 0.9, DET.none);
+  pal[SLOT.IRIS] = mat(app.eyes ?? 0x3a6ab0, 0.9, DET.none);
+  pal[SLOT.LASH] = mat(0x140e0c, 0.1, DET.none);
+  pal[SLOT.LIPS] = mat(app.skin, 0.2, DET.skin);
   // keep lit albedo below the bloom threshold under the strong sun (HDR pipeline): soft-cap bright colours
   for (let i = 0; i < NSLOT; i++) {
-    if (i === SLOT.GEM || i === SLOT.GLOW || i === SLOT.RUNE) continue;
+    if (i === SLOT.GEM || i === SLOT.GLOW || i === SLOT.RUNE || i === SLOT.SCLERA) continue;
     if (i === SLOT.SKIN || i === SLOT.SKIN2) { const c = pal[i].c; for (let k = 0; k < 3; k++) { const v = c[k]; c[k] = v < 0.6 ? v : 0.6 + (v - 0.6) * 0.6; } continue; }
     const c = pal[i].c;
     for (let k = 0; k < 3; k++) { const v = c[k]; c[k] = v < 0.45 ? v : 0.45 + (v - 0.45) * 0.45; }

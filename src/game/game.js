@@ -69,6 +69,7 @@ export class Game {
     this.visuals = new Visuals(this.scene, this.level);
     this.presenter.bind(this.level);
     if (this.net?.attach) this.net.attach(this.level);
+    this.renderer.resetAdapt?.();
     return this.level;
   }
   clearLevel() {

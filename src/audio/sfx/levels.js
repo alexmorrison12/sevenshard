@@ -29,6 +29,10 @@ export const TARGETS = {
   coin: -22, loot_drop: -21, loot_rare: -17, loot_legendary: -11.5, chest_open: -19, door_open: -20,
   mount_summon: -18, horse_gallop: -21, ship_bell: -18, cannon: -12, wave_splash: -19, sail_flap: -21,
   fishing_cast: -21, fishing_bite: -18, fishing_reel: -23, chop: -18, mine: -18, dig: -20, gather: -22, bell: -16,
+  // names used by the class kits / boss scripts
+  gunshot_heavy: -14.5, chain: -17, spike: -14, punch_heavy: -14.5, claw: -17, stomp: -11.5, cast: -21, frost: -17,
+  chi: -16, void: -14, vanish: -20, fire_burst: -14, ghost_slam: -12, ghost_wail: -13, roar: -13, charge_roar: -10.5,
+  channel: -24, spin: -19, fire_loop: -18,
 };
 export const LEVELS = {
   ui_hover: 2.58, ui_click: 1.622, ui_tab: 3.658, ui_open: 3.02, ui_close: 2.371, ui_error: 0.684,

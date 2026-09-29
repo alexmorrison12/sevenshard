@@ -93,6 +93,13 @@ export class Atlas {
     if (draw) { const g = this.g; g.save(); g.beginPath(); g.rect(r.x - 2, r.y - 2, w + 4, h + 4); g.clip(); g.translate(r.x, r.y); draw(g, w, h, r); g.restore(); }
     return r;
   }
+  /** Pack many regions at once (tallest first): spec { name: [w, h, draw] } → { name: region } */
+  pack(spec) {
+    const out = {};
+    const names = Object.keys(spec).sort((a, b) => spec[b][1] - spec[a][1] || spec[b][0] - spec[a][0]);
+    for (const k of names) out[k] = this.alloc(spec[k][0], spec[k][1], spec[k][2]);
+    return out;
+  }
   texture() {
     const t = new THREE.CanvasTexture(this.cv);
     t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;

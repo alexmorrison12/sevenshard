@@ -8,7 +8,7 @@ import { col } from '../../../kit/sdf.js';
 const _v = new THREE.Vector3(), _n = new THREE.Vector3(), _m3 = new THREE.Matrix3();
 
 // surface kinds understood by the guardian material (aux.z)
-export const K = { skin: 0, hard: 1, crystal: 2, membrane: 3, flame: 4, eye: 5, mouth: 6, lava: 7, hair: 8, water: 9 };
+export const K = { skin: 0, hard: 1, crystal: 2, membrane: 3, flame: 4, eye: 5, mouth: 6, lava: 7, hair: 8, water: 9, bolt: 10 };
 
 export class BossAcc {
   constructor() {

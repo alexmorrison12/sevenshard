@@ -180,6 +180,7 @@ export const cinderhorn = {
       erupt: { dur: 2.0, hits: [0.45] },
       tail_slam: { dur: 2.2, hits: [1.2] },
       roar: { dur: 2.6, hits: [1.0] },
+      channel: { dur: 2.0, hits: [1.0], loop: true },
       groggy: { dur: 3.0, hits: [], loop: true },
       death: { dur: 3.4, hits: [], hold: true },
     },

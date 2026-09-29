@@ -96,7 +96,7 @@ export function rimewingSpec(J) {
     const breath = Math.sin(t * TAU * mix(0.22, 0.45, Math.max(enr, run)));
     P.sc[b.chest].setScalar(1 + breath * 0.012);
     const hoverBob = -Math.sin(ph) * 0.28 * fly;
-    const alt = FLY_H * fly * ch.altMul;
+    const alt = FLY_H * fly * ch.altMul * ctl.liftK;
     ctl.lift = alt + hoverBob;
     const crouch = 0.12 * gr * (1 - run) + 0.25 * grog;
     P.move(b.body, G.sway * gr, G.bob * gr - crouch + alt + hoverBob + G.gOff, 0);
@@ -169,7 +169,8 @@ export function rimewingSpec(J) {
     const fly = ctl.fly;
     const bil = -Math.cos(u.flapPh * TAU) * 0.25 * fly + (u.W.L.open - fly) * 0.05;
     U.uBillow.value.set(bil, bil);
-    U.uGlowK.value = ctl.dead ? Math.max(0.05, U.uGlowK.value - dt * 0.4) : 1 + ctl.enrage * 0.35;
+    U.uGlowK.value = ctl.dead ? Math.max(0.05, U.uGlowK.value - dt * 0.4) : 1 + ctl.enrage * 0.35 + ch.heat * 0.9;
+    U.uTatter.value += ((ctl.broken.has('wings') ? 1 : 0) - U.uTatter.value) * (1 - Math.exp(-5 * dt));
   }
 
   // ---------------------------------------------------------------- actions
@@ -281,23 +282,69 @@ export function rimewingSpec(J) {
         for (let i = 0; i < 4; i++) P.rx(b['neck' + (i + 1)], (0.05 * flare - 0.08 * impact) * w);
       } },
 
-    dive: { dur: 2.9, fin: 0.15, fout: 0.3,
+    dive: { dur: 2.2, fin: 0.08, fout: 0.3,
+      // from the air: a quick flare, then a low swept-wing strafe along the line (claws forward), then pull up
       pre(ctl, a) {
         const t = a.t;
-        const up = bump(t, 0, 0.8, 0.9, 1.0), plunge = bump(t, 0.95, 1.4, 1.5, 2.6);
-        ctl.ch.altMul = 1 + 0.25 * up - 0.85 * plunge;
-        ctl.ch.pitchAir = 0.35 * up - 0.75 * bump(t, 0.95, 1.2, 1.25, 1.45) + 0.25 * bump(t, 1.45, 1.7, 1.9, 2.4);
+        const plunge = bump(t, 0.2, 0.45, 1.2, 1.65);
+        ctl.ch.altMul = 1 + 0.15 * bump(t, 0, 0.2, 0.25, 0.4) - 0.85 * plunge;
+        ctl.ch.pitchAir = 0.2 * bump(t, 0, 0.15, 0.2, 0.35) - 0.55 * bump(t, 0.2, 0.4, 0.5, 0.8) - 0.1 * plunge + 0.3 * bump(t, 1.2, 1.5, 1.7, 2.2);
       },
       fn(ctl, a, w) {
         const P = ctl.P, b = ctl.b, t = a.t;
-        const up = bump(t, 0, 0.8, 0.9, 1.0), plunge = bump(t, 0.95, 1.15, 1.4, 1.55), strike = bump(t, 1.3, 1.42, 1.5, 1.75), climb = bump(t, 1.5, 1.8, 2.4, 2.9);
-        wing(ctl, { flap: 0.9 * up - 0.1 * plunge + Math.cos(t * 7) * 0.6 * climb, tuck: 0.7 * plunge, sweep: -0.25 * plunge, lag: 0.35 * up - 0.3 * climb * Math.sin(t * 7), curl: 0.2 * up }, w);
-        const L = ctl.gait.legs;
-        for (const Lg of L.slice(2)) { const s = Lg.side; P.rx(b['thigh' + (s < 0 ? 'L' : 'R')], 1.4 * strike * w); P.rx(b['meta' + (s < 0 ? 'L' : 'R')], 0.6 * strike * w); }
-        for (let i = 0; i < 4; i++) P.rx(b['neck' + (i + 1)], (0.08 * up - 0.1 * plunge) * w);
-        P.rx(b.head, (-0.3 * up - 0.2 * plunge) * w);
-        ctl.ch.jaw = Math.max(ctl.ch.jaw, (0.6 * plunge + 0.4 * strike) * w);
+        const flare = bump(t, 0, 0.15, 0.2, 0.35), plunge = bump(t, 0.2, 0.4, 1.15, 1.35), strike = bump(t, 0.7, 0.9, 1.0, 1.3), climb = bump(t, 1.25, 1.5, 1.9, 2.2);
+        wing(ctl, { flap: 0.9 * flare - 0.15 * plunge + Math.cos(t * 8) * 0.6 * climb, tuck: 0.7 * plunge, sweep: -0.3 * plunge, lag: 0.3 * flare - 0.3 * climb * Math.sin(t * 8), curl: 0.2 * flare, open: 1 }, w);
+        for (const n of ['L', 'R']) { P.rx(b['thigh' + n], 1.5 * strike * w); P.rx(b['meta' + n], 0.6 * strike * w); }
+        for (let i = 0; i < 4; i++) P.rx(b['neck' + (i + 1)], (0.08 * flare - 0.12 * plunge) * w);
+        P.rx(b.head, (-0.25 * flare - 0.15 * plunge) * w);
+        ctl.ch.jaw = Math.max(ctl.ch.jaw, (0.5 * plunge + 0.4 * strike) * w);
+        ctl.ch.throat = Math.max(ctl.ch.throat, 0.6 * plunge * w);
       } },
+
+    pounce: { dur: 2.2, fin: 0.12, fout: 0.35, fn(ctl, a, w) {
+      // coils low glaring (counter window), springs with a wing beat, crashes down wing-knuckles first
+      const P = ctl.P, b = ctl.b, t = a.t;
+      const coil = bump(t, 0, 0.45, 0.95, 1.1), arc = Math.sin(clamp01((t - 1.05) / 0.52) * Math.PI) * (t > 1.05 && t < 1.57 ? 1 : 0), slam = bump(t, 1.5, 1.6, 1.7, 2.1);
+      const lash = Math.sin(t * 9) * coil;
+      P.move(b.body, 0, (-0.45 * coil + 1.2 * arc - 0.35 * slam) * w, (0.3 * coil - 0.6 * arc) * w);
+      P.rx(b.body, (-0.08 * coil + 0.25 * arc * (1 - clamp01((t - 1.05) / 0.52)) - 0.15 * slam) * w);
+      for (let i = 0; i < 4; i++) P.rx(b['neck' + (i + 1)], (-0.18 * coil + 0.05 * arc - 0.06 * slam) * w);
+      P.rx(b.head, (0.3 * coil - 0.05 * arc) * w);
+      for (let i = 0; i < 8; i++) P.ry(b['tail' + (i + 1)], lash * (0.05 + i * 0.02) * w);
+      wing(ctl, { open: 0.35 * coil + arc, flap: 0.5 * coil + 0.9 * arc * (t < 1.3 ? 1 : -0.6), fan: 0.5 * arc, sweep: 0.2 * arc }, w);
+      for (const L of ctl.gait.legs) if (L.id[0] === 'H') setLegOv(L, L.toe.x, 0.6, L.toe.z + 0.8, arc * w, true, -0.5);
+      ctl.ch.jaw = Math.max(ctl.ch.jaw, (0.25 * coil + 0.6 * arc + 0.4 * slam) * w);
+      ctl.ch.throat = Math.max(ctl.ch.throat, 0.5 * coil * w);
+    } },
+
+    roar: { dur: 2.2, fin: 0.15, fout: 0.4, fn(ctl, a, w) {
+      const P = ctl.P, b = ctl.b, t = a.t;
+      const rear = bump(t, 0, 0.55, 1.6, 2.05), roar = bump(t, 0.5, 0.8, 1.6, 1.95);
+      const shake = Math.sin(t * 38) * 0.03 * roar;
+      P.move(b.body, 0, 0.45 * rear * w, 0.4 * rear * w);
+      P.rot(b.body, 0.4 * rear * w, shake * w, shake * 0.5 * w);
+      const nr = [0.22, 0.12, -0.02, -0.14], nf = [-0.2, -0.14, -0.04, 0.1];
+      for (let i = 0; i < 4; i++) P.rot(b['neck' + (i + 1)], (nr[i] * rear + nf[i] * roar) * w, shake * w, 0);
+      P.rx(b.head, (0.3 * rear - 0.05 * roar) * w);
+      ctl.ch.jaw = Math.max(ctl.ch.jaw, 0.95 * roar * w);
+      ctl.ch.throat = Math.max(ctl.ch.throat, 1.3 * roar * w);
+      wing(ctl, { open: rear, flap: 0.55 * rear + Math.sin(t * 22) * 0.06 * roar, sweep: 0.15 * rear, fan: 0.8, twist: -0.15 * rear }, w);
+    } },
+
+    channel: { dur: 2.0, loop: true, fin: 0.6, fadeOut: 0.5, fn(ctl, a, w) {
+      // Absolute Zero: reared up, wings spread high and trembling, gullet to the sky, every crystal blazing
+      const P = ctl.P, b = ctl.b, t = a.t;
+      const beat = Math.pow(0.5 + 0.5 * Math.sin(t / 2.0 * TAU - 1.3), 2), tr = Math.sin(t * 31) * 0.02;
+      P.move(b.body, 0, 0.55 * w, 0.45 * w);
+      P.rot(b.body, 0.5 * w, tr * w, tr * w);
+      const nk = [0.3, 0.2, 0.1, 0.0];
+      for (let i = 0; i < 4; i++) P.rot(b['neck' + (i + 1)], (nk[i] + 0.04 * beat) * w, tr * w, 0);
+      P.rx(b.head, (0.45 + 0.1 * beat) * w);
+      ctl.ch.jaw = Math.max(ctl.ch.jaw, (0.5 + 0.25 * beat) * w);
+      ctl.ch.throat = Math.max(ctl.ch.throat, (1.2 + 0.6 * beat) * w);
+      ctl.ch.heat = Math.max(ctl.ch.heat, (0.6 + 0.5 * beat) * w);
+      wing(ctl, { open: 1, flap: 0.95 + Math.sin(t * 26) * 0.04, sweep: 0.2, fan: 1, twist: -0.25 }, w);
+    } },
 
     ice_spikes: { dur: 3.1, fin: 0.2, fout: 0.4, fn(ctl, a, w) {
       const P = ctl.P, b = ctl.b, t = a.t;

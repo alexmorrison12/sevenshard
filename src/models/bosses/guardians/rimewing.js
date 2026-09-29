@@ -328,8 +328,8 @@ function parts({ acc, macc, S, rig: R, b }) {
 // ---------------------------------------------------------------- definition
 export const rimewing = {
   info: {
-    name: 'Rimewing', title: 'Tyrant of the Frozen Skies', height: 4.4, radius: 3.2, flyHeight: 5.5, wingspan: 12,
-    parts: ['crest', 'tail'],
+    name: 'Rimewing', title: 'Tyrant of the Frozen Sky', height: 4.4, radius: 3.2, flyHeight: 5.5, wingspan: 12,
+    parts: ['wings', 'crest', 'tail'],
     actions: {
       idle: { dur: 4, hits: [], loop: true },
       walk: { dur: 1.35, hits: [], loop: true, speed: 3 },
@@ -342,7 +342,10 @@ export const rimewing = {
       breath: { dur: 3.8, hits: [1.35, 1.75, 2.15, 2.55, 2.95] },
       takeoff: { dur: 2.4, hits: [0.8] },
       fly: { dur: 1.25, hits: [], loop: true },
-      dive: { dur: 2.9, hits: [1.42], move: { dist: 16, t0: 0.95, t1: 1.75 } },
+      dive: { dur: 2.2, hits: [0.9], move: { dist: 16, t0: 0.35, t1: 1.3 } },
+      pounce: { dur: 2.2, hits: [1.6], counter: [0.1, 1.05], move: { dist: 8, t0: 1.05, t1: 1.55 } },
+      roar: { dur: 2.2, hits: [0.9] },
+      channel: { dur: 2.0, hits: [1.0], loop: true },
       land: { dur: 2.0, hits: [1.15] },
       ice_spikes: { dur: 3.1, hits: [1.6, 2.15] },
       wing_gust: { dur: 2.5, hits: [1.2, 1.6] },
@@ -362,6 +365,7 @@ export const rimewing = {
   },
 };
 rimewing.breakable = {
+  wings: { socket: 'wingL' },   // membranes tear (uTatter) — the game grounds her
   crest: { bone: 'crest', socket: 'crest' },
   tail: { bone: 'blade', socket: 'tail' },
 };

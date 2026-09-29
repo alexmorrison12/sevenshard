@@ -76,6 +76,8 @@ export function kuraiSpec(J, T) {
 
   function finish(ctl, dt) {
     const P = ctl.P, b = ctl.b, u = ctl.u, ch = ctl.ch, t = ctl.t, Tp = u.T;
+    const broken = ctl.broken.has('tails');
+    if (broken) ch.flame *= 0.7;
     for (let i = 0; i < NT; i++) {
       const a = tailA[i], e = tailE[i], f = (i - 4) / 4;
       for (let j = 0; j < TB; j++) {
@@ -90,6 +92,7 @@ export function kuraiSpec(J, T) {
           yaw += Tp.whip * 0.25 * j - Tp.wrap * Math.sign(f || 0.01) * 0.35;
         }
         roll = Tp.twist * f * 0.4;
+        if (broken && (i < 2 || i > 6)) { pitch += j === 0 ? 0.9 : 0.25; yaw *= 0.3; }   // broken tails hang limp
         P.rot(bi, pitch, yaw, roll);
       }
     }
@@ -254,6 +257,18 @@ export function kuraiSpec(J, T) {
       ctl.u.ear = mix(ctl.u.ear, -0.5, (lie + howl) * w);
     } },
 
+    channel: { dur: 2.0, loop: true, fin: 0.5, fadeOut: 0.5, fn(ctl, a, w) {
+      // sits tall gathering fire: tails fanned high like a burning halo, flames swelling with every beat
+      const P = ctl.P, b = ctl.b, t = a.t, beat = Math.pow(0.5 + 0.5 * Math.sin(t / 2.0 * TAU - 1.2), 2);
+      P.move(b.body, 0, -0.3 * w, 0.3 * w); P.rx(b.body, 0.28 * w); P.rx(b.hips, 0.12 * w);
+      P.rx(b.neck1, 0.3 * w); P.rx(b.head, (0.15 + 0.05 * beat) * w);
+      tails(ctl, { fan: 1.9, lift: 0.7, curl: -0.6, sway: 0.5 + beat * 0.3, twist: 0.3 }, w);
+      ctl.ch.flame = Math.max(ctl.ch.flame, 1.3 + 0.7 * beat);
+      ctl.ch.flash = Math.max(ctl.ch.flash, 0.2 * beat * w);
+      ctl.ch.jaw = Math.max(ctl.ch.jaw, 0.2 * w);
+      for (const L of ctl.gait.legs) if (L.id[0] === 'R') setLegOv(L, L.toe.x * 1.1, 0, L.toe.z - 0.35, w, false);
+    } },
+
     groggy: { dur: 3.0, loop: true, fin: 0.4, pre(ctl, a, w) { ctl.ch.groggy = Math.max(ctl.ch.groggy, w); }, fn(ctl, a, w) {
       const P = ctl.P, b = ctl.b, tt = a.t % 3;
       const shake = bump(tt, 1.9, 2.05, 2.4, 2.6);
@@ -276,5 +291,5 @@ export function kuraiSpec(J, T) {
       }
     } },
   };
-  return { gait, init, channels, base, finish, material, actions: A };
+  return { gait, init, channels, base, finish, material, actions: A, aliases: { roar: 'howl' } };
 }

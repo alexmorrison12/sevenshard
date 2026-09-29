@@ -128,7 +128,8 @@ export function sidePath(H, u0, u1, yFn, side, n = 40, out = 0) {
 /** paint: { hull(x, y, z, u) → rgb, deck → rgb | fn, inner → rgb, cap → rgb, capMetal, bulkhead → rgb, transom(x, y) → rgb } */
 export function buildHull(wb, H, paint, opt = {}) {
   const c = H.c, keel = c.keel, th = c.thick ?? 0.14;
-  const NU = opt.nu ?? 64, NS = opt.ns ?? 30;
+  const NU = opt.nu ?? 48, NS = opt.ns ?? 22;
+  const ys = s => 1 - Math.pow(1 - s, 1.5);   // fewer rows below the waterline
   const us = []; // stations 0 → 1, denser at both ends (round bow, tucked stern)
   for (let i = 0; i <= NU; i++) { const t = i / NU; us.push(lerp(t, 0.5 - 0.5 * Math.cos(Math.PI * t), 0.6)); }
   // ---- outer shell (both sides)
@@ -138,14 +139,14 @@ export function buildHull(wb, H, paint, opt = {}) {
       const u = us[i], yT = H.railY(u), col = [];
       let g = 0, prev = null;
       for (let j = NS; j >= 0; j--) {
-        const y = keel + (yT - keel) * (j / NS), p = H.P(u, y, side);
+        const y = keel + (yT - keel) * ys(j / NS), p = H.P(u, y, side);
         if (prev) g += p.distanceTo(prev);
         prev = p; col[j] = g;
       }
       girth.push(col);
     }
     const geo = gridGeo(NU, NS, (i, j) => {
-      const u = us[i], y = keel + (H.railY(u) - keel) * (j / NS), p = H.P(u, y, side);
+      const u = us[i], y = keel + (H.railY(u) - keel) * ys(j / NS), p = H.P(u, y, side);
       return [p.x, p.y, p.z, p.z / TU, girth[i][j] / TV + 0.013];
     }, side < 0);
     wb.add(geo, null, { uv: 'keep', color: (p) => paint.hull(p.x, p.y, p.z, H.uAtZ(p.z, p.y)), d: paint.hullDetail ?? 1 });
@@ -191,20 +192,20 @@ export function buildHull(wb, H, paint, opt = {}) {
   }
   // ---- rail caps (sides + taffrail)
   const capW = c.capW ?? 0.1, capH = c.capH ?? 0.07, capOut = c.capOut ?? 0.05;
-  const capProf = [[-th - 0.03, -0.02], [capOut, -0.02], [capOut, capH], [-th - 0.03, capH]];
+  const capProf = [[capOut, -0.03], [capOut, capH], [-th - 0.03, capH], [-th - 0.03, -0.03]];
   for (const side of [-1, 1]) {
     const path = [];
-    const n = 90;
+    const n = 64;
     for (let i = 0; i <= n; i++) {
-      const u = Math.min(0.997, i / n), f = H.frame(u, H.railY(u), side);
+      const u = Math.min(0.997, lerp(0, 1, i / n)), f = H.frame(u, H.railY(u), side);
       path.push({ o: f.o, A: f.N.clone().setY(0).normalize(), B: V3(0, 1, 0) });
     }
-    sweep(wb, path, capProf, { color: paint.cap, metal: paint.capMetal || 0, d: 0.8 });
+    sweep(wb, path, capProf, { color: paint.cap, metal: paint.capMetal || 0, d: 0.8, closed: false });
   }
   {
     const yT = H.railY(0), w = H.hb(yT, 0), path = [];
     for (let i = 0; i <= 8; i++) { const x = lerp(-w, w, i / 8); path.push({ o: V3(x, yT, H.zStern(yT)), A: V3(0, 0, 1), B: V3(0, 1, 0) }); }
-    sweep(wb, path, capProf, { color: paint.cap, metal: paint.capMetal || 0, d: 0.8 });
+    sweep(wb, path, capProf, { color: paint.cap, metal: paint.capMetal || 0, d: 0.8, closed: false });
   }
   // ---- bulkheads at deck breaks (facing the lower deck)
   for (let i = 0; i < H.decks.length - 1; i++) {
@@ -219,6 +220,6 @@ export function buildHull(wb, H, paint, opt = {}) {
     // deck-edge fascia (a moulding along the top of the bulkhead)
     const w = H.hb(hi, ub) - th, z = H.zAt(ub, hi), path = [];
     for (let k = 0; k <= 6; k++) path.push({ o: V3(lerp(-w, w, k / 6), hi, z), A: V3(0, 0, aftHigh ? -1 : 1), B: V3(0, 1, 0) });
-    sweep(wb, path, [[-0.02, -0.16], [0.07, -0.16], [0.07, 0.03], [-0.02, 0.03]], { color: paint.cap, metal: paint.capMetal || 0, d: 0.8 });
+    sweep(wb, path, [[-0.02, -0.16], [0.07, -0.16], [0.07, 0.03], [-0.02, 0.03]], { color: paint.cap, metal: paint.capMetal || 0, d: 0.8, closed: false });
   }
 }

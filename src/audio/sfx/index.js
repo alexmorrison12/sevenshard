@@ -19,5 +19,7 @@ export const CATEGORIES = {
 };
 export const SFX = { ...UI, ...COMBAT, ...MAGIC, ...CREATURES, ...MOVE, ...LOOT, ...TRAVEL, ...CRAFT };
 for (const [name, g] of Object.entries(LEVELS)) if (SFX[name]) SFX[name].gain = g;
+// aliases: names used by the game data that map onto an existing recipe
+export const ALIAS = { gunshot: 'gun', blink: 'teleport' };
 export const SFX_NAMES = Object.keys(SFX).filter((k) => !SFX[k].hidden);
 export const LOOP_NAMES = Object.keys(SFX).filter((k) => SFX[k].loop);

@@ -5,7 +5,7 @@ import {
 } from './core.js';
 import { greatsword, longsword, curvedBlade, glaive, pistol, harp, staff, fist, palm, book } from './motifs.js';
 import { ENGRAVING_PAINTERS } from './emblems.js';
-import { ENGR_COMBAT, ENGR_CLASS, CLASSES } from './ids.js';
+import { ENGR_COMBAT, ENGR_CLASS, ENGR_NEG, CLASSES } from './ids.js';
 
 const INK = 'rgba(6,4,8,.92)';
 /** Tier looks: story (iron/leather), Vanguard (silver/gold/blue), Horned Tyrant (obsidian/crimson, glowing, horned). */
@@ -263,7 +263,7 @@ const CLASS_OF = {}; for (const c in ENGR_CLASS) for (const e of ENGR_CLASS[c]) 
 const CLASS_COVER = { reaver: '#8a1a22', oathkeeper: '#2a4a8a', stormfist: '#1a4a7a', pistoleer: '#6a3a14', starcaller: '#4a2a8a', songweaver: '#8a3a4a', bladedancer: '#3a2a6a', demonbound: '#3a0e2e' };
 function engrBook(x, R, e) {
   const cls = CLASS_OF[e];
-  const cover = cls ? CLASS_COVER[cls] : '#2a3448';
+  const cover = cls ? CLASS_COVER[cls] : e.startsWith('neg_') ? '#4a1414' : '#2a3448';
   x.save(); x.translate(52, 52); x.rotate(-0.08);
   book(x, 54, 70, cover, { trim: cls ? 'gold' : 'silver' });
   // emblem medallion on the cover
@@ -281,4 +281,4 @@ for (const c of CLASSES) {
 for (const s in ARMOR) for (const tk of ['t0', 't1', 't2']) GEAR_PAINT[`item:${s}:${tk}`] = (x, R) => ARMOR[s](x, R, TIER[tk]);
 for (const a in ACC) GEAR_PAINT[`item:${a}`] = ACC[a];
 for (const k of ['ruin', 'swift']) for (let i = 1; i <= 10; i++) GEAR_PAINT[`item:gem:${k}:${i}`] = (x, R) => gemIcon(x, R, k, i);
-for (const e of [...ENGR_COMBAT, ...Object.values(ENGR_CLASS).flat()]) GEAR_PAINT[`item:book:${e}`] = (x, R) => engrBook(x, R, e);
+for (const e of [...ENGR_COMBAT, ...Object.values(ENGR_CLASS).flat(), ...ENGR_NEG]) GEAR_PAINT[`item:book:${e}`] = (x, R) => engrBook(x, R, e);

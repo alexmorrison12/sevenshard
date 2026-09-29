@@ -5,6 +5,7 @@ import { wolf } from './wolf.js';
 import { boar } from './boar.js';
 import { spider } from './spider.js';
 import { crab } from './crab.js';
+import { treant } from './treant.js';
 
-export const BEASTS = { wolf, boar, spider, crab };
+export const BEASTS = { wolf, boar, spider, crab, treant };
 export const { createCreature, CREATURES, creatureStats } = makeRegistry(BEASTS);

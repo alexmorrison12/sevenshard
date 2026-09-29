@@ -147,17 +147,20 @@ const PRIM = {
 };
 
 // ------------------------------------------------------------------ galleries
-function telegraphGallery() {
+function telegraphGallery(page = 0) {
   fx.reset();
+  boss.root.visible = false; hero.root.visible = false;
   const cols = ['red', 'orange', 'blue', 'purple', 'yellow', 'white'];
-  const shapes = [
-    { shape: 'circle', radius: 1.6 }, { shape: 'cone', radius: 2.8, angle: 1.4 }, { shape: 'rect', length: 3.6, width: 1.8 },
-    { shape: 'donut', radius: 1.8, inner: 0.9 }, { shape: 'line', length: 3.6, width: 0.8 }, { shape: 'wedges', radius: 1.8, count: 8 },
-  ];
+  const shapes = page === 0 ? [
+    { shape: 'circle', radius: 1.15 }, { shape: 'cone', radius: 2.2, angle: 1.4 }, { shape: 'rect', length: 2.3, width: 1.4 },
+    { shape: 'donut', radius: 1.2, inner: 0.65 }, { shape: 'line', length: 2.3, width: 0.6 }, { shape: 'wedges', radius: 1.2, count: 8 },
+  ] : [{ shape: 'circle', radius: 3 }, { shape: 'cone', radius: 5, angle: 2.2 }];
+  const dx = page === 0 ? 3.6 : 7, dz = page === 0 ? 2.55 : 7;
   shapes.forEach((s, j) => cols.forEach((c, i) => {
-    const pos = new THREE.Vector3(-10 + i * 4, 0, -8 + j * 3.6);
-    const dir = s.shape === 'cone' || s.shape === 'rect' || s.shape === 'line' ? new THREE.Vector3(0, 0, -1) : fwd;
-    fx.telegraph({ ...s, pos: s.shape === 'cone' || s.shape === 'rect' || s.shape === 'line' ? pos.clone().add(new THREE.Vector3(0, 0, 1.6)) : pos, dir, color: c, dur: (c === 'yellow' || c === 'white') ? undefined : 3 + i * 0.4 + j * 0.2 });
+    const pos = new THREE.Vector3((i - 2.5) * dx, 0, -1.2 + (j - (shapes.length - 1) / 2) * dz);
+    const dir = new THREE.Vector3(0, 0, -1);
+    const along = s.shape === 'cone' || s.shape === 'rect' || s.shape === 'line';
+    fx.telegraph({ ...s, pos: along ? pos.clone().add(new THREE.Vector3(0, 0, 1.1)) : pos, dir, color: c, dur: (c === 'yellow' || c === 'white') ? undefined : 3 + i * 0.3 + j * 0.15 });
   }));
 }
 function numberStorm(n = 300) {
@@ -219,7 +222,7 @@ function resume() { lab.paused = false; }
 const P = lab.panel;
 const info = P.text('');
 setInterval(() => { const s = fx.stats(); info.set(`tasks ${s.tasks} · tele ${s.telegraphs} · decals ${s.decals}\nfx draws ${s.drawCalls} · init ${s.initMs} ms`); }, 500);
-P.button('Reset', () => { fx.reset(); stress(false); });
+P.button('Reset', () => { fx.reset(); stress(false); boss.root.visible = true; hero.root.visible = true; });
 P.button('Stress (4 players × 60 mobs)', () => stress());
 P.button('Telegraph gallery', telegraphGallery);
 P.button('Damage-number storm', () => numberStorm());
@@ -233,6 +236,6 @@ for (const g in groups) { P.label(g); P.buttons(groups[g], k => play(k)); }
 let wx = null;
 function setWeather(kind) { wx?.stop(); wx = kind && kind !== 'none' ? fx.weather(kind) : null; }
 
-window.fxLab = { fx, lab, hero, boss, party, mobs, play, prim: k => PRIM[k](), PRIM, at, resume, gallery: telegraphGallery, storm: numberStorm, stress, weather: setWeather, reset: () => fx.reset(), swing };
+window.fxLab = { fx, lab, hero, boss, party, mobs, play, prim: k => PRIM[k](), PRIM, at, resume, gallery: telegraphGallery, storm: numberStorm, stress, weather: setWeather, reset: () => { fx.reset(); boss.root.visible = true; hero.root.visible = true; }, swing };
 if (Q.get('fx')) { const t = +(Q.get('t') || 0); setTimeout(() => { if (t > 0) at(Q.get('fx'), t); else if (PRIM[Q.get('fx')]) PRIM[Q.get('fx')](); else play(Q.get('fx')); }, 300); }
 console.log('[fx-lab] ready', fx.stats());

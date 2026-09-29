@@ -15,7 +15,7 @@ K.greatsword_cleave = (fx, p) => {
   const c = ctx(fx, p, null, 4.2), s = c.s, col = tc(c.tint, CRIMSON, 2.4);
   const pos = vec(c.x, c.y, c.z);
   slash(fx, { pos, dir: c.f, radius: c.R, arc: p.arc ?? 3.0, color: col, intensity: 1, width: c.R * 0.46, style: 'h', dur: 0.34, flip: p.flip });
-  slash(fx, { pos, dir: c.f, radius: c.R * 0.72, arc: 2.6, color: [1.6, 1.4, 1.2], intensity: 1, width: c.R * 0.18, style: 'h', dur: 0.26, glow: false, sparks: false, flip: p.flip, delay: 0.02 });
+  slash(fx, { pos, dir: c.f, radius: c.R * 0.72, arc: 2.6, color: [col[0] * 0.8 + 0.5, col[1] * 0.8 + 0.35, col[2] * 0.8 + 0.3], intensity: 1, width: c.R * 0.18, style: 'h', dur: 0.26, glow: false, sparks: false, flip: p.flip, delay: 0.02 });
   // dust + sparks kicked up along the swept ground
   const o = fx.o(s * 0.9, null);
   for (let i = 0; i < fx.n(10); i++) {
@@ -136,8 +136,8 @@ K.chain_throw = {                    // chain flies to the target, hooks, retrac
     T.v.end = vec(c.x + c.f.x * L, c.y + 1.0, c.z + c.f.z * L);
     if (p.target) T.v.end.set(c.tx, c.ty + 1.0, c.tz);
     T.v.from = from.isObject3D ? from : vec(c.x + c.rt.x * 0.4, c.y + 1.2, c.z + c.rt.z * 0.4);
-    T.v.b = fx.ribbons.beam({ from: T.v.from, to: T.v.end, kind: 'chain', width: 0.26 * c.s, dur: Infinity, reach: 0.02, grow: 70, fade: 0.1, color: [0.6, 0.56, 0.52] }, 'chain');
-    T.v.glow = fx.ribbons.beam({ from: T.v.from, to: T.v.end, width: 0.5 * c.s, dur: Infinity, reach: 0.02, grow: 70, fade: 0.1, color: tc(c.tint, CRIMSON, 0.9) }, 'energy');
+    T.v.b = fx.ribbons.beam({ from: T.v.from, to: T.v.end, kind: 'chain', width: 0.36 * c.s, dur: Infinity, reach: 0.02, grow: 70, fade: 0.1, color: [0.7, 0.66, 0.62] }, 'chain');
+    T.v.glow = fx.ribbons.beam({ from: T.v.from, to: T.v.end, width: 0.7 * c.s, dur: Infinity, reach: 0.02, grow: 70, fade: 0.1, color: tc(c.tint, CRIMSON, 0.35) }, 'energy');
     T.dur = p.dur ?? 0.75;
   },
   tick(T) {

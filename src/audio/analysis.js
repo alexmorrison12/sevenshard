@@ -65,10 +65,10 @@ export async function renderMusic(name, seconds, { seed = 7, step = 0.1, log = t
   grab();
   return { buf, log: logs, stats: { ...mu.stats } };
 }
-export async function renderAmbience(kind, seconds, { seed = 3, step = 0.1, raw = false } = {}) {
+export async function renderAmbience(kind, seconds, { seed = 3, step = 0.1, raw = false, mix = null } = {}) {
   const [oac, a] = mk(seconds, seed, raw);
-  await prepareAmbience(a, kind);
-  at(oac, 0, () => { a.ambience(kind); a._tick(); });
+  await prepareAmbience(a, kind, mix);
+  at(oac, 0, () => { a.ambience(kind, mix ? { mix } : {}); a._tick(); });
   for (let t = step; t < seconds; t += step) { const tt = +t.toFixed(4); at(oac, tt, () => a._tick()); }
   return trim(await oac.startRendering());
 }

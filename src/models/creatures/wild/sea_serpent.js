@@ -18,9 +18,9 @@ import { sstep, clamp01, mix, TAU, frameRot } from '../../kit/rig.js';
 import { loftZ, chainSkin, fanSheet, twoSided, fkBones, topAt, V3 } from './common.js';
 
 const PAL = {
-  abyssal: { back: 0x123844, side: 0x2a6c72, belly: 0xd6e0bc, band: 0x0a2430, spot: 0x6ff6ff, spotEm: 1.15, fin: 0x1f7a80, finEdge: 0x7ae8d8, finEm: 0.32, spine: 0x0a2228, horn: 0x16222a, hornTip: 0xd8e8d8, mouth: 0x4a1020, gum: 0x7a2034, tongue: 0x9a3448, tooth: 0xf2ecd8, eye: 0x7affe8, eyeGlow: 3.2 },
-  coral: { back: 0x7e1a1a, side: 0xc8562a, belly: 0xf4dcb0, band: 0x4a0a0e, spot: 0xffd070, spotEm: 0, fin: 0xd8782a, finEdge: 0xffe0a0, finEm: 0, spine: 0x4a0c0e, horn: 0x34120e, hornTip: 0xf4e0b8, mouth: 0x3e0a12, gum: 0x8a2230, tongue: 0xa83a44, tooth: 0xfff4dc, eye: 0xffc040, eyeGlow: 3.0 },
-  leviathan: { back: 0x0c121c, side: 0x1c2a3c, belly: 0x98a4b0, band: 0x04060a, spot: 0x60e8ff, spotEm: 1.8, fin: 0x16324c, finEdge: 0x60e0ff, finEm: 0.8, spine: 0x04060a, horn: 0x080a10, hornTip: 0xb0e8ff, mouth: 0x300820, gum: 0x5a1432, tongue: 0x7a2448, tooth: 0xe8f0f4, eye: 0xa0faff, eyeGlow: 4.5 },
+  abyssal: { back: 0x123844, side: 0x2a6c72, belly: 0xd6e0bc, band: 0x0a2430, spot: 0x6ff6ff, spotEm: 1.15, fin: 0x1a6a70, finEdge: 0x4ec4b4, finEm: 0.3, spine: 0x0a2228, horn: 0x16222a, hornTip: 0xd8e8d8, mouth: 0x4a1020, gum: 0x7a2034, tongue: 0x9a3448, tooth: 0xf2ecd8, eye: 0x7affe8, eyeGlow: 3.2 },
+  coral: { back: 0x7e1a1a, side: 0xc8562a, belly: 0xf4dcb0, band: 0x4a0a0e, spot: 0xffd070, spotEm: 0, fin: 0xb85a1c, finEdge: 0xe0a050, finEm: 0, spine: 0x4a0c0e, horn: 0x34120e, hornTip: 0xf4e0b8, mouth: 0x3e0a12, gum: 0x8a2230, tongue: 0xa83a44, tooth: 0xfff4dc, eye: 0xffc040, eyeGlow: 3.0 },
+  leviathan: { back: 0x0c121c, side: 0x1c2a3c, belly: 0x98a4b0, band: 0x04060a, spot: 0x60e8ff, spotEm: 1.8, fin: 0x16324c, finEdge: 0x3aa8d0, finEm: 0.8, spine: 0x04060a, horn: 0x080a10, hornTip: 0xb0e8ff, mouth: 0x300820, gum: 0x5a1432, tongue: 0x7a2448, tooth: 0xe8f0f4, eye: 0xa0faff, eyeGlow: 4.5 },
 };
 
 // ------------------------------------------------------------------------------------------------ proportions (rest pose)
@@ -59,7 +59,7 @@ export const sea_serpent = {
     return {
       variant: v, pal: PAL[v], elite, shapeKey: elite ? 'elite' : 'base', scale: elite ? 1.3 : 1,
       h: 0.068, hg: { 1: 0.06 }, ao: { dist: 0.07, str: 0.75 }, grad: { top: 0.15, bottom: 0.3 }, castShadow: true,
-      mat: { dfreq: 0.95, rim: 0.3, rimColor: 0xbfe8ff, spec: 0.26, shine: 40, wrap: 0.45 }, sphereMul: 2.2,
+      mat: { dfreq: 0.95, rim: 0.2, rimColor: 0xbfe8ff, spec: 0.2, shine: 36, wrap: 0.45 }, sphereMul: 2.2,
     };
   },
   rig(R) {
@@ -112,10 +112,13 @@ export const sea_serpent = {
       v.mix(c.belly, sstep(-0.2, -0.75, ny) * 0.9);
       if (v.t('mouthL') > 0.2 || v.t('tongue') > 0.4) { v.mix(v.t('tongue') > 0.4 ? c.tongue : c.mouth, 0.9); v.aoMul = 0.4; }
     }
-    // spotted scales on the head for the glowing variants
-    if (c.spotEm && v.group === 0 && ny > -0.2) {
-      const sp = Math.sin(x * 21 + 1.3) * Math.sin(z * 17 + y * 9);
-      if (sp > 0.93 && Math.abs(x) > 0.12) { v.mix(c.spot, 0.9); v.emis = c.spotEm * 0.7; }
+    // lantern dots: a row along each upper jaw line and a pair behind each eye (glowing variants)
+    if (c.spotEm && v.group === 0 && Math.abs(x) > 0.14) {
+      let d = 1e9;
+      for (let k = 0; k < 5; k++) { const zk = -0.62 - k * 0.19, yk = 0.0 - k * 0.012; d = Math.min(d, Math.hypot(z - zk, (y - yk) * 1.3)); }
+      d = Math.min(d, Math.hypot(z + 0.62, y - 0.2), Math.hypot(z + 0.45, y - 0.17));
+      const dot = 1 - sstep(0.035, 0.075, d);
+      if (dot > 0.01) { v.mix(c.spot, dot * 0.9); v.emis = Math.max(v.emis, c.spotEm * 0.7 * dot); }
     }
     v.mul(1 + Math.sin(x * 13 + z * 7) * Math.sin(y * 11) * 0.05);
   },
@@ -137,7 +140,7 @@ export const sea_serpent = {
       color: (p, n, uv) => {
         const s = p.z, ry = ryAt(s), rx = rxAt(s);
         const up = clamp01(Math.abs(p.y) / Math.max(1e-3, ry)) * Math.sign(p.y), lat = p.x / Math.max(1e-3, rx);
-        const dors = sstep(0.05, 0.8, up), belly = sstep(-0.35, -0.72, up);
+        const dors = sstep(0.05, 0.8, up), belly = sstep(-0.5, -0.8, up) * (1 - 0.45 * sstep(6, 9, s));
         let cc = lerp3(cSide, cBack, dors);
         // wavy saddle bands across the back and flanks
         const band = sstep(0.45, 0.85, Math.sin(s * 3.6 + Math.sin(s * 1.1) * 1.4 + lat * 0.7)) * sstep(-0.3, 0.4, up) * (1 - sstep(19, 21.5, s));
@@ -181,6 +184,13 @@ export const sea_serpent = {
       g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
       g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
       g.setIndex(ix); g.computeVertexNormals();
+      // pleat the membrane between spines (breaks up the mirror-like highlight of a flat sheet)
+      const na = g.attributes.normal, pa = g.attributes.position;
+      for (let i = 0; i < na.count; i++) {
+        const q = Math.cos(((pa.getZ(i) - 0.2) / SPINE_GAP) * TAU) * 0.55;
+        const x = na.getX(i), y = na.getY(i), z = na.getZ(i) + q * Math.sign(x || 1), l = Math.hypot(x, y, z) || 1;
+        na.setXYZ(i, x / l, y / l, z / l);
+      }
       return g;
     };
     const finCol = (p, n, uv) => { const f = uv[0], s = uv[1], pk = spinePeak(s); return lerp3(lerp3(cFin, cEdge, sstep(0.35, 1, f)), cSp, sstep(0.55, 0.95, pk) * (0.5 + 0.5 * f) * 0.85); };
@@ -297,7 +307,7 @@ export class SerpentCtl extends BaseCtl {
     this.ex = Math.sin(t * 0.37 - 1.2) * 0.18; this.ey = -0.25; this.ez = 1.0 + 0.3 * sw;
     this.tx = 0; this.ty = -1; this.tz = 0.3 + 0.5 * sw;
     this.a1 = 1.35; this.a2 = 2.3; this.bulge = 0.5 + 0.1 * Math.sin(t * 0.5);
-    this.wA = 1.4 - 0.25 * sw; this.wMid = 0.22; this.wL = 5.0; this.coil = 0.75; this.wSpd = Math.max(0.9, Math.abs(this.speedSm)) * Math.sign(this.speedSm || 1);
+    this.wA = 1.4 - 0.25 * sw; this.wMid = 0.22; this.wL = 5.0; this.coil = 0.45; this.wSpd = Math.max(0.9, Math.abs(this.speedSm)) * Math.sign(this.speedSm || 1);
     this.sinkH = 0; this.sinkB = 0; this.bend = this.turnSm * 0.018; this.tailUp = 0;
     this.jaw = 0.05 + 0.04 * Math.sin(t * 0.9) + 0.18 * c; this.frill = 0.12 + 0.55 * c + 0.1 * Math.sin(t * 0.7); this.glow = 1; this.throat = 0;
   }
@@ -373,14 +383,15 @@ export class SerpentCtl extends BaseCtl {
     // body: helical travelling wave behind the water entry; a decaying correction term keeps position & tangent
     // continuous with the neck curve at the entry point
     const k = TAU / this.wL, ph = this.ph, tau = 0.8, tzs = Math.max(0.08, tz);
-    const c0 = ey - this.wMid, c1 = ty / tzs + c0 / tau, d1 = tx / tzs;
-    const sinkD = this.sinkB - this.sinkH;
+    const c0 = this.ey - this.wMid, c1 = ty / tzs + c0 / tau, d1 = tx / tzs;
+    const sH = this.sinkH, sB = this.sinkB;
     for (let j = 1; j <= NB; j++) {
       const u = j * DU;
-      const env = sstep(0.3, 2.6, u) * (1 - 0.3 * sstep(9, 15, u));
+      const env = sstep(0.9, 3.4, u) * (1 - 0.3 * sstep(9, 15, u));
       const ang = k * u - ph;
       const dec = Math.exp(-u / tau);
-      const y = this.wMid + this.wA * env * Math.sin(ang) + (c0 + c1 * u) * dec - sinkD * sstep(0.5, 5, u) + this.tailUp * sstep(8, 12, u);
+      const off = sH + (sB - sH) * sstep(0.5, 5, u);
+      const y = this.wMid + this.wA * env * Math.sin(ang) + (c0 + c1 * u) * dec - off + this.tailUp * sstep(8, 12, u);
       const x = ex + this.coil * env * Math.cos(ang) + d1 * u * dec + this.bend * u * u;
       px[n] = x; py[n] = y; pz[n] = ez + u;
       n++;
@@ -410,8 +421,8 @@ const ACTIONS = {
     const k = a.k, t = a.t;
     const wind = env2(k, 0, 0.34, 0.36, 0.46), strike = env2(k, 0.36, 0.49, 0.64, 0.95), shake = env2(k, 0.5, 0.54, 0.6, 0.66);
     ctl.hz += 1.1 * wind * w; ctl.hy += 0.75 * wind * w; ctl.hpitch += 0.4 * wind * w;
-    ctl.hx = mix(ctl.hx, 0, strike * w); ctl.hz = mix(ctl.hz, -5.2, strike * w); ctl.hy = mix(ctl.hy, 1.7, strike * w);
-    ctl.hpitch = mix(ctl.hpitch, -0.5, strike * w); ctl.hyaw = mix(ctl.hyaw, 0, strike * w);
+    ctl.hx = mix(ctl.hx, 0, strike * w); ctl.hz = mix(ctl.hz, -5.0, strike * w); ctl.hy = mix(ctl.hy, 2.5, strike * w);
+    ctl.hpitch = mix(ctl.hpitch, -0.42, strike * w); ctl.hyaw = mix(ctl.hyaw, 0, strike * w);
     ctl.hroll += Math.sin(t * 38) * 0.22 * shake * w;
     ctl.ez = mix(ctl.ez, 0.4, strike * w); ctl.bulge += 0.8 * strike * w; ctl.a1 += 0.6 * strike * w;
     ctl.jaw = Math.max(ctl.jaw, (0.4 * wind + 0.95 * env2(k, 0.36, 0.44, 0.47, 0.51) + 0.2 * shake) * w);

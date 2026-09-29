@@ -98,28 +98,34 @@ export function sdfNormal(S, p, group = 0) { const n = [0, 0, 0]; S.normal(p[0],
  * → { P: [[x,y,z]…][], N: [...][], S: skin sample points }
  */
 export function wrapGrid(S, group, zs, ths, axis, place) {
-  const P = [], N = [], SK = [];
+  const P = [], N = [], SK = [], U = [], V = [];
+  const z0 = zs[0], z1 = zs[zs.length - 1];
   for (let j = 0; j < zs.length; j++) {
-    const z = zs[j], [cx, cy] = axis(z), v = zs.length > 1 ? j / (zs.length - 1) : 0;
+    const z = zs[j], [cx, cy] = axis(z), v = zs.length > 1 ? (z - z0) / (z1 - z0) : 0;
     const T = typeof ths === 'function' ? ths(v, z) : ths;
-    const row = [], nrow = [], srow = [];
+    const row = [], nrow = [], srow = [], urow = [];
     let last = null, lastN = null;
     for (let i = 0; i < T.length; i++) {
       const th = T[i], d = [Math.sin(th), Math.cos(th), 0];
       let p = marchOut(S, [cx, cy, z], d, group, 1.5);
       let n = p ? sdfNormal(S, p, group) : null;
       if (!p) { p = last ? last.slice() : [cx, cy, z]; n = lastN ? lastN.slice() : d.slice(); }
-      const u = T.length > 1 ? i / (T.length - 1) : 0;
+      const u = T.length > 1 ? (th - T[0]) / (T[T.length - 1] - T[0]) : 0;
       const sp = p.slice();
       if (place) { const r = place(u, v, p, n, th, z); if (r) { p = r.p || p; n = r.n || n; } }
-      row.push(p); nrow.push(n); srow.push(sp);
+      row.push(p); nrow.push(n); srow.push(sp); urow.push(u);
       last = p; lastN = n;
     }
-    P.push(row); N.push(nrow); SK.push(srow);
+    P.push(row); N.push(nrow); SK.push(srow); U.push(urow); V.push(v);
   }
-  return { P, N, SK };
+  return { P, N, SK, U, V };
 }
 export const linspace = (a, b, n) => Array.from({ length: n }, (_, i) => a + (b - a) * i / (n - 1));
+/** n params in [a, b] with extra samples hugging both ends (crisp trims / hems): e = first step as a fraction */
+export function edgespace(a, b, n, e = 0.05) {
+  const inner = linspace(e * 2.4, 1 - e * 2.4, Math.max(2, n - 4));
+  return [0, e, ...inner, 1 - e, 1].map(t => a + (b - a) * t);
+}
 
 /**
  * Thin shell from a surface grid G ({P, N, SK}): outer face pushed out by off(u, v), optional inner face (for hanging
@@ -128,11 +134,12 @@ export const linspace = (a, b, n) => Array.from({ length: n }, (_, i) => a + (b 
  */
 export function shell(acc, S, G, o = {}) {
   const { P, N, SK } = G, nv = P.length, nu = P[0].length;
+  const UU = (j, i) => (G.U ? G.U[j][i] : i / (nu - 1)), VV = (j) => (G.V ? G.V[j] : j / (nv - 1));
   const offF = typeof o.off === 'function' ? o.off : () => (o.off ?? 0.01);
   const thick = o.thick ?? 0.012;
   const dtl = o.dtl ?? [0, 0, 0.2, 0.25];
   const colF = (u, v, side) => { const c = o.color ? o.color(u, v, side) : 0x808080; return col(c); };
-  const skinF = (j, i) => o.skin ? o.skin(i / (nu - 1), j / (nv - 1), SK[j][i]) : skinAt(S, SK[j][i]);
+  const skinF = (j, i) => o.skin ? o.skin(UU(j, i), VV(j), SK[j][i]) : skinAt(S, SK[j][i]);
   const mask = o.mask || (() => true), innerMask = o.innerMask || (() => true);
   // orientation: du × dv vs N
   const pa = P[0][0], pb = P[0][Math.min(1, nu - 1)], pc = P[Math.min(1, nv - 1)][0];
@@ -142,7 +149,7 @@ export function shell(acc, S, G, o = {}) {
   const O = [], ON = [];
   for (let j = 0; j < nv; j++) {
     O.push([]); ON.push([]);
-    for (let i = 0; i < nu; i++) { const p = P[j][i], n = N[j][i], of = offF(i / (nu - 1), j / (nv - 1)); O[j].push([p[0] + n[0] * of, p[1] + n[1] * of, p[2] + n[2] * of]); ON[j].push(n); }
+    for (let i = 0; i < nu; i++) { const p = P[j][i], n = N[j][i], of = offF(UU(j, i), VV(j)); O[j].push([p[0] + n[0] * of, p[1] + n[1] * of, p[2] + n[2] * of]); ON[j].push(n); }
   }
   if (o.recalcN) {
     const a = new V3(), b = new V3(), c = new V3();
@@ -160,7 +167,7 @@ export function shell(acc, S, G, o = {}) {
   for (let j = 0; j < nv; j++) {
     outer.push([]); inner.push([]);
     for (let i = 0; i < nu; i++) {
-      const u = i / (nu - 1), v = j / (nv - 1), p = O[j][i], n = ON[j][i], n0 = N[j][i];
+      const u = UU(j, i), v = VV(j), p = O[j][i], n = ON[j][i], n0 = N[j][i];
       const sk = skinF(j, i), c = colF(u, v, 1), em = o.emis ? o.emis(u, v) : 0;
       outer[j].push(acc.count);
       acc.vert(p[0], p[1], p[2], n[0], n[1], n[2], c[0], c[1], c[2], sk.si, sk.sw, dtl[0], dtl[1], dtl[2], dtl[3], em, 0);
@@ -172,7 +179,7 @@ export function shell(acc, S, G, o = {}) {
     }
   }
   for (let j = 0; j < nv - 1; j++) for (let i = 0; i < nu - 1; i++) {
-    const mu = (i + 0.5) / (nu - 1), mv = (j + 0.5) / (nv - 1);
+    const mu = (UU(j, i) + UU(j, i + 1)) / 2, mv = (VV(j) + VV(j + 1)) / 2;
     if (!mask(mu, mv)) continue;
     const a = outer[j][i], b = outer[j][i + 1], c = outer[j + 1][i], d = outer[j + 1][i + 1];
     if (!flip) { acc.tri(a, b, c); acc.tri(b, d, c); } else { acc.tri(a, c, b); acc.tri(b, c, d); }
@@ -195,12 +202,12 @@ export function shell(acc, S, G, o = {}) {
       return [p[0] - q[0], p[1] - q[1], p[2] - q[2]];
     };
     for (let i = 0; i < nu - 1; i++) {
-      if (mask((i + 0.5) / (nu - 1), 0.5 / (nv - 1))) { const d = outDir(0, i, -1, 0); rimEdge(0, i, 0, i + 1, d[0], d[1], d[2]); }
-      if (mask((i + 0.5) / (nu - 1), 1 - 0.5 / (nv - 1))) { const d = outDir(nv - 1, i, 1, 0); rimEdge(nv - 1, i, nv - 1, i + 1, d[0], d[1], d[2]); }
+      if (mask((UU(0, i) + UU(0, i + 1)) / 2, VV(1) / 2)) { const d = outDir(0, i, -1, 0); rimEdge(0, i, 0, i + 1, d[0], d[1], d[2]); }
+      if (mask((UU(nv - 1, i) + UU(nv - 1, i + 1)) / 2, (1 + VV(nv - 2)) / 2)) { const d = outDir(nv - 1, i, 1, 0); rimEdge(nv - 1, i, nv - 1, i + 1, d[0], d[1], d[2]); }
     }
     for (let j = 0; j < nv - 1; j++) {
-      if (mask(0.5 / (nu - 1), (j + 0.5) / (nv - 1))) { const d = outDir(j, 0, 0, -1); rimEdge(j, 0, j + 1, 0, d[0], d[1], d[2]); }
-      if (mask(1 - 0.5 / (nu - 1), (j + 0.5) / (nv - 1))) { const d = outDir(j, nu - 1, 0, 1); rimEdge(j, nu - 1, j + 1, nu - 1, d[0], d[1], d[2]); }
+      if (mask(UU(j, 1) / 2, (VV(j) + VV(j + 1)) / 2)) { const d = outDir(j, 0, 0, -1); rimEdge(j, 0, j + 1, 0, d[0], d[1], d[2]); }
+      if (mask((1 + UU(j, nu - 2)) / 2, (VV(j) + VV(j + 1)) / 2)) { const d = outDir(j, nu - 1, 0, 1); rimEdge(j, nu - 1, j + 1, nu - 1, d[0], d[1], d[2]); }
     }
   }
   return { outer, inner };
@@ -228,17 +235,54 @@ export function strap(acc, pts, w, th, o) {
   const g = sweep(pts, pts.map(() => w * 0.5), { radial: 4, flat: th / w, up: o.up, twist: Math.PI / 4, capStart: true });
   addG(acc, g, { skin: o.skin, color: o.color ?? 0x4a2c18, dtl: o.dtl ?? [0, 0, 0.2, 0.35], emis: o.emis });
 }
-/** points on a surface path: rays from `o` through each direction (marched to group surface) pushed out by off */
+/** points on a surface path: rays from `o` through each direction (marched to group surface) pushed out by off.
+ *  The returned array carries .normals (surface normals per point). */
 export function surfPath(S, group, origin, dirs, off = 0.008) {
-  const out = [];
+  const out = [], nrm = [];
   for (const d0 of dirs) {
     const l = Math.hypot(d0[0], d0[1], d0[2]), d = [d0[0] / l, d0[1] / l, d0[2] / l];
     const p = marchOut(S, origin, d, group, 1.5);
     if (!p) continue;
     const n = sdfNormal(S, p, group);
-    out.push(new V3(p[0] + n[0] * off, p[1] + n[1] * off, p[2] + n[2] * off));
+    out.push(new V3(p[0] + n[0] * off, p[1] + n[1] * off, p[2] + n[2] * off)); nrm.push(new V3(...n));
   }
+  out.normals = nrm;
   return out;
+}
+/** Points toward targets from an interior origin, marched to the surface (targets are aim points, not directions). */
+export function surfAim(S, group, origin, targets, off = 0.008) {
+  return surfPath(S, group, origin, targets.map(q => [q[0] - origin[0], q[1] - origin[1], q[2] - origin[2]]), off);
+}
+/**
+ * Flat ribbon lying on a surface (bridle straps, belts, harness): one quad strip facing the surface normals
+ * (single-sided, 2 tris per segment). pts: Vector3[] with .normals (or o.normal fn). o: { skin, color, dtl, emis, doubleSided }
+ */
+export function ribbon(acc, pts, w, o = {}) {
+  const n = pts.length, NR = pts.normals, base = acc.count;
+  const c = col(o.color ?? 0x3a2414), d = o.dtl ?? [0, 0, 0.15, 0.35];
+  const T = new V3(), B = new V3(), Nn = new V3();
+  const sides = o.doubleSided ? [1, -1] : [1];
+  for (const face of sides) {
+    const b0 = acc.count;
+    for (let i = 0; i < n; i++) {
+      const p = pts[i];
+      T.subVectors(pts[Math.min(n - 1, i + 1)], pts[Math.max(0, i - 1)]).normalize();
+      Nn.copy(NR ? NR[i] : new V3(0, 1, 0)); Nn.addScaledVector(T, -Nn.dot(T)).normalize();
+      B.crossVectors(T, Nn).normalize();
+      const sk = typeof o.skin === 'function' ? o.skin(p, [0, i / (n - 1)]) : o.skin;
+      const hw = w * 0.5 * (o.taper ? mix(1, o.taper, i / (n - 1)) : 1);
+      for (const sd of [-1, 1]) {
+        acc.vert(p.x + B.x * hw * sd + Nn.x * 0.002 * face, p.y + B.y * hw * sd + Nn.y * 0.002 * face, p.z + B.z * hw * sd + Nn.z * 0.002 * face,
+          Nn.x * face, Nn.y * face, Nn.z * face, c[0], c[1], c[2], sk.si, sk.sw, d[0], d[1], d[2], d[3], o.emis ?? 0, 0);
+      }
+    }
+    for (let i = 0; i < n - 1; i++) {
+      const a = b0 + i * 2, bq = a + 1, cq = a + 2, dq = a + 3;
+      // (a: −B, b: +B) × next; winding so the face points along ±N
+      if (face > 0) { acc.tri(a, bq, cq); acc.tri(bq, dq, cq); } else { acc.tri(a, cq, bq); acc.tri(bq, cq, dq); }
+    }
+  }
+  void base;
 }
 /** Catmull-Rom resample of a polyline (smooth curves through control points) → n points */
 export function smoothPath(ctrl, n) {

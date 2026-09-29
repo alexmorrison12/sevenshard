@@ -20,6 +20,10 @@ vRP = position; vRN = normal; vDtl = dtl; vAux = aux; vUv2 = uv; vKind = aux.z;
   if ( abs( kind - 3.0 ) < 0.5 ) {           // membrane billow (along the normal, per side)
     float b = sin( clamp( uv.x, 0.0, 1.0 ) * 3.14159 ) * sin( clamp( uv.y, 0.0, 1.0 ) * 3.14159 );
     transformed += normal * b * ( position.x < 0.0 ? uBillow.x : uBillow.y );
+  } else if ( abs( kind - 10.0 ) < 0.5 ) {   // lightning arc: re-zags every flicker step
+    float tq = floor( uTime * 14.0 + aux.w * 3.7 );
+    vec3 hj = fract( sin( vec3( dot( position, vec3( 12.9, 78.2, 37.7 ) ) + tq, dot( position, vec3( 39.3, 11.1, 83.1 ) ) - tq, tq * 1.7 + position.y * 9.0 ) ) * 43758.5453 ) - 0.5;
+    transformed += hj * 0.22 * sin( clamp( uv.y, 0.0, 1.0 ) * 3.14159 );
   } else if ( abs( kind - 4.0 ) < 0.5 || abs( kind - 8.0 ) < 0.5 ) {    // flame / hair flicker (rest space)
     float f = clamp( uv.y, 0.0, 1.0 ); f *= f;
     float t = uTime * ( kind > 5.0 ? 0.35 : 1.0 );
@@ -38,7 +42,7 @@ uniform vec3 uGlowCol; uniform vec3 uGlow2Col; uniform float uGlowK; uniform flo
 uniform float uCounter; uniform vec3 uCounterCol; uniform float uEnrage; uniform vec3 uEnrageCol;
 uniform float uGhost; uniform vec3 uGhostCol; uniform vec3 uTint; uniform float uTintAmt;
 uniform float uThroat; uniform float uEye; uniform float uFlame; uniform float uHeat; uniform float uMemGlow; uniform float uAlpha;
-uniform vec3 uFlashCol; uniform float uFlash; uniform float uCrackF; float gCrack = 0.0;
+uniform vec3 uFlashCol; uniform float uFlash; uniform float uCrackF; uniform float uTatter; float gCrack = 0.0;
 float gSpecMask = 1.0; float gTransMask = 0.0; float gVein = 0.0; float gKind = 0.0; float gFlameA = 1.0;
 float gH3( vec3 p ) { return fract( sin( dot( p, vec3( 127.1, 311.7, 74.7 ) ) ) * 43758.5453 ); }
 vec3 gHash3( vec3 p ) {
@@ -74,7 +78,7 @@ const FRAG_COLOR = /* glsl */`
   vec4 tX = texture2D( uDetail, P.zy ); vec4 tY = texture2D( uDetail, P.zx ); vec4 tZ = texture2D( uDetail, P.xy );
   vec4 tt = tX * bw.x + tY * bw.y + tZ * bw.z;
   diffuseColor.rgb *= max( 0.0, 1.0 + dot( tt - 0.5, vDtl ) * 2.0 ) * uColorMul;
-  gSpecMask = kind < 0.5 ? 0.12 : kind < 1.5 ? 1.0 : kind < 2.5 ? 2.2 : kind < 3.5 ? 0.25 : kind < 4.5 ? 0.0 : kind < 5.5 ? 2.0 : kind < 6.5 ? 0.6 : kind < 7.5 ? 1.4 : kind < 8.5 ? 0.3 : 1.2;
+  gSpecMask = kind < 0.5 ? 0.12 : kind < 1.5 ? 1.0 : kind < 2.5 ? 2.2 : kind < 3.5 ? 0.25 : kind < 4.5 ? 0.0 : kind < 5.5 ? 2.0 : kind < 6.5 ? 0.6 : kind < 7.5 ? 1.4 : kind < 8.5 ? 0.3 : kind < 9.5 ? 1.2 : 0.0;
   if ( abs( kind - 3.0 ) < 0.5 ) {
     // membrane: veins radiating from the bones, capillary net, frosted underside
     float u = vUv2.x, v = vUv2.y;
@@ -90,9 +94,15 @@ const FRAG_COLOR = /* glsl */`
     vein *= smoothstep( 0.02, 0.12, v );
     diffuseColor.rgb *= 1.0 - max( vein, cap ) * 0.4;
     gVein = vein;
+    if ( uTatter > 0.001 ) {   // broken wings: tears growing in from the trailing edge, frosted rims
+      float n = gNoise( vec3( u * 9.0, v * 13.0, 3.1 ) ) * 0.6 + gNoise( vec3( u * 23.0, v * 29.0, 7.7 ) ) * 0.4;
+      float hole = n * ( 0.35 + 0.85 * smoothstep( 0.3, 1.0, v ) ) * uTatter;
+      if ( hole > 0.5 ) discard;
+      diffuseColor.rgb = mix( diffuseColor.rgb, vec3( 0.75, 0.88, 1.0 ), smoothstep( 0.4, 0.5, hole ) * 0.7 );
+    }
     if ( !gl_FrontFacing ) diffuseColor.rgb *= 1.18;
     gTransMask = 1.0;
-  } else if ( abs( kind - 4.0 ) < 0.5 ) {
+  } else if ( abs( kind - 4.0 ) < 0.5 || kind > 9.5 ) {
     diffuseColor.rgb *= 0.25;
   } else if ( abs( kind - 7.0 ) < 0.5 ) {
     // obsidian plates: per-pixel voronoi plates with molten seams (crisp at any mesh density)
@@ -132,6 +142,12 @@ const FRAG_EMIS = /* glsl */`
     ec = mix( uGlowCol, uGlow2Col, smoothstep( 0.1, 1.0, f * 0.7 + n * 0.5 ) );
     em = vAux.x * uFlame * fl * uGlowK * ( 0.55 + 0.9 * tongue ) * ( 1.0 + uEnrage * 0.5 );
     gFlameA = tongue * ( 1.0 - smoothstep( 0.8, 1.0, f ) ) * clamp( vAux.x, 0.0, 1.5 );
+  } else if ( abs( kind - 10.0 ) < 0.5 ) {   // lightning arc: strobing on / off per arc, white-hot core
+    float tq = floor( uTime * 14.0 + vAux.w * 3.7 );
+    float on = step( 0.5 - 0.25 * uHeat, fract( sin( tq * 12.9898 + vAux.w * 78.233 ) * 43758.5453 ) );
+    ec = mix( uGlowCol, vec3( 3.0, 3.2, 3.6 ), 0.45 );
+    em = vAux.x * on * ( 0.5 + uHeat ) * uGlowK;
+    gFlameA = on * min( 1.0, 0.4 + uHeat );
   } else if ( abs( kind - 5.0 ) < 0.5 ) {    // eye
     em *= uEye;
   } else if ( abs( kind - 6.0 ) < 0.5 ) {    // mouth / throat
@@ -181,7 +197,7 @@ export function guardianUniforms(o = {}) {
     uTint: { value: new THREE.Color(1, 1, 1) }, uTintAmt: { value: 0 },
     uThroat: { value: 0 }, uEye: { value: 1 }, uFlame: { value: 1 }, uHeat: { value: 0 }, uMemGlow: { value: o.memGlow ?? 0.35 },
     uBillow: { value: new THREE.Vector2() }, uFlameAmp: { value: 1 }, uAlpha: { value: 1 },
-    uFlash: { value: 0 }, uFlashCol: { value: hdr(o.flash ?? o.glow ?? 0xffffff, 2.0) }, uCrackF: { value: o.crackF ?? 1.5 },
+    uFlash: { value: 0 }, uFlashCol: { value: hdr(o.flash ?? o.glow ?? 0xffffff, 2.0) }, uCrackF: { value: o.crackF ?? 1.5 }, uTatter: { value: 0 },
   };
 }
 

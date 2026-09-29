@@ -196,7 +196,7 @@ function dress({ acc, facc, S, b }) {
 export const kurai = {
   info: {
     name: 'Kurai', title: 'the Pyrefox', height: 5.2, radius: 2.4,
-    parts: [],
+    parts: ['tails'],
     actions: {
       idle: { dur: 4, hits: [], loop: true },
       walk: { dur: 1.6, hits: [], loop: true, speed: 3 },
@@ -210,6 +210,7 @@ export const kurai = {
       foxfire_breath: { dur: 3.3, hits: [1.05, 1.45, 1.85, 2.25, 2.65] },
       dash: { dur: 1.0, hits: [0.42], move: { dist: 14, t0: 0.18, t1: 0.56 } },
       howl: { dur: 2.7, hits: [1.2] },
+      channel: { dur: 2.0, hits: [1.0], loop: true },
       groggy: { dur: 3.0, hits: [], loop: true },
       death: { dur: 3.3, hits: [], hold: true },
     },
@@ -232,4 +233,5 @@ export const kurai = {
     boss.U.uGlowK.value = 1.2;
   },
 };
+kurai.breakable = { tails: { socket: 'tail0' } };   // four outer tails gutter out and hang limp
 kurai.spec = kuraiSpec(J, { NT, TB, TS, tailCurve });

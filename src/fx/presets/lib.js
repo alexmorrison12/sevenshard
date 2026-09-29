@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { S, R } from '../textures.js';
 import { P } from '../particles.js';
 import { GEN, PHYS, FIRE, FROST, HOLY, STORM, CHI, DARK, ARC, HEAL, MUSIC, WATER, POI, CRIM, AMB } from '../ptypes.js';
-import { col, v3, TAU, hue, UP } from '../util.js';
+import { col, v3, TAU, hue, UP, hasCol } from '../util.js';
 import { shockwave, decal, explosion, meteorImpact, hit, burst, slash, angRad } from '../prims.js';
 
 export { S, R, P, GEN, PHYS, FIRE, FROST, HOLY, STORM, CHI, DARK, ARC, HEAL, MUSIC, WATER, POI, CRIM, AMB, TAU, UP, col, hue, v3, shockwave, decal, explosion, meteorImpact, hit, burst, slash, angRad };
@@ -27,7 +27,7 @@ export function ctx(fx, p, o, defR = 3, defL = 8, range = 8) {
   o.R = (p.radius ?? p.r ?? defR * o.s);
   o.L = (p.len ?? p.length ?? defL * o.s);
   o.W = p.width ?? null;
-  o.tint = p.color !== undefined ? col(p.color, 1, o.tintA || (o.tintA = [0, 0, 0])) : null;
+  o.tint = hasCol(p.color) ? col(p.color, 1, o.tintA || (o.tintA = [0, 0, 0])) : null;
   if (p.target !== undefined && p.target !== null) { v3(p.target, _w); o.tx = _w.x; o.tz = _w.z; }
   else { o.tx = o.x + o.f.x * range * o.s; o.tz = o.z + o.f.z * range * o.s; }
   o.ty = fx.gy(o.tx, o.tz, o.y);
@@ -40,8 +40,8 @@ export const vec = (x, y, z) => new THREE.Vector3(x, y, z);
 /** heavy ground impact: flash, shockwave + wall, radial crack/crater decal, rock debris, dust ring, shake */
 export function groundSmash(fx, x, y, z, R, color, o = {}) {
   const s = R / 3.5, p = vec(x, y, z), c = color;
-  fx.at(GEN.bigFlash, p, s * 0.9, c, null, 0, 0.6, 0);
-  fx.at(GEN.flare, p, s * 2.2, c, { rot: 0 }, 0, 0.5, 0);
+  fx.at(GEN.bigFlash, p, Math.min(s, 2) * 0.5, c, null, 0, 0.6, 0);
+  fx.at(GEN.flare, p, Math.min(s, 2) * 1.4, c, { rot: 0 }, 0, 0.5, 0);
   shockwave(fx, { pos: p, radius: R * (o.ring ?? 1.9), color: [c[0] * 1.3, c[1] * 1.3, c[2] * 1.3], dur: 0.45 + R * 0.03, height: o.wallH ?? 1.2 * s });
   if (o.second !== false) shockwave(fx, { pos: p, radius: R * 1.2, color: [1.4, 1.25, 1.0], dur: 0.35, wall: false, dust: false, delay: 0.05 });
   decal(fx, { pos: p, radius: R * (o.decalR ?? 1.05), kind: o.decal ?? 'crater', dur: o.decalDur ?? 8, color: [c[0] * 1.5, c[1] * 1.5, c[2] * 1.5] });

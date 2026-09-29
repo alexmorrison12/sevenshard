@@ -9,9 +9,10 @@
 import { Boss, buildEntry, clearCache, cacheStats } from './boss.js';
 import { gorrath } from './gorrath.js';
 import { skarn, vesk } from './hounds.js';
+import { varkhul } from './varkhul.js';
 import { PLACEHOLDER_META, metaOf } from './meta.js';
 
-const DEFS = { gorrath, skarn, vesk };
+const DEFS = { gorrath, skarn, vesk, varkhul };
 
 /** BOSSES[id] = { name, title, height, radius, walkSpeed, runSpeed, actions: { name: { dur, hits, counter?, active?, move? } } } */
 export const BOSSES = {};

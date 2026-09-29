@@ -11,6 +11,8 @@ import { G } from '../engine/materials.js';
 // that exports the same names (createCreature, CREATURES, creatureStats; createShip/SHIPS optional).
 import * as REG from '../models/creatures/spirits/index.js';
 const { createCreature, CREATURES, createShip, creatureStats } = REG;
+import { HOLD as SKEL_HOLD } from '../models/creatures/spirits/skeleton.js';
+window.__skelHold = SKEL_HOLD; // live pose tuning from screenshot scripts
 
 const Q = new URLSearchParams(location.search);
 const num = (k, d) => (Q.has(k) ? +Q.get(k) : d);

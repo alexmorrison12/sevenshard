@@ -15,7 +15,8 @@ import { faceTexture, marksTexture } from './face.js';
 import { Animator } from './anim.js';
 import { resolveGear, buildPalette, paintBody } from './gear.js';
 import { outfitPieces } from './outfit.js';
-import { hairPiece, HAIR_STYLES } from './hair.js';
+import { HAIR_STYLES } from './hair.js';
+import { lockHairPiece } from './hair2.js';
 import { armGeometry, CLASS_ACCENT } from './arms.js';
 import { MOVE_NAMES } from './moves.js';
 import { FACE_PRESETS } from './head.js';
@@ -23,7 +24,7 @@ import { FACE_PRESETS } from './head.js';
 export { HAIR_STYLES, FACE_PRESETS };
 
 // ------------------------------------------------------------------------------------------------
-export const SKIN_TONES = [0xf8d8c4, 0xf0c4a4, 0xe2ac88, 0xcc9068, 0xae744e, 0x8c5838, 0x6c4028, 0x4a2c1c];
+export const SKIN_TONES = [0xf6dccb, 0xedc7ae, 0xdfb094, 0xc99676, 0xab7859, 0x8a5b40, 0x68432e, 0x4a3021];
 export const HAIR_COLORS = [0x1c1612, 0x3a2616, 0x6a4424, 0xa87038, 0xe0c080, 0xe8e4dc, 0x9a2a1c, 0x2a3a6a, 0x5a2a6a, 0xc8d4e0];
 export const EYE_COLORS = [0x3a6ab0, 0x4a8a5a, 0x6a4a2a, 0x8a8a9a, 0xc08a2a, 0x8a3ac0, 0xd03030, 0x30c0c0];
 export const MARK_COLORS = [0x9a1c1c, 0x1c3a9a, 0xe8e0d0, 0x1a1a1a, 0xd8a030, 0x6a1a8a];
@@ -70,7 +71,7 @@ function defaultLook(cls, sex) {
 }
 
 // hair styles that would poke through a hat crown fall back to a flatter cut
-const HAT_SAFE = { topknot: 'short', mohawk: 'short', swept: 'short', bun: 'long', buns: 'braids', pigtails: 'braids', bald: 'bald' };
+const HAT_SAFE = { topknot: 'short', mohawk: 'short', swept: 'short', fem_bun: 'fem_long', fem_buns: 'fem_braids', fem_pigtails: 'fem_braids', bald: 'bald' };
 
 // ------------------------------------------------------------------------------------------------
 const INV_CACHE = new Map();
@@ -220,7 +221,8 @@ export function createHero(opts = {}) {
     U.uEye.value.set(L.eyes ?? 0x3a6ab0);
     U.uBrow.value.set(L.hairColor).multiplyScalar(0.8);
     const skinHex = typeof L.skin === 'number' && L.skin < 16 ? SKIN_TONES[(L.skin | 0) % SKIN_TONES.length] : (L.skin ?? SKIN_TONES[2]);
-    { const sk = new THREE.Color(skinHex); U.uInk.value.setRGB(sk.r * 0.07 + 0.006, sk.g * 0.045 + 0.004, sk.b * 0.04 + 0.004); }
+    { const sk = new THREE.Color(skinHex); U.uInk.value.setRGB(sk.r * 0.07 + 0.006, sk.g * 0.045 + 0.004, sk.b * 0.04 + 0.004);
+      U.uLip.value.setRGB(sk.r * (o.sex === 'f' ? 0.95 : 0.9) + 0.05, sk.g * (o.sex === 'f' ? 0.42 : 0.6), sk.b * (o.sex === 'f' ? 0.46 : 0.58)); }
     // outfit
     const g = resolveGear({ cls: o.cls, npc: o.npc, tier: o.gear.tier, sex: o.sex, dye: o.gear.dye, spec: o.gear.spec });
     h.gear = g;
@@ -229,6 +231,7 @@ export function createHero(opts = {}) {
     const parts = [
       { p: pieces.body, ...paint.body },
       { p: pieces.head, ...paint.head },
+      { p: head.eyes },
       { p: pieces.handL, ...paint.handL, cast: 0.6 },
       { p: pieces.handR, ...paint.handR, cast: 0.6 },
     ];
@@ -236,9 +239,9 @@ export function createHero(opts = {}) {
     const styles = HAIR_STYLES[o.sex];
     let style = styles[(L.hair | 0) % styles.length];
     if (op.hat) style = HAT_SAFE[style] ?? style;
-    if (!op.hideHair && style) { const hp = hairPiece(base, style); if (hp) parts.push({ p: hp }); }
+    if (!op.hideHair && style) { const hp = lockHairPiece(base, style, o.sex); if (hp) parts.push({ p: hp }); }
     for (const it of op.list) parts.push(it);
-    const pal = buildPalette(g, { skin: skinHex, hairColor: L.hairColor });
+    const pal = buildPalette(g, { skin: skinHex, hairColor: L.hairColor, eyes: L.eyes ?? 0x3a6ab0 });
     const old = mesh.geometry;
     mesh.geometry = assemble(parts, pal);
     old.dispose();

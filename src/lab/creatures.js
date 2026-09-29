@@ -86,53 +86,86 @@ function buildStrip() { // N copies of one action at spread times (frozen)
 
 // ------------------------------------------------------------------------------------------------ horde
 function buildHorde() {
+  // 60 mobs spawn on a ring (clawing out of the ground), charge a hero proxy at the centre, surround it and attack;
+  // the hero's periodic whirlwind flings a batch of them (death), corpses burn away (setDissolve), then they respawn.
   clear();
   const count = num('count', 60);
-  const mix = (Q.get('types') || 'imp:30,hellhound:18,legionnaire:12').split(',').map(s => { const [t, n] = s.split(':'); return [t, +n]; });
+  const mixS = (Q.get('types') || 'imp:26,hellhound:14,legionnaire:10,abyss_caster:4,gargoyle:4,brute:2').split(',').map(s => { const [t, n] = s.split(':'); return [t, +n]; });
   const T0 = performance.now();
   const kinds = [];
-  for (const [t, n] of mix) for (let i = 0; i < n && kinds.length < count; i++) kinds.push(t);
-  while (kinds.length < count) kinds.push(mix[0][0]);
-  const rng = (i, k) => { const x = Math.sin(i * 12.9898 + k * 78.233) * 43758.5453; return x - Math.floor(x); };
+  for (const [t, n] of mixS) for (let i = 0; i < n && kinds.length < count; i++) kinds.push(t);
+  while (kinds.length < count) kinds.push(mixS[0][0]);
+  const rng = Math.random;
+  const hero = new THREE.Group();
+  const hm = new THREE.MeshLambertMaterial({ color: 0x3a6ad0 }), hs = new THREE.MeshLambertMaterial({ color: 0xe0b090 });
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.32, 0.9, 4, 10), hm); body.position.y = 0.8; hero.add(body);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.2, 12, 8), hs); head.position.y = 1.65; hero.add(head);
+  const sword = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 1.5), new THREE.MeshBasicMaterial({ color: new THREE.Color(2.5, 2.0, 1.2) })); sword.position.set(0.5, 1.0, -0.4); hero.add(sword);
+  hero.traverse(o => { if (o.isMesh) o.castShadow = true; }); lab.scene.add(hero);
+  const ringPos = (it) => { const a = rng() * Math.PI * 2, R = 13 + rng() * 5; it.c.root.position.set(Math.cos(a) * R, 0, Math.sin(a) * R); };
   kinds.forEach((t, i) => {
-    const vs = CREATURES[t].variants.filter(v => !/overseer|alpha|elite|centurion|warlord/.test(v));
+    const vs = CREATURES[t].variants.filter(v => !/overseer|alpha|elite|centurion|warlord|archon|sentinel/.test(v));
     const c = createCreature(t, { variant: vs[i % vs.length], seed: i + 1 });
-    const it = add(c, (rng(i, 1) - 0.5) * 24, -14 - rng(i, 2) * 16, 0);
-    it.speed = t === 'hellhound' ? 5.5 + rng(i, 3) * 1.5 : t === 'imp' ? 4 + rng(i, 3) * 1.2 : 2.6 + rng(i, 3) * 0.6;
-    it.phase = 'run'; it.timer = rng(i, 4) * 2; it.dead = false;
+    const it = add(c, 0, 0, 0);
+    ringPos(it);
+    it.speed = { imp: 4.2, hellhound: 6.2, legionnaire: 2.8, brute: 2.2, abyss_caster: 2.4, gargoyle: 3.5 }[t] ?? 3;
+    it.speed *= 0.85 + rng() * 0.3;
+    it.reach = c.radius + 0.9 + (t === 'abyss_caster' ? 5 : 0);
+    it.phase = 'spawn'; it.timer = 0.3 + rng() * 2.5; it.st = { speed: 0, turn: 0, combat: true, dead: false, down: false, stunned: false, fly: false };
+    it.face = 0; it.first = true;
   });
   const buildMs = performance.now() - T0;
   lab.setView('iso', new THREE.Vector3(0, 0, 0));
-  let upd = 0, frames = 0, acc = 0;
+  let upd = 0, frames = 0, acc = 0, swing = 3;
+  const L = api.list;
   lab.onFrame((dt) => {
     const t0 = performance.now();
-    for (const it of api.list) {
-      const c = it.c, r = c.root;
+    hero.rotation.y += dt * (swing < 0.6 ? 14 : 0.8);
+    swing -= dt;
+    let whirl = false;
+    if (swing <= 0) { swing = 2.8 + rng() * 1.5; whirl = true; }
+    for (let i = 0; i < L.length; i++) {
+      const it = L[i], c = it.c, r = c.root, st = it.st;
       it.timer -= dt;
-      let speed = 0, st = it.st || (it.st = { speed: 0, turn: 0, combat: true, dead: false });
-      if (it.phase === 'run') {
-        speed = it.speed;
-        r.position.z += speed * dt; // charge toward the camera (south)
-        r.rotation.y = Math.PI;
-        if (r.position.z > 8 + (it.x % 3)) { it.phase = 'fight'; it.timer = 1 + Math.random() * 2; }
+      const dx = -r.position.x, dz = -r.position.z, dist = Math.hypot(dx, dz) || 1e-3;
+      let speed = 0, want = it.face;
+      if (it.phase === 'spawn') {
+        if (it.timer <= 0) { c.setDissolve(0); st.dead = false; c.play('spawn'); it.phase = 'rise'; it.timer = 1.2; want = Math.atan2(-dx, -dz); r.rotation.y = it.face = want; }
+        else r.position.y = it.first ? 0 : -50;
+      } else if (it.phase === 'rise') { r.position.y = 0; if (it.timer <= 0) it.phase = 'charge'; }
+      else if (it.phase === 'charge') {
+        want = Math.atan2(-dx, -dz);
+        if (dist > it.reach) {
+          speed = it.speed;
+          // separation from neighbours
+          let sx = 0, sz = 0;
+          for (let j = 0; j < L.length; j++) { if (j === i) continue; const o = L[j].c.root.position; const ex = r.position.x - o.x, ez = r.position.z - o.z, d2 = ex * ex + ez * ez; const rr = (c.radius + L[j].c.radius) * 1.1; if (d2 < rr * rr && d2 > 1e-6) { const d = Math.sqrt(d2); sx += ex / d * (rr - d); sz += ez / d * (rr - d); } }
+          r.position.x += (dx / dist * speed + sx * 4) * dt; r.position.z += (dz / dist * speed + sz * 4) * dt;
+        } else { it.phase = 'fight'; it.timer = rng() * 1.2; }
       } else if (it.phase === 'fight') {
-        if (it.timer <= 0) {
-          const roll = Math.random();
-          if (roll < 0.35) { c.play('death'); it.phase = 'dead'; it.timer = 2.2; st.dead = true; }
-          else { c.play(roll < 0.7 ? 'attack' : roll < 0.85 ? 'attack2' : 'hit'); it.timer = 0.9 + Math.random() * 1.2; }
-        }
+        want = Math.atan2(-dx, -dz);
+        if (dist > it.reach + 0.6) it.phase = 'charge';
+        if (it.timer <= 0) { const roll = rng(); c.play(roll < 0.55 ? 'attack' : roll < 0.8 ? 'attack2' : roll < 0.9 ? 'attack_big' : 'roar'); it.timer = 1.4 + rng() * 1.8; }
       } else if (it.phase === 'dead') {
-        c.setDissolve(Math.min(1, Math.max(0, (2.2 - it.timer - 1.2) / 1)));
-        if (it.timer <= 0) { r.position.set((Math.random() - 0.5) * 24, 0, -18 - Math.random() * 10); st.dead = false; c.setDissolve(0); c.play('spawn'); it.phase = 'rise'; it.timer = 1.4; }
-      } else if (it.phase === 'rise') { if (it.timer <= 0) it.phase = 'run'; }
-      st.speed = speed;
+        c.setDissolve(Math.min(1, Math.max(0, (it.timer0 - it.timer - 1.3) / 1.1)));
+        if (it.timer <= 0) { ringPos(it); r.position.y = -50; it.phase = 'spawn'; it.timer = 0.2 + rng() * 2; it.first = false; }
+      }
+      if (whirl && it.phase !== 'dead' && it.phase !== 'spawn' && dist < 5.5 && rng() < 0.65) {
+        if (rng() < 0.85) { c.play('death'); st.dead = true; it.phase = 'dead'; it.timer = it.timer0 = 2.6; want = Math.atan2(-dx, -dz); }
+        else { c.play('knockback'); r.position.x -= dx / dist * 1.2; r.position.z -= dz / dist * 1.2; }
+      }
+      // turn toward the wanted facing (shortest arc), report turn rate
+      let df = want - it.face; df = Math.atan2(Math.sin(df), Math.cos(df));
+      const turn = Math.max(-6, Math.min(6, df * 8));
+      it.face += turn * dt; r.rotation.y = it.face;
+      st.speed = speed; st.turn = turn; st.fly = c.flying && it.phase === 'charge' && c.type === 'gargoyle';
       c.update(dt, st);
     }
     upd += performance.now() - t0; frames++; acc += dt;
     if (acc > 1) {
-      const i = lab.renderer.r.info;
-      setInfo(`HORDE ${api.list.length} mobs · ${lab.renderer.fps.toFixed(0)} fps\ncreature update ${(upd / frames).toFixed(2)} ms/frame\n${i.render.calls} calls · ${(i.render.triangles / 1000).toFixed(0)}k tris\nbuild ${buildMs.toFixed(0)} ms`);
-      api.horde = { fps: lab.renderer.fps, updMs: upd / frames, calls: i.render.calls, tris: i.render.triangles, buildMs };
+      const inf = lab.renderer.r.info;
+      setInfo(`HORDE ${L.length} mobs · ${lab.renderer.fps.toFixed(0)} fps\ncreature update ${(upd / frames).toFixed(2)} ms/frame (${(upd / frames / L.length * 1000).toFixed(0)} µs/mob)\n${inf.render.calls} calls · ${(inf.render.triangles / 1000).toFixed(0)}k tris\nbuild+spawn ${buildMs.toFixed(0)} ms`);
+      api.horde = { fps: lab.renderer.fps, updMs: upd / frames, calls: inf.render.calls, tris: inf.render.triangles, buildMs };
       upd = 0; frames = 0; acc = 0;
     }
   });

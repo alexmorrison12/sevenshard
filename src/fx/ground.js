@@ -93,31 +93,35 @@ void main() {
   bool pulse = (flags & 2) != 0;
   bool noFill = (flags & 4) != 0;
   vec3 fc = vI3.rgb, rc = vI4.rgb;
+  float lr = max(max(rc.r, rc.g), rc.b);
+  vec3 rimC = rc / max(lr, 1e-3) * 1.4;                    // rim colour at a moderate HDR level (subtle bloom only)
   // rim + glows
-  float rw = max(0.06 + R * 0.003, aa * 1.6);
+  float rw = max(0.055 + R * 0.0025, aa * 1.5);
   float rim = inside * (1.0 - smoothstep(rw - aa, rw + aa, -d));
-  float outer = (1.0 - inside) * exp(-max(d, 0.0) / 0.22) * 0.55;
-  float edgeGrad = inside * exp(-max(-d, 0.0) / (0.35 + L * 0.06));
+  float inner = inside * exp(-max(-d, 0.0) / 0.28);       // soft light band just inside the rim
+  float outer = (1.0 - inside) * exp(-max(d, 0.0) / 0.1); // thin outer halo
+  float edgeGrad = inside * exp(-max(-d, 0.0) / (0.5 + L * 0.08));
   // fill region (grows from the origin / centre to the edge)
   float pp = max(fwidth(prog), 1e-4);
   float filled = noFill ? 0.0 : inside * (1.0 - smoothstep(fill - pp, fill + pp, prog));
   float fr = (prog - fill) * L;
-  float front = noFill ? 0.0 : inside * exp(-fr * fr / 0.012) * step(0.004, fill) * step(fill, 0.996);
+  float front = noFill ? 0.0 : inside * exp(-fr * fr / 0.006) * step(0.004, fill) * step(fill, 0.996);
   float t = uFxTime + vI5.z * 10.0;
   float pat;
-  if (shape == 2 || shape == 1) pat = smoothstep(0.62, 0.8, fract((prog * L - abs(shape == 2 ? p.x : r * sin(atan(p.x, p.y))) * 0.55) * 0.42 - t * 0.9)) * 0.06;
-  else pat = smoothstep(0.7, 0.9, fract(prog * L * 0.5 - t * 0.7)) * 0.04;
-  float breathe = pulse ? 0.75 + 0.25 * sin(t * 5.0) : 1.0;
-  // alpha-blended body (dark translucent zone) + brighter fill
-  float a = inside * (0.2 + 0.1 * edgeGrad + pat * (1.0 - filled)) + filled * 0.24 + rim * 0.5;
-  vec3 body = fc * (0.12 + 0.2 * edgeGrad) * inside + fc * filled * (0.38 + 0.25 * smoothstep(0.0, 1.0, prog));
-  // additive light: rim, outer glow, fill front, pulse
-  vec3 add = rc * (rim * 1.25 * breathe + outer * 0.4 + front * 0.9) + fc * filled * 0.18 + fc * edgeGrad * 0.12;
+  if (shape == 2 || shape == 1) pat = smoothstep(0.62, 0.8, fract((prog * L - abs(shape == 2 ? p.x : r * sin(atan(p.x, p.y))) * 0.55) * 0.42 - t * 0.9)) * 0.05;
+  else pat = smoothstep(0.7, 0.9, fract(prog * L * 0.5 - t * 0.7)) * 0.035;
+  float breathe = pulse ? 0.65 + 0.35 * sin(t * 5.0) : 1.0;
+  // dark translucent zone (darkens + tints the ground); the growing fill is denser and brighter
+  float a = inside * (0.28 + 0.1 * edgeGrad + pat * (1.0 - filled)) + filled * 0.2;
+  vec3 body = fc * inside * (0.09 + 0.1 * edgeGrad) + fc * filled * (0.2 + 0.22 * prog);
+  if (pulse) { a = inside * (0.14 + 0.12 * edgeGrad); body = fc * inside * (0.06 + 0.1 * edgeGrad) * breathe; }
+  // additive light: crisp rim, inner band, thin halo, fill front
+  vec3 add = rimC * (rim * breathe + inner * 0.14 + outer * 0.2) + fc * front * 1.1;
   // detonation flash
   if (post > 0.0 && (flags & 1) != 0) {
-    float fl = exp(-post * 9.0);
-    add += (rc * 0.9 + vec3(0.6)) * inside * fl * 1.6 + rc * outer * fl * 2.0;
-    a += inside * fl * 0.2;
+    float fl = exp(-post * 12.0);
+    add += (fc * 1.3 + vec3(0.2)) * inside * fl + rimC * outer * fl;
+    a += inside * fl * 0.15;
   }
   a = clamp(a, 0.0, 0.92) * fade;
   vec3 rgb = (body + add) * fade;
@@ -188,14 +192,14 @@ void main() {
     a = blot * 0.82;
     dark = vec3(0.035, 0.025, 0.02) * a;
     float emb = smoothstep(0.62, 0.78, fbm2(vL * 4.0 + seed)) * blot;
-    add = vec3(3.0, 0.9, 0.2) * emb * heat * 1.2 + C * blot * heat * 0.25;
+    add = vec3(3.0, 0.9, 0.2) * emb * heat * 1.1 + C * blot * heat * 0.06;
     if (kind == 2) {
       float cr = cellTex(${D.crack}.0, rot2(p * 0.95, seed * 3.0));
       float rim = cellTex(${D.ring}.0, rot2(p * 1.05, seed));
       a = max(a, cr * 0.9);
       a = max(a, rim * 0.55 * smoothstep(1.0, 0.6, r));
       dark = mix(dark, vec3(0.02, 0.015, 0.012) * a, cr);
-      add += C * cr * (0.35 + heat * 3.5) * smoothstep(1.0, 0.3, r) + vec3(2.5, 0.7, 0.12) * cr * heat * 2.0;
+      add += C * cr * (0.3 + heat * 2.2) * smoothstep(1.0, 0.3, r) + vec3(2.2, 0.6, 0.1) * cr * heat * 1.2;
     }
   } else if (kind == 1) {                  // radial crack
     float cr = cellTex(${D.crack}.0, rot2(p, seed * 6.0));
@@ -219,9 +223,10 @@ void main() {
     float inner = cellTex(cell, rot2(p * 1.35, -t * spd * 1.6 + seed)) * step(r, 0.55);
     float glow = smoothstep(1.0, 0.0, r);
     float pulse = 0.82 + 0.18 * sin(t * 3.0 + seed);
-    a = (m * 0.5 + glow * 0.12) * smoothstep(1.03, 0.97, r);
-    dark = C * 0.25 * a;
-    add = C * (m * 2.2 * pulse + inner * 1.2 + glow * 0.28 + heat * m * 3.0) * smoothstep(1.04, 0.96, r);
+    a = (m * 0.45 + glow * 0.1) * smoothstep(1.03, 0.97, r);
+    dark = C * 0.18 * a;
+    float big = 1.0 / (1.0 + R * 0.07);                  // large circles: thinner-looking, less bloom
+    add = C * (m * 1.35 * pulse + inner * 0.6 + glow * 0.05 + heat * m * 1.6) * smoothstep(1.04, 0.96, r) * big;
   } else if (kind == 7) {                  // blood splatter
     float m = cellTex(${D.splat}.0, rot2(p, seed * 6.0));
     a = smoothstep(0.2, 0.6, m) * 0.85;
@@ -248,9 +253,9 @@ void main() {
       vec2 v = vor(vL * 0.85 + warp * 1.3, seed);
       float crack = 1.0 - smoothstep(0.0, 0.14, v.y);
       float heatN = fbm2(vL * 1.2 - vec2(t * 0.35, t * 0.2));
-      float h = crack * 0.9 + smoothstep(0.5, 0.85, heatN) * 0.6 + (1.0 - r) * 0.3;
+      float h = crack * 0.9 + smoothstep(0.58, 0.88, heatN) * 0.55 + (1.0 - r) * 0.12;
       vec3 lava = mix(vec3(1.4, 0.28, 0.04), vec3(4.2, 1.7, 0.35), smoothstep(0.45, 0.85, heatN + crack * 0.3));
-      a = mask * 0.9; dark = vec3(0.05, 0.018, 0.01) * a;
+      a = mask * 0.92; dark = vec3(0.045, 0.016, 0.01) * a;
       add = lava * clamp(h, 0.0, 1.3) * mask * (0.8 + 0.2 * sin(t * 6.0 + heatN * 14.0)) + vec3(2.2, 0.6, 0.1) * exp(-sq((r - 0.86) / 0.1)) * 0.5;
     } else if (kind == 10) {
       float goo = fbm2(vL * 1.6 + vec2(sin(t * 0.3), t * 0.2));
@@ -282,7 +287,7 @@ void main() {
   } else if (kind == 16) {                 // sunburst
     float m = cellTex(${D.sun}.0, rot2(p, seed + t * 0.1));
     a = m * 0.35; dark = C * 0.3 * a;
-    add = C * (m * (0.5 + heat * 3.0) + smoothstep(1.0, 0.0, r) * heat * 0.8);
+    add = C * (m * (0.45 + heat * 2.2) + smoothstep(1.0, 0.0, r) * heat * 0.4);
   } else if (kind == 17) {                 // quake: cracked earth cells
     float m = cellTex(${D.cells}.0, rot2(p * 0.9, seed * 6.0));
     float body = smoothstep(1.0, 0.6, r + (nz - 0.5) * 0.3);

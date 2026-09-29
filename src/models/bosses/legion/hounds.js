@@ -18,7 +18,7 @@ const HR = (r) => r.map(v => v * HS);
 const PAL = {
   skarn: {
     hide: 0x1f1512, hideL: 0x3c2a22, belly: 0x5a2312, horn: 0x2b221e, hornT: 0xb8a482, claw: 0x120e0c, spine: 0x2a1c16, spineT: 0xff8a2a,
-    glow: 0xff5a14, eye: 0xffd24a, maw: 0xff6a18, mane: [5, 2.2, 0.5], tooth: 0xe8dcc0, crack: 0.85, girth: 1, name: 'Skarn', title: 'the Cinder Hound',
+    glow: 0xff8a22, eye: 0xffd24a, maw: 0xff7a1c, mane: [5, 2.2, 0.5], tooth: 0xe8dcc0, crack: 0.85, girth: 1, name: 'Skarn', title: 'the Cinder Hound',
   },
   vesk: {
     hide: 0x0f0c14, hideL: 0x2a2038, belly: 0x1a1224, horn: 0x100c16, hornT: 0x5a3a8a, claw: 0x0a080e, spine: 0x120e1a, spineT: 0xc070ff,
@@ -35,7 +35,7 @@ function makeHound(kind) {
     h: 0.034, hg: { 1: 0.024, 2: 0.024 },
     ao: { dist: 0.05, str: 0.85 },
     grad: { top: 0.14, bottom: 0.4, y0: 0.2, y1: 1.4, low: 0.3 },
-    mat: { glow: c.glow, glowK: fire ? 3.4 : 3.0, crackFreq: 9.5, crackK: 1.0, dfreq: 3.2, rim: 0.3, rimColor: fire ? 0xffb080 : 0xc8a0ff, spec: 0.4, shine: 20, ghostCol: 0x6f63ff, enrageCol: fire ? 0xff2a08 : 0xff30c0 },
+    mat: { sil: 0.34, silCol: fire ? 0x9ab0ff : 0xd0b0ff, glow: c.glow, glowK: fire ? 3.4 : 3.0, crackFreq: 9.5, crackK: 1.0, dfreq: 3.2, rim: 0.3, rimColor: fire ? 0xffb080 : 0xc8a0ff, spec: 0.4, shine: 20, ghostCol: 0x6f63ff, enrageCol: fire ? 0xff2a08 : 0xff30c0 },
     stepFx: { n: 3, scale: 1.1 },
     particles: { add: 900, alpha: 260 },
 

@@ -35,8 +35,9 @@ const add = (p, d, k = 1) => [p[0] + d[0] * k, p[1] + d[1] * k, p[2] + d[2] * k]
 const nrm = (d) => { const l = Math.hypot(d[0], d[1], d[2]); return [d[0] / l, d[1] / l, d[2] / l]; };
 const FIST = (s) => [0.266 * s, 0.86, 0.022];
 const DIR = { sword: nrm([0, -0.42, -1]), axe: nrm([0, 0.12, -1]), great: nrm([0, -0.16, -1]) };
-const SHIELD_C = [-0.352, 1.05, 0.03], SHIELD_N = nrm([-1, 0.02, -0.3]);
-const NOCK = [-0.266, 0.86, 0.097]; // bow string centre at rest (bow held vertically in the left fist)
+const SHIELD_N = nrm([-0.25, 0, -1]), SHIELD_C = [-0.271, 1.05, -0.008]; // strapped on the forearm, facing forward at rest
+const BOW_Y = (z) => { const u = Math.min(1, Math.abs(z) / 0.62); return 0.11 * Math.pow(u, 1.8) - 0.04 * sstep(0.78, 1, u); };
+const NOCK = [-0.266, 0.86 + BOW_Y(0.61), 0.022]; // bow string centre at rest (limbs along the fist's grip axis, string up)
 
 export const skeleton = {
   name: 'Skeleton',
@@ -66,7 +67,7 @@ export const skeleton = {
     if (W === 'sword') R.add('shieldL', 'armLL', SHIELD_C);
     if (W === 'bow') {
       R.add('weaponL', 'handL', FIST(-1));
-      R.add('limbT', 'weaponL', add(FIST(-1), [0, 0.1, 0.012])); R.add('limbB', 'weaponL', add(FIST(-1), [0, -0.1, 0.012]));
+      R.add('limbT', 'weaponL', add(FIST(-1), [0, 0.012, -0.1])); R.add('limbB', 'weaponL', add(FIST(-1), [0, 0.012, 0.1]));
       R.add('nock', 'weaponL', NOCK); R.add('arrow', 'nock', NOCK);
     }
     if (cfg.knight) for (const s of [-1, 1]) {
@@ -117,9 +118,9 @@ export const skeleton = {
     // ---------------- eyes: bright cores deep in the sockets, soul-flames licking up out of them
     const fc = { core: c.eyeCore, mid: c.eye, tip: c.eyeTip };
     for (const s of [-1, 1]) {
-      knob(acc, R0('head'), [s * 0.038, 1.659, -0.083], 0.028, c.eye, { emis: 1.4, dtl: [0, 0, 0, 0], ws: 6, hs: 3 });
-      orb(acc, [s * 0.037, 1.66, -0.102], E ? 0.02 : 0.018, R0('head'), c.eyeCore, E ? 5 : 5, 0);
-      flame(acc, [s * 0.037, 1.668, -0.106], [s * 0.2, 1, -0.05], E ? 0.19 : 0.13, E ? 0.024 : 0.018, R0('head'), fc, { emis: E ? 3.0 : 2.8, n: 5, radial: 4, bend: [s * 0.15, 0, 0.55] });
+      knob(acc, R0('head'), [s * 0.038, 1.659, -0.083], 0.028, c.eye, { emis: E ? 0.7 : 1.4, dtl: [0, 0, 0, 0], ws: 6, hs: 3 });
+      orb(acc, [s * 0.037, 1.66, -0.102], E ? 0.02 : 0.018, R0('head'), c.eyeCore, E ? 3.0 : 5, 0);
+      flame(acc, [s * 0.037, 1.668, -0.106], [s * 0.2, 1, -0.05], E ? 0.19 : 0.13, E ? 0.022 : 0.018, R0('head'), fc, { emis: E ? 2.1 : 2.8, n: 5, radial: 4, bend: [s * 0.15, 0, 0.55] });
     }
     // ---------------- teeth
     const tcol = (p, n, uv) => lerp3(col(0xb8a880), col(0xf0e8d0), uv[1]);
@@ -372,28 +373,25 @@ function axe(acc, skin, F, d, c) {
 }
 
 function bow(acc, b, c) {
-  const F = FIST(-1), cW = col(c.wood), cW2 = col(0x3a2412), cL = col(c.leather);
-  const z = (y) => { const u = Math.min(1, Math.abs(y) / 0.62); return 0.11 * Math.pow(u, 1.8) - 0.04 * sstep(0.78, 1, u); };
-  for (const s of [1, -1]) {
+  const F = FIST(-1), cW = col(0x8a6238), cW2 = col(0x3a2412), cL = col(c.leather);
+  for (const s of [-1, 1]) { // s = -1: front limb (limbT, toward −Z), +1: back limb (limbB)
     const pts = [], rad = [];
-    for (let i = 0; i <= 8; i++) { const y = s * i / 8 * 0.62; pts.push(new V3(F[0], F[1] + y, F[2] + z(y))); rad.push(i < 2 ? 0.019 : 0.019 - (i - 1) / 7 * 0.012); }
-    const limb = b(s > 0 ? 'limbT' : 'limbB'), grip = b('weaponL');
-    acc.add(sweep(pts, rad, { radial: 5, flat: 0.55, up: [0, 0, 1], capStart: true }), {
-      skin: (p) => { const t = sstep(0.12, 0.35, Math.abs(p.y - F[1])); return { si: [grip, limb, 0, 0], sw: [1 - t, t, 0, 0] }; },
-      color: (p, n, uv) => uv[1] < 0.14 ? lerp3(cL, cW2, 0.3 * Math.sin(uv[1] * 200)) : lerp3(cW, cW2, 0.25 + 0.25 * Math.sin(uv[1] * 30 + uv[0] * 5)), dtl: [0, 0, 0.2, 0.5],
+    for (let i = 0; i <= 8; i++) { const z = s * i / 8 * 0.62; pts.push(new V3(F[0], F[1] + BOW_Y(z), F[2] + z)); rad.push(i < 2 ? 0.021 : 0.021 - (i - 1) / 7 * 0.012); }
+    const limb = b(s < 0 ? 'limbT' : 'limbB'), grip = b('weaponL');
+    acc.add(sweep(pts, rad, { radial: 5, flat: 0.55, up: [0, 1, 0], capStart: true }), {
+      skin: (p) => { const t = sstep(0.12, 0.35, Math.abs(p.z - F[2])); return { si: [grip, limb, 0, 0], sw: [1 - t, t, 0, 0] }; },
+      color: (p, n, uv) => uv[1] < 0.14 ? lerp3(cL, cW2, 0.3 * Math.sin(uv[1] * 200)) : lerp3(cW, cW2, 0.2 + 0.2 * Math.sin(uv[1] * 30 + uv[0] * 5)), dtl: [0, 0, 0.2, 0.5],
     });
-    // horn tips
-    knob(acc, rigid(limb), [F[0], F[1] + s * 0.62, F[2] + z(0.62) - 0.004], 0.011, c.bone ?? 0xd0c8b0, { sy: 1.6 });
+    knob(acc, rigid(limb), [F[0], F[1] + BOW_Y(0.62) + 0.004, F[2] + s * 0.62], 0.012, 0xd8ccb0, { sz: 1.6 }); // horn nocks
   }
   // string: tip → nock → tip, skinned limb tip ↔ nock bone
-  const tipT = [F[0], F[1] + 0.61, F[2] + z(0.61)], tipB = [F[0], F[1] - 0.61, F[2] + z(0.61)];
-  for (const [tip, limb] of [[tipT, 'limbT'], [tipB, 'limbB']]) {
+  for (const [s, limb] of [[-1, 'limbT'], [1, 'limbB']]) {
+    const tip = [F[0], F[1] + BOW_Y(0.61), F[2] + s * 0.61];
     const pts = []; for (let i = 0; i <= 4; i++) pts.push(new V3(...tip).lerp(new V3(...NOCK), i / 4));
-    acc.add(sweep(pts, [0.0035, 0.0035, 0.0035, 0.0035, 0.0035], { radial: 3 }), { skin: (p) => { const t = clamp01(1 - Math.abs(p.y - NOCK[1]) / 0.61); return { si: [b(limb), b('nock'), 0, 0], sw: [1 - t, t, 0, 0] }; }, color: 0xd8d0b8, dtl: [0, 0, 0, 0] });
+    acc.add(sweep(pts, [0.0035, 0.0035, 0.0035, 0.0035, 0.0035], { radial: 3 }), { skin: (p) => { const t = clamp01(1 - Math.abs(p.z - NOCK[2]) / 0.61); return { si: [b(limb), b('nock'), 0, 0], sw: [1 - t, t, 0, 0] }; }, color: 0xd8d0b8, dtl: [0, 0, 0, 0] });
   }
-  // nocked arrow (hidden unless drawing): shaft, iron head, fletching
-  const A0 = new V3(...NOCK), fw = new V3(0, 0, -1), aw = rigid(b('arrow'));
-  arrowGeo(acc, aw, A0, fw, c, 0.74);
+  // nocked arrow (hidden unless drawing): rest points from the nock down through the grip
+  arrowGeo(acc, rigid(b('arrow')), new V3(...NOCK), new V3(0, -1, 0), c, 0.74);
   // quiver on the back (right shoulder), with arrow fletchings
   const q0 = new V3(0.1, 1.08, 0.17), q1 = new V3(-0.06, 1.46, 0.2);
   acc.add(sweep([q0, q1], [0.045, 0.05], { radial: 7, capStart: true, capEnd: false }), { skin: rigid(b('chest')), color: (p, n, uv) => lerp3(cL, cW2, uv[1] > 0.85 ? 0.6 : 0.15), dtl: [0, 0, 0.25, 0.4] });
@@ -406,7 +404,7 @@ function bow(acc, b, c) {
   }
 }
 function arrowGeo(acc, skin, nock, fw, c, len, stub = false) {
-  const cS = col(0x8a6a44), cF = col(c.cloth === undefined ? 0xa03020 : 0xc8c0a8);
+  const cS = col(0x8a6a44), cF = col(0x9a3224);
   const tip = nock.clone().addScaledVector(fw, len);
   acc.add(sweep([nock, tip], [0.0055, 0.0055], { radial: 4 }), { skin, color: cS, dtl: [0, 0, 0.1, 0.3] });
   if (!stub) acc.add(sweep([tip.clone().addScaledVector(fw, -0.005), tip.clone().addScaledVector(fw, 0.06)], [0.013, 0.0005], { radial: 4 }), { skin, color: c.metal, dtl: [0, 0, 0.2, 0] });
@@ -441,8 +439,8 @@ function knightArmour(acc, b, c, cB) {
   for (const s of [-1, 1]) {
     const n = s < 0 ? 'L' : 'R';
     for (let l = 0; l < 2; l++) {
-      const prof = [[0.0, 0.07], [0.06, 0.062], [0.1, 0.035], [0.128, 0.0], [0.132, -0.01], [0.124, -0.012]];
-      const { g, m } = lathe(prof, 14, [s * (0.225 + l * 0.02), 1.475 - l * 0.06, 0.035], [s * 0.8, 1 - l * 0.4, 0.05], 0, (p) => { p.x *= 1.0; p.z *= 0.92; });
+      const prof = [[0.0, 0.07], [0.06, 0.062], [0.1, 0.035], [0.128, 0.0], [0.132, -0.01], [0.124, -0.012]].map(([r, y]) => [r * (1 - l * 0.22), y * (1 - l * 0.2)]);
+      const { g, m } = lathe(prof, 14, [s * (0.228 + l * 0.03), 1.48 - l * 0.07, 0.035], [s * (0.55 + l * 0.25), 1, 0.05], 0, (p) => { p.z *= 0.92; });
       acc.add(g, { matrix: m, skin: rigid(b('armU' + n)), color: (p, nn, uv) => uv[1] > 0.72 ? cT : iron(p), dtl: [0, 0, 0.35, 0.05] });
     }
     // spike on the upper plate
@@ -450,23 +448,17 @@ function knightArmour(acc, b, c, cB) {
   }
   // ---- broken cuirass over the upper ribcage (front arc), gorget
   {
-    const prof = [[0.158, 1.29], [0.168, 1.34], [0.168, 1.4], [0.155, 1.45], [0.12, 1.49]].map(([r, y]) => [r, y - 1.29]);
+    const prof = [[0.135, 1.5], [0.172, 1.46], [0.188, 1.4], [0.186, 1.34], [0.176, 1.28]].map(([r, y]) => [r, y - 1.29]); // top → bottom: outward-facing
     const g = new THREE.LatheGeometry(prof.map(([r, y]) => new THREE.Vector2(r, y)), 10, Math.PI * 0.58, Math.PI * 0.84);
     const pa = g.attributes.position;
-    for (let i = 0; i < pa.count; i++) { const x = pa.getX(i), y = pa.getY(i); if (y < 0.02 && x > 0.02) pa.setY(i, y + 0.05 * sstep(0.02, 0.12, x)); pa.setZ(i, pa.getZ(i) * 0.82); }
+    for (let i = 0; i < pa.count; i++) { const x = pa.getX(i), y = pa.getY(i); if (y < 0.02 && x > 0.02) pa.setY(i, y + 0.06 * sstep(0.02, 0.14, x)); pa.setZ(i, pa.getZ(i) * 0.9); }
     g.computeVertexNormals();
-    acc.add(g, { matrix: new THREE.Matrix4().makeTranslation(0, 1.29, 0.02), skin: rigid(b('chest')), color: (p, n, uv) => uv[1] > 0.85 ? cT : iron(p), dtl: [0, 0, 0.35, 0.05] });
+    acc.add(g, { matrix: new THREE.Matrix4().makeTranslation(0, 1.29, 0.02), skin: rigid(b('chest')), color: (p, n, uv) => uv[1] < 0.15 ? cT : iron(p), dtl: [0, 0, 0.35, 0.05] });
   }
   // ---- faulds: three hanging plates at the belt
   for (let i = -1; i <= 1; i++) {
     const a = i * 0.55;
     acc.add(new THREE.BoxGeometry(0.1, 0.13, 0.012), { matrix: new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(-0.18, a, 0, 'YXZ')).setPosition(Math.sin(a) * 0.14, 0.925, -Math.cos(a) * 0.12 + 0.02), skin: rigid(b('hips')), color: iron(new V3(i, 0, 0)), dtl: [0, 0, 0.3, 0] });
-  }
-  // ---- greaves on the shins
-  for (const s of [-1, 1]) {
-    const n = s < 0 ? 'L' : 'R';
-    const g = new THREE.LatheGeometry([[0.05, 0], [0.056, 0.1], [0.052, 0.22], [0.046, 0.27]].map(([r, y]) => new THREE.Vector2(r, y)), 8, Math.PI * 0.62, Math.PI * 0.76);
-    acc.add(g, { matrix: new THREE.Matrix4().makeTranslation(s * 0.115, 0.2, -0.005), skin: rigid(b('shin' + n)), color: (p, nn, uv) => uv[1] > 0.8 ? cT : iron(p), dtl: [0, 0, 0.35, 0] });
   }
   // ---- tattered cape: grid skinned across two 3-bone chains
   {
@@ -502,7 +494,7 @@ function knightArmour(acc, b, c, cB) {
 }
 
 // ================================================================================================ controller
-const _t = new V3(), _t2 = new V3(), _pole = new V3(), _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _fw = new V3(0, 0, -1), _ax = new V3();
+const _t = new V3(), _t2 = new V3(), _pole = new V3(), _q = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _fw = new V3(0, -1, 0), _ax = new V3();
 class SkelCtl extends BipedCtl {
   constructor(inst, spec) {
     super(inst, spec);
@@ -524,6 +516,7 @@ class SkelCtl extends BipedCtl {
     this.gripW = 0; this.drawW = 0; this.draw = 0; this.arrowVis = 0; this.release = 0; this.aimUp = 0;
     this.clothF = 0; this.clothFv = 0; this.capeL = 0; this.capeV = 0;
     this.seed = (inst.seed || 0) + Math.random() * 100;
+    this.pilePer = { [P.b.head]: { roll: 0.32, hop: 0.07 }, [P.b.jaw]: { hop: 0.05 } }; // the skull bounces and rolls away
     postHook(this, post);
   }
 }
@@ -558,7 +551,7 @@ function post(ctl) {
       solveIK(P, ctl.chainR, _t, _pole);
       P.wq[x.handR].slerp(P.wq[ctl.chainR.b], dw);                   // straight wrist
     } else P.wp[nk].copy(_t2);
-    if (ctl.release > 0) { P.carry(wl, NOCK_V, _t); _t.addScaledVector(_t2.set(0, 0, -0.035).applyQuaternion(P.wq[wl]), Math.sin(ctl.release * 30) * ctl.release); P.wp[nk].copy(_t); }
+    if (ctl.release > 0) { P.carry(wl, NOCK_V, _t); _t.addScaledVector(_t2.set(0, -0.035, 0).applyQuaternion(P.wq[wl]), Math.sin(ctl.release * 30) * ctl.release); P.wp[nk].copy(_t); }
     P.wq[nk].copy(P.wq[wl]);
     // limbs flex with the draw
     const flex = 0.22 * ctl.draw * dw;
@@ -597,13 +590,15 @@ const GAIT = {
   ],
 };
 
-// hold poses per weapon: [armU up, out, twist, elbow, wrist] relaxed / combat
-const HOLD = {
-  sword: { R: [[0.12, 0.08, 0, 0.35, 0.1], [0.75, 0.2, -0.2, 1.05, -0.35]], L: [[0.1, 0.12, 0, 0.3, 0], [0.9, -0.05, 0.55, 1.45, 0]] },
-  axe: { R: [[0.35, 0.12, 0, 2.2, -0.2], [0.45, 0.15, 0.25, 0.9, -0.45]], L: [[0.05, 0.1, 0, 0.3, 0], [0.5, 0, 0.3, 1.0, 0]] },
-  bow: { R: [[0.08, 0.12, 0, 0.35, 0], [0.45, 0.15, 0, 0.8, 0]], L: [[0.1, 0.12, 0, 0.3, 0], [0.45, 0.1, 0.2, 0.6, 0.2]] },
-  great: { R: [[0.35, 0.1, 0, 2.15, -0.25], [0.6, 0.12, 0.35, 1.2, -0.4]], L: [[0.05, 0.12, 0, 0.3, 0], [0.6, 0, 0.3, 1.2, 0]] },
+// hold poses per weapon (solved with an FK fit, then tuned by eye): [up, out, twist, elbow, forearm twist, wrist, wrist twist]
+// [relaxed idle, combat, relaxed walking (optional)]. Two-handed weapons also IK the left fist onto the haft (post()).
+export const HOLD = {
+  sword: { R: [[0.04, 0.05, 0.08, 0.2, 0.26, -0.13, -0.45], [0.12, 0.53, 0.77, 0.68, -0.68, 0.02, -0.15]], L: [[-0.12, 0.05, 0.7, 0.18, 0.36, 0, 0], [-0.11, 0.45, -1.39, 1.77, 1.52, 0, 0]] },
+  axe: { R: [[0.05, 0.1, 0.0, 0.25, 0, -0.35, 1.45], [0.23, 0.05, -0.06, 0.5, 1.6, 0.01, -1.14]], L: [[0.05, 0.1, 0, 0.3, 0, 0, 0], [0.5, 0, 0.3, 1.0, 0, 0, 0]] },
+  bow: { R: [[0.08, 0.1, 0, 0.3, 0, 0, 0], [0.45, 0.15, 0, 0.8, 0, 0, 0]], L: [[0.11, -0.16, 0.56, 0.6, -1.83, 0.32, 0.24], [0.14, -0.7, 0.87, 0.82, -0.98, 0.34, -0.25]] },
+  great: { R: [[0.47, 0.44, 1.26, 0, 1.2, -0.86, 1.0], [0.17, 0.2, 0.53, 0.81, 0.76, 0.03, -0.84], [0.31, -0.15, -0.7, 0, -1.07, 0.02, -1.32]], L: [[0.6, 0, 0.3, 1.2, 0, 0, 0], [0.6, 0, 0.3, 1.2, 0, 0, 0], [0.05, 0.12, 0, 0.3, 0, 0, 0]] },
 };
+const hv = (hp, i, mk, cb) => mix(mix(hp[0][i], (hp[2] || hp[0])[i], mk), hp[1][i], cb);
 const ATTACKS = ['attack', 'attack2', 'attack_big', 'roar', 'idle_alt', 'death', 'knockdown', 'getup', 'spawn', 'spawn_drop', 'stun', 'knockback', 'hit'];
 
 function poseFn(ctl, dt) {
@@ -611,15 +606,15 @@ function poseFn(ctl, dt) {
   ctl.flame = 1;
   // busy = weight of any action that owns the arms
   let busy = 0; for (let i = 0; i < ATTACKS.length; i++) { const w = ctl.acts.weight(ATTACKS[i]); if (w > busy) busy = w; }
-  const H = HOLD[W], cb = ctl.combat, rel = 1 - busy;
+  const H = HOLD[W], cb = ctl.combat, rel = 1 - busy, mk = clamp01(G.act * 1.5);
   for (let s = -1; s <= 1; s += 2) {
     const hp = s < 0 ? H.L : H.R, arm = s < 0 ? b.armL : b.armR;
-    const r0 = hp[0], r1 = hp[1];
-    const up = mix(r0[0], r1[0], cb), out = mix(r0[1], r1[1], cb), tw = mix(r0[2], r1[2], cb), el = mix(r0[3], r1[3], cb), wr = mix(r0[4], r1[4], cb);
-    P.rot(arm[0], up * rel, tw * rel, s * out * rel); P.rx(arm[1], el * rel); P.rx(arm[2], wr * rel);
+    P.rot(arm[0], hv(hp, 0, mk, cb) * rel, hv(hp, 2, mk, cb) * rel, s * hv(hp, 1, mk, cb) * rel);
+    P.rx(arm[1], hv(hp, 3, mk, cb) * rel); P.ry(arm[1], hv(hp, 4, mk, cb) * rel);
+    P.rot(arm[2], hv(hp, 5, mk, cb) * rel, hv(hp, 6, mk, cb) * rel, 0);
   }
   // two-handed grip weight (axe / greatsword): on in combat & during attacks, off when relaxed (carried on the shoulder)
-  if (ctl.gripL) ctl.gripW = clamp01(Math.max(cb, ctl.acts.weight('attack'), ctl.acts.weight('attack2'), ctl.acts.weight('attack_big')) * (1 - Math.max(ctl.acts.weight('death'), ctl.acts.weight('knockdown'), ctl.acts.weight('hit'), ctl.acts.weight('knockback'), ctl.acts.weight('stun'), ctl.acts.weight('getup'), ctl.acts.weight('spawn'))));
+  if (ctl.gripL) ctl.gripW = clamp01(Math.max(cb, W === 'great' ? 1 - mk : 0, ctl.acts.weight('attack'), ctl.acts.weight('attack2'), ctl.acts.weight('attack_big')) * (1 - Math.max(ctl.acts.weight('death'), ctl.acts.weight('knockdown'), ctl.acts.weight('hit'), ctl.acts.weight('knockback'), ctl.acts.weight('stun'), ctl.acts.weight('getup'), ctl.acts.weight('spawn'))));
   if (W === 'bow') { ctl.drawW = 0; ctl.draw = 0; ctl.arrowVis = 0; ctl.release = Math.max(0, ctl.release - dt * 3); }
   // ---- rattle & jerk: footfall shudder, twitchy quantised head, chattering jaw, cocked skull
   let jolt = 0; for (let i = 0; i < G.legs.length; i++) jolt = Math.max(jolt, G.legs[i].down);
@@ -695,86 +690,97 @@ const COMMON = {
   } },
 };
 
+// ---- keyframed melee: arm key poses (FK-solved: [up, out, twist, elbow, forearm twist, wrist, wrist twist]) + torso keys
+const KP = {
+  sword_wind: [2.68, 1.24, -1.01, 1.01, 0.7, -0.76, 1.2], sword_end: [0.94, -0.07, 1.53, 0, -0.7, -0.95, -0.08],
+  sword_over: [2.55, -0.08, 0.28, 0.52, -0.74, -0.4, 1.1], sword_slam: [0.54, 1.05, 1.6, 0, -1.52, -0.59, -0.05],
+  axe_wind: [-0.16, 0.94, -1.6, 0.19, -1.6, -0.97, -0.59], axe_end: [0.93, -0.42, 1.6, 0, -0.4, -1, 0.07],
+  axe_over: [2.18, -0.26, 0.17, 1.13, -0.05, -0.9, 0.58], axe_chop: [1.07, 0.64, 0.97, 0, 0.06, -1, -0.57],
+  great_wind: [3.0, 1.4, -1.21, 1.01, 1.14, -0.78, 0.98], great_end: [0.91, -0.11, 1.6, 0, -0.74, -1, 0.14],
+  great_over: [2.35, 0.16, 0.86, 0.76, 0.97, -0.5, -0.12], great_slam: [0.7, 1.04, 1.58, 0, -1.05, -0.79, -0.42],
+  great_thrust_wind: [-0.6, 0.5, -1.55, 1.25, 1.02, 0.1, -0.18], great_thrust: [1.34, -0.23, 0.07, 0, 0.93, -0.83, -1.02],
+};
+/** a keyed track: T (normalised times), keys [[7 arm params, pitch, yaw, dy, dz]] — "hold" = the weapon's combat hold */
+function track(W, T, keys) {
+  const hold = HOLD[W].R[1];
+  const rows = keys.map(k => { const [arm, pitch = 0, yaw = 0, dy = 0, dz = 0] = k; const a = arm === 'hold' ? hold : KP[arm]; return [...a, pitch, yaw, dy, dz]; });
+  const V = []; for (let i = 0; i < 11; i++) V.push(rows.map(r => r[i]));
+  return { T, V };
+}
+const _kv = new Float32Array(11);
+function playTrack(ctl, tr, k, w, trem = 0) {
+  for (let i = 0; i < 11; i++) _kv[i] = kf(k, tr.T, tr.V[i]);
+  const P = ctl.pose, b = ctl.b, arm = b.armR, pitch = _kv[7] + trem, yaw = _kv[8];
+  P.rot(arm[0], (_kv[0] + trem * 2) * w, _kv[2] * w, _kv[1] * w); P.rx(arm[1], _kv[3] * w); P.ry(arm[1], _kv[4] * w); P.rot(arm[2], _kv[5] * w, _kv[6] * w, 0);
+  P.move(b.hips, 0, _kv[9] * w, _kv[10] * w);
+  P.rot(b.hips, 0.2 * pitch * w, 0.3 * yaw * w, 0); P.rot(b.spine, 0.5 * pitch * w, 0.45 * yaw * w, 0); P.rot(b.chest, 0.3 * pitch * w, 0.25 * yaw * w, 0);
+  P.rx(b.head, -0.45 * pitch * w); P.ry(b.head, -0.4 * yaw * w);
+}
+const TR = {
+  sword_attack: track('sword', [0, 0.34, 0.41, 0.5, 0.64, 1], [['hold'], ['sword_wind', 0.1, 0.6, -0.02, 0.03], ['sword_wind', 0.12, 0.62, -0.03, 0.03], ['sword_end', -0.25, -0.85, -0.06, -0.08], ['sword_end', -0.22, -0.8, -0.05, -0.07], ['hold']]),
+  sword_big: track('sword', [0, 0.38, 0.58, 0.66, 0.82, 1], [['hold'], ['sword_over', 0.28, 0.1, -0.02, 0.04], ['sword_over', 0.32, 0.12, -0.04, 0.05], ['sword_slam', -0.7, 0, -0.16, -0.14], ['sword_slam', -0.66, 0, -0.15, -0.13], ['hold']]),
+  axe_attack: track('axe', [0, 0.4, 0.46, 0.57, 0.7, 1], [['hold'], ['axe_wind', 0.05, 0.9, -0.03, 0.03], ['axe_wind', 0.06, 0.92, -0.04, 0.03], ['axe_end', -0.15, -1.1, -0.06, -0.08], ['axe_end', -0.12, -1.0, -0.05, -0.06], ['hold']]),
+  axe_chop: track('axe', [0, 0.42, 0.48, 0.58, 0.74, 1], [['hold'], ['axe_over', 0.3, 0.1, -0.02, 0.04], ['axe_over', 0.32, 0.1, -0.03, 0.04], ['axe_chop', -0.75, 0, -0.14, -0.12], ['axe_chop', -0.7, 0, -0.13, -0.1], ['hold']]),
+  axe_big: track('axe', [0, 0.36, 0.56, 0.68, 0.84, 1], [['hold'], ['axe_over', 0.3, 0.05, -0.12, 0.06], ['axe_over', 0.34, 0.05, -0.14, 0.06], ['axe_chop', -0.8, 0, -0.18, -0.55], ['axe_chop', -0.75, 0, -0.16, -0.55], ['hold', 0, 0, 0, -0.3]]),
+  great_attack: track('great', [0, 0.38, 0.45, 0.55, 0.68, 1], [['hold'], ['great_wind', 0.1, 0.7, -0.03, 0.03], ['great_wind', 0.12, 0.72, -0.04, 0.03], ['great_end', -0.25, -0.95, -0.07, -0.08], ['great_end', -0.22, -0.9, -0.06, -0.07], ['hold']]),
+  great_thrust: track('great', [0, 0.38, 0.44, 0.52, 0.66, 1], [['hold'], ['great_thrust_wind', 0.05, 0.4, -0.05, 0.08], ['great_thrust_wind', 0.06, 0.42, -0.06, 0.08], ['great_thrust', -0.3, -0.1, -0.08, -0.25], ['great_thrust', -0.28, -0.1, -0.07, -0.22], ['hold']]),
+  great_big: track('great', [0, 0.4, 0.58, 0.66, 0.82, 1], [['hold'], ['great_over', 0.3, 0.05, -0.02, 0.04], ['great_over', 0.34, 0.05, -0.04, 0.05], ['great_slam', -0.75, 0, -0.18, -0.15], ['great_slam', -0.7, 0, -0.17, -0.14], ['hold']]),
+};
+const tremble = (k, a, b, t) => sstep(a, b, k) * (1 - sstep(b, b + 0.03, k)) * Math.sin(t * 58) * 0.03;
+const telegraph = (ctl, k, a, b, w) => { const g = sstep(a, b, k) * (1 - sstep(b + 0.03, b + 0.12, k)); ctl.glow = mix(ctl.glow, 1 + 2.8 * g, w); ctl.charge = Math.max(ctl.charge, g * w); };
+
 const SWORD = {
-  attack: { dur: 0.72, a: 0.05, d: 0.85, hit: 0.46, fn(ctl, a, w) { // diagonal slash, right-high → left-low
-    const P = ctl.pose, b = ctl.b, k = a.k;
-    const wind = sstep(0, 0.36, k) * (1 - sstep(0.36, 0.48, k)), sw = sstep(0.36, 0.5, k), rec = sstep(0.6, 1, k), u = 1 - rec;
-    P.move(b.hips, 0, -0.03 * (wind + sw * u) * w, (0.03 * wind - 0.07 * sw * u) * w);
-    P.rot(b.spine, (0.08 * wind - 0.18 * sw * u) * w, (0.45 * wind - 0.55 * sw * u) * w, 0);
-    P.rot(b.chest, (-0.05 * sw * u) * w, (0.25 * wind - 0.3 * sw * u) * w, 0);
-    up(ctl, 1, mix(2.6 * wind, 0.55, sw) * u, mix(0.75 * wind, -0.35, sw) * u, mix(0.2 * wind, -0.6, sw) * u, mix(1.2 * wind, 0.15, sw) * u, mix(-0.9 * wind, 0.2, sw) * u, w);
-    up(ctl, -1, 0.2 * wind, 0.1, 0.3 * wind, 0.3, 0, w);
-    ctl.jaw = Math.max(ctl.jaw, 0.5 * sw * u * w);
-    legsPlant(ctl, (wind + sw) * u * w * 0.5, 1.3, -0.04);
+  attack: { dur: 0.72, a: 0.05, d: 0.85, hit: 0.47, fn(ctl, a, w) { // diagonal slash: blade cocked high behind the right shoulder → cut across and down
+    playTrack(ctl, TR.sword_attack, a.k, w);
+    up(ctl, -1, 0.15 * sstep(0.3, 0.5, a.k) * (1 - sstep(0.6, 1, a.k)), 0.05, 0.3, 0.2, 0, w);
+    ctl.jaw = Math.max(ctl.jaw, 0.55 * sstep(0.44, 0.5, a.k) * (1 - sstep(0.6, 0.9, a.k)) * w);
+    legsPlant(ctl, sstep(0.2, 0.4, a.k) * (1 - sstep(0.7, 1, a.k)) * w * 0.6, 1.35, -0.05);
   } },
   attack2: { dur: 0.8, a: 0.06, d: 0.85, hit: 0.48, fn(ctl, a, w) { // shield bash + lunge
     const P = ctl.pose, b = ctl.b, k = a.k;
     const wind = sstep(0, 0.36, k) * (1 - sstep(0.36, 0.46, k)), bash = sstep(0.38, 0.5, k) * (1 - sstep(0.65, 1, k));
     P.move(b.hips, 0, -0.04 * (wind + bash) * w, (0.05 * wind - 0.16 * bash) * w);
     P.rot(b.spine, (0.1 * wind - 0.2 * bash) * w, (-0.45 * wind + 0.4 * bash) * w, 0);
-    up(ctl, -1, 0.9 * wind + 1.35 * bash, -0.15 * wind - 0.2 * bash, 0.4 * wind + 0.45 * bash, 1.6 * wind + 0.35 * bash, 0, w);
+    P.ry(b.armLL, 0);
+    up(ctl, -1, 0.3 * wind + 0.9 * bash, 0.1 * wind + 0.25 * bash, -0.9 * wind - 0.6 * bash, 1.6 * wind + 0.9 * bash, 0, w);
+    ctl.pose.ry(ctl.b.armL[1], (1.4 * wind + 1.3 * bash) * w);
     up(ctl, 1, 0.4 * wind, 0.3, 0, 0.9, 0, w);
     ctl.jaw = Math.max(ctl.jaw, 0.6 * bash * w);
     legsPlant(ctl, (wind + bash) * w * 0.6, 1.3, -0.06 * bash);
   } },
   attack_big: { dur: 1.6, a: 0.05, d: 0.9, hit: 0.64, fn(ctl, a, w) { // overhead cleave: long trembling windup (eyes flare) → slam
-    const P = ctl.pose, b = ctl.b, k = a.k, t = a.t;
-    const wind = sstep(0, 0.38, k) * (1 - sstep(0.58, 0.66, k)), trem = sstep(0.3, 0.58, k) * (1 - sstep(0.58, 0.62, k)) * Math.sin(t * 60) * 0.035;
-    const slam = sstep(0.58, 0.66, k) * (1 - sstep(0.8, 1, k));
-    P.move(b.hips, 0, (-0.03 * wind - 0.14 * slam) * w, (0.05 * wind - 0.12 * slam) * w);
-    P.rot(b.spine, (0.28 * wind - 0.45 * slam + trem) * w, 0.1 * wind * w, trem * w);
-    P.rot(b.chest, (0.15 * wind - 0.2 * slam) * w, 0, 0);
-    P.rot(b.head, (0.3 * wind - 0.3 * slam) * w, 0, 0);
-    up(ctl, 1, 3.0 * wind + 1.0 * slam + trem * 3, 0.25 * wind, -0.1 * wind, 1.1 * wind + 0.1 * slam, -0.2 * wind + 0.3 * slam, w);
-    up(ctl, -1, 1.6 * wind + 0.4 * slam, 0.6 * wind + 0.2 * slam, 0.2 * wind, 1.2 * wind, 0, w);
-    ctl.jaw = Math.max(ctl.jaw, (0.4 * wind + 0.9 * slam) * w);
-    const g = sstep(0.08, 0.58, k) * (1 - sstep(0.62, 0.72, k));
-    ctl.glow = mix(ctl.glow, 1 + 2.8 * g, w); ctl.charge = Math.max(ctl.charge, g * w);
-    legsPlant(ctl, (wind + slam) * w * 0.8, 1.45, -0.05 * slam);
+    const k = a.k;
+    playTrack(ctl, TR.sword_big, k, w, tremble(k, 0.3, 0.58, a.t));
+    up(ctl, -1, 0.3 * sstep(0.1, 0.4, k) * (1 - sstep(0.6, 0.9, k)), 0.2, 0.2, 0.3, 0, w);
+    ctl.jaw = Math.max(ctl.jaw, (0.4 * sstep(0, 0.4, k) + 0.6 * sstep(0.58, 0.66, k)) * (1 - sstep(0.8, 1, k)) * w);
+    telegraph(ctl, k, 0.08, 0.58, w);
+    legsPlant(ctl, sstep(0.1, 0.4, k) * (1 - sstep(0.85, 1, k)) * w * 0.8, 1.45, -0.05 * sstep(0.58, 0.66, k));
   } },
 };
 
 const AXE = {
   attack: { dur: 0.95, a: 0.05, d: 0.86, hit: 0.54, fn(ctl, a, w) { // horizontal sweep right → left
-    const P = ctl.pose, b = ctl.b, k = a.k;
-    const wind = sstep(0, 0.42, k) * (1 - sstep(0.44, 0.56, k)), sw = sstep(0.44, 0.58, k), rec = sstep(0.68, 1, k), u = 1 - rec;
-    P.move(b.hips, 0, -0.04 * (wind + sw * u) * w, (0.03 * wind - 0.06 * sw * u) * w);
-    P.rot(b.hips, 0, (0.35 * wind - 0.45 * sw * u) * w, 0);
-    P.rot(b.spine, (0.05 * wind - 0.1 * sw * u) * w, (0.55 * wind - 0.75 * sw * u) * w, 0);
-    P.rot(b.chest, 0, (0.3 * wind - 0.35 * sw * u) * w, 0);
-    up(ctl, 1, mix(1.1 * wind, 1.15, sw) * u, mix(0.9 * wind, -0.2, sw) * u, mix(0.9 * wind, -0.9, sw) * u, mix(0.9 * wind, 0.3, sw) * u, mix(-0.6 * wind, -0.3, sw) * u, w);
-    ctl.jaw = Math.max(ctl.jaw, 0.6 * sw * u * w);
-    legsPlant(ctl, (wind + sw) * u * w * 0.7, 1.4, -0.03);
+    playTrack(ctl, TR.axe_attack, a.k, w);
+    ctl.jaw = Math.max(ctl.jaw, 0.6 * sstep(0.5, 0.57, a.k) * (1 - sstep(0.7, 0.95, a.k)) * w);
+    legsPlant(ctl, sstep(0.2, 0.4, a.k) * (1 - sstep(0.75, 1, a.k)) * w * 0.7, 1.4, -0.03);
   } },
   attack2: { dur: 1.05, a: 0.05, d: 0.86, hit: 0.56, fn(ctl, a, w) { // overhead chop into the ground
-    const P = ctl.pose, b = ctl.b, k = a.k;
-    const wind = sstep(0, 0.44, k) * (1 - sstep(0.46, 0.56, k)), chop = sstep(0.46, 0.58, k), rec = sstep(0.72, 1, k), u = 1 - rec;
-    P.move(b.hips, 0, (-0.02 * wind - 0.13 * chop * u) * w, (0.04 * wind - 0.1 * chop * u) * w);
-    P.rot(b.spine, (0.3 * wind - 0.5 * chop * u) * w, 0.1 * wind * w, 0);
-    P.rot(b.chest, (0.15 * wind - 0.25 * chop * u) * w, 0, 0);
-    up(ctl, 1, mix(3.0 * wind, 0.9, chop) * u, 0.15 * wind * u, 0, mix(1.0 * wind, 0.05, chop) * u, mix(-0.3 * wind, 0.1, chop) * u, w);
-    ctl.jaw = Math.max(ctl.jaw, 0.7 * chop * u * w);
-    legsPlant(ctl, (wind + chop) * u * w * 0.8, 1.45, -0.05 * chop);
+    playTrack(ctl, TR.axe_chop, a.k, w);
+    ctl.jaw = Math.max(ctl.jaw, 0.7 * sstep(0.5, 0.58, a.k) * (1 - sstep(0.75, 1, a.k)) * w);
+    legsPlant(ctl, sstep(0.2, 0.42, a.k) * (1 - sstep(0.8, 1, a.k)) * w * 0.8, 1.45, -0.05 * sstep(0.48, 0.58, a.k));
   } },
   attack_big: { dur: 1.9, a: 0.04, d: 0.9, hit: 0.68, fn(ctl, a, w) { // leaping cleave: crouch with the axe high (trembling, eyes flare) → leap → cleave
-    const P = ctl.pose, b = ctl.b, k = a.k, t = a.t, H = ctl.H;
-    const wind = sstep(0, 0.36, k) * (1 - sstep(0.56, 0.62, k)), trem = sstep(0.25, 0.54, k) * (1 - sstep(0.54, 0.58, k)) * Math.sin(t * 60) * 0.04;
-    const hop = Math.sin(clamp01((k - 0.54) / 0.14) * Math.PI), fwd = sstep(0.54, 0.68, k) * (1 - sstep(0.8, 1, k));
-    const chop = sstep(0.6, 0.68, k) * (1 - sstep(0.82, 1, k));
-    P.move(b.hips, 0, (-0.12 * wind + 0.22 * hop * H * 0.6 - 0.14 * chop) * w, (0.06 * wind - 0.55 * fwd) * w);
-    P.rot(b.hips, (-0.15 * wind + 0.1 * hop) * w, 0, 0);
-    P.rot(b.spine, (0.35 * wind - 0.6 * chop + trem) * w, 0, trem * w);
-    P.rot(b.head, (0.35 * wind - 0.3 * chop) * w, 0, 0);
-    up(ctl, 1, mix(3.1 * wind + trem * 3, 0.9, chop), 0.1 * wind, 0, mix(1.1 * wind, 0.05, chop), 0.2 * chop, w);
-    ctl.jaw = Math.max(ctl.jaw, (0.4 * wind + 0.9 * chop) * w);
-    const g = sstep(0.05, 0.54, k) * (1 - sstep(0.62, 0.72, k));
-    ctl.glow = mix(ctl.glow, 1 + 3 * g, w); ctl.charge = Math.max(ctl.charge, g * w);
-    legsPlant(ctl, wind * w, 1.5, 0);
+    const k = a.k, H = ctl.H;
+    playTrack(ctl, TR.axe_big, k, w, tremble(k, 0.25, 0.54, a.t));
+    const hop = Math.sin(clamp01((k - 0.54) / 0.14) * Math.PI);
+    ctl.pose.move(ctl.b.hips, 0, 0.18 * hop * H * 0.6 * w, 0);
+    ctl.jaw = Math.max(ctl.jaw, (0.4 * sstep(0, 0.36, k) + 0.6 * sstep(0.6, 0.68, k)) * (1 - sstep(0.84, 1, k)) * w);
+    telegraph(ctl, k, 0.05, 0.54, w);
+    legsPlant(ctl, sstep(0.05, 0.3, k) * (1 - sstep(0.52, 0.56, k)) * w, 1.5, 0);
     legsLocal(ctl, hop * w, 0.3, 1.2);
-    legsPlant(ctl, chop * w, 1.5, -0.55 * fwd);
+    legsPlant(ctl, sstep(0.64, 0.68, k) * (1 - sstep(0.9, 1, k)) * w, 1.5, -0.5);
   } },
 };
-
 // bow actions drive ctl.drawW / draw / arrowVis; post() IKs the drawing arm
 function shoot(ctl, a, w, T, aimUp) {
   const P = ctl.pose, b = ctl.b, k = a.k;
@@ -811,37 +817,21 @@ const BOW = {
 
 const GREAT = {
   attack: { dur: 0.85, a: 0.05, d: 0.86, hit: 0.52, fn(ctl, a, w) { // two-handed diagonal cut
-    const P = ctl.pose, b = ctl.b, k = a.k;
-    const wind = sstep(0, 0.4, k) * (1 - sstep(0.42, 0.54, k)), sw = sstep(0.42, 0.56, k), rec = sstep(0.66, 1, k), u = 1 - rec;
-    P.move(b.hips, 0, -0.04 * (wind + sw * u) * w, (0.03 * wind - 0.08 * sw * u) * w);
-    P.rot(b.hips, 0, (0.3 * wind - 0.35 * sw * u) * w, 0);
-    P.rot(b.spine, (0.1 * wind - 0.2 * sw * u) * w, (0.5 * wind - 0.6 * sw * u) * w, 0);
-    up(ctl, 1, mix(2.5 * wind, 0.7, sw) * u, mix(0.6 * wind, -0.3, sw) * u, mix(0.5 * wind, -0.7, sw) * u, mix(1.1 * wind, 0.2, sw) * u, mix(-0.8 * wind, 0.1, sw) * u, w);
-    ctl.jaw = Math.max(ctl.jaw, 0.5 * sw * u * w);
-    legsPlant(ctl, (wind + sw) * u * w * 0.7, 1.4, -0.04);
+    playTrack(ctl, TR.great_attack, a.k, w);
+    ctl.jaw = Math.max(ctl.jaw, 0.5 * sstep(0.47, 0.55, a.k) * (1 - sstep(0.68, 0.95, a.k)) * w);
+    legsPlant(ctl, sstep(0.2, 0.4, a.k) * (1 - sstep(0.75, 1, a.k)) * w * 0.7, 1.4, -0.04);
   } },
   attack2: { dur: 0.9, a: 0.05, d: 0.86, hit: 0.5, fn(ctl, a, w) { // lunging thrust
-    const P = ctl.pose, b = ctl.b, k = a.k;
-    const wind = sstep(0, 0.4, k) * (1 - sstep(0.42, 0.5, k)), th = sstep(0.42, 0.52, k) * (1 - sstep(0.66, 1, k));
-    P.move(b.hips, 0, -0.06 * (wind + th) * w, (0.08 * wind - 0.22 * th) * w);
-    P.rot(b.spine, (0.05 * wind - 0.25 * th) * w, (0.35 * wind - 0.15 * th) * w, 0);
-    up(ctl, 1, 0.9 * wind + 1.4 * th, 0.35 * wind, 0.3 * wind - 0.25 * th, 1.7 * wind + 0.1 * th, -0.7 * wind - 1.0 * th, w);
-    ctl.jaw = Math.max(ctl.jaw, 0.5 * th * w);
-    legsPlant(ctl, (wind + th) * w * 0.8, 1.45, -0.08 * th);
+    playTrack(ctl, TR.great_thrust, a.k, w);
+    ctl.jaw = Math.max(ctl.jaw, 0.5 * sstep(0.44, 0.52, a.k) * (1 - sstep(0.66, 0.9, a.k)) * w);
+    legsPlant(ctl, sstep(0.2, 0.38, a.k) * (1 - sstep(0.75, 1, a.k)) * w * 0.8, 1.45, -0.12 * sstep(0.44, 0.52, a.k));
   } },
   attack_big: { dur: 1.8, a: 0.05, d: 0.9, hit: 0.66, fn(ctl, a, w) { // soul-fire flares, sword raised overhead → earth-splitting slam
-    const P = ctl.pose, b = ctl.b, k = a.k, t = a.t;
-    const wind = sstep(0, 0.4, k) * (1 - sstep(0.58, 0.66, k)), trem = sstep(0.3, 0.58, k) * (1 - sstep(0.58, 0.62, k)) * Math.sin(t * 55) * 0.035;
-    const slam = sstep(0.58, 0.66, k) * (1 - sstep(0.82, 1, k));
-    P.move(b.hips, 0, (-0.03 * wind - 0.16 * slam) * w, (0.05 * wind - 0.14 * slam) * w);
-    P.rot(b.spine, (0.3 * wind - 0.55 * slam + trem) * w, 0, trem * w);
-    P.rot(b.chest, (0.12 * wind - 0.2 * slam) * w, 0, 0);
-    P.rot(b.head, (0.35 * wind - 0.3 * slam) * w, 0, 0);
-    up(ctl, 1, 3.05 * wind + 0.95 * slam + trem * 3, 0.1 * wind, 0, 0.9 * wind + 0.05 * slam, -0.3 * wind + 0.2 * slam, w);
-    ctl.jaw = Math.max(ctl.jaw, (0.5 * wind + 0.9 * slam) * w);
-    const g = sstep(0.05, 0.58, k) * (1 - sstep(0.62, 0.72, k));
-    ctl.glow = mix(ctl.glow, 1 + 3.2 * g, w); ctl.charge = Math.max(ctl.charge, g * w);
-    legsPlant(ctl, (wind + slam) * w * 0.85, 1.5, -0.06 * slam);
+    const k = a.k;
+    playTrack(ctl, TR.great_big, k, w, tremble(k, 0.3, 0.58, a.t));
+    ctl.jaw = Math.max(ctl.jaw, (0.5 * sstep(0, 0.4, k) + 0.5 * sstep(0.58, 0.66, k)) * (1 - sstep(0.82, 1, k)) * w);
+    telegraph(ctl, k, 0.05, 0.58, w);
+    legsPlant(ctl, sstep(0.1, 0.4, k) * (1 - sstep(0.85, 1, k)) * w * 0.85, 1.5, -0.06 * sstep(0.58, 0.66, k));
   } },
 };
 
@@ -854,7 +844,7 @@ function specFor(cfg) {
   return SPECS[W] || (SPECS[W] = {
     bones: { hips: 'hips', spine: 'spine', chest: 'chest', neck: 'neck', head: 'head', jaw: 'jaw', armL: ['armUL', 'armLL', 'handL'], armR: ['armUR', 'armLR', 'handR'] },
     gait: GAIT,
-    arm: { swing: 0.5, out: 0.08, elbow: 0.2, runSwing: 0.8, runOut: 0.1, runElbow: 0.9, combatUp: 0, combatElbow: 0, combatOut: 0, weaponSwing: W === 'axe' || W === 'great' ? 0.15 : 0.5 },
+    arm: { swing: 0.5, out: 0, elbow: 0, runSwing: 0.8, runOut: 0.1, runElbow: 0.9, combatUp: 0, combatElbow: 0, combatOut: 0, weaponSwing: W === 'axe' || W === 'great' ? 0.15 : 0.5 },
     lean: { walk: 0.08, run: 0.32, combat: 0.1 }, twist: 0.12, waddle: 0.03, crouch: 0.07, breathe: 0,
     fidgets: [{ name: 'idle_alt', w: 1 }], fidgetGap: 5,
     pose: poseFn,

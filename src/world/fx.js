@@ -46,7 +46,7 @@ export function buildFlames(list) {
         vec2 c = vC; float y = (c.y + 0.6) / 2.2;
         float n = texture2D(uNoise, vec2(c.x * 0.25 + vPh * 7.0, y * 0.5 - uTime * 1.3 + vPh)).g;
         float n2 = texture2D(uNoise, vec2(c.x * 0.5 + vPh * 3.0, y * 1.1 - uTime * 2.1)).b;
-        float w = mix(0.62, 0.02, pow(y, 0.8)) * (0.8 + n * 0.5);
+        float w = mix(0.62, 0.02, pow(clamp(y, 0.0, 1.0), 0.8)) * (0.8 + n * 0.5);
         float x = c.x + (n2 - 0.5) * 0.5 * y;
         float body = smoothstep(w, w * 0.25, abs(x)) * smoothstep(0.0, 0.14, y) * smoothstep(1.0, 0.45, y + n2 * 0.25);
         float core = smoothstep(w * 0.55, 0.0, abs(x)) * smoothstep(0.55, 0.1, y);
@@ -224,4 +224,32 @@ export function buildShafts(list) {
   });
   const mesh = new THREE.Mesh(g, mat); mesh.renderOrder = 7; mesh.name = 'shafts';
   return mesh;
+}
+
+// ---------------------------------------------------------------- rift portal (vertical swirling gate)
+export function buildRiftPortal({ x, y, z, rot = 0, r = 2.4, c1 = 0x6a10a0, c2 = 0xff50d0, c3 = 0xffffff, stretch = 1.35 } = {}) {
+  const g = new THREE.CircleGeometry(r, 48); g.scale(1, stretch, 1);
+  const mat = new THREE.ShaderMaterial({
+    uniforms: { uTime: G.uTime, uNoise: { value: noiseTex() }, uC1: { value: new THREE.Color(c1) }, uC2: { value: new THREE.Color(c2) }, uC3: { value: new THREE.Color(c3) }, uR: { value: r }, uS: { value: stretch } },
+    vertexShader: 'varying vec2 vP; void main(){ vP = position.xy; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: /* glsl */`
+      uniform float uTime; uniform sampler2D uNoise; uniform vec3 uC1, uC2, uC3; uniform float uR, uS; varying vec2 vP;
+      void main() {
+        vec2 p = vP / vec2(uR, uR * uS);
+        float d = length(p), a = atan(p.y, p.x);
+        float sw = a + d * 5.0 - uTime * 1.6;
+        float n = texture2D(uNoise, vec2(sw / 6.2832 * 2.0, d * 0.8 - uTime * 0.1)).g;
+        float n2 = texture2D(uNoise, vec2(sw / 6.2832 * 5.0 + 0.3, d * 1.7 - uTime * 0.25)).b;
+        float arms = smoothstep(0.45, 0.8, n * 0.7 + n2 * 0.5);
+        vec3 col = mix(uC1, uC2, arms) * (1.2 + (1.0 - d) * 1.5);
+        col += uC3 * smoothstep(0.25, 0.0, d) * 2.5;
+        col += uC2 * smoothstep(0.86, 0.98, d) * smoothstep(1.0, 0.97, d) * 4.0;
+        float alpha = smoothstep(1.0, 0.94, d) * (0.75 + 0.25 * arms);
+        gl_FragColor = vec4(col * alpha, alpha);
+      }`,
+    transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending,
+  });
+  const m = new THREE.Mesh(g, mat);
+  m.position.set(x, y + r * stretch, z); m.rotation.y = rot; m.renderOrder = 8; m.name = 'rift-portal';
+  return m;
 }

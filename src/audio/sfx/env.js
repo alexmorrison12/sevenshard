@@ -1,6 +1,7 @@
 // Ambience building blocks: loop recipes (baked into seamless buffers) and one-shot events (birds, drips...).
 import { clamp } from '../util.js';
 import { VOWEL } from './common.js';
+import { TUBE, METAL } from '../kit.js';
 
 const loopEnv = (k, o, D, fade = 0.3) => { const g = k.gain(0); k.envPts(g.gain, o.loop ? [[0, 1], [D, 1]] : [[0, 0], [fade, 1], [D - fade, 1], [D, 0]]); return g; };
 
@@ -110,6 +111,59 @@ export const ENV = {
       }
       for (let i = 0; i < 2; i++) laugh(k, k.rnd(0, Math.max(0.1, D - 1.5)), k.pan(k.rnd(-0.7, 0.7), room));
       for (let i = 0; i < 4; i++) k.bell({ t: k.rnd(0, D - 0.3), f: k.rnd(1700, 2600), vol: 0.03, d: 0.25, partials: [[1, 1, 1], [2.3, 0.5, 0.6], [3.9, 0.3, 0.4]], dest: k.pan(k.rnd(-0.7, 0.7), room) });
+      return D;
+    },
+  },
+  // outdoor crowd murmur (Solhaven): more, farther talkers than the tavern, shuffling feet, no room tone
+  crowd: {
+    loop: { dur: 12, xf: 1.4 }, bus: 'ambience', max: 2, gain: 1, rev: 0.1,
+    fn: (k, o) => {
+      const D = o.dur ?? 6, main = loopEnv(k, o, D, 0.6);
+      const air = k.filter('lowpass', 2300, 0.6, main);
+      const bed = k.gain(0.1, air); k.wobble(0, D, 0.5, 0.035, bed.gain);
+      k.noiseSrc(0, D, k.filter('bandpass', 520, 0.6, bed), 'pink');
+      const vowels = ['ah', 'eh', 'oh', 'uh', 'ee', 'aw'];
+      for (let v = 0; v < 12; v++) {
+        const pan = k.pan(k.rnd(-0.9, 0.9), air), far = k.rnd(0.35, 1);
+        const base = k.chance(0.55) ? k.rnd(95, 140) : k.rnd(170, 240), vol = k.rnd(0.04, 0.09) * far;
+        let t = k.rnd(-1.5, 0.5);
+        while (t < D) {
+          const plen = k.rnd(0.6, 2.2), s0 = Math.max(0, t), L = Math.min(D, t + plen) - s0;
+          if (L > 0.3) {
+            const pitch = [], amp = [[0, 0]], form = [];
+            let st = 0, f = base * k.rnd(0.95, 1.15);
+            while (st < L - 0.15) {
+              const sd = k.rnd(0.1, 0.22);
+              f = clamp(f * k.rnd(0.92, 1.08), base * 0.85, base * 1.35);
+              pitch.push([st, f]); form.push([st + sd * 0.3, VOWEL[k.pick(vowels)]]);
+              amp.push([st + 0.03, k.rnd(0.6, 1)], [st + sd - 0.04, k.rnd(0.4, 0.8)], [st + sd, k.chance(0.25) ? 0.02 : 0.25]);
+              st += sd;
+            }
+            if (pitch.length) {
+              amp.push([st + 0.06, 0]); pitch.push([st + 0.06, f * 0.85]); form.push([st + 0.06, form[form.length - 1][1]]);
+              k.voice({ t: s0, pitch, amp, formants: form, q: [5, 7, 8], fg: [1, 0.5, 0.2], breath: 0.12, body: 0.4, vol, dest: pan });
+            }
+          }
+          t += plen + k.rnd(0.4, 2.4);
+        }
+      }
+      for (let i = 0; i < D * 2.5; i++) k.nz({ t: k.rnd(0, D - 0.1), type: 'bandpass', f: k.rnd(900, 2200), q: 1.5, a: 0.002, d: 0.04, vol: 0.03, dest: k.pan(k.rnd(-0.8, 0.8), air) }); // feet
+      return D;
+    },
+  },
+  // ocean: slow swells that rise, break into foam and draw back, over a low surge
+  waves: {
+    loop: { dur: 16, xf: 2 }, bus: 'ambience', max: 2, gain: 1, rev: 0.05,
+    fn: (k, o) => {
+      const D = o.dur ?? 8, main = loopEnv(k, o, D, 1);
+      k.noiseSrc(0, D, k.filter('lowpass', 220, 0.6, k.gain(0.25, main)), 'brown');
+      let t = -1;
+      while (t < D) {
+        const L = k.rnd(3.2, 5.2), v = k.rnd(0.55, 1);
+        k.nz({ t: Math.max(0, t), color: 'pink', type: 'lowpass', fc: [[0, 300], [L * 0.45, 1500], [L, 450]], env: [[0, 0], [L * 0.4, v], [L * 0.55, v * 0.9], [L, 0]], vol: 0.5, dest: main });
+        k.nz({ t: Math.max(0, t + L * 0.38), type: 'highpass', f: 2600, env: [[0, 0], [0.15, v], [L * 0.6, 0]], vol: 0.12, dest: main }); // foam
+        t += L * k.rnd(0.7, 1.0);
+      }
       return D;
     },
   },
@@ -244,6 +298,88 @@ export const EVENTS = {
     return 0.5;
   },
   leaves: (k) => { k.nz({ type: 'bandpass', f: k.rnd(3000, 5000), q: 0.8, env: [[0, 0], [0.4, 1], [1.5, 0]], vol: 0.12 }); return 1.6; },
+  // seagull: 2–4 descending "kyow" calls
+  gull: (k) => {
+    const n = 2 + Math.floor(k.rnd(0, 2.99)), f0 = k.rnd(1300, 1800); let t = 0;
+    for (let i = 0; i < n; i++) {
+      const d = k.rnd(0.18, 0.32), f = f0 * k.rnd(0.9, 1.08);
+      k.voice({ t, pitch: [[0, f * 1.15], [d * 0.3, f * 1.25], [d, f * 0.72]], amp: [[0, 0], [0.02, 1], [d * 0.6, 0.7], [d, 0]], formants: [[0, [1900, 2800, 4000]], [d, [1300, 2200, 3600]]], q: [4, 5, 6], fg: [1, 0.6, 0.3], fry: 0.25, fryRate: 70, breath: 0.2, jitter: 25, vol: 0.2 });
+      t += d + k.rnd(0.05, 0.16);
+    }
+    return t + 0.2;
+  },
+  // distant town bell: two or three strikes
+  bell_far: (k) => { const f = k.pick([294, 330, 262]), n = 2 + (k.chance(0.4) ? 1 : 0); for (let i = 0; i < n; i++) k.bell({ t: i * 1.6, f, vol: 0.13, d: 4.5, partials: TUBE, spread: 0.003 }); return n * 1.6 + 4; },
+  // a cart rolling over cobbles, passing by
+  cart: (k) => {
+    const D = k.rnd(3, 5), p = k.pan(-0.8), dir = k.chance(0.5) ? 1 : -1; p.pan.setValueAtTime(-0.8 * dir, k.at(0)); p.pan.linearRampToValueAtTime(0.8 * dir, k.at(D));
+    const g = k.gain(0, p); k.envPts(g.gain, [[0, 0], [D * 0.45, 1], [D, 0]]);
+    k.nz({ color: 'brown', type: 'lowpass', f: 180, env: [[0, 0], [0.3, 1], [D - 0.3, 1], [D, 0]], vol: 0.3, dest: g });
+    for (let t = 0; t < D; t += k.rnd(0.09, 0.16)) k.nz({ t, type: 'bandpass', f: k.rnd(500, 1100), q: 2.5, a: 0.001, d: 0.025, vol: k.rnd(0.1, 0.22), dest: g });
+    return D + 0.2;
+  },
+  // a merchant calling out (wordless): a longer, rising-falling voice
+  call: (k) => {
+    const f = k.rnd(150, 230), d = k.rnd(0.6, 1.1);
+    k.voice({ pitch: [[0, f], [d * 0.3, f * 1.3], [d, f * 0.9]], amp: [[0, 0], [0.05, 1], [d * 0.8, 0.8], [d, 0]], formants: [[0, VOWEL.eh], [d * 0.4, VOWEL.ah], [d, VOWEL.oh]], q: [5, 7, 8], fg: [1, 0.5, 0.2], breath: 0.15, body: 0.4, vib: [5, 12], vol: 0.14 });
+    return d + 0.2;
+  },
+  // the smithy across the square
+  hammer: (k) => { const f = k.rnd(1400, 2000); for (let i = 0; i < 3; i++) { k.bell({ t: i * 0.42, f, vol: 0.05, d: 0.45, partials: METAL }); k.nz({ t: i * 0.42, type: 'highpass', f: 3000, a: 0.0005, d: 0.02, vol: 0.06 }); } return 1.6; },
+  hull_creak: (k) => {
+    const f = k.rnd(90, 170), D = k.rnd(0.6, 1.3);
+    const g = k.gain(0, k.filter('bandpass', f * 3, 3)); k.envPts(g.gain, [[0, 0], [D * 0.2, 0.25], [D * 0.8, 0.2], [D, 0]]);
+    const o = k.osc('sawtooth', f, 0, D, g); k.wobble(0, D, 16, 150, o.detune);
+    const am = k.gain(0.5); k.lfo(0, D, k.rnd(18, 30), 0.5, am.gain, 'square');
+    k.nz({ type: 'bandpass', f: f * 6, q: 4, env: [[0, 0], [0.1, 1], [D, 0]], vol: 0.06, dest: am });
+    return D + 0.1;
+  },
+  slosh: (k) => { const d = k.rnd(0.6, 1.2); k.nz({ color: 'pink', type: 'lowpass', fc: [[0, 300], [d * 0.4, 1200], [d, 350]], env: [[0, 0], [d * 0.35, 1], [d, 0]], vol: 0.3 }); for (let i = 0; i < 3; i++) { const f = k.rnd(400, 900); k.tone({ t: k.rnd(0.1, d), fc: [[0, f], [0.03, f * 1.8]], a: 0.002, d: 0.05, vol: 0.03 }); } return d + 0.1; },
+  rope: (k) => { const f = k.rnd(700, 1100), d = k.rnd(0.25, 0.5); k.tone({ type: 'triangle', fc: [[0, f], [d, f * 1.25]], env: [[0, 0], [0.04, 1], [d, 0]], vol: 0.03, dest: k.filter('bandpass', f * 2, 3) }); k.nz({ type: 'bandpass', f: f * 2.5, q: 5, env: [[0, 0], [0.03, 1], [d, 0]], vol: 0.04 }); return d + 0.1; },
+  // a bee drifting past
+  bee: (k) => {
+    const D = k.rnd(1.2, 2.2), f = k.rnd(190, 240), p = k.pan(0), p0 = k.rnd(-0.9, -0.2), dir = k.chance(0.5) ? 1 : -1; p.pan.setValueAtTime(p0 * dir, k.at(0)); p.pan.linearRampToValueAtTime(-p0 * dir * k.rnd(0.3, 1), k.at(D));
+    const g = k.gain(0, k.filter('bandpass', 900, 0.8, p)); k.envPts(g.gain, [[0, 0], [D * 0.5, 0.12], [D, 0]]);
+    const o = k.osc('sawtooth', f, 0, D, g); o.frequency.setValueAtTime(f * 1.04 * k.r, k.at(0)); o.frequency.linearRampToValueAtTime(f * 0.95 * k.r, k.at(D)); k.wobble(0, D, 9, 25, o.detune);
+    return D + 0.1;
+  },
+  crow: (k) => {
+    const n = 1 + Math.floor(k.rnd(0, 2.99)), f = k.rnd(430, 560); let t = 0;
+    for (let i = 0; i < n; i++) {
+      const d = k.rnd(0.22, 0.34);
+      k.voice({ t, pitch: [[0, f * 1.1], [d, f * 0.85]], amp: [[0, 0], [0.02, 1], [d * 0.7, 0.8], [d, 0]], formants: [[0, [800, 1300, 2600]], [d, [700, 1100, 2400]]], q: [3, 4, 5], fg: [1, 0.7, 0.3], fry: 0.6, fryRate: 55, jitter: 40, breath: 0.3, drive: 1.6, vol: 0.2 });
+      t += d + k.rnd(0.12, 0.3);
+    }
+    return t + 0.2;
+  },
+  owl: (k) => {
+    const f = k.rnd(330, 420);
+    for (const [t, s, d] of [[0, 1, 0.34], [0.45, 0.94, 0.22], [0.72, 0.94, 0.5]]) {
+      k.tone({ t, fc: [[0, f * s * 0.97], [d * 0.3, f * s], [d, f * s * 0.95]], env: [[0, 0], [0.06, 1], [d - 0.05, 0.8], [d, 0]], vol: 0.12 });
+      k.nz({ t, type: 'bandpass', f: f * s * 2, q: 6, env: [[0, 0], [0.05, 1], [d, 0]], vol: 0.03 });
+    }
+    return 1.4;
+  },
+  tree_creak: (k) => {
+    const f = k.rnd(60, 110), D = k.rnd(1.2, 2.4);
+    const g = k.gain(0, k.filter('bandpass', f * 4, 2.5)); k.envPts(g.gain, [[0, 0], [D * 0.3, 0.3], [D * 0.7, 0.26], [D, 0]]);
+    const o = k.osc('sawtooth', f, 0, D, g); k.wobble(0, D, 11, 120, o.detune); o.frequency.linearRampToValueAtTime(f * 1.3 * k.r, k.at(D));
+    return D + 0.1;
+  },
+  snap: (k) => { k.nz({ type: 'bandpass', f: k.rnd(1500, 2800), q: 2, a: 0.0004, d: 0.02, vol: 0.4 }); k.nz({ t: 0.015, type: 'bandpass', f: k.rnd(900, 1600), q: 2, a: 0.0004, d: 0.03, vol: 0.2 }); return 0.2; },
+  ice_crack: (k) => { k.nz({ type: 'highpass', f: 1800, a: 0.0004, d: 0.04, vol: 0.3 }); k.tone({ fc: [[0, 2600], [0.4, 900]], a: 0.001, d: 0.45, vol: 0.03 }); k.nz({ t: 0.02, color: 'brown', type: 'lowpass', f: 200, a: 0.01, d: 0.8, vol: 0.2 }); return 1; },
+  sand_gust: (k) => { const D = k.rnd(1.8, 3.2); k.nz({ type: 'bandpass', fc: [[0, 3500], [D * 0.5, 6500], [D, 4000]], q: 0.8, env: [[0, 0], [D * 0.45, 1], [D, 0]], vol: 0.12 }); k.nz({ color: 'pink', type: 'lowpass', f: 500, env: [[0, 0], [D * 0.4, 1], [D, 0]], vol: 0.15 }); return D + 0.1; },
+  void_pulse: (k) => { const D = k.rnd(2.5, 4); k.tone({ fc: [[0, 36], [D, 52]], env: [[0, 0], [D * 0.5, 1], [D, 0]], vol: 0.3 }); k.nz({ type: 'bandpass', fc: [[0, 200], [D, 900]], q: 3, env: [[0, 0], [D * 0.6, 1], [D, 0]], vol: 0.08 }); return D + 0.1; },
+  // unvoiced whisper: breath through moving vowel formants at syllable rate
+  whisper: (k) => {
+    const D = k.rnd(0.9, 1.8), sy = k.rnd(5, 7.5), vs = ['ee', 'ah', 'oo', 'eh', 'oh'];
+    const g = k.gain(0, k.filter('highpass', 400, 0.7));
+    const env = [[0, 0]]; for (let x = 0; x < D; x += 1 / sy) env.push([x + 0.03, k.rnd(0.5, 1)], [x + 0.8 / sy, k.rnd(0.1, 0.4)]); env.push([D + 0.05, 0]);
+    k.envPts(g.gain, env);
+    const F = VOWEL[k.pick(vs)];
+    F.forEach((f, i) => { const bp = k.filter('bandpass', f * 1.1, [6, 8, 10][i], k.gain([0.5, 0.3, 0.2][i], g)); for (let x = 0; x < D; x += 1 / sy) bp.frequency.setTargetAtTime(VOWEL[k.pick(vs)][i] * 1.1 * k.r, k.at(x), 0.03); k.noiseSrc(0, D + 0.1, bp, 'white'); });
+    return D + 0.2;
+  },
 };
 
 // loudness trims for the loop beds (from Everdawn's calibration)

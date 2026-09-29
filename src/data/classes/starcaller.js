@@ -59,16 +59,16 @@ const skills = [
   {
     id: 'blaze_nova', name: 'Blaze Nova', type: 'normal', cd: 7, mp: 45, dur: 0.6,
     desc: 'A ring of fire bursts outward from your staff, pushing enemies back.', props: { stagger: 'Mid' },
-    events: [A(0, 'cast_ground', 0.6), H(0.26, { ...circle(4.2), coef: 20, stagger: 8, elem: FI, knock: 'push', kb: 2 }), FX(0.26, 'fire_nova', { color: FI, r: 4.2 }), S(0.26, 'fire')],
-    tripods: [['quick_prep', 'wide', 'weak_point'], ['burn', 'stance', { id: 'double_nova', name: 'Double Nova', desc: 'A second nova follows 0.4 s later (+50% damage).', apply: d => { addEv(d.events, H(0.66, { ...circle(5), coef: 10, stagger: 4, elem: FI }), FX(0.66, 'fire_nova', { color: FI, r: 5 })); d.dur = 0.8; } }],
-      [{ id: 'solar_flare', name: 'Solar Flare', desc: 'The nova scorches the ground around you for 4 s.', apply: d => { addEv(d.events, Z(0.3, { r: 4, dur: 4, tick: 0.5, kind: 'fire', hit: { coef: 1.4, elem: FI } })); } }, 'enhanced:0.4']],
+    events: [A(0, 'cast_ground', 0.6), H(0.26, { ...circle(4.2), coef: 16, stagger: 8, elem: FI, knock: 'push', kb: 2 }), FX(0.26, 'fire_nova', { color: FI, r: 4.2 }), S(0.26, 'fire')],
+    tripods: [['quick_prep', 'wide', 'weak_point'], ['burn', 'stance', { id: 'double_nova', name: 'Double Nova', desc: 'A second nova follows 0.4 s later (+50% damage).', apply: d => { addEv(d.events, H(0.66, { ...circle(5), coef: 8, stagger: 4, elem: FI }), FX(0.66, 'fire_nova', { color: FI, r: 5 })); d.dur = 0.8; } }],
+      [{ id: 'solar_flare', name: 'Solar Flare', desc: 'The nova scorches the ground around you for 4 s.', apply: d => { addEv(d.events, Z(0.3, { r: 4, dur: 4, tick: 0.5, kind: 'fire', hit: { coef: 1.1, elem: FI } })); } }, 'enhanced:0.4']],
   },
   {
     id: 'frost_lance', name: 'Frost Lance', type: 'normal', cd: 6, mp: 40, dur: 0.55,
     desc: 'Hurl a lance of ice that pierces every enemy in its path and may freeze them.', props: { stagger: 'Low' },
-    events: [A(0, 'cast', 0.55), P(0.22, { speed: 32, range: 14, radius: 1.0, pierce: 99, kind: 'frost_lance', color: IC, hit: { coef: 18, stagger: 5, elem: IC, status: [chill] } }), S(0.22, 'frost')],
+    events: [A(0, 'cast', 0.55), P(0.22, { speed: 32, range: 14, radius: 1.0, pierce: 99, kind: 'frost_lance', color: IC, hit: { coef: 14.4, stagger: 5, elem: IC, status: [chill] } }), S(0.22, 'frost')],
     tripods: [['quick_prep', 'swift', 'weak_point'], ['keen', 'freeze', { id: 'triple_lance', name: 'Triple Lance', desc: 'Three lances in a fan (each 45% damage).', apply: d => { const p = evs(d.events, 'proj')[0]; p.count = 3; p.spread = 0.5; p.hit.coef *= 0.45; } }],
-      [{ id: 'shatter', name: 'Shatter', desc: 'The lance shatters where it stops: a 3 m burst of ice shards (+40% damage).', apply: d => { addEv(d.events, H(0.66, { ...circle(3), at: 12.5, coef: 7.2, stagger: 3, elem: IC }), FX(0.66, 'ice_shatter', { at: 12.5, color: IC, r: 3 })); d.dur = 0.7; } }, 'enhanced:0.4']],
+      [{ id: 'shatter', name: 'Shatter', desc: 'The lance shatters where it stops: a 3 m burst of ice shards (+40% damage).', apply: d => { addEv(d.events, H(0.66, { ...circle(3), at: 12.5, coef: 5.8, stagger: 3, elem: IC }), FX(0.66, 'ice_shatter', { at: 12.5, color: IC, r: 3 })); d.dur = 0.7; } }, 'enhanced:0.4']],
   },
   {
     id: 'starfire_explosion', name: 'Starfire Explosion', type: 'point', cd: 12, mp: 70, range: 11, dur: 0.75,
@@ -98,10 +98,10 @@ const skills = [
     id: 'esoteric_rune', name: 'Esoteric Rune', type: 'point', cd: 16, mp: 70, range: 10, dur: 0.7,
     desc: 'Inscribe a rune of stars on the ground: it pulses three times, then detonates.', props: { stagger: 'Mid' },
     events: [A(0, 'cast_ground', 0.7), FX(0.2, 'rune_circle', { at: 'point', color: AR, r: 3.2, dur: 1.4 }), S(0.2, 'cast'),
-      Z(0.2, { at: 'point', r: 3.2, dur: 1.2, tick: 0.4, first: 0.2, kind: 'rune', hit: { coef: 6, stagger: 3, elem: AR } }),
-      H(1.45, { ...circle(3.4), at: 'point', coef: 32, stagger: 12, elem: AR, heavy: true }), FX(1.45, 'arcane_burst', { at: 'point', color: AR, r: 3.4 }), S(1.45, 'explosion')],
+      Z(0.2, { at: 'point', r: 3.2, dur: 1.2, tick: 0.4, first: 0.2, kind: 'rune', hit: { coef: 4.8, stagger: 3, elem: AR } }),
+      H(1.45, { ...circle(3.4), at: 'point', coef: 25.6, stagger: 12, elem: AR, heavy: true }), FX(1.45, 'arcane_burst', { at: 'point', color: AR, r: 3.4 }), S(1.45, 'explosion')],
     tripods: [['quick_prep', 'wide', 'weak_point'], ['keen', 'crushing', { id: 'binding_rune', name: 'Binding Rune', desc: 'The rune binds foes in place (stuns non-boss enemies for 2 s).', apply: d => { const z = evs(d.events, 'zone')[0]; z.hit.knock = 'stun'; z.hit.knockDur = 2; } }],
-      [{ id: 'twin_rune', name: 'Twin Rune', desc: 'A second rune is drawn under your feet (+60% damage around you).', apply: d => { addEv(d.events, Z(0.2, { r: 3, dur: 1.2, tick: 0.4, first: 0.2, kind: 'rune', hit: { coef: 3.6, elem: AR } }), H(1.45, { ...circle(3.2), coef: 19, stagger: 6, elem: AR }), FX(1.45, 'arcane_burst', { color: AR, r: 3.2 })); } }, 'enhanced:0.4']],
+      [{ id: 'twin_rune', name: 'Twin Rune', desc: 'A second rune is drawn under your feet (+60% damage around you).', apply: d => { addEv(d.events, Z(0.2, { r: 3, dur: 1.2, tick: 0.4, first: 0.2, kind: 'rune', hit: { coef: 2.9, elem: AR } }), H(1.45, { ...circle(3.2), coef: 15.2, stagger: 6, elem: AR }), FX(1.45, 'arcane_burst', { color: AR, r: 3.2 })); } }, 'enhanced:0.4']],
   },
   {
     id: 'lightning_vortex', name: 'Lightning Vortex', type: 'holding', cd: 12, mp: 70, holdMax: 2.4, range: 8,
@@ -154,9 +154,9 @@ export default finalize({
   dash: { cd: 9, dist: 5.2, dur: 0.26 },
   stats: { hp: 0.9, atk: 1.0, def: 0.9 },
   basic: [
-    { anim: 'atk1', dur: 0.36, proj: { t: 0.14, speed: 30, range: 12, radius: 0.6, kind: 'arcane_bolt', color: AR, hit: { coef: 1.1, stagger: 1.5 } }, hit: { t: 0.14, shape: 'none' }, sfx: 'cast' },
-    { anim: 'atk2', dur: 0.36, proj: { t: 0.14, speed: 30, range: 12, radius: 0.6, kind: 'arcane_bolt', color: AR, hit: { coef: 1.2, stagger: 1.5 } }, hit: { t: 0.14, shape: 'none' }, sfx: 'cast' },
-    { anim: 'atk3', dur: 0.52, proj: { t: 0.22, speed: 28, range: 12, radius: 0.7, count: 3, spread: 0.35, kind: 'arcane_bolt', color: AR, hit: { coef: 0.8, stagger: 1 } }, hit: { t: 0.22, shape: 'none' }, sfx: 'cast' },
+    { anim: 'atk1', dur: 0.36, proj: { t: 0.14, speed: 30, range: 12, radius: 0.6, kind: 'arcane', color: AR, hit: { coef: 1.1, stagger: 1.5 } }, hit: { t: 0.14, shape: 'none' }, sfx: 'cast' },
+    { anim: 'atk2', dur: 0.36, proj: { t: 0.14, speed: 30, range: 12, radius: 0.6, kind: 'arcane', color: AR, hit: { coef: 1.2, stagger: 1.5 } }, hit: { t: 0.14, shape: 'none' }, sfx: 'cast' },
+    { anim: 'atk3', dur: 0.52, proj: { t: 0.22, speed: 28, range: 12, radius: 0.7, count: 3, spread: 0.35, kind: 'arcane', color: AR, hit: { coef: 0.8, stagger: 1 } }, hit: { t: 0.22, shape: 'none' }, sfx: 'cast' },
   ],
   identity,
   awakening: {

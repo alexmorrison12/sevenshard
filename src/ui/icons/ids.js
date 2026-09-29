@@ -15,7 +15,9 @@ export const SKILLS = {
 export const CLASS_SPECIAL = ['identity_z', 'identity_x', 'awakening'];
 export const DEMON_SKILLS = ['abyss_claw', 'rending_talons', 'hellfire_wings', 'demonic_slam'];
 
-export const TRIPODS = ['quick_prep', 'mobility', 'weak_point', 'enhanced', 'wide', 'super_armor', 'bleed', 'burn', 'freeze', 'shock', 'pull', 'pierce', 'extra_hit', 'charge', 'zone', 'element'];
+export const TRIPODS = ['quick_prep', 'mobility', 'weak_point', 'enhanced', 'wide', 'super_armor', 'bleed', 'burn', 'freeze', 'shock', 'pull', 'pierce', 'extra_hit', 'charge', 'zone', 'element',
+  // the game's generic tripod catalogue (src/game/skills/tripods.js)
+  'stance', 'unstoppable', 'swift', 'mana_saver', 'keen', 'crushing', 'aftershock', 'back', 'head', 'scorched', 'vital'];
 
 export const ENGR_COMBAT = ['vendetta', 'hexed_idol', 'keen_edge', 'adrenaline', 'backstabber', 'frontliner', 'wind_captain', 'spirit_absorption', 'precise_blade', 'super_charge', 'barricade', 'expert', 'awakening', 'master_brawler', 'ether_predator', 'crisis_evasion', 'stabilized_status', 'all_out_attack', 'mana_flow', 'heavy_armor', 'sight_focus', 'drops_of_ether', 'propulsion', 'increase_mass'];
 /** Class engravings by class (2 each). */
@@ -26,14 +28,20 @@ export const ENGR_CLASS = {
 };
 export const ENGR_NEG = ['neg_atk', 'neg_speed', 'neg_def', 'neg_move'];
 
-export const STATUSES = ['burn', 'bleed', 'poison', 'freeze', 'shock', 'stun', 'fear', 'sleep', 'silence', 'slow', 'knockdown', 'shield', 'heal', 'atk_up', 'crit_up', 'speed_up', 'def_down', 'brand', 'counter', 'stagger', 'invuln', 'super_armor', 'rest'];
+export const STATUSES = ['burn', 'bleed', 'poison', 'freeze', 'shock', 'stun', 'fear', 'sleep', 'silence', 'slow', 'knockdown', 'shield', 'heal', 'atk_up', 'crit_up', 'speed_up', 'def_down', 'brand', 'counter', 'stagger', 'invuln', 'super_armor', 'rest',
+  'armor_break', 'weaken', 'def_up', 'regen', 'enrage'];
 /** Statuses drawn with the harmful (red) frame. */
-export const DEBUFFS = new Set(['burn', 'bleed', 'poison', 'freeze', 'shock', 'stun', 'fear', 'sleep', 'silence', 'slow', 'knockdown', 'def_down', 'brand', 'stagger']);
+export const DEBUFFS = new Set(['burn', 'bleed', 'poison', 'freeze', 'shock', 'stun', 'fear', 'sleep', 'silence', 'slow', 'knockdown', 'def_down', 'brand', 'stagger', 'armor_break', 'weaken', 'enrage']);
 
 export const UI_IDS = ['character', 'inventory', 'skills', 'engravings', 'cards', 'gems', 'map', 'guild', 'market', 'mail', 'stronghold', 'tome', 'collectibles', 'party', 'settings', 'songs', 'emotes', 'pvp', 'leaderboard', 'compass', 'quests', 'friends', 'honing', 'mounts', 'pets', 'wardrobe', 'chat', 'photo', 'help', 'logout'];
 
-export const BOSSES = ['gorrath', 'skarn', 'vesk', 'varkhul', 'ashmaw', 'gatekeeper', 'rimewing', 'cinderhorn', 'sandmaw', 'kurai', 'nerissa', 'deep_oracle', 'thunderhoof'];
-export const NPCS = ['brannoc', 'seraphine', 'bramblebeard', 'merchant'];
+export const BOSSES = ['gorrath', 'skarn', 'vesk', 'varkhul', 'ashmaw', 'gatekeeper', 'rimewing', 'cinderhorn', 'sandmaw', 'kurai', 'nerissa', 'deep_oracle', 'thunderhoof', 'vorrathis', 'ghost_captain'];
+/** npc ids: the four story busts, every city NPC of src/data/npcs.js (dialog portraits), and card characters. */
+export const NPCS = ['brannoc', 'seraphine', 'bramblebeard', 'merchant',
+  'blacksmith', 'market', 'bank', 'guild', 'cards', 'general', 'songs', 'pvp', 'harbor', 'stronghold', 'tasks', 'gemcutter', 'tailor', 'stable', 'rapport1', 'rapport2', 'rapport3', 'nexus', 'mail', 'board',
+  'morwenna', 'ithra', 'aurelion', 'solenne', 'maelis', 'vaelor', 'kest', 'corvan', 'puddlebutton', 'sprig', 'captain_acorn', 'mossy_gran'];
+/** card ids (src/data/cards.js). */
+export const CARDS = ['seraphine', 'ithra', 'aurelion', 'solenne', 'brannoc', 'maelis', 'bramblebeard', 'puddlebutton', 'sprig', 'tumbleroot', 'captain_acorn', 'mossy_gran', 'gorrath', 'varkhul', 'skarn', 'vesk', 'ashmaw', 'rimewing', 'cinderhorn', 'sandmaw', 'kurai', 'thunderhoof', 'nerissa', 'maren', 'hilda', 'mirelle', 'wren', 'morwenna', 'deep_oracle', 'ghost_captain', 'gatekeeper', 'vorrathis', 'vaelor', 'kest', 'corvan', 'tully', 'iolanthe'];
 export const CURRENCIES = ['silver', 'gold', 'crystal', 'royal', 'shards', 'bloodstone', 'pirate', 'token', 'pvp'];
 
 export const ARMOR_SLOTS = ['head', 'shoulder', 'chest', 'pants', 'gloves'];
@@ -44,6 +52,8 @@ export const BATTLE_ITEMS = ['hp_potion', 'elixir', 'destruction_bomb', 'flame_g
 export const TRADE = ['herb', 'flower', 'timber', 'ore', 'gem_ore', 'fish', 'meat', 'relic_shard'];
 export const COLLECTIBLES = ['island_soul', 'giants_heart', 'masterpiece', 'omnium_star', 'sea_bounty', 'world_leaf', 'pip_seed'];
 export const MISC_ITEMS = ['card_pack', 'mount_whistle', 'pet_charm', 'chest', 'key', 'map', 'coin_pirate', 'skill_potion', 'scroll', 'quest'];
+/** extra ITEMS ids of src/data/items.js with dedicated art. */
+export const EXTRA_ITEMS = ['horn_shard', 'resin', 'heartwood', 'starsteel', 'hide', 'pelt', 'clam', 'pearl', 'sunbloom', 'buried_coin', 'relic_idol', 'card_pack_epic', 'card_pack_legend', 'card_pack_pip', 'gem_pouch', 'gem_pouch_hi', 'accessory_chest', 'life_tonic', 'crew_contract', 'rename_ticket'];
 
 /** Grades: name + colour (DESIGN.md §6). */
 export const GRADES = [
@@ -78,7 +88,7 @@ export function buildIds() {
   for (const s of ARMOR_SLOTS) for (const t of TIERS) out.push(`item:${s}:${t}`);
   for (const a of ACCESSORIES) out.push(`item:${a}`);
   for (const k of ['ruin', 'swift']) for (let i = 1; i <= 10; i++) out.push(`item:gem:${k}:${i}`);
-  for (const e of [...ENGR_COMBAT, ...Object.values(ENGR_CLASS).flat()]) out.push(`item:book:${e}`);
+  for (const e of [...ENGR_COMBAT, ...Object.values(ENGR_CLASS).flat(), ...ENGR_NEG]) out.push(`item:book:${e}`);
   for (const m of MATERIALS) out.push(`item:${m}`);
   for (const b of BATTLE_ITEMS) out.push(`item:${b}`);
   for (const t of TRADE) out.push(`item:${t}`);
@@ -86,6 +96,7 @@ export function buildIds() {
   for (let i = 1; i <= 4; i++) out.push(`item:gift:${i}`);
   for (const c of COLLECTIBLES) out.push(`item:${c}`);
   for (const m of MISC_ITEMS) out.push(`item:${m}`);
+  for (const m of EXTRA_ITEMS) out.push(`item:${m}`);
   for (const c of CURRENCIES) out.push(`currency:${c}`);
   for (const e of ENGR_COMBAT) out.push(`engr:${e}`);
   for (const e of Object.values(ENGR_CLASS).flat()) out.push(`engr:${e}`);
@@ -94,6 +105,7 @@ export function buildIds() {
   for (const u of UI_IDS) out.push(`ui:${u}`);
   for (const b of BOSSES) out.push(`boss:${b}`);
   for (const n of NPCS) out.push(`npc:${n}`);
+  for (const c of CARDS) out.push(`card:${c}`);
   for (let i = 0; i <= 7; i++) out.push(`grade:${i}`);
   return out;
 }

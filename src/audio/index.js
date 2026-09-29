@@ -9,9 +9,9 @@
 //
 // See README.md for every name and option.
 import { Engine, TRACKS } from './engine.js';
-import { SFX, SFX_NAMES, LOOP_NAMES } from './sfx/index.js';
-import { STINGERS, SONGS } from './music/index.js';
-import { AMBIENCE_NAMES } from './ambience.js';
+import { SFX, SFX_NAMES, LOOP_NAMES, ALIAS } from './sfx/index.js';
+import { STINGERS, SONGS, MUSIC_ALIAS } from './music/index.js';
+import { AMBIENCE_NAMES, AMBIENCE_ALIAS } from './ambience.js';
 
 export const TRACK_NAMES = Object.keys(TRACKS);
 export const STINGER_NAMES = Object.keys(STINGERS);
@@ -94,8 +94,9 @@ export function createAudio(opts = {}) {
         latency: e.ctx ? +(((e.ctx.baseLatency || 0) + (e.ctx.outputLatency || 0)) * 1000).toFixed(1) : 0,
       };
     },
-    names: { sfx: SFX_NAMES, loops: LOOP_NAMES, music: TRACK_NAMES, stingers: STINGER_NAMES, ambience: AMBIENCE_NAMES, songs: SONG_NAMES },
-    has(name) { return !!SFX[name]; },
+    names: { sfx: SFX_NAMES, loops: LOOP_NAMES, music: TRACK_NAMES, stingers: STINGER_NAMES, ambience: AMBIENCE_NAMES, songs: SONG_NAMES,
+      aliases: { sfx: { ...ALIAS }, music: { ...MUSIC_ALIAS }, ambience: { ...AMBIENCE_ALIAS } } },
+    has(name) { return !!SFX[ALIAS[name] || name]; },
     engine: e,
     dispose() { disarm(); e.dispose(); },
   };

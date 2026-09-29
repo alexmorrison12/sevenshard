@@ -103,6 +103,21 @@ export function sandmawSpec(G) {
       ctl.ch.flame = Math.max(ctl.ch.flame, 1 + up);
     } },
 
+    roar: { dur: 2.4, fin: 0.2, fout: 0.45, fn(ctl, a, w) {
+      const t = a.t;
+      const up = bump(t, 0, 0.6, 1.8, 2.3), roar = bump(t, 0.6, 0.85, 1.7, 2.1);
+      pose(ctl, { rise: 1 + 0.08 * up, lean: -0.9 * up + 0.6 * roar, head: 0.5 * up - 0.3 * roar, maw: 0.6 * up + 0.45 * roar, thrash: 0.6 * roar }, w);
+      ctl.ch.throat = Math.max(ctl.ch.throat, 1.5 * roar * w);
+    } },
+
+    channel: { dur: 2.4, loop: true, fin: 0.6, fadeOut: 0.5, fn(ctl, a, w) {
+      // towers with its maw open to the sky, slowly corkscrewing, the gullet pulsing
+      const t = a.t, beat = Math.pow(0.5 + 0.5 * Math.sin(t / 2.4 * TAU - 1.2), 2);
+      pose(ctl, { rise: 1.1, lean: -1.4, head: 0.7, maw: 0.85 + 0.15 * beat, spin: t * 0.6, coil: -0.3, sway: 0.4, thrash: 0.15 }, w);
+      ctl.ch.throat = Math.max(ctl.ch.throat, (1.2 + 0.8 * beat) * w);
+      ctl.ch.flame = Math.max(ctl.ch.flame, 1.5);
+    } },
+
     burrow: { dur: 2.6, fin: 0.15, fout: 0.2,
       pre(ctl, a) { ctl.ch.burrow = sm((a.t - 0.9) / 1.6); },
       end(ctl) { ctl.burrowLatch = 1; },

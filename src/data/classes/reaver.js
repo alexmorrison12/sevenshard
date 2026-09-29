@@ -1,8 +1,9 @@
 // REAVER — greatsword warrior (DPS). Identity: Bloodlust → Burst Mode (Z), Crimson Finale (Z during Burst).
 import { A, H, FX, S, K, M, P, Z, B, circle, cone, rect, hits } from '../../game/skills/dsl.js';
+import { finalize } from './common.js';
 
 const RED = 'crimson';
-export default {
+export default finalize({
   id: 'reaver', name: 'Reaver', archetype: 'Warrior', role: 'dps', weapon: 'greatsword', difficulty: 2,
   blurb: 'A berserker who swings a sword taller than most men. Bloodlust builds with every hit until the Reaver erupts into Burst Mode and ends it with a crimson finale.',
   palette: { main: 0xc81e1e, glow: [4, 0.5, 0.35] },
@@ -34,7 +35,8 @@ export default {
     {
       id: 'whirlwind_edge', name: 'Whirlwind Edge', type: 'holding', cd: 12, mp: 90, holdMax: 2.6, superArmor: 'push',
       desc: 'Spin with the greatsword while held, shredding everything around you. Move slowly while spinning.', props: { stagger: 'Mid', superArmor: 'push' },
-      events: [A(0, 'spin_loop', 0.4, { loop: true })],
+      onStart: r => r.u.model?.play?.('spin_loop', { loop: true }),   // holding skills never run `events`
+      events: [],
       loop: { every: 0.3, walk: 2.6, events: [H(0, { ...circle(3.2), coef: 3.6, stagger: 3 }), FX(0, 'slash', { color: RED, r: 3.2, arc: 360, spin: true }), S(0, 'whoosh')] },
       end: [A(0, 'spin', 0.45), H(0.15, { ...circle(3.6), coef: 8, stagger: 8, knock: 'push', kb: 2.5 }), FX(0.15, 'shockwave', { color: RED, r: 3.6 })],
       tripods: [['quick_prep', 'mobility', 'weak_point'], ['bleed', 'wide', 'pull'], [{ id: 'crimson_gale', name: 'Crimson Gale', desc: 'The final spin releases a gale that deals 150% more damage.', apply: d => { d.end[1].coef *= 2.5; d.end[1].r = 4.6; } }, 'keen']],
@@ -120,4 +122,4 @@ export default {
     { id: 'bloodfrenzy', name: 'Bloodfrenzy', desc: 'Max HP −25%. Damage +16%, damage taken −35%, healing received −60%. Immune to push while using skills.', mods: { dmgMul: 0.16, dmgTaken: -0.35, healTaken: -0.6, hpMaxMul: -0.25 }, superArmor: 1 },
     { id: 'tempered_fury', name: 'Tempered Fury', desc: 'Burst Mode no longer exhausts you; Crit Damage +40% during Burst Mode.', burstCritDmg: 0.4 },
   ],
-};
+});

@@ -21,7 +21,7 @@ export const CARD_LIST = [
   C('bramblebeard', 'Elder Bramblebeard', 5, 'pip', ['pips'], 'Rapport: Bramblebeard (Friendly) · Pip card packs', 'Walks with a twig. The twig walks with him.'),
   C('puddlebutton', 'Mayor Puddlebutton', 3, 'pip', ['pips'], 'Pip card packs', 'Elected unanimously. Nobody else wanted the hat.'),
   C('sprig', 'Sprig', 2, 'pip', ['pips'], 'Pip card packs · card packs', 'Hides seeds. Forgets where. Hides more seeds.'),
-  C('thimble', 'Thimble', 2, 'pip', ['pips'], 'Pip card packs · card packs', 'Sews tiny capes for beetles.'),
+  C('tumbleroot', 'Pip Tumbleroot', 2, 'pip', ['pips'], 'Rapport: Tumbleroot (Friendly) · Pip card packs', 'Visiting Solhaven to ask everyone, very politely, about seeds.'),
   C('captain_acorn', 'Captain Acorn', 3, 'pip', ['pips'], 'Pip card packs · Pip Island', 'Commands a fleet of one walnut shell.'),
   C('mossy_gran', 'Mossy Gran', 4, 'pip', ['pips'], 'Pip card packs · seed rewards', 'Knits moss into blankets. Knits blankets into moss.'),
   // Horns of the Legion — the Abyssal Legion's commanders
@@ -38,10 +38,10 @@ export const CARD_LIST = [
   C('thunderhoof', 'Old Thunderhoof', 3, 'boss', ['elements'], 'Field Boss', 'Shows up every hour on the hour. More punctual than the ferry.'),
   C('nerissa', 'Nerissa of the Drowned Choir', 4, 'boss', ['elements'], 'Abyssal Dungeon: The Sunken Oratory', 'Her song drowned a cathedral. Do not hum along.'),
   // Wardens of Brighthold — Solhaven's defenders
-  C('isolde', 'Dame Isolde Varn', 4, 'npc', ['wardens'], 'Rapport: Isolde (Friendly) · card packs', 'Undefeated in the Solhaven lists. Undefeated in arguments, too.'),
-  C('durgan', 'Durgan Emberhand', 3, 'npc', ['wardens'], 'Rapport: Durgan (Friendly) · card packs', 'The blacksmith. Your +19 failure is not his fault. Ask him.'),
-  C('maren', 'Captain Maren Saltwhistle', 3, 'npc', ['wardens'], 'Rapport: Maren (Friendly) · card packs', 'Harbour master of Solhaven, loudest voice on the Glass Sea.'),
-  C('lirael', 'Lirael Songbright', 3, 'npc', ['wardens'], 'Rapport: Lirael (Friendly) · card packs', 'A bard with a lute, a hat, and opinions about both.'),
+  C('maren', 'Old Maren', 4, 'npc', ['wardens'], 'Rapport: Old Maren (Friendly) · card packs', 'Hunted guardians before your parents were born. Rimewing still owes her a boot.'),
+  C('hilda', 'Hilda Ironbrand', 3, 'npc', ['wardens'], 'Card packs · honing milestones', 'Master blacksmith of Solhaven. Your +19 failure is not her fault. Ask her.'),
+  C('mirelle', 'Captain Mirelle Stormwake', 3, 'npc', ['wardens'], 'Rapport: Mirelle (Friendly) · card packs', 'Harbor master of Solhaven. Calm seas make her nervous.'),
+  C('wren', 'Wren Ashdown', 3, 'npc', ['wardens'], 'Rapport: Wren (Friendly) · card packs', 'Bard of the Plaza. Plays you a song, expects one back.'),
   C('morwenna', 'Old Morwenna of the Brine', 4, 'npc', ['wardens'], 'Rapport: Morwenna (Friendly) · Ghost Ship', 'The sea witch of Brinehollow. Knows your name. Never asked.'),
   // loose cards
   C('deep_oracle', 'The Deep Oracle', 4, 'boss', [], 'Abyssal Dungeon: The Sunken Oratory', 'It saw the Sundering coming, and said nothing.'),
@@ -50,8 +50,9 @@ export const CARD_LIST = [
   C('vorrathis', 'Vorrathis, Emperor of the Abyss', 5, 'boss', [], 'Legendary card selector (very rare)', 'The shadow behind every Legion banner.'),
   C('vaelor', 'Vaelor the Unbroken', 4, 'legend', [], 'Card packs · Adventure Tome', 'The Light who held the gate alone for seven days.'),
   C('kest', 'Kest the Wanderer', 3, 'legend', [], 'Card packs', 'The Light who never stayed anywhere long enough to be thanked.'),
-  C('orrin', 'Orrin Stormhand', 3, 'legend', [], 'Card packs', 'Caught lightning once. Kept it in a jar.'),
-  C('tobble', 'Tobble Coinpurse', 2, 'npc', [], 'Card packs', 'Solhaven’s friendliest merchant. Prices negotiable, smile is not.'),
+  C('corvan', 'Corvan Stormhand', 3, 'legend', [], 'Card packs', 'Caught lightning once. Kept it in a jar.'),
+  C('tully', 'Bram Tully', 2, 'npc', [], 'Card packs', 'General goods. Sells you the potion you forgot, every single time.'),
+  C('iolanthe', 'Madame Iolanthe', 2, 'npc', [], 'Card packs', 'Collects faces on cards. Yours is next.'),
 ];
 export const CARDS = Object.fromEntries(CARD_LIST.map(c => [c.id, c]));
 
@@ -64,7 +65,7 @@ export const CARD_SETS = {
     { n: 6, awk: 18, chain: 'dmg', desc: 'Damage +10%.', mods: { dmgAdd: 0.1 } },
     { n: 6, awk: 30, chain: 'dmg', desc: 'Damage +15%.', mods: { dmgAdd: 0.15 } },
   ] },
-  pips: { id: 'pips', name: 'Pip Parade', cards: ['bramblebeard', 'puddlebutton', 'sprig', 'thimble', 'captain_acorn', 'mossy_gran'], bonuses: [
+  pips: { id: 'pips', name: 'Pip Parade', cards: ['bramblebeard', 'puddlebutton', 'sprig', 'tumbleroot', 'captain_acorn', 'mossy_gran'], bonuses: [
     { n: 2, awk: 0, chain: 'silver', desc: 'Silver gained +3%.', mods: { silverGain: 0.03 } },
     { n: 4, awk: 0, chain: 'xp', desc: 'Experience gained +5%.', mods: { xpGain: 0.05 } },
     { n: 6, awk: 0, chain: 'parade', desc: 'Silver +6%, experience +8%.', mods: { silverGain: 0.06, xpGain: 0.08 } },
@@ -85,7 +86,7 @@ export const CARD_SETS = {
     { n: 6, awk: 18, chain: 'dot', desc: 'Burn, bleed, freeze and shock damage +20%.', mods: { dotMul: 0.2 } },
     { n: 6, awk: 30, chain: 'dmg', desc: 'Damage +6%.', mods: { dmgAdd: 0.06 } },
   ] },
-  wardens: { id: 'wardens', name: 'Wardens of Brighthold', cards: ['isolde', 'durgan', 'maren', 'lirael', 'morwenna'], bonuses: [
+  wardens: { id: 'wardens', name: 'Wardens of Brighthold', cards: ['hilda', 'mirelle', 'wren', 'maren', 'morwenna'], bonuses: [
     { n: 2, awk: 0, chain: 'hp', desc: 'Max HP +3%.', mods: { hpMaxMul: 0.03 } },
     { n: 3, awk: 0, chain: 'care', desc: 'Healing and shields you grant +5%.', mods: { healMul: 0.05, shieldMul: 0.05 } },
     { n: 5, awk: 0, chain: 'guard', desc: 'Damage taken −6%.', mods: { dmgTaken: -0.06 } },

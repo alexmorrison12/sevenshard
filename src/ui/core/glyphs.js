@@ -70,7 +70,8 @@ const D = {
   expand: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
   sparkle: '<path d="M12 3l1.8 5.4L19 10l-5.2 1.6L12 17l-1.8-5.4L5 10l5.2-1.6z"/><path d="M18.5 16l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/>',
 };
+const ALIAS = { gear: 'settings', user: 'character', door: 'exit', bag: 'inventory', book: 'tome', coin: 'market', people: 'users', search: 'finder', x: 'close', flag: 'guild', scroll: 'quest', letter: 'mail', castle: 'stronghold' };
 export const GLYPHS = Object.keys(D);
 export function glyph(name, cls = '') {
-  return `<svg class="ss-gl${cls ? ' ' + cls : ''}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${D[name] || D.info}</svg>`;
+  return `<svg class="ss-gl${cls ? ' ' + cls : ''}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${D[name] || D[ALIAS[name]] || D.info}</svg>`;
 }

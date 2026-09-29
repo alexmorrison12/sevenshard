@@ -170,6 +170,36 @@ const STATUS = {
     fire(x, R, 50, 76, 56, 40, 0, { n: 5 });
     for (const [px, py, s] of [[76, 22, 7], [86, 10, 5]]) { x.strokeStyle = '#ffffff'; x.lineWidth = 2.4; x.beginPath(); x.moveTo(px - s, py - s); x.lineTo(px + s, py - s); x.lineTo(px - s, py + s); x.lineTo(px + s, py + s); x.stroke(); }
   },
+  armor_break(x, R) {
+    sBg(x, R, '#d85a2a');
+    x.save(); x.translate(50, 54); x.scale(1.2, 1.2);
+    x.beginPath(); x.moveTo(-24, -18); x.lineTo(-8, -24); x.quadraticCurveTo(0, -18, 8, -24); x.lineTo(24, -18); x.lineTo(22, 8); x.quadraticCurveTo(14, 26, 0, 30); x.quadraticCurveTo(-14, 26, -22, 8); x.closePath();
+    fillSym(x, '#b8c0cc', 1.4);
+    x.restore();
+    glowPath(x, xx => poly(xx, [[50, 24], [44, 40], [54, 50], [44, 64], [52, 86]], false), '#ff7a3a', 2.2);
+    for (const [px, py, a] of [[30, 30, -0.6], [72, 70, 0.8]]) { x.save(); x.translate(px, py); x.rotate(a); poly(x, [[-4, -3], [5, -2], [3, 4], [-3, 3]]); x.fillStyle = '#8a92a0'; x.fill(); outline(x, INK, 0.8); x.restore(); }
+  },
+  weaken(x, R) {
+    sBg(x, R, '#a04a8a');
+    at(x, 34, 82, 0.62, 0.9, greatsword, { metal: 'iron' });
+    x.fillStyle = 'rgba(40,10,40,.35)'; x.fillRect(0, 0, 100, 100);
+    arrowUp(x, 74, 64, 1.9, '#e070c0', { down: true });
+  },
+  def_up(x, R) { sBg(x, R, '#3a9aff'); heaterPath(x, 44, 54, 1); fillSym(x, '#9ad0ff', 2.2); heaterPath(x, 44, 54, 0.7); x.strokeStyle = rgba('#ffffff', 0.7); x.lineWidth = 1.6; x.stroke(); arrowUp(x, 76, 34, 1.7, '#9ae0ff'); },
+  regen(x, R) {
+    sBg(x, R, '#40d070');
+    x.save(); x.translate(50, 56); x.scale(1.6, 1.6); x.beginPath(); x.moveTo(0, 14); x.bezierCurveTo(-18, 2, -20, -12, -10, -15); x.bezierCurveTo(-4, -17, 0, -12, 0, -8); x.bezierCurveTo(0, -12, 4, -17, 10, -15); x.bezierCurveTo(20, -12, 18, 2, 0, 14); x.closePath(); x.restore();
+    fillSym(x, '#70e890', 2.2);
+    glowPath(x, xx => { xx.beginPath(); for (let t = 0; t <= 1.001; t += 0.04) { const a = t * TAU * 1.2 - PI / 2, r = 36; t ? xx.lineTo(50 + Math.cos(a) * r, 54 + Math.sin(a) * r) : xx.moveTo(50 + Math.cos(a) * r, 54 + Math.sin(a) * r); } }, '#c0ffd0', 2);
+    poly(x, [[46, 42], [54, 42], [54, 50], [62, 50], [62, 58], [54, 58], [54, 66], [46, 66], [46, 58], [38, 58], [38, 50], [46, 50]]); x.fillStyle = '#ffffff'; x.fill(); outline(x, INK, 1);
+  },
+  enrage(x, R) {
+    sBg(x, R, '#ff2a1a');
+    fire(x, R, 50, 98, 80, 80, 0, { n: 6 });
+    // angry vein mark
+    x.save(); x.translate(50, 44); for (let i = 0; i < 4; i++) { x.save(); x.rotate(i * PI / 2 + PI / 4); x.beginPath(); x.moveTo(-4, -8); x.quadraticCurveTo(0, -20, 4, -8); x.quadraticCurveTo(0, -12, -4, -8); x.closePath(); x.fillStyle = '#fff0e0'; x.fill(); x.lineWidth = 1.6; x.strokeStyle = INK; x.stroke(); x.restore(); } x.restore();
+    for (const s of [-1, 1]) { x.save(); x.translate(50 + s * 22, 30); x.scale(s, 1); poly(x, [[0, 10], [6, -14], [10, 10]]); fillSym(x, '#ffd0b0', 1.2); x.restore(); }
+  },
 };
 
 // ------------------------------------------------------------------ UI menu glyphs

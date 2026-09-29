@@ -25,18 +25,29 @@ export const haste = B => B.flags.haste || 1;
 export const wait = (B, s) => B.wait(s * haste(B));
 /** telegraph whose drawn duration matches wait(B, dur) */
 export const tele = (B, shape, o = {}) => B.tele(shape, { ...o, dur: (o.dur ?? 1) * haste(B) * tf(B) });
+/** resolve a hit now and play its FX with the right colour (B.hit would tint the FX with the telegraph colour).
+ *  o.fx preset · o.fxColor · o.fxR / o.fxLen (default r / len) · o.fxBig */
+export function smash(B, shape, o = {}) {
+  const evs = B.hit(shape, { ...o, fx: null });
+  if (o.fx) {
+    const dir = o.dir || fwd(B), off = o.off || 0;
+    const x = (o.x ?? B.u.pos.x) + dir.x * off, z = (o.z ?? B.u.pos.z) + dir.z * off;
+    fx(B, o.fx, x, z, { dir, r: o.fxR ?? o.r, len: o.fxLen ?? o.len, width: o.width, color: o.fxColor, big: o.fxBig });
+  }
+  return evs;
+}
 /** telegraph → wait → hit (all in sync) */
 export async function strike(B, shape, o = {}) {
   const tg = tele(B, shape, o);
   try { await wait(B, o.dur ?? 1); } finally { tg.alive = false; }
-  return B.hit(shape, o);
+  return smash(B, shape, o);
 }
-/** several telegraphs that all resolve together: list = [[shape, o], …]; o.dur of the first is used */
+/** several telegraphs that all resolve together: list = [[shape, o], …] */
 export async function volley(B, list, dur, common = {}) {
   const tgs = list.map(([shape, o]) => tele(B, shape, { ...common, ...o, dur }));
   try { await wait(B, dur); } finally { for (const t of tgs) t.alive = false; }
-  const out = [];
-  list.forEach(([shape, o], i) => out.push(...B.hit(shape, { ...common, ...o, fx: i < (common.fxMax ?? 12) ? (o.fx ?? common.fx) : null, sfx: i === 0 ? (o.sfx ?? common.sfx) : null, shake: i === 0 ? (o.shake ?? common.shake) : 0 })));
+  const out = [], fxMax = common.fxMax ?? 12;
+  list.forEach(([shape, o], i) => out.push(...smash(B, shape, { ...common, ...o, fx: i < fxMax ? (o.fx ?? common.fx) : null, sfx: i === 0 ? (o.sfx ?? common.sfx) : null, shake: i === 0 ? (o.shake ?? common.shake) : 0 })));
   return out;
 }
 
@@ -46,8 +57,9 @@ export async function volley(B, list, dur, common = {}) {
  */
 export function act(B, name, at, hitIndex = 0) {
   const m = B.u.model;
-  let meta = m?.info?.actions?.[name] || B.def.anims?.[name];
-  if (!meta && m?.entry?.actions?.[name]) { const e = m.entry.actions[name]; meta = { dur: e.D, hits: e.hits }; }
+  let meta = m?.info?.actions?.[name];                                              // guardian models
+  if (!meta) { const e = m?.entry?.actions?.[name]; if (e && e.D) meta = { dur: e.D, hits: e.hits || [] }; }   // legion models
+  if (!meta) meta = B.def.anims?.[name];                                            // script-side fallback table
   const k = haste(B) * tf(B);
   if (meta && meta.hits && meta.hits.length > hitIndex && meta.hits[hitIndex] > 0 && !meta.loop) B.anim(name, meta.dur * at / meta.hits[hitIndex] * k);
   else if (meta && meta.loop) B.anim(name, at * k);
@@ -84,7 +96,7 @@ export function pool(B, o) {
 
 /** a hit whose `fear` status makes heroes run away from the boss */
 export function fearHit(B, shape, o) {
-  const evs = B.hit(shape, { ...o, status: [...(o.status || []), { id: 'fear', dur: o.fear ?? 2 }] });
+  const evs = smash(B, shape, { ...o, status: [...(o.status || []), { id: 'fear', dur: o.fear ?? 2 }] });
   for (const ev of evs) ev.tgt.data.fearFrom = { x: B.u.pos.x, z: B.u.pos.z };
   return evs;
 }
@@ -117,7 +129,9 @@ export function visual(B, from, to, { speed = 18, kind = 'orb', color = 'orange'
   const d = norm(to.x - from.x, to.z - from.z), len = Math.hypot(to.x - from.x, to.z - from.z);
   return B.level.projectile({ src: B.u, x: from.x, z: from.z, y, dx: d.x, dz: d.z, speed, range: Math.max(0.5, len), radius, noHit: true, flies: true, kind, color, arc });
 }
-export const fx = (B, preset, x, z, o = {}) => B.level.emit('fx', { unit: B.u, preset, x, z, dx: o.dir?.x ?? B.u.fx, dz: o.dir?.z ?? B.u.fz, ev: { r: o.r, len: o.len, width: o.width, color: o.color } });
+/** named FX preset at (x, z); o: { dir, r, len, width, color, dur, follow (the boss model), big, scale } */
+export const fx = (B, preset, x, z, o = {}) => B.level.emit('fx', { unit: B.u, preset, x, z, dx: o.dir?.x ?? B.u.fx, dz: o.dir?.z ?? B.u.fz,
+  ev: { r: o.r, len: o.len, width: o.width, color: o.color, dur: o.dur, follow: o.follow, big: o.big, scale: o.scale } });
 export const sfx = (B, name, p = B.u.pos) => B.level.emit('sfx', { unit: B.u, name, pos: { x: p.x, y: B.u.pos.y, z: p.z } });
 export const shake = (B, v) => B.level.emit('shake', { unit: B.u, v });
 

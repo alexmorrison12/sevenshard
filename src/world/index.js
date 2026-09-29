@@ -6,6 +6,8 @@ import { bakeStats } from './bake.js';
 export { bakeStats };
 import * as test from './zones/test.js';
 import * as solhaven from './zones/solhaven.js';
+import * as chaosRift from './zones/chaos_rift.js';
+import * as frostmere from './zones/frostmere.js';
 import { placeholder } from './zones/placeholder.js';
 export { applyEnv, makeEnv, PRESETS } from './env.js';
 
@@ -25,8 +27,8 @@ const ring = (n, r, prefix, cz = 0) => Object.fromEntries(Array.from({ length: n
 const BUILDERS = {
   test: test.build,
   solhaven: solhaven.build,
-  chaos_rift: placeholder({ half: 25, layer: 'void', preset: 'void', region: 'Demon Rift', anchors: { 'stage1:spawn': [0, 18], 'stage1:exit': [0, -20], 'stage2:spawn': [0, 18], 'stage2:exit': [0, -20], 'stage3:spawn': [0, 18], 'stage3:boss': [0, -10, Math.PI], ...ring(12, 12, 's1:m'), ...ring(12, 12, 's2:m'), ...ring(12, 12, 's3:m') } }),
-  frostmere: placeholder({ half: 35, layer: 'snow', preset: 'frost', region: 'Frostmere', anchors: { spawn: [0, 25], boss: [0, -10, Math.PI] } }),
+  chaos_rift: chaosRift.build,
+  frostmere: frostmere.build,
   throne_of_horns: placeholder({ half: 28, layer: 'bloodstone', preset: 'blood', region: 'Throne of Horns', anchors: { spawn: [0, 22], boss: [0, -8, Math.PI], ...ring(8, 20, 'pillar:') } }),
   kennels: placeholder({ half: 24, layer: 'bloodstone', preset: 'blood', region: 'The Kennels', anchors: { spawn: [0, 18], boss: [0, -8, Math.PI], 'boss:skarn': [-6, -8, Math.PI], 'boss:vesk': [6, -8, Math.PI] } }),
   crucible: placeholder({ half: 22, layer: 'flagstone', preset: 'dusk', region: 'The Crucible', anchors: { spawn: [0, 16], 'team:a1': [-4, 16], 'team:a2': [0, 16], 'team:a3': [4, 16], 'team:b1': [-4, -16, Math.PI], 'team:b2': [0, -16, Math.PI], 'team:b3': [4, -16, Math.PI] } }),

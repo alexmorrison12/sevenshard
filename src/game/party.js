@@ -41,6 +41,14 @@ export class Party {
     let supports = this.members.filter(m => CLASSES[m.kit.char.cls]?.role === 'support').length;
     let i = 0;
     const available = Object.keys(CLASSES);
+    // friends you invited in town come first
+    for (const sim of this.game.invitedSims || []) {
+      if (this.members.length >= n) break;
+      if (this.members.some(m => m.sim === sim)) continue;
+      if (CLASSES[sim.cls]?.role === 'support') supports++;
+      const a = (this.members.length / n) * Math.PI * 2;
+      this.addSim(sim, { x: at.x + Math.cos(a) * 2, z: at.z + 1.5 + Math.sin(a) * 1.5, facing: at.facing || 0 }, ilvl);
+    }
     while (this.members.length < n) {
       const wantSupport = supports < needSupports && (n - this.members.length) <= (needSupports - supports) + 1;
       const supportCls = available.filter(c => CLASSES[c].role === 'support');

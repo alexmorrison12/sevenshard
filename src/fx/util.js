@@ -11,12 +11,14 @@ const _c = new THREE.Color();
 
 /** Any colour → linear [r,g,b] × k. Accepts hex number, css string, THREE.Color, [r,g,b] (taken as linear, may be HDR). */
 export function col(c, k = 1, out = [0, 0, 0]) {
-  if (c == null) { out[0] = out[1] = out[2] = k; return out; }
+  if (c == null || c === 'auto' || c === '') { out[0] = out[1] = out[2] = k; return out; }
   if (Array.isArray(c) || ArrayBuffer.isView(c)) { out[0] = c[0] * k; out[1] = c[1] * k; out[2] = c[2] * k; return out; }
   if (c.isColor) { out[0] = c.r * k; out[1] = c.g * k; out[2] = c.b * k; return out; }
   if (typeof c === 'string' && PAL[c]) return col(PAL[c], k, out);
   _c.set(c); out[0] = _c.r * k; out[1] = _c.g * k; out[2] = _c.b * k; return out;
 }
+/** true when a colour param is really given ('auto' / null / undefined mean "use the effect's own palette") */
+export const hasCol = c => c !== undefined && c !== null && c !== 'auto' && c !== '';
 /** Linear rgb from hex (sRGB). */
 export const lin = (hex, k = 1) => col(hex, k, [0, 0, 0]);
 export function lum(c) { return c[0] * 0.2126 + c[1] * 0.7152 + c[2] * 0.0722; }
@@ -31,7 +33,7 @@ export const PAL = {
   music: 0xff8ad8, sand: 0xd8b070, wind: 0xd8f0ff, white: 0xffffff, shadow: 0x6a2ad0, foxfire: 0x6a8aff, rift: 0xa040ff,
   // names used by the game data (DESIGN / skills README): brass, rose, teal, silver, cyan, green + plain colour words
   brass: 0xe0b060, rose: 0xff6a9a, teal: 0x2ad8c0, silver: 0xd8e0f0, cyan: 0x5ae8ff, green: 0x5ae86a, red: 0xff3a2a,
-  orange: 0xff8a2a, yellow: 0xffe04a, blue: 0x4a8aff, purple: 0xa05aff, pink: 0xff7ad0, black: 0x1a1020, phys: 0xffd8a0, physical: 0xffd8a0,
+  orange: 0xff8a2a, brown: 0x9a6a3a, yellow: 0xffe04a, blue: 0x4a8aff, purple: 0xa05aff, pink: 0xff7ad0, black: 0x1a1020, phys: 0xffd8a0, physical: 0xffd8a0,
 };
 
 // Telegraph colour language (see DESIGN §5): fill (dark translucent zone), rim (bright HDR edge).

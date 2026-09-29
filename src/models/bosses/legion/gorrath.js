@@ -13,10 +13,10 @@ import { BossAcc } from './acc.js';
 import { bipedCarriage } from './boss.js';
 
 const C = {
-  skin: 0x4c2019, skinD: 0x2a100c, skinL: 0x6e3023, fur: 0x1f1410, furL: 0x3a2619, hoof: 0x141010,
+  skin: 0x2f1d19, skinD: 0x180d0b, skinL: 0x4a2c24, fur: 0x1f1410, furL: 0x3a2619, hoof: 0x141010,
   iron: 0x2f2c30, ironD: 0x19171a, ironL: 0x4d4850, bronze: 0x8e6431, gold: 0xc79a3a, leather: 0x3b2418, leatherD: 0x24150e,
   cape: 0x6a1111, capeD: 0x2c0808, capeTrim: 0xb08a3a, hornB: 0x2c2420, hornM: 0x9c8c74, hornT: 0xece0c6,
-  glow: 0xff5a18, eye: 0xffc84a, nose: 0x241412, mouth: 0x3a0c0a, tooth: 0xe8dcc0, claw: 0x121010, bone: 0x8e8068,
+  glow: 0xff8424, eye: 0xffc84a, nose: 0x241412, mouth: 0x3a0c0a, tooth: 0xe8dcc0, claw: 0x121010, bone: 0x8e8068,
 };
 const DT = { skin: [0.04, 0.22, 0.3, 0], fur: [0.6, 0, 0.12, 0], metal: [0, 0.02, 0.32, 0.06], cloth: [0.05, 0, 0.25, 0.5], leather: [0, 0.08, 0.3, 0.3], horn: [0.3, 0, 0.2, 0.25], hoof: [0.1, 0, 0.25, 0.3] };
 
@@ -40,7 +40,7 @@ export const gorrath = {
   h: 0.0285, hg: { 1: 0.028, 2: 0.0165, 3: 0.016, 4: 0.019 },
   ao: { dist: 0.04, str: 0.85 },
   grad: { top: 0.16, bottom: 0.34, y0: 0.0, y1: 0.7, low: 0.25 },
-  mat: { glow: C.glow, glowK: 3.2, crackFreq: 8.5, crackK: 1.0, dfreq: 4.5, rim: 0.28, rimColor: 0xffc8a0, spec: 0.45, shine: 22, ghostCol: 0x6f63ff },
+  mat: { glow: C.glow, glowK: 3.4, crackFreq: 8.5, crackK: 0.9, dfreq: 4.5, rim: 0.22, rimColor: 0xffd0a8, spec: 0.45, shine: 22, ghostCol: 0x6f63ff, sil: 0.38, silCol: 0x9ab0ff },
   stepFx: { n: 5, scale: 1.4 },
   particles: { add: 700, alpha: 300 },
 
@@ -586,7 +586,7 @@ function snort(ctl, k = 1) {
   const side = new THREE.Vector3(1, 0, 0).applyQuaternion(ctl.pose.wq[ctl.B.head]).transformDirection(ctl.pivotW);
   for (const s of [-1, 1]) {
     const q = p.clone().addScaledVector(side, s * 0.18);
-    for (let i = 0; i < Math.round(8 * k); i++) ctl.fx('steam', q, 1, { dir: [d.x + side.x * s * 0.25, d.y, d.z + side.z * s * 0.25], scale: 1.3 * Math.sqrt(k) });
+    for (let i = 0; i < Math.round(7 * k); i++) ctl.fx('steam', q, 1, { dir: [d.x + side.x * s * 0.25, d.y, d.z + side.z * s * 0.25], scale: 0.85 * Math.sqrt(k) });
   }
   ctl._emitEvent('snort', p);
 }
@@ -774,24 +774,38 @@ A.axe_sweep = {
   ],
 };
 
+/** SW rotated about the body axis by th (radians, + = counter-clockwise from above) — for spins */
+const rotY = (v, th) => [v[0] * Math.cos(th) + v[2] * Math.sin(th), v[1], -v[0] * Math.sin(th) + v[2] * Math.cos(th)];
+const SWR = (deg, th, y = 1.15, dir = 1, rad = 0.7) => {
+  const k = SW(deg, y, dir, rad); const a = k.$aimR;
+  return { $handR: rotY(k.$handR, th), $aimR: [...rotY(a.slice(0, 3), th), ...rotY(a.slice(3, 6), th)] };
+};
+const TOE = { L: [-0.22, 0, -0.07], R: [0.22, 0, -0.07] };
+const SPIN = (th, rel, y = 1.12) => K2(SWR(rel, th, y, 1, 0.74), { hips: [0, th, 0], $footL: rotY(TOE.L, th), $footR: rotY(TOE.R, th), $gripL: 1, $hips: [0, -0.14, 0], $charge: 1 });
+
 A.triple_sweep = {
-  dur: 4.8, hits: [2.05, 2.8, 3.6], hitAt: ['weapon', 'weapon', 'weapon'], lock: 1, counter: [0.35, 1.85], active: [[1.95, 2.2], [2.7, 2.95], [3.45, 3.8]],
+  dur: 5.2, hits: [2.05, 2.9, 4.25], hitAt: ['weapon', 'weapon', 'weapon'], lock: 1, counter: [0.35, 1.8], active: [[1.95, 2.2], [2.8, 3.05], [3.75, 4.45]],
   keys: [
     [0, {}],
     [0.35, { $counter: 0 }],
     [0.6, { $handR: [0.28, 2.02, -0.12], $aimR: aim([-1, 0.05, 0], [0, 0, -1]), $gripL: 1, 'spine+': [0.1, 0, 0], 'chest+': [0.14, 0, 0], 'head+': [0.3, 0, 0], jaw: [-0.35, 0, 0], $counter: 1, $charge: 0.3 }, 'o'],
     [1.2, { $handR: [0.22, 2.1, -0.02], $aimR: aim([-0.7, 0.05, 0.7], [0.7, 0, 0.7]), $gripL: 1, 'spine+': [0.12, -0.1, 0], 'chest+': [0.16, -0.15, 0], 'head+': [0.25, 0, 0], jaw: [-0.5, 0, 0], $counter: 1, $charge: 0.6, $shake: 0.35 }, 'io'],
-    [1.75, K2(SW(-128, 1.36, 1, 0.55), TW(-0.3), { $gripL: 1, $hips: [0, -0.08, 0.03], $counter: 1, $charge: 1, $shake: 0.2, 'head+': [0, -0.2, 0], jaw: [0, 0, 0] }), 'o'],
-    [1.85, { $counter: 0 }],
+    [1.72, K2(SW(-128, 1.36, 1, 0.55), TW(-0.3), { $gripL: 1, $hips: [0, -0.08, 0.03], $counter: 1, $charge: 1, $shake: 0.2, 'head+': [0, -0.2, 0], jaw: [0, 0, 0] }), 'o'],
+    [1.8, { $counter: 0 }],
     [2.05, K2(SW(0, 1.1, 1, 0.78), TW(0.08), { $gripL: 1, $hips: [0, -0.1, -0.02], $charge: 1 }), 'i'],
     [2.3, K2(SW(100, 1.18, 1, 0.56), TW(0.32), { $gripL: 1, $hips: [0, -0.08, 0], $charge: 0.9 }), 'o'],
-    [2.55, K2(SW(118, 1.22, -1, 0.5), TW(0.36), { $gripL: 1, $hips: [0, -0.07, 0], $charge: 1 }), 'io'],
-    [2.8, K2(SW(0, 1.1, -1, 0.78), TW(-0.06), { $gripL: 1, $hips: [0, -0.1, -0.02], $charge: 1 }), 'i'],
-    [3.05, K2(SW(-100, 1.2, -1, 0.56), TW(-0.3), { $gripL: 1, $hips: [0, -0.08, 0], $charge: 0.9 }), 'o'],
-    [3.3, K2(SW(-145, 1.32, 1, 0.52), TW(-0.38), { $gripL: 1, $hips: [0, -0.14, 0.04], $charge: 1, 'head+': [0, -0.3, 0] }), 'io'],
-    [3.6, K2(SW(0, 1.02, 1, 0.84), TW(0.1), { $gripL: 1, $hips: [0, -0.18, -0.1], $charge: 1, $footL: [-0.32, 0, -0.38] }), 'i'],
-    [3.95, K2(SW(125, 1.12, 1, 0.52), TW(0.4), { $gripL: 1, $hips: [0, -0.14, -0.08], $charge: 0.6, $footL: [-0.32, 0, -0.38] }), 'o'],
-    [4.8, { $gripL: 0, $charge: 0 }],
+    [2.6, K2(SW(118, 1.22, -1, 0.5), TW(0.36), { $gripL: 1, $hips: [0, -0.07, 0], $charge: 1 }), 'io'],
+    [2.9, K2(SW(0, 1.1, -1, 0.78), TW(-0.06), { $gripL: 1, $hips: [0, -0.1, -0.02], $charge: 1 }), 'i'],
+    [3.15, K2(SW(-100, 1.2, -1, 0.56), TW(-0.3), { $gripL: 1, $hips: [0, -0.08, 0], $charge: 0.9 }), 'o'],
+    [3.6, K2(SW(-140, 1.25, 1, 0.52), TW(-0.36), { hips: [0, 0, 0], $footL: TOE.L, $footR: TOE.R, $gripL: 1, $hips: [0, -0.16, 0.04], $charge: 1, 'head+': [0, -0.3, 0] }), 'io'],
+    // the Reaping Wheel: a full turn with the axe held out at waist height (cape flares)
+    [3.8, K2(SPIN(0.6, -40), TW(-0.1, -0.1)), 'i'],
+    [4.0, K2(SPIN(1.9, 10), TW(0, 0)), 'l'],
+    [4.15, SPIN(3.3, 10), 'l'],
+    [4.3, SPIN(4.7, 10), 'l'],
+    [4.45, K2(SPIN(6.2832, 25), TW(0.15, 0.2)), 'o'],
+    [4.75, K2(SW(70, 1.15, 1, 0.6), TW(0.25), { hips: [0, 6.2832, 0], $footL: TOE.L, $footR: TOE.R, $gripL: 1, $hips: [0, -0.1, 0], $charge: 0.5 }), 'o'],
+    [5.2, { hips: null, $footL: null, $footR: null, $gripL: 0, $charge: 0 }],
   ],
 };
 
@@ -938,9 +952,70 @@ A.intro = {
   ev: [[1.15, 'land', 'feetL'], [1.9, 'snort'], [2.5, 'snort'], [4.3, 'roar', 'mouth']],
 };
 
+// game-driven leap (the encounter moves the root along an arc with B.leap): pose only — crouch, airborne tuck with
+// the axe overhead, slam on landing (hits[0] = landing)
+A.leap = {
+  dur: 2.3, hits: [1.5], hitAt: ['weaponTip2'], lock: 1,
+  keys: [
+    [0, {}],
+    [0.3, { $hips: [0, -0.22, 0.04], 'spine+': [-0.18, 0, 0], 'chest+': [-0.1, 0, 0], $handR: [0.45, 1.32, 0.22], $aimR: aim([0.08, 0.78, 0.62], [0, 0.62, -0.78]), $gripL: 1, $charge: 0.4 }, 'o'],
+    [0.5, { $hips: [0, 0.06, 0], $air: 0.8, 'spine+': [0.05, 0, 0], 'chest+': [0.08, 0, 0], $handR: [0.25, 1.95, 0.05], $aimR: aim([0.02, 0.5, 0.86], [0, 0.86, -0.5]), $gripL: 1 }, 'o'],
+    [0.95, K2(OVERHEAD_BACK, { $hips: [0, 0.12, 0], $air: 1, 'spine+': [0.18, 0, 0], 'chest+': [0.22, 0, 0], 'head+': [0.12, 0, 0], $gripL: 1, $charge: 1 }), 'o'],
+    [1.36, K2(OVERHEAD_BACK, { $hips: [0, 0.05, 0], $air: 1, 'spine+': [0.1, 0, 0], 'chest+': [0.14, 0, 0], $gripL: 1, $charge: 1 }), 'io'],
+    [1.5, K2(SLAM, { $hips: [0, -0.2, -0.08], $air: 0, 'spine+': [-0.24, 0, 0], 'chest+': [-0.32, 0, 0], 'head+': [-0.12, 0, 0], $gripL: 1, $charge: 1, $shake: 0.5 }), 'i'],
+    [1.95, K2(SLAM, { $hips: [0, -0.17, -0.07], 'spine+': [-0.2, 0, 0], 'chest+': [-0.26, 0, 0], $gripL: 1, $charge: 0.4 }), 'o'],
+    [2.3, { $gripL: 0, $charge: 0 }],
+  ],
+  ev: [[0.45, 'jump', 'feetL'], [1.5, 'land', 'weaponTip2']],
+};
+
+// hoof back-kick at raiders behind him: weight forward, glance back over the shoulder, hoof driven back high
+A.kick = {
+  dur: 1.5, hits: [0.62], hitAt: ['feetR'], lock: 1,
+  keys: [
+    [0, {}],
+    [0.36, { 'spine+': [-0.2, -0.15, 0], 'chest+': [-0.2, -0.2, 0], 'head+': [0.05, -0.55, 0], $hips: [0, -0.04, -0.06], $footR: [0.26, 0.42, 0.5, 0.4, 0.6], $footL: [-0.22, 0, -0.14], armUL: [0.4, 0, -0.5], armLL: [0.6, 0, 0] }, 'o'],
+    [0.62, { 'spine+': [-0.32, -0.1, 0], 'chest+': [-0.34, -0.12, 0], 'head+': [0.1, -0.5, 0], $hips: [0, -0.02, -0.1], $footR: [0.28, 0.62, 1.3, -0.3, -0.4], $footL: [-0.22, 0, -0.14], armUL: [0.6, 0, -0.7], armLL: [0.4, 0, 0], $shake: 0.3 }, 'i'],
+    [0.9, { 'spine+': [-0.12, 0, 0], 'chest+': [-0.1, 0, 0], 'head+': [0, -0.3, 0], $hips: [0, -0.02, -0.03], $footR: [0.25, 0.04, 0.32], armUL: [0.2, 0, -0.3] }, 'o'],
+    [1.5, { $footR: null, $footL: null, armUL: null, armLL: null }],
+  ],
+};
+
+// ghost phase: axe raised to the sky, open claw, spectral axes rain down (hits[0] = the call)
+A.cast = {
+  dur: 1.9, hits: [0.9], hitAt: ['weaponTip'], lock: 1,
+  keys: [
+    [0, {}],
+    [0.55, { $handR: [0.72, 2.02, -0.1], $aimR: aim([0.15, 1, 0.05], [0, 0.05, -1]), armUL: [0.2, 0, -1.25], armLL: [0.5, 0, 0], fingL: [-0.45, 0, 0], 'chest+': [0.15, 0, 0], 'head+': [0.4, 0, 0], jaw: [-0.3, 0, 0], $charge: 0.6 }, 'o'],
+    [0.9, { $handR: [0.74, 2.08, -0.12], $aimR: aim([0.12, 1, 0.08], [0, 0.08, -1]), armUL: [0.35, 0, -1.4], armLL: [0.3, 0, 0], fingL: [-0.5, 0, 0], 'chest+': [0.2, 0, 0], 'head+': [0.45, 0, 0], jaw: [-0.55, 0, 0], $charge: 1, $shake: 0.6 }, 'i'],
+    [1.35, { $handR: [0.72, 2.0, -0.1], $aimR: aim([0.15, 1, 0.05], [0, 0.05, -1]), armUL: [0.3, 0, -1.3], 'head+': [0.35, 0, 0], jaw: [-0.4, 0, 0], $charge: 0.8, $shake: 0.4 }],
+    [1.9, { armUL: null, armLL: null, fingL: null, jaw: [0, 0, 0], $charge: 0 }],
+  ],
+};
+
+// ghost phase counter: long low wind-up (the game opens the blue counter window), then a lunging rising slash
+// (the encounter drives the lunge distance with B.charge between hits[0] and hits[1])
+A.spectral_lunge = {
+  dur: 2.3, hits: [1.1, 1.42], hitAt: ['weapon', 'weapon'], lock: 1, active: [[1.1, 1.5]],
+  keys: [
+    [0, {}],
+    [0.5, K2(SW(-150, 0.95, 1, 0.5, -0.35), TW(-0.3), { $gripL: 1, $hips: [0, -0.2, 0.08], 'spine+': [-0.1, 0, 0], 'head+': [0.1, 0.3, 0], $charge: 0.5 }), 'o'],
+    [1.05, K2(SW(-158, 0.9, 1, 0.5, -0.38), TW(-0.34), { $gripL: 1, $hips: [0, -0.23, 0.1], 'spine+': [-0.12, 0, 0], 'head+': [0.12, 0.32, 0], $charge: 1, $shake: 0.35 }), 'io'],
+    [1.12, K2(SW(-110, 1.0, 1, 0.55, -0.2), TW(-0.2), { $gripL: 1, $hips: [0, -0.18, -0.12], 'spine+': [-0.25, 0, 0], 'chest+': [-0.15, 0, 0], $footL: [-0.26, 0, -0.42], $charge: 1 }), 'i'],
+    [1.42, K2(SW(25, 1.75, 1, 0.8, 0.45), TW(0.28), { $gripL: 1, $hips: [0, -0.06, -0.14], 'spine+': [0.05, 0, 0], 'chest+': [0.12, 0, 0], $footL: [-0.26, 0, -0.42], $charge: 1 }), 'i'],
+    [1.75, K2(SW(80, 2.0, 1, 0.55, 0.7), TW(0.35), { $gripL: 1, $hips: [0, -0.04, -0.1], $footL: [-0.26, 0, -0.42], $charge: 0.5 }), 'o'],
+    [2.3, { $gripL: 0, $charge: 0, $footL: null }],
+  ],
+};
+
+// appears (attach): a heavy settle and a snort
+A.spawn = { dur: 0.9, hits: [], lock: 1, fadeIn: 0.02, keys: [[0, { $hips: [0, -0.16, 0], 'chest+': [-0.15, 0, 0] }], [0.9, {}]], ev: [[0.35, 'snort']] };
+
 A.hit = {
   dur: 0.6, hits: [], lock: 0, fadeIn: 0.04,
   keys: [[0, {}], [0.12, { 'chest+': [0.12, 0.08, 0.05], 'head+': [0.2, 0.1, 0], $hips: [0, -0.02, 0.03] }, 'o'], [0.6, {}]],
 };
+
+A.ghost_transform = A.ghost_form;   // the encounter's name for the ghost transition
 
 export { aim, GRIP, IDLE_AIM };

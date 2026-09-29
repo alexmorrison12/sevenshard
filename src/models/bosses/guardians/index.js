@@ -14,15 +14,19 @@ import { kurai } from './kurai.js';
 import { cinderhorn } from './cinderhorn.js';
 import { sandmaw } from './sandmaw.js';
 import { nerissa } from './nerissa.js';
+import { deep_oracle } from './deep_oracle.js';
+import { thunderhoof } from './thunderhoof.js';
 
-const DEFS = { rimewing, kurai, cinderhorn, sandmaw, nerissa };
+const DEFS = { rimewing, kurai, cinderhorn, sandmaw, nerissa, deep_oracle, thunderhoof };
 
 function infoOf(id, def) {
   const i = def.info;
   const actions = {};
-  for (const [k, a] of Object.entries(i.actions)) {
+  const all = { ...i.actions };
+  for (const [al, target] of Object.entries(def.spec.aliases || {})) if (!all[al] && i.actions[target]) all[al] = { ...i.actions[target], alias: target };
+  for (const [k, a] of Object.entries(all)) {
     const o = { dur: a.dur, hits: a.hits.slice() };
-    for (const key of ['loop', 'hold', 'counter', 'move', 'speed', 'turn', 'air']) if (a[key] !== undefined) o[key] = a[key];
+    for (const key of ['loop', 'hold', 'counter', 'move', 'speed', 'turn', 'air', 'alias']) if (a[key] !== undefined) o[key] = a[key];
     actions[k] = o;
   }
   const out = { name: i.name, title: i.title, height: i.height, radius: i.radius, actions, parts: i.parts || [] };

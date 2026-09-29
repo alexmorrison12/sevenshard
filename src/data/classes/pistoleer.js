@@ -16,7 +16,7 @@ const skills = [
     id: 'quick_shot', name: 'Quick Shot', type: 'normal', stance: 'pistol', cd: 5, mp: 40, dur: 0.72,
     desc: 'Hop back and empty both pistols into the target: four quick shots.', props: { stagger: 'Low' },
     events: [A(0, 'dash_back', 0.25), M(0, 'back', 3, 0.2, { iframes: 0.15 }), A(0.2, 'shoot_dual', 0.5),
-      bullet(0.26, { hit: { coef: 3.4, stagger: 2 } }), bullet(0.34, { hit: { coef: 3.4, stagger: 2 } }), bullet(0.42, { hit: { coef: 3.4, stagger: 2 } }), bullet(0.5, { hit: { coef: 3.4, stagger: 2 } }), S(0.26, 'gunshot'), S(0.42, 'gunshot')],
+      bullet(0.26, { hit: { coef: 4, stagger: 2 } }), bullet(0.34, { hit: { coef: 4, stagger: 2 } }), bullet(0.42, { hit: { coef: 4, stagger: 2 } }), bullet(0.5, { hit: { coef: 4, stagger: 2 } }), S(0.26, 'gunshot'), S(0.42, 'gunshot')],
     tripods: [['quick_prep', 'mobility', 'weak_point'], ['keen', 'pierce', { id: 'hollow_point', name: 'Hollow Point', desc: 'Bullets burst on impact, hitting everything within 2 m (+40% damage).', apply: d => { for (const p of evs(d.events, 'proj')) p.hit = { ...p.hit, shape: 'circle', r: 2, coef: p.hit.coef * 1.4 }; } }],
       [{ id: 'double_tap', name: 'Double Tap', desc: 'Fire eight shots instead of four (each 70% damage).', apply: d => { const ps = evs(d.events, 'proj'); for (const p of ps) p.hit.coef *= 0.7; addEv(d.events, ...ps.map(p => ({ ...p, t: p.t + 0.04, hit: { ...p.hit } }))); } }, 'enhanced:0.4']],
   },
@@ -81,9 +81,9 @@ const skills = [
   {
     id: 'dragon_shot', name: 'Dragon Shot', type: 'normal', stance: 'shotgun', cd: 10, mp: 75, dur: 0.7,
     desc: 'Fire a flaming slug that bursts into a roaring dragon of fire on impact.', props: { stagger: 'Mid' },
-    events: [A(0, 'shotgun', 0.7), P(0.22, { speed: 30, range: 11, radius: 0.8, kind: 'flame_slug', color: F, hit: { shape: 'circle', r: 3, coef: 21.3, stagger: 10, elem: 'fire' } }), FX(0.22, 'muzzle_flash', { color: F, r: 1.4 }), S(0.22, 'shotgun'), M(0.24, 'back', 1, 0.15)],
+    events: [A(0, 'shotgun', 0.7), P(0.22, { speed: 30, range: 11, radius: 0.8, kind: 'flame_slug', color: F, hit: { shape: 'circle', r: 3, coef: 25.1, stagger: 10, elem: 'fire' } }), FX(0.22, 'muzzle_flash', { color: F, r: 1.4 }), S(0.22, 'shotgun'), M(0.24, 'back', 1, 0.15)],
     tripods: [['quick_prep', 'weak_point', 'wide'], ['burn', 'keen', 'crushing'],
-      [{ id: 'dragon_breath', name: 'Dragon Breath', desc: 'The burst leaves a 3.5 m sea of flame for 4 s.', apply: d => { const p = evs(d.events, 'proj')[0]; p.onEnd = (pr, L, run) => { L.groundZone({ src: run.u, x: pr.x, z: pr.z, r: 3.5, dur: 4, tick: 0.5, first: 0.3, kind: 'fire', hit: { coef: 1.3, elem: 'fire' }, ctx: { ...run.ctx, hitSet: null } }); }; } }, 'enhanced:0.4']],
+      [{ id: 'dragon_breath', name: 'Dragon Breath', desc: 'The burst leaves a 3.5 m sea of flame for 4 s.', apply: d => { const p = evs(d.events, 'proj')[0]; p.onEnd = (pr, L, run) => { L.groundZone({ src: run.u, x: pr.x, z: pr.z, r: 3.5, dur: 4, tick: 0.5, first: 0.3, kind: 'fire', hit: { coef: 1.5, elem: 'fire' }, ctx: { ...run.ctx, hitSet: null } }); }; } }, 'enhanced:0.4']],
   },
   // ---------------------------------------------------------------- rifle
   {
@@ -107,18 +107,18 @@ const skills = [
     id: 'target_down', name: 'Target Down', type: 'point', stance: 'rifle', cd: 18, mp: 115, range: 12, dur: 1.35, cancelAt: 1.2,
     desc: 'Mark a target area and put three rifle rounds through it.', props: { stagger: 'High', wp: 1 },
     events: [A(0, 'rifle_aim', 1.35), FX(0, 'crosshair', { at: 'point', color: 'red', r: 2.4 }),
-      H(0.42, { ...circle(2.4), at: 'point', coef: 13.1, stagger: 7 }), FX(0.42, 'bullet_impact', { at: 'point', color: G, r: 2.4 }), S(0.42, 'rifle'),
-      H(0.82, { ...circle(2.4), at: 'point', coef: 13.1, stagger: 7 }), FX(0.82, 'bullet_impact', { at: 'point', color: G, r: 2.4 }), S(0.82, 'rifle'),
-      H(1.22, { ...circle(2.8), at: 'point', coef: 21.3, stagger: 10, wp: 1, heavy: true }), FX(1.22, 'bullet_impact', { at: 'point', color: G, r: 2.8, big: true }), K(1.22, 0.3), S(1.22, 'rifle')],
+      H(0.42, { ...circle(2.4), at: 'point', coef: 15.5, stagger: 7 }), FX(0.42, 'bullet_impact', { at: 'point', color: G, r: 2.4 }), S(0.42, 'rifle'),
+      H(0.82, { ...circle(2.4), at: 'point', coef: 15.5, stagger: 7 }), FX(0.82, 'bullet_impact', { at: 'point', color: G, r: 2.4 }), S(0.82, 'rifle'),
+      H(1.22, { ...circle(2.8), at: 'point', coef: 25.1, stagger: 10, wp: 1, heavy: true }), FX(1.22, 'bullet_impact', { at: 'point', color: G, r: 2.8, big: true }), K(1.22, 0.3), S(1.22, 'rifle')],
     tripods: [['quick_prep', 'weak_point', 'wide'], ['keen', 'crushing', { id: 'rapid_sights', name: 'Rapid Sights', desc: 'Fire the three rounds twice as fast.', apply: d => { for (const e of d.events) if (e.t > 0) e.t = e.t * 0.55; d.dur = 0.8; d.cancelAt = 0.7; } }],
-      [{ id: 'fourth_round', name: 'Fourth Round', desc: 'Chamber a fourth, explosive round (+40% damage).', apply: d => { addEv(d.events, H(1.5, { ...circle(3.4), at: 'point', coef: 18.9, stagger: 8, elem: 'fire' }), FX(1.5, 'explosion', { at: 'point', color: F, r: 3.4 }), S(1.5, 'explosion')); d.dur = 1.6; d.cancelAt = 1.5; } }, 'enhanced:0.4']],
+      [{ id: 'fourth_round', name: 'Fourth Round', desc: 'Chamber a fourth, explosive round (+40% damage).', apply: d => { addEv(d.events, H(1.5, { ...circle(3.4), at: 'point', coef: 22.3, stagger: 8, elem: 'fire' }), FX(1.5, 'explosion', { at: 'point', color: F, r: 3.4 }), S(1.5, 'explosion')); d.dur = 1.6; d.cancelAt = 1.5; } }, 'enhanced:0.4']],
   },
   {
     id: 'catastrophe', name: 'Catastrophe', type: 'point', stance: 'rifle', cd: 24, mp: 145, range: 14, dur: 0.8, cancelAt: 0.6,
     desc: 'Fire a flare into the sky; a barrage of shells rains on the target area, then a final blast.', props: { stagger: 'High', wp: 1 },
     events: [A(0, 'rifle_fire', 0.8), FX(0, 'flare_shot', { color: 'red', r: 1 }), S(0, 'rifle'), FX(0.3, 'barrage', { at: 'point', color: F, r: 4.2, dur: 1.8 }),
-      Z(0.3, { at: 'point', r: 4.2, dur: 1.7, tick: 0.2, first: 0.4, kind: 'barrage', hit: { coef: 5.2, stagger: 3, elem: 'fire' } }),
-      H(2.2, { ...circle(4.8), at: 'point', coef: 18, stagger: 12, wp: 1, elem: 'fire', heavy: true }), FX(2.2, 'explosion', { at: 'point', color: F, r: 4.8, big: true }), K(2.2, 0.4), S(2.2, 'explosion_big')],
+      Z(0.3, { at: 'point', r: 4.2, dur: 1.7, tick: 0.2, first: 0.4, kind: 'barrage', hit: { coef: 6.1, stagger: 3, elem: 'fire' } }),
+      H(2.2, { ...circle(4.8), at: 'point', coef: 21.2, stagger: 12, wp: 1, elem: 'fire', heavy: true }), FX(2.2, 'explosion', { at: 'point', color: F, r: 4.8, big: true }), K(2.2, 0.4), S(2.2, 'explosion_big')],
     tripods: [['quick_prep', 'wide', 'weak_point'], ['burn', 'keen', 'stance'],
       [{ id: 'carpet_bomb', name: 'Carpet Bomb', desc: 'The barrage lasts 60% longer.', apply: d => { const z = evs(d.events, 'zone')[0]; z.dur *= 1.6; } }, 'enhanced:0.4']],
   },
@@ -127,7 +127,7 @@ const skills = [
 // Longshot (class engraving): rifle skills hit much harder, pistol and shotgun skills weaker.
 for (const s of skills) {
   const prev = s.onStart;
-  s.onStart = run => { prev?.(run); if (hasEngr(run.u.kit, 'longshot')) run.mult *= s.stance === 'rifle' ? 1.45 : 0.7; };
+  s.onStart = run => { prev?.(run); if (hasEngr(run.u.kit, 'longshot')) run.mult *= s.stance === 'rifle' ? 1.4 : 0.8; };
 }
 
 export default finalize({
@@ -159,6 +159,6 @@ export default finalize({
   defaultBar: ['dual_buckshot', 'shotgun_rapid_fire', 'last_request', 'dexterous_shot', 'equilibrium', 'spiral_tracker', 'focused_shot', 'perfect_shot'],
   engravings: [
     { id: 'quickdraw', name: 'Quickdraw', desc: 'Swapping weapons by casting grants Quickdraw: +15% damage for 3 s (instead of +6%). Move Speed +5%.', mods: { moveSpd: 0.05 } },
-    { id: 'longshot', name: 'Longshot', desc: 'Rifle skills deal +45% damage; pistol and shotgun skills deal −30%. Crit Damage +10%.', mods: { critDmg: 0.1 } },
+    { id: 'longshot', name: 'Longshot', desc: 'Rifle skills deal +40% damage; pistol and shotgun skills deal −20%. Crit Damage +10%.', mods: { critDmg: 0.1 } },
   ],
 });

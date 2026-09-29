@@ -21,15 +21,15 @@ export const J = {
   tail: [[0, 2.72, 0.05], [0, 2.15, 0.28], [0, 1.6, 0.66], [0, 1.15, 1.2], [0.05, 0.82, 1.85], [0.2, 0.62, 2.55], [0.55, 0.5, 3.2], [1.05, 0.4, 3.72], [1.65, 0.3, 4.05], [2.3, 0.24, 4.2]],
   fluke: [2.95, 0.2, 4.25],
 };
-export const NT = 10, NH = 7, HB = 4;
+export const NT = 10, NH = 9, HB = 4;
 const X = (p, s) => [p[0] * s, p[1], p[2]];
 const SIDES = [[-1, 'L'], [1, 'R']];
 // hair fronds: from the back of the skull, flowing back and down over the shoulders
 function hairPts(i) {
   const a = (i - (NH - 1) / 2) / ((NH - 1) / 2);         // -1..1 across the back of the head
-  const root = [a * 0.2, 5.22 - Math.abs(a) * 0.08, 0.1 + (1 - Math.abs(a)) * 0.05];
-  const L = 2.6 - Math.abs(a) * 0.5;
-  return bezier([root, [a * 0.45, 5.1, 0.55], [a * 0.7, 4.6 - L * 0.2, 0.75], [a * 0.85, 5.0 - L, 0.8 + (1 - Math.abs(a)) * 0.2]], 16);
+  const root = [a * 0.19, 5.26 - Math.abs(a) * 0.1, 0.06 + (1 - Math.abs(a)) * 0.06];
+  const L = 2.9 - Math.abs(a) * 0.6;
+  return bezier([root, [a * 0.38, 5.2, 0.5], [a * 0.55, 4.7 - L * 0.15, 0.7], [a * 0.62 + Math.sin(i * 1.7) * 0.12, 5.05 - L, 0.62 + (1 - Math.abs(a)) * 0.35]], 16);
 }
 const HAIR = Array.from({ length: NH }, (_, i) => hairPts(i));
 const polyAt = (P, s) => { const x = s * (P.length - 1), k = Math.min(P.length - 2, Math.floor(x)); return lerp3(P[k], P[k + 1], x - k); };
@@ -47,11 +47,11 @@ function rig(R) {
 const skinD = [0, 0.05, 0.15, 0], scale = [0, 0.4, 0.15, 0], shellD = [0, 0.1, 0.2, 0.3];
 function sculpt(S) {
   // tail: serpentine, flattening a little towards the fluke; hips flare into it
-  const tr = (i) => 0.42 - i * 0.032;
+  const tr = (i) => 0.4 - i * 0.03 + 0.05 * Math.exp(-i * 0.7);
   S.ell('hips', [0, 3.1, 0.02], [0.44, 0.5, 0.36], { k: 0.2, col: C.tail, tag: 'hips', dtl: scale });
   for (let i = 0; i < NT; i++) {
     const a = J.tail[i], bb = i < NT - 1 ? J.tail[i + 1] : J.fluke;
-    S.cone('tail' + i, a, bb, tr(i), tr(i + 1), { k: 0.14, col: C.tail, tag: 'tail', b2: i < NT - 1 ? 'tail' + (i + 1) : undefined, t0: 0.7, t1: 1, dtl: scale });
+    S.cone('tail' + i, a, bb, tr(i), tr(i + 1), { k: 0.28, col: C.tail, tag: 'tail', b2: i < NT - 1 ? 'tail' + (i + 1) : undefined, t0: 0.55, t1: 1, dtl: scale });
   }
   // torso: narrow waist, ribcage, nacre bodice sculpted as raised shells
   S.ell('spine', [0, 3.72, 0.02], [0.3, 0.42, 0.24], { k: 0.16, col: C.skin, tag: 'waist', dtl: skinD });
@@ -131,8 +131,8 @@ function dress({ acc, macc, S, b }) {
   for (let i = 0; i < NH; i++) {
     const bones = HS.map((_, j) => b(`h${i}_${j}`));
     const wAt = (s) => { let j = 0; while (j < HB - 1 && s > HS[j + 1]) j++; const s1 = j < HB - 1 ? HS[j + 1] : 1; const f = sstep(0.5, 1, (s - HS[j]) / (s1 - HS[j])); const m = {}; m[bones[j]] = 1 - (j < HB - 1 ? f : 0); if (j < HB - 1) m[bones[j + 1]] = f; return skinMap(m); };
-    const r0 = 0.09 - Math.abs(i - 3) * 0.008;
-    acc.addRaw(loft(HAIR[i], 6, (t) => { const r = r0 * (1 - t * 0.7) * (1 + 0.3 * Math.sin(t * 9 + i)); return [r * 1.4, r * 0.7]; }, [0, 0, 1]), {
+    const r0 = 0.1 - Math.abs(i - (NH - 1) / 2) * 0.006;
+    acc.addRaw(loft(HAIR[i], 7, (t) => { const r = r0 * (1 - t * 0.55) * (1 + 0.35 * Math.sin(t * 8 + i)); return [r * 1.9, r * 0.45]; }, [0, 0, 1]), {
       skin: (p, t) => wAt(t), kind: K.hair, color: (t) => lc(C.hair, C.hairTip, Math.pow(t, 3)), emis: (t) => 1.6 * Math.pow(t, 5), gm: 1, dtl: [0.3, 0, 0.1, 0], uv: (uv, t) => [uv[0], t],
     });
   }

@@ -109,7 +109,7 @@ export function squareSail(sb, o) {
   const Wt = o.Wt, Wb = o.Wb ?? o.Wt, Hh = o.H, roach = o.roach ?? 0.25;
   const pos = (a, b) => {
     const w = lerp(Wt, Wb, b);
-    return top.clone().addScaledVector(yd, (a - 0.5) * w).addScaledVector(UP, -b * Hh + roach * Math.sin(Math.PI * a) * Math.pow(b, 6));
+    return top.clone().addScaledVector(yd, (a - 0.5) * w).addScaledVector(UP, -b * Hh + roach * Math.sin(Math.PI * a) * Math.pow(b, 6)).addScaledVector(fwd, (o.tilt || 0) * b);
   };
   const corners = sb.cloth({
     na: o.na ?? 12, nb: o.nb ?? 10, pos, n0: fwd, bdir: fwd, depth: o.depth ?? Wt * 0.15, lift: 0.35, pinch: 0.12, across: yd,

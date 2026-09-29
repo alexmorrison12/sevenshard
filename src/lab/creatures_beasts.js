@@ -20,6 +20,26 @@ G.uFogDensity.value = mode === 'ship' ? 0.002 : 0.0008;
 const api = (window.__cr = { lab, list: [], stats: creatureStats, CREATURES });
 const P = lab.panel;
 let type = Q.get('type') || Object.keys(CREATURES).find(t => !CREATURES[t].placeholder) || Object.keys(CREATURES)[0];
+// ---- beasts lab extras: zone-like ground (?ground=grass|sand|forest), hero-height reference (?ref=1)
+{
+  const gk = Q.get('ground');
+  const TONES = { grass: ['#6f7a2e', [[70, 38, 34], [58, 45, 30], [80, 50, 42]]], sand: ['#c8ae7e', [[40, 40, 70], [36, 35, 62], [44, 45, 76]]], forest: ['#2e3424', [[80, 25, 18], [100, 22, 22], [60, 20, 14]]] };
+  if (gk && TONES[gk] && lab.ground) {
+    const cv = document.createElement('canvas'); cv.width = cv.height = 256; const x = cv.getContext('2d');
+    x.fillStyle = TONES[gk][0]; x.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 1400; i++) { const t = TONES[gk][1][i % 3]; x.fillStyle = `hsla(${t[0] + Math.random() * 14},${t[1]}%,${t[2] + Math.random() * 10}%,0.55)`; const r = 2 + Math.random() * 7; x.beginPath(); x.ellipse(Math.random() * 256, Math.random() * 256, r, r * (0.4 + Math.random()), Math.random() * 3, 0, 7); x.fill(); }
+    const tex = new THREE.CanvasTexture(cv); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(20, 20); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
+    lab.ground.material.map = tex; lab.ground.material.needsUpdate = true;
+  }
+}
+function heroRef(x, z) { // 1.85 m capsule "hero" for scale
+  const g = new THREE.Group();
+  const m = new THREE.MeshLambertMaterial({ color: 0x4a6ab0 }), sk = new THREE.MeshLambertMaterial({ color: 0xe0b090 });
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.24, 1.0, 4, 10), m); body.position.y = 0.86; g.add(body);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.14, 12, 8), sk); head.position.y = 1.7; g.add(head);
+  g.traverse(o => { if (o.isMesh) o.castShadow = true; });
+  g.position.set(x, 0, z); lab.add(g); return g;
+}
 let variant = Q.get('variant') || null;
 const state = { speed: num('speed', 0), turn: num('turn', 0), combat: Q.get('combat') === '1', fly: Q.get('fly') === '1', stunned: Q.get('stunned') === '1', down: Q.get('down') === '1', dead: Q.get('dead') === '1' };
 const yaw = THREE.MathUtils.degToRad(num('yaw', 150));
@@ -47,10 +67,21 @@ function buildSingle() {
   const c = createCreature(type, { variant: variant || undefined, elite: Q.get('elite') === '1', seed: num('seed', 0) });
   const ms = performance.now() - t0;
   add(c);
+  if (Q.get('ref') === '1') heroRef(-(c.radius + 0.9), 0.3);
   const e = c.entry.stats;
   setInfo(`${type}/${c.variant}  ${e.tris} tris · ${e.verts} v · ${e.bones} bones\nbuild ${e.ms.toFixed(0)} ms (sdf ${e.sdfMs.toFixed(0)}) · inst ${ms.toFixed(1)} ms\nh ${c.height.toFixed(2)} m · r ${c.radius.toFixed(2)} m`);
   frameCam(c.height);
   return c;
+}
+function buildZoo() { // every beast (default variant) in a row + a hero reference, facing the camera
+  clear();
+  const types = (Q.get('types') || Object.keys(CREATURES).join(',')).split(',');
+  let x = 0; const items = [];
+  for (const t of types) { const [tt, v] = t.split(':'); const c = createCreature(tt, { variant: v || undefined }); const w = Math.max(c.radius * 2.2, 0.9); items.push([c, x + w / 2]); x += w + 0.4; }
+  for (const [c, px] of items) add(c, px - x / 2, 0);
+  heroRef(-x / 2 - 0.8, 0);
+  frameCam(Math.max(4.3, x * 0.38));
+  setInfo(types.join('  '));
 }
 function buildLineup() {
   clear();
@@ -88,17 +119,17 @@ function buildStrip() { // N copies of one action at spread times (frozen)
 function buildHorde() {
   clear();
   const count = num('count', 60);
-  const mix = (Q.get('types') || 'imp:30,hellhound:18,legionnaire:12').split(',').map(s => { const [t, n] = s.split(':'); return [t, +n]; });
+  const mix = (Q.get('types') || 'wolf:20,boar:16,spider:14,crab:10').split(',').map(s => { const [t, n] = s.split(':'); return [t, +n]; });
   const T0 = performance.now();
   const kinds = [];
   for (const [t, n] of mix) for (let i = 0; i < n && kinds.length < count; i++) kinds.push(t);
   while (kinds.length < count) kinds.push(mix[0][0]);
   const rng = (i, k) => { const x = Math.sin(i * 12.9898 + k * 78.233) * 43758.5453; return x - Math.floor(x); };
   kinds.forEach((t, i) => {
-    const vs = CREATURES[t].variants.filter(v => !/overseer|alpha|elite|centurion|warlord/.test(v));
+    const vs = CREATURES[t].variants.filter(v => !/overseer|alpha|elite|centurion|warlord|duskfang|gnarltusk|broodmother|barnaclaw/.test(v));
     const c = createCreature(t, { variant: vs[i % vs.length], seed: i + 1 });
     const it = add(c, (rng(i, 1) - 0.5) * 24, -14 - rng(i, 2) * 16, 0);
-    it.speed = t === 'hellhound' ? 5.5 + rng(i, 3) * 1.5 : t === 'imp' ? 4 + rng(i, 3) * 1.2 : 2.6 + rng(i, 3) * 0.6;
+    it.speed = t === 'wolf' ? 5.5 + rng(i, 3) * 1.5 : t === 'boar' ? 4.5 + rng(i, 3) * 1.2 : t === 'treant' ? 1.6 : 3 + rng(i, 3) * 0.8;
     it.phase = 'run'; it.timer = rng(i, 4) * 2; it.dead = false;
   });
   const buildMs = performance.now() - T0;
@@ -220,9 +251,9 @@ if (mode === 'single' || mode === 'strip' || mode === 'lineup') {
 }
 function rebuild() { if (mode === 'lineup') buildLineup(); else if (mode === 'strip') buildStrip(); else buildSingle(); }
 
-({ single: buildSingle, lineup: buildLineup, strip: buildStrip, horde: buildHorde, mount: buildMount, ship: buildShip, gallery: buildGallery })[mode]?.();
+({ single: buildSingle, lineup: buildLineup, strip: buildStrip, horde: buildHorde, mount: buildMount, ship: buildShip, gallery: buildGallery, zoo: buildZoo })[mode]?.();
 
-if (mode === 'single' || mode === 'lineup' || mode === 'gallery') {
+if (mode === 'single' || mode === 'lineup' || mode === 'gallery' || mode === 'zoo') {
   lab.onFrame((dt) => {
     for (const it of api.list) {
       if (state.speed || state.turn) { const r = it.c.root; r.rotation.y += state.turn * dt; if (Q.get('move') === '1') { r.position.x -= Math.sin(r.rotation.y) * state.speed * dt; r.position.z -= Math.cos(r.rotation.y) * state.speed * dt; } }

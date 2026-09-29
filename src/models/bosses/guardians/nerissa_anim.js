@@ -152,5 +152,5 @@ export function nerissaSpec(J, D) {
         ctl.ch.eye = Math.min(ctl.ch.eye, 1 - sstep(1.5, 3.0, t));
       } },
   };
-  return { init, base, finish, material, actions: A };
+  return { init, base, finish, material, actions: A, aliases: { roar: 'scream', channel: 'sing' } };
 }

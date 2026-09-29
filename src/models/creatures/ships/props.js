@@ -8,9 +8,8 @@ export const IRON = lc(0x1c1a19), DARK = lc(0x0c0908);
 const GLASS_WARM = lc(0xffb45a);
 
 // ------------------------------------------------------------------------------------------------ cannon
-const BARREL = [[0.001, -0.7], [0.045, -0.7], [0.058, -0.66], [0.03, -0.6], [0.12, -0.57], [0.165, -0.5], [0.172, -0.43], [0.162, -0.4], [0.16, -0.1],
-  [0.168, -0.08], [0.168, -0.02], [0.148, 0.0], [0.142, 0.34], [0.15, 0.36], [0.15, 0.4], [0.132, 0.42], [0.12, 0.84], [0.138, 0.88], [0.152, 0.96], [0.152, 1.0],
-  [0.08, 1.0], [0.075, 0.9], [0.001, 0.9]];
+const BARREL = [[0.001, -0.7], [0.05, -0.7], [0.034, -0.62], [0.14, -0.57], [0.17, -0.47], [0.16, -0.42], [0.162, -0.02], [0.145, 0.0],
+  [0.132, 0.42], [0.122, 0.84], [0.152, 0.94], [0.152, 1.0], [0.08, 1.0], [0.075, 0.88], [0.001, 0.88]];
 /**
  * Cannon on a truck carriage. o: { x (trunnion x, sign = side), y (axis height), z, slot (0-based, recoil anim), barrel, wood,
  * metal, scale }. Barrel points outboard (±X). Returns the muzzle position (Vector3).
@@ -19,13 +18,13 @@ export function cannon(wb, o) {
   const s = o.scale ?? 1, side = Math.sign(o.x) || 1, anim = o.slot + 1;
   const base = M(o.x, o.y, o.z, 0, side > 0 ? 0 : Math.PI, 0, s);
   const add = (g, m, opt) => wb.add(g, base.clone().multiply(m), { anim, ...opt });
-  add(lathe(BARREL, 12), M(0, 0, 0, 0, 0, -Math.PI / 2), { uv: 'keep', color: o.barrel || IRON, metal: o.metal ?? 0.6, d: 0 });
-  add(cyl(0.05, 0.05, 0.44, 6), M(0, 0, -0.22, Math.PI / 2), { uv: 'keep', color: o.barrel || IRON, metal: o.metal ?? 0.6, d: 0 });
+  add(lathe(BARREL, 10), M(0, 0, 0, 0, 0, -Math.PI / 2), { uv: 'keep', color: o.barrel || IRON, metal: o.metal ?? 0.6, d: 0 });
+  add(cyl(0.05, 0.05, 0.44, 5, true), M(0, 0, -0.22, Math.PI / 2), { uv: 'keep', color: o.barrel || IRON, metal: o.metal ?? 0.6, d: 0 });
   const wd = o.wood || lc(0x5a3a22);
   for (const zz of [-0.24, 0.24]) add(box(1.05, 0.34, 0.08), M(-0.3, -0.24, zz), { color: wd, d: 1 });
   add(box(1.0, 0.07, 0.5), M(-0.32, -0.36, 0), { color: wd, d: 1 });
   for (const xx of [0.08, -0.72]) for (const zz of [-0.27, 0.27]) {
-    add(cyl(0.12, 0.12, 0.07, 10), M(xx, -0.4, zz + (zz > 0 ? -0.035 : -0.035), Math.PI / 2), { uv: 'box', color: wd, d: 0.6 });
+    add(cyl(0.12, 0.12, 0.07, 8), M(xx, -0.4, zz - 0.035, Math.PI / 2), { uv: 'box', color: wd, d: 0.6 });
   }
   return new THREE.Vector3(1.02 * s, 0, 0).applyMatrix4(base);
 }
@@ -42,7 +41,7 @@ export function gunport(wb, H, o) {
   wb.add(box(w + t * 2, t, 0.09), m(0, -h / 2 - t / 2, 0.02), { color: fr, metal: o.frameMetal || 0, d: 0.6 });
   for (const sx of [-1, 1]) wb.add(box(t, h, 0.09), m(sx * (w / 2 + t / 2), 0, 0.02), { color: fr, metal: o.frameMetal || 0, d: 0.6 });
   // lid hinged at the top edge, swung outward/up
-  const lid = o.lid ?? 1.15;
+  const lid = o.lid ?? 0.95;
   const hinge = new THREE.Matrix4().makeBasis(f.X, f.U, f.N).setPosition(f.o).multiply(M(0, h / 2 + t, 0.06)).multiply(M(0, 0, 0, -lid)).multiply(M(0, -h / 2, 0.03));
   wb.add(box(w + 0.06, h + 0.06, 0.06), hinge, { color: o.lidColor || fr, d: 0.8 });
   if (o.lidInner) wb.add(box(w - 0.04, h - 0.04, 0.02), hinge.clone().multiply(M(0, 0, -0.035)), { color: o.lidInner, d: 0.2 });
@@ -122,8 +121,8 @@ export function balustrade(wb, a, b, o = {}) {
   wb.add(box(len + 0.06, 0.07, 0.12), M(mid.x, mid.y + h, mid.z, 0, ang), { color: cap, metal: o.capMetal || 0, d: 0.8 });
   wb.add(box(len, 0.06, 0.1), M(mid.x, mid.y + 0.08, mid.z, 0, ang), { color: wd, d: 0.8 });
   const n = Math.max(1, Math.round(len / gap));
-  const prof = [[0.001, 0], [0.035, 0], [0.035, 0.05], [0.025, 0.1], [0.045, h * 0.35], [0.028, h * 0.62], [0.034, h - 0.08], [0.03, h - 0.03], [0.001, h - 0.03]];
-  const bal = lathe(prof, 6);
+  const prof = [[0.034, 0], [0.024, 0.1], [0.046, h * 0.36], [0.026, h * 0.64], [0.032, h - 0.06], [0.03, h - 0.03]];
+  const bal = lathe(prof, 5);
   for (let i = 0; i <= n; i++) {
     const p = V3().lerpVectors(a, b, i / n);
     if (o.skip && o.skip(p)) continue;
@@ -162,10 +161,10 @@ export function hatch(wb, x, y, z, w, d, o = {}) {
 
 export function barrel(wb, x, y, z, o = {}) {
   const r = o.r ?? 0.28, h = o.h ?? 0.72, wd = o.wood || lc(0x8a5a30), rot = o.lie ? M(x, y + r * 0.95, z, 0, o.ry || 0, Math.PI / 2).multiply(M(0, -h / 2, 0)) : M(x, y, z, 0, o.ry || 0, 0);
-  wb.add(lathe([[0.001, 0], [r * 0.82, 0], [r * 0.86, 0.02], [r * 0.96, h * 0.25], [r, h * 0.5], [r * 0.96, h * 0.75], [r * 0.86, h - 0.02], [r * 0.82, h], [0.001, h]], 12, 11), rot, { uv: 'keep', color: wd, d: 1 });
-  for (const t of [0.12, 0.34, 0.66, 0.88]) {
-    const rr = r * (t < 0.2 || t > 0.8 ? 0.9 : 0.985) + 0.012;
-    wb.add(torus(rr, 0.018, 4, 14), rot.clone().multiply(M(0, h * t, 0, Math.PI / 2)), { uv: 'box', color: o.hoop || IRON, metal: 0.4, d: 0 });
+  wb.add(lathe([[0.001, 0], [r * 0.84, 0], [r * 0.96, h * 0.22], [r, h * 0.5], [r * 0.96, h * 0.78], [r * 0.84, h], [0.001, h]], 10, 10), rot, { uv: 'keep', color: wd, d: 1 });
+  for (const t of [0.1, 0.33, 0.67, 0.9]) {
+    const rr = r * (t < 0.2 || t > 0.8 ? 0.9 : 0.985) + 0.008;
+    wb.add(cyl(rr, rr, 0.045, 10, true), rot.clone().multiply(M(0, h * t - 0.022, 0)), { uv: 'keep', color: o.hoop || IRON, metal: 0.3, d: 0 });
   }
 }
 export function crate(wb, x, y, z, s = 0.7, o = {}) {
@@ -193,7 +192,7 @@ export function sack(wb, x, y, z, o = {}) {
 }
 export function coil(wb, x, y, z, r = 0.3, o = {}) {
   const c = o.color || lc(0x9a7a4a);
-  for (let i = 0; i < 3; i++) wb.add(torus(r - i * 0.06, 0.035, 5, 16), M(x, y + 0.035 + i * 0.05, z, Math.PI / 2), { uv: 'box', color: c, d: 0.3 });
+  for (let i = 0; i < 2; i++) wb.add(torus(r - i * 0.075, 0.04, 4, 12), M(x, y + 0.04 + i * 0.06, z, Math.PI / 2), { uv: 'box', color: c, d: 0.3 });
 }
 export function capstan(wb, x, y, z, o = {}) {
   const wd = o.wood || lc(0x6a4424);

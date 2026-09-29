@@ -22,7 +22,7 @@ export class BossCtl {
     this.dead = false; this._sd = false;
     // smoothed state (0..1 unless noted)
     this.speed = 0; this.turn = 0; this.fly = 0; this.burrow = 0; this.groggy = 0; this.enrage = 0; this.ghost = 0;
-    this.airLatch = 0; this.burrowLatch = 0;
+    this.airLatch = 0; this.burrowLatch = 0; this.selfLift = true; this.liftK = 1;
     this.st = {};
     this.ch = { ...CH_DEFAULT };
     this.locoW = 1;
@@ -32,7 +32,7 @@ export class BossCtl {
     if (spec.init) spec.init(this);
   }
 
-  def(name) { return this.spec.actions[name]; }
+  def(name) { const a = this.spec.aliases?.[name]; return this.spec.actions[a || name]; }
   has(name) { return this.acts.some(a => a.name === name && !a.out); }
   weight(name) { let w = 0; for (const a of this.acts) if (a.name === name) w = Math.max(w, a.w); return w; }
   active() { for (let i = this.acts.length - 1; i >= 0; i--) if (!this.acts[i].out) return this.acts[i]; return null; }
@@ -47,6 +47,7 @@ export class BossCtl {
     else if (!d.overlay) for (const a of this.acts) if (!a.def.overlay) a.out = true;
     const loop = !!d.loop;
     const speed = loop ? 1 : (reqDur ? d.dur / reqDur : 1);
+    name = this.spec.aliases?.[name] || name;
     const inst = { name, def: d, t: 0, el: 0, speed, w: 0, out: false, outT: 0, until: loop ? (reqDur ?? Infinity) : Infinity, seed: Math.random() * 100, k: 0, fired: {}, dur: reqDur ?? d.dur };
     this.acts.push(inst);
     if (d.start) d.start(this, inst);
@@ -111,6 +112,7 @@ export class BossCtl {
     this.speed += (speed - this.speed) * k(5); this.turn += (turn - this.turn) * k(4);
     const flyT = ch.air >= 0 ? ch.air : Math.max(st.fly ?? 0, this.airLatch);
     this.fly += (clamp01(flyT) - this.fly) * (ch.air >= 0 ? 1 : k(2.2));
+    this.liftK += ((this.selfLift ? 1 : 0) - this.liftK) * k(2.5);      // external root lift → pose only
     const burT = ch.burrow >= 0 ? ch.burrow : Math.max(st.burrowed ?? 0, this.burrowLatch);
     this.burrow += (clamp01(burT) - this.burrow) * (ch.burrow >= 0 ? 1 : k(2.5));
     this.groggy += (Math.max(st.groggy ? 1 : 0, ch.groggy) - this.groggy) * k(3);

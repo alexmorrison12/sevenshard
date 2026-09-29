@@ -13,7 +13,7 @@
 //   sa   vec4  sails: x flutter freedom, y across 0..1, z kind (0 sail, 1 flag, 2 sheet rope), w down 0..1
 //              flags: x along 0..1 (hoist → fly), y length (m), z = 1, w phase · ropes: x follow weight, z = 2
 import * as THREE from 'three';
-import { lambert, G } from '../../../engine/materials.js';
+import { lambert, G, FOG_GLSL_PARS } from '../../../engine/materials.js';
 import { plankTex } from './tex.js';
 
 export const MAX_GUNS = 24;
@@ -57,7 +57,7 @@ varying vec4 vAux; varying vec3 vPiv; uniform float uGlow; uniform float uFlick;
 export function woodMaterial(o = {}) {
   const u = {
     uRecoil: { value: new Float32Array(MAX_GUNS) }, uWheel: { value: 0 }, uRudder: { value: 0 }, uSway: { value: new THREE.Vector2() },
-    uGlow: { value: o.glow ?? 1 }, uFlick: { value: o.flick ?? 1 }, uSpecK: { value: o.specK ?? 1.4 },
+    uGlow: { value: o.glow ?? 1 }, uFlick: { value: o.flick ?? 1 }, uSpecK: { value: o.specK ?? 0.7 }, uWrapU: { value: o.wrap ?? 0.45 },
   };
   const m = lambert({ vertexColors: true, map: plankTex() }, {
     key: 'sevenshard-ship-wood', wrap: o.wrap ?? 0.45, rim: o.rim ?? 0.12, rimColor: o.rimColor ?? 0xfff0d8, spec: 1, shine: o.shine ?? 36, uniforms: u,
@@ -65,7 +65,7 @@ export function woodMaterial(o = {}) {
       .replace('#include <beginnormal_vertex>', WOOD_VNORM)
       .replace('#include <begin_vertex>', 'vec3 transformed = gP;'),
     fragment: fs => fs.replace('#include <common>', '#include <common>\n' + WOOD_FPARS)
-      .replace('uniform float uSpec;', 'uniform float uSpecK;\nvarying float vMetal;\n#define uSpec ( uSpecK * vMetal )\n')
+      .replace('uniform float uWrap; uniform float uSpec;', 'uniform float uWrapU; uniform float uSpecK;\nvarying float vMetal;\n#define uWrap ( uWrapU * ( 1.0 - vMetal * 0.8 ) )\n#define uSpec ( uSpecK * vMetal )\n')
       .replace('#include <map_fragment>', `#ifdef USE_MAP
         vec4 texelColor = texture2D( map, vMapUv );
         diffuseColor.rgb *= mix( vec3( 1.0 ), texelColor.rgb * 1.18, vAux.y );
@@ -77,9 +77,14 @@ export function woodMaterial(o = {}) {
           fl = 1.0 - uFlick * ( 0.16 - 0.1 * sin( uTime * 11.0 + h ) - 0.06 * sin( uTime * 23.0 + h * 1.7 ) - 0.05 * sin( uTime * 4.1 + h * 0.3 ) );
         }
         totalEmissiveRadiance += vColor.rgb * vAux.x * fl * uGlow;
-        totalEmissiveRadiance += vColor.rgb * vMetal * 0.10;
+        if ( vMetal > 0.0 ) {   // cheap sky reflection so gold / bronze read as metal, not paint
+          vec3 upV = normalize( ( viewMatrix * vec4( 0.0, 1.0, 0.0, 0.0 ) ).xyz );
+          vec3 rv = reflect( -normalize( vViewPosition ), normal );
+          float sky = dot( rv, upV );
+          totalEmissiveRadiance += vColor.rgb * vMetal * ( 0.04 + 0.42 * smoothstep( -0.1, 0.9, sky ) - 0.03 * smoothstep( 0.0, -0.8, sky ) );
+        }
       }`)
-      .replace('totalEmissiveRadiance + gSpecAcc', 'totalEmissiveRadiance + gSpecAcc * mix( vec3( 1.0 ), diffuseColor.rgb * 2.6, vMetal )'),
+      .replace('totalEmissiveRadiance + gSpecAcc', 'totalEmissiveRadiance + gSpecAcc * mix( vec3( 1.0 ), diffuseColor.rgb * 1.5 + 0.1, vMetal )'),
   });
   m.userData.ship = u;
   return m;
@@ -88,7 +93,7 @@ export function woodMaterial(o = {}) {
 // ------------------------------------------------------------------------------------------------ sails
 const SAIL_VPARS = /* glsl */`
 attribute vec3 bOff; attribute vec3 bNrm; attribute vec3 anc; attribute vec4 sa;
-uniform float uBillow; uniform float uReef; uniform float uLuff; uniform float uFlagW; uniform float uFlagA; uniform float uPhase;
+uniform float uBillow; uniform float uReef; uniform float uLuff; uniform float uFlagT; uniform float uFlagA; uniform float uPhase;
 vec3 sP; vec3 sN;
 void sailDeform() {
   vec3 p = position; vec3 n = normal;
@@ -116,7 +121,7 @@ void sailDeform() {
   } else if ( kind < 1.5 ) {
     float u = sa.x, len = sa.y;
     float kw = 6.2831 / max( 1.6, len * 0.55 );
-    float ph = u * len * kw - t * uFlagW + sa.w * 6.2831;
+    float ph = u * len * kw - uFlagT - uPhase + sa.w * 6.2831;
     float env = pow( u, 1.15 ) * uFlagA * ( 0.35 + len * 0.1 );
     float f = sin( ph ) * env + sin( ph * 2.3 + 1.7 ) * env * 0.25;
     p += normal * f;
@@ -140,7 +145,7 @@ uniform float uSailGlow; uniform vec3 uGlowCol; uniform float uGlowPulse;
 /** Per-ship sail material (double-sided, alpha-tested cloth atlas, translucent when back-lit). o: { tex, trans, glow, glowCol, pulse, rim } */
 export function sailMaterial(o) {
   const u = {
-    uBillow: { value: 0.6 }, uReef: { value: 0 }, uLuff: { value: 0.05 }, uFlagW: { value: 6 }, uFlagA: { value: 0.35 }, uPhase: { value: 0 },
+    uBillow: { value: 0.6 }, uReef: { value: 0 }, uLuff: { value: 0.05 }, uFlagT: { value: 0 }, uFlagA: { value: 0.35 }, uPhase: { value: 0 },
     uSailGlow: { value: o.glow ?? 0 }, uGlowCol: { value: new THREE.Color(o.glowCol ?? 0xffffff) }, uGlowPulse: { value: o.pulse ?? 0 },
   };
   const m = lambert({ vertexColors: true, map: o.tex, side: THREE.DoubleSide, alphaTest: 0.5 }, {
@@ -173,5 +178,44 @@ export function sailDepthMaterial(sailMat) {
       .replace('#include <begin_vertex>', 'sailDeform();\nvec3 transformed = sP;');
   };
   m.customProgramCacheKey = () => 'sevenshard-ship-sail-depth';
+  return m;
+}
+
+// ------------------------------------------------------------------------------------------------ waterline foam skirt
+// Flat strip around the hull at the waterline (on the ship root, so it stays on the water while the hull rocks).
+// uv.x = metres from the bow along each side, uv.y = 0 at the hull → 1 at the outer edge; color.r = strength.
+const FOAM_VS = /* glsl */`
+varying vec2 vUv; varying vec3 vW; varying float vK;
+void main() {
+  vUv = uv; vK = color.r;
+  vec4 w = modelMatrix * vec4( position, 1.0 );
+  vW = w.xyz;
+  gl_Position = projectionMatrix * viewMatrix * w;
+}`;
+const FOAM_FS = /* glsl */`
+uniform float uTime; uniform float uFoam; uniform float uFlow; uniform float uDesat; uniform vec3 uFoamCol;
+varying vec2 vUv; varying vec3 vW; varying float vK;
+${FOG_GLSL_PARS}
+float h2( vec2 p ) { return fract( sin( dot( p, vec2( 127.1, 311.7 ) ) ) * 43758.5453 ); }
+float vn( vec2 p ) { vec2 i = floor( p ), f = fract( p ); f = f * f * ( 3.0 - 2.0 * f );
+  return mix( mix( h2( i ), h2( i + vec2( 1.0, 0.0 ) ), f.x ), mix( h2( i + vec2( 0.0, 1.0 ) ), h2( i + vec2( 1.0, 1.0 ) ), f.x ), f.y ); }
+void main() {
+  float o = vUv.y / max( 0.35, 0.45 + 0.55 * uFoam );
+  vec2 p = vec2( vUv.x * 1.6 - uFlow * 1.6, o * 3.2 - uTime * 0.35 );
+  float n = vn( p * 1.7 ) * 0.55 + vn( p * 4.1 + 7.3 ) * 0.3 + vn( p * 9.7 - 3.1 ) * 0.15;
+  float edge = 1.0 - smoothstep( 0.0, 1.0, o );
+  float lace = smoothstep( 0.42, 0.62, n + edge * 0.55 - 0.25 ) * edge;
+  float line = smoothstep( 0.18, 0.0, o ) * ( 0.55 + 0.45 * n );          // bright contact line at the hull
+  float a = clamp( ( lace * 0.8 + line ) * vK * ( 0.35 + 0.65 * uFoam ), 0.0, 1.0 );
+  vec3 col = applyFog( uFoamCol, vW );
+  col = mix( col, vec3( dot( col, vec3( 0.3, 0.5, 0.2 ) ) ), uDesat );
+  gl_FragColor = vec4( col, a * 0.9 );
+}`;
+export function foamMaterial(o = {}) {
+  const u = { uTime: G.uTime, uDesat: G.uDesat, uFogColor: G.uFogColor, uFogSunColor: G.uFogSunColor, uFogDensity: G.uFogDensity, uFogHeight: G.uFogHeight,
+    uFogBase: G.uFogBase, uSunDir: G.uSunDir, uCamPos: G.uCamPos, uFoam: { value: 0.3 }, uFlow: { value: 0 }, uFoamCol: { value: new THREE.Color(o.color ?? 0xeef6fa) } };
+  const m = new THREE.ShaderMaterial({ vertexShader: FOAM_VS, fragmentShader: FOAM_FS, uniforms: u, transparent: true, depthWrite: false, vertexColors: true,
+    polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+  m.userData.ship = u;
   return m;
 }

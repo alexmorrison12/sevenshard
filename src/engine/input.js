@@ -4,9 +4,8 @@ export const DEFAULT_BINDS = {
   skill0: 'KeyQ', skill1: 'KeyW', skill2: 'KeyE', skill3: 'KeyR', skill4: 'KeyA', skill5: 'KeyS', skill6: 'KeyD', skill7: 'KeyF',
   dash: 'Space', idZ: 'KeyZ', idX: 'KeyX', awaken: 'KeyV', basic: 'KeyC',
   item0: 'Digit1', item1: 'Digit2', item2: 'Digit3', item3: 'Digit4',
-  interact: 'KeyG', mount: 'KeyT', map: 'KeyM', overlay: 'Tab', inventory: 'KeyI', character: 'KeyP', skills: 'KeyK',
-  quests: 'KeyJ', guild: 'KeyU', social: 'KeyO', engravings: 'KeyN', tome: 'KeyL', compass: 'KeyH', songs: 'KeyB', emotes: 'Period',
-  chat: 'Enter', menu: 'Escape', photo: 'F12', meter: 'KeyY', pet: 'KeyL',
+  interact: 'KeyG', mount: 'KeyT', songs: 'Comma', emotes: 'Period', compass: 'Semicolon', meter: 'Backquote',
+  chat: 'Enter', menu: 'Escape', photo: 'F12',
 };
 
 export class Input {
