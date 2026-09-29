@@ -224,6 +224,14 @@ export function weighted(rng, list) {
   let r = rng.next() * tot; for (const [id, w] of list) { r -= w; if (r <= 0) return id; }
   return list[list.length - 1][0];
 }
+/** flood fill the walkable grid from `from`; true when every point in `pts` is reachable */
+function connected(nav, from, pts) {
+  const W = nav.w, H = nav.h, data = nav.data, seen = new Uint8Array(W * H), q = new Int32Array(W * H);
+  const s0 = nav.ci(from.x, from.z); if (s0 < 0 || !data[s0]) return true;
+  let h = 0, t = 0; seen[s0] = 1; q[t++] = s0;
+  while (h < t) { const k = q[h++], i = k % W, j = (k / W) | 0; for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const ni = i + di, nj = j + dj; if (ni < 0 || nj < 0 || ni >= W || nj >= H) continue; const nk = nj * W + ni; if (!seen[nk] && data[nk]) { seen[nk] = 1; q[t++] = nk; } } }
+  return pts.every(p => { const k = nav.ci(p.x, p.z); if (k < 0) return true; if (seen[k]) return true; const n = nav.nearest(p.x, p.z, 1.5, 0); const k2 = n ? nav.ci(n.x, n.z) : -1; return k2 >= 0 && !!seen[k2]; });
+}
 /** a small treasure chest (world kit materials) */
 export function chestMesh(grade = 4) {
   const kit = new Kit({ seed: 11 }), g = new THREE.Group();
@@ -564,8 +572,7 @@ class InfernoRun {
     const nav = L.nav, data = nav.data, before = data.slice();
     const block = (c) => { const sh = c.shape, inf = c.inflate ?? 0.35; const [x0, z0, x1, z1] = sh.box; for (let zz = z0 - inf - 0.5; zz <= z1 + inf + 0.5; zz += nav.cell) for (let xx = x0 - inf - 0.5; xx <= x1 + inf + 0.5; xx += nav.cell) { const k = nav.ci(xx, zz); if (k >= 0 && sh.sd(nav.center(k).x, nav.center(k).z) <= inf) data[k] = 0; } };
     for (const c of kit.colliders) block(c);
-    const reach = (a, b) => { if (!a || !b) return true; const p = nav.path(a.x, a.z, b.x, b.z, 0.3); const e = p?.[p.length - 1]; return !!e && Math.hypot(e.x - b.x, e.z - b.z) < 2.5; };
-    if (!reach(A.spawn, A.exit) || !reach(A.spawn, A.boss)) { data.set(before); return; }
+    if (A.spawn && !connected(nav, A.spawn, Object.entries(A).filter(([k]) => k === 'exit' || k === 'boss' || k.startsWith('spawn:m')).map(([, a]) => a))) { data.set(before); return; }
     const grp = new THREE.Group(); grp.name = 'inferno-props';
     kit.build(grp);
     this.g.zone.root.add(grp);
@@ -690,11 +697,11 @@ class InfernoRun {
     const b = BOON_BY_ID[id]; if (!b) return;
     this.boons[id] = Math.min(b.max, (this.boons[id] || 0) + 1);
     if (!this.boonOrder.includes(id)) this.boonOrder.push(id);
-    if (this.me) this.applyBoons();
+    if (this.party && this.baseStats && this.me) this.applyBoons();
     if (!quiet) { this.g.ui?.banner?.(b.name, { kind: 'success', sub: b.desc, dur: 2.4 }); this.g.audio?.sfx?.('buff', {}); this.L && this.me && this.L.emit('fx', { unit: this.me, preset: 'aura_burst', x: this.me.pos.x, z: this.me.pos.z, ev: { color: 'fire' } }); }
   }
   applyBoons(fresh = false) {
-    const u = this.me, L = this.L; if (!u || !L) return;
+    const u = this.me, L = this.L; if (!u || !L || !this.baseStats) return;
     let hpMul = 1;
     for (const [id, n] of Object.entries(this.boons)) hpMul += (BOON_BY_ID[id]?.hpMul || 0) * n;
     const st = { ...this.baseStats, hpMax: Math.round(this.baseStats.hpMax * Math.max(0.3, hpMul)) };
@@ -725,6 +732,12 @@ class InfernoRun {
       this.g.presenter?.sfx?.('thunder', e.pos);
     }));
   }
+  async bankedBoons() {
+    if (this.state !== 'cleared' || !this.pendingBoons) return;
+    const n = this.pendingBoons; this.pendingBoons = 0; this.state = 'boon';
+    for (let i = 0; i < n && this.state === 'boon'; i++) await this.chooseBoon();
+    if (this.state === 'boon') this.state = 'cleared';
+  }
   async chooseBoon() {
     const opts = this.offer(3);
     if (!opts.length) return;
@@ -742,7 +755,7 @@ class InfernoRun {
   }
   // ---------------------------------------------------------------- floor end
   clearFloor() {
-    if (this.state !== 'fight') return;
+    if (this.state !== 'fight' || this.falling) return;
     this.state = 'cleared';
     const f = this.floor, L = this.L, g = this.g;
     this.cleared++; this.deepest = Math.max(this.deepest, f);
@@ -783,12 +796,14 @@ class InfernoRun {
       this.state = 'cleared';
       if (AUTO) this.after(2.5, () => this.descend());
     };
-    if (f % INFERNO.boonEvery === 0 && !last) { this.state = 'boon'; this.after(1.4, async () => { await this.chooseBoon(); if (this.state === 'boon') this.state = 'cleared'; next(); }); }
+    const boons = (f % INFERNO.boonEvery === 0 && !last ? 1 : 0) + (this.pendingBoons || 0);
+    this.pendingBoons = 0;
+    if (boons && !last) { this.state = 'boon'; this.after(1.4, async () => { for (let i = 0; i < boons && this.state === 'boon'; i++) await this.chooseBoon(); if (this.state === 'boon') this.state = 'cleared'; next(); }); }
     else next();
     this.s.bus.emit('inferno', { floor: f, cleared: true });
   }
   async descend() {
-    if (this.state !== 'cleared' || this.descending) return;
+    if (this.state !== 'cleared' || this.descending || this.falling) return;
     this.descending = true;
     try {
       const g = this.g;
@@ -822,9 +837,9 @@ class InfernoRun {
       showResults(this.s, {
         kind: d >= this.start ? 'clear' : 'fail', over: 'Inferno Descent',
         title: conquered ? 'The Inferno Conquered' : d >= this.start ? `Floor ${d} Reached` : 'The Inferno Claims You',
-        sub: reason === 'fell' ? `Fell on Floor ${this.floor}` : reason === 'left' ? 'You left the Inferno with your spoils' : conquered ? 'All one hundred floors' : '',
+        sub: (reason === 'fell' ? `Fell on Floor ${this.floor}` : reason === 'left' ? 'You left the Inferno with your spoils' : conquered ? 'All one hundred floors' : '') + (boonList ? ` · ${boonList}` : ''),
         rank: d >= this.start ? rank : null, time: this.t,
-        stats: [{ label: 'Deepest Floor', value: String(d), tag: d > prevBest ? 'New Record' : null }, { label: 'Floors Cleared', value: String(this.cleared) }, { label: 'Kills', value: String(this.kills) }, { label: 'Best Ever', value: `Floor ${I.best}` }, { label: 'Boons', value: boonList || '—' }],
+        stats: [{ label: 'Deepest Floor', value: String(d), tag: d > prevBest ? 'New Record' : null }, { label: 'Floors Cleared', value: String(this.cleared) }, { label: 'Kills', value: String(this.kills) }, { label: 'Best Ever', value: `Floor ${I.best}` }, { label: 'Boons', value: String(Object.values(this.boons).reduce((a, b) => a + b, 0)) }],
         loot: this.rows, currencies: this.cur, retry: true, continueLabel: 'Return to Solhaven',
         dps: dpsRows(meter),
       }, d >= this.start);
@@ -861,10 +876,11 @@ class InfernoRun {
       // failsafe: stragglers that cannot reach the party (or be reached) are pulled in
       this.stuckT = (this.stuckT || 0) + dt;
       if (this.killsSeen !== this.kills) { this.killsSeen = this.kills; this.stuckT = 0; }
-      if (this.stuckT > 22) {
+      if (this.stuckT > 18) {
         this.stuckT = 0;
-        for (const u of L.units) if (u.kind === 'mob' && !u.dead && !u.data.crystal && !u.data.gilded && u.distTo(me) > 9) { const a = Math.random() * 6.28, p = L.nav.nearest(me.pos.x + Math.cos(a) * 5, me.pos.z + Math.sin(a) * 5, 5, 0.4); if (p) { u.pos.x = p.x; u.pos.z = p.z; g.presenter?.call?.('portal', { pos: { x: p.x, y: L.heightAt(p.x, p.z), z: p.z }, color: 'crimson', dur: 1 }); } }
+        for (const u of L.units) if (u.kind === 'mob' && !u.dead && !u.data.crystal && !u.data.gilded) { const a = Math.random() * 6.28, p = L.nav.nearest(me.pos.x + Math.cos(a) * 4, me.pos.z + Math.sin(a) * 4, 5, 0.4); if (p) { u.pos.x = p.x; u.pos.z = p.z; u.ctrl && (u.ctrl.path = null); g.presenter?.call?.('portal', { pos: { x: p.x, y: L.heightAt(p.x, p.z), z: p.z }, color: 'crimson', dur: 1 }); } }
       }
+      if (this.fkind === 'purge' && this.spawned >= this.need && !L.units.some(u => u.kind === 'mob' && !u.dead && !u.data.crystal)) { this.killedF = this.need; this.clearFloor(); return; }
     }
     // Bloodthirst heals in pulses (no number spam)
     if (this._leech > 0 && ((this._leechT = (this._leechT || 0) - dt) <= 0)) { this._leechT = 0.6; if (!me.dead) heal(L, me, me, this._leech); this._leech = 0; }
@@ -912,7 +928,7 @@ class InfernoRun {
     mergeRows(this.rows, rows); addCurrencies(this.cur, { silver: b.silver, gold: b.gold || 0 });
     for (const r of rows.slice(0, 3)) g.ui?.hud?.loot?.({ name: r.name, grade: r.grade, count: r.count, icon: r.icon, kind: r.kind });
     const roll = this.rng.next();
-    if (roll < 0.22) { g.ui?.toast?.('The chest holds a living ember — choose a boon!', 'success'); this.chooseBoon(); }
+    if (roll < 0.22) { this.pendingBoons = (this.pendingBoons || 0) + 1; g.ui?.toast?.('The chest holds a living ember — choose a boon when the floor is clear!', 'success'); if (this.state === 'cleared') this.bankedBoons(); }
     else if (roll < 0.5) { const p = g.hero.items.find(it => it.id === 'hp_potion'); if (p) p.count++; g.ui?.toast?.('+1 Healing Potion', 'loot'); }
     else if (roll < 0.65) { g.hero.awakenUses = Math.min(3, g.hero.awakenUses + 1); g.ui?.toast?.('+1 Awakening use', 'loot'); }
     else if (roll < 0.8) { heal(this.L, me, me, me.hpMax * 0.5); g.ui?.toast?.('Warmth floods back: +50% HP', 'success'); }

@@ -89,7 +89,7 @@ export class FieldMode {
   }
   exit() {
     for (const f of this.offs) f(); this.offs = [];
-    for (const o of this.objs) { o.prop?.removeFromParent(); o.prop?.userData.dispose?.(); o.portalFx?.stop?.(); }
+    for (const o of this.objs) { if (o.prop?.isObject3D) { o.prop.removeFromParent(); o.prop.userData?.dispose?.(); } o.portalFx?.stop?.(); }
     for (const d of this.drops) d.beam?.stop?.();
     this.objs = []; this.drops = []; this.channel = null;
     if (this.shrunk) this.shrink(false);
@@ -111,8 +111,9 @@ export class FieldMode {
   }
   // ---------------------------------------------------------------- objects
   addObj(kind, key, a, o = {}) {
-    const obj = { kind, key, x: a.x, z: a.z, facing: a.facing || 0, cd: 0, ...o };
-    if (o.prop !== false) {
+    const { prop: wantProp, ...rest } = o;
+    const obj = { kind, key, x: a.x, z: a.z, facing: a.facing || 0, cd: 0, ...rest };
+    if (wantProp !== false) {
       const propKind = kind === 'node' ? obj.skill : kind;
       const y = this.L.heightAt(a.x, a.z);
       obj.prop = makeFieldProp(propKind, a.x, y, a.z, a.facing || 0);
@@ -267,10 +268,12 @@ export class FieldMode {
     for (const u of this.npcs) { if (!u.level || u.dead) continue; const d = me.distTo(u); if (d > 3.2) continue; const sc = d - bonus(u); if (sc < bd) { bd = sc; best = u; } }
     for (const o of this.objs) {
       const r = o.kind === 'gate' ? 4.2 : o.kind === 'triport' ? 3.4 : o.kind === 'seed' ? 2.2 : 2.6;
-      const d = dist(me.pos, o); if (d > r || d >= bd) continue;
+      const d = dist(me.pos, o); if (d > r) continue;
+      const sc = d - (o.kind === 'gate' && Q?.wantsZone?.(o.to) ? 2.4 : 0);   // the way the story wants beats a chat
+      if (sc >= bd) continue;
       if (o.kind === 'seed' && !o.unit) continue;
       if (o.kind === 'node' && o.cd > 0) continue;
-      bd = d; best = o;
+      bd = sc; best = o;
     }
     if (!best || best.pos) return best;
     const o = best;

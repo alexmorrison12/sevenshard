@@ -141,6 +141,8 @@ function devUI(game) {
 }
 
 async function boot() {
+  // field zones register themselves one microtask after the bundle evaluates (import cycle with world/index.js)
+  await new Promise(r => setTimeout(r, 0));
   if (!q.dev) { const { Session } = await import('./game/session.js'); const s = new Session(); return s.boot(); }
   if (q.dev === 'join') return devJoin();
   if (q.dev === 'chaos') return devChaos();

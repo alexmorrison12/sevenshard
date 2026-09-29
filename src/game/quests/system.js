@@ -16,7 +16,7 @@ import { itemLevel } from '../systems/stats.js';
 import { Cutscene, cutsceneActive, screenDark, fill } from './cutscene.js';
 import { QuestMarkers } from './markers.js';
 import { QuestWorld } from './world.js';
-import { anchorOf, dist, warnOnce, familyOf } from './spawn.js';
+import { anchorOf, dist, warnOnce, familyOf, makeFieldMob, walkable } from './spawn.js';
 import * as COLL from '../systems/collectibles.js';
 
 const FIELD_NPC_BY_ID = {}; for (const [zone, list] of Object.entries(FIELD_NPCS)) for (const n of list) FIELD_NPC_BY_ID[n.id] = { ...n, zone };
@@ -102,6 +102,8 @@ export class QuestSystem {
   }
   /** Powerpass characters play the story at their own pace: its quests arrive quietly and never take the tracker */
   optional(q) { return !!this.char?.powerpass && q.kind === 'msq'; }
+  /** does an active quest's current step lead to zone `id` (from somewhere else)? */
+  wantsZone(id) { if (!id || id === this.zoneId || !this.st) return false; return this.st.active.some(e => { const q = this.def(e.id), s = q && this.step(e); return s && this.stepZone(q, s) === id; }); }
   // ---------------------------------------------------------------- lifecycle
   accept(id, o = {}) {
     const q = this.def(id), st = this.st; if (!q || !st || this.isActive(id) || this.isDone(id)) return false;
@@ -369,7 +371,7 @@ export class QuestSystem {
   interactable() {
     const me = this.me; if (!me || this.channel || cutsceneActive()) return null;
     // whoever the story wants you to talk to wins over whoever happens to be a step closer
-    const bonus = u => { const id = u?.data?.npcDef?.id; if (!id || u.data.npcDef.object) return 0; const b = this.business(id); return b.talk.length ? 1.6 : b.offer.length ? 0.7 : 0; };
+    const bonus = u => { if (u?.fobj?.kind === 'gate') return this.wantsZone(u.fobj.to) ? 2.4 : 0; const id = u?.data?.npcDef?.id; if (!id || u.data.npcDef.object) return 0; const b = this.business(id); return b.talk.length ? 1.6 : b.offer.length ? 0.7 : 0; };
     let best = null, bs = Infinity;
     const o = this.world.nearestObj(me);
     if (o) {
@@ -535,6 +537,23 @@ export class QuestSystem {
     try { o.s.onUse?.(this, o, e); } catch (err) { console.error('[quest onUse]', err); }
     if (this.need(o.s) > 1) this.g.ui?.toast?.(`${o.s.name || o.q.title} ${Math.min(e.used.length, this.need(o.s))}/${this.need(o.s)}`, 'loot');
     this.progressEntry(e, 1);
+  }
+  /** a few level-scaled foes that burst out around a point (step onUse hooks): Q.spawnNear('skeleton', 2, obj, { spread }) */
+  spawnNear(type, n = 1, at = null, o = {}) {
+    const L = this.g.level, p = at || this.me?.pos; if (!L || !p) return [];
+    const [lo, hi] = at?.q?.levels || [1, MAX_LEVEL];
+    const level = Math.max(lo, Math.min(hi, this.char?.level || 5)) + (o.levelBonus || 0);
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      const ang = (i / n + Math.random() * 0.2) * Math.PI * 2, r = (o.spread ?? 4) * (0.55 + Math.random() * 0.45);
+      const w = walkable(L, p.x + Math.cos(ang) * r, p.z + Math.sin(ang) * r, 5);
+      try {
+        const u = makeFieldMob(type, { level, x: w.x, z: w.z, alert: true, aggro: o.aggro ?? 18, elite: o.elite ?? false, name: o.name, delay: 0.4 + i * 0.15 });
+        u.data.questNear = true; L.add(u); out.push(u);
+        this.g.presenter?.call?.('play', 'spawn_puff', { pos: u.pos, x: u.pos.x, z: u.pos.z });
+      } catch (err) { warnOnce('near:' + type, 'spawnNear', type, err.message); }
+    }
+    return out;
   }
   // ---------------------------------------------------------------- targets, routing, markers
   /** where to go for an entry's current step in this zone: [{ x, z, label, r }] (+ .route for other zones) */

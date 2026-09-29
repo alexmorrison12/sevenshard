@@ -30,7 +30,7 @@ export async function build(zone, o = {}) {
       GUNS.forEach(([x, z, r], i) => c.anchor('gun:' + i, x - Math.sin(r) * -2.1, z + Math.cos(r) * 2.1, r));
       c.anchor('magazine', 0, -27.2, 0);
       c.anchor('land:0', -33, -33, Math.PI * 0.5); c.anchor('land:1', 33, -33, -Math.PI * 0.5);
-      for (const [i, x, z] of [[0, -36, -80], [1, 36, -80], [2, -12, -88], [3, 12, -86]]) { c.anchor('sea:' + i, x, z, Math.PI); c.anchors['sea:' + i].extra = { free: true }; }
+      for (const [i, x, z] of [[0, -26, -78], [1, 26, -78], [2, -10, -84], [3, 10, -84]]) { c.anchor('sea:' + i, x, z, Math.PI); c.anchors['sea:' + i].extra = { free: true }; }
       c.anchor('brig', 0, -72, 0); c.anchors.brig.extra = { free: true };
       c.anchor('seed:1', -15.5, 22, 0); c.anchor('seed:2', 41, 8, 0);
       c.anchor('vista', 0, -38, 0);

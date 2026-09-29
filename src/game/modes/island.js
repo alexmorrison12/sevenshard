@@ -827,14 +827,14 @@ GIMMICKS.defense = class Defense extends Gimmick {
     const g = this.g, me = this.me, a = this.m.anchor('gun:' + i), sp = this.spot('gun' + i), r = sp[3] || 0;
     me.pos.x = a.x; me.pos.z = a.z; me.data.rooted = true; me.facing = r; me.move.x = me.move.z = 0;
     const fx = -Math.sin(r), fz = -Math.cos(r);
-    this.manning = { i, pos: new THREE.Vector3(sp[0] + fx * 1.2, sp[1] + 1.05, sp[2] + fz * 1.2), dir: { x: fx, z: fz }, cd: 0, focus: new THREE.Vector3(sp[0] + fx * 13, sp[1], sp[2] + fz * 13) };
+    this.manning = { i, pos: new THREE.Vector3(sp[0] + fx * 1.2, sp[1] + 1.05, sp[2] + fz * 1.2), dir: { x: fx, z: fz }, cd: 0, focus: new THREE.Vector3(sp[0] + fx * 9, sp[1] - 3, sp[2] + fz * 9) };
     const self = this;
     g.player.input = function (dt, inp, cam) {
       const p = cam.groundAt(inp.mouse.x, inp.mouse.y, 0); this.aim.x = p.x; this.aim.z = p.z;
       if ((inp.clicked(0) || inp.clicked(2) || inp.hit('basic') || inp.hit('skill0')) && inp.mouse.over) self.fire(p);
     };
     this.camPrev = { pitch: g.cam.pitch, zoom: g.cam.zoom, maxDist: g.cam.maxDist };
-    g.cam.pitch = 0.72; g.cam.maxDist = 44; g.cam.zoom = 40; g.camFocus = this.manning.focus;
+    g.cam.pitch = 0.82; g.cam.maxDist = 52; g.cam.zoom = 48; g.camFocus = this.manning.focus;     // pulled back over the parapet: the gun at the bottom, the approaches above
     me.model?.play?.('interact', { dur: 0.8 });
     this.say('Aim with the mouse and click (or Q) to fire — lead the longboats! G leaves the cannon.', 'info');
   }
@@ -1005,7 +1005,9 @@ GIMMICKS.climb = class Climb extends Gimmick {
     this.t = 0; this.strikeT = 2; this.best = this.m.sea.climbBest || null; this.amb = 2;
     const b = this.m.anchor('bell'); this.mk = this.m.marker('The Crown Bell', b.x, b.z, 2.2);
     this.flash = 0;
+    this.rain = this.g.fx?.weather?.('rain', { intensity: 0.7 }) || null;       // the Maelstrom never stops raining
   }
+  exit() { this.rain?.stop?.(); this.rain = null; if (this.g.renderer?.fx) this.g.renderer.fx.flash = 0; }
   line(id) { if (id !== 'stormwarden') return null; if (this.state === 'climb') return 'Keep moving! Up, up!'; if (this.best) return `Your best ascent: ${this.best.toFixed(1)} s. The storm remembers.`; return null; }
   choices(id) { return id === 'stormwarden' && this.state !== 'climb' ? [{ id: 'how', text: 'How do I reach the Crown Bell?', kind: 'talk' }] : []; }
   choose(id, c) { if (c === 'how') this.say('Take the ledge from the spire’s foot. Once you set foot on it the storm hunts you — three minutes to the summit. Never stand still.', 'info'); }

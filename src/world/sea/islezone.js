@@ -49,7 +49,7 @@ export async function buildIsle(zone, id, spec = {}, opts = {}) {
   // ---------------------------------------------------------------- ground
   const g = zone.ground = new Ground({ x0: -R, z0: -R, w: R * 2, d: R * 2, res: 1, paintRes: 0.5, layers: spec.layers || ISLE_LAYERS, base: 'sand', seed: id.length * 3 + 1 });
   g.sculpt((x, z) => T.height(x, z));
-  g.tint.setRGB(...(spec.groundTint || [1.1, 1.07, 1.02]));        // sun-bleached tropical ground (the splat sand reads muddy otherwise)
+  g.tint.setRGB(...(spec.groundTint || [1.17, 1.12, 1.03]));        // sun-bleached tropical ground (the splat sand reads muddy otherwise)
   paintIsle(g, T, 0, 0, spec.paintOpts || {});
   const ctx = { zone, I, T, g, R, rng, spots: {}, extra: {} };
   spec.paint?.(g, ctx);
