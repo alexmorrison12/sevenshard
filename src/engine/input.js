@@ -8,6 +8,9 @@ export const DEFAULT_BINDS = {
   chat: 'Enter', menu: 'Escape', photo: 'F12',
 };
 
+/** PointerEvent.buttons (left 1, right 2, middle 4) → our bits (1 << button: left 1, middle 2, right 4) */
+const fromButtons = b => (b & 1) | (b & 4 ? 2 : 0) | (b & 2 ? 4 : 0);
+
 export class Input {
   constructor(el) {
     this.el = el;
@@ -23,21 +26,47 @@ export class Input {
       this.keys.add(e.code);
       if (this.enabled && this.isGameKey(e.code)) e.preventDefault();
     });
-    addEventListener('keyup', e => { this.keys.delete(e.code); this.released.add(e.code); });
-    addEventListener('blur', () => { for (const k of this.keys) this.released.add(k); this.keys.clear(); this.mouse.buttons = 0; });
+    addEventListener('keyup', e => {
+      this.keys.delete(e.code); this.released.add(e.code);
+      // macOS never sends keyup for keys pressed while Cmd was down: drop everything when Cmd lifts
+      if (e.code === 'MetaLeft' || e.code === 'MetaRight') this.releaseAll();
+    });
+    addEventListener('blur', () => this.releaseAll());
+    document.addEventListener('visibilitychange', () => { if (document.hidden) this.releaseAll(); });
     const onUI = e => e.target !== el;
-    addEventListener('pointermove', e => { this.mouse.x = e.clientX; this.mouse.y = e.clientY; this.mouse.over = !onUI(e); });
+    // held buttons only ever come from presses on the game canvas, but any pointer event can tell us they were let go
+    // (a pointerup can be lost to a native drag, a context menu or a release outside the window)
+    const sync = e => { if (e.pointerType !== 'touch' && typeof e.buttons === 'number') this.mouse.buttons &= fromButtons(e.buttons); };
+    addEventListener('pointermove', e => {
+      this.mouse.x = e.clientX; this.mouse.y = e.clientY; this.mouse.over = !onUI(e);
+      // a second button pressed or released while another is held arrives as a pointermove (e.button ≥ 0),
+      // never as pointerdown / pointerup — e.g. letting go of attack while still holding move
+      if (e.pointerType !== 'touch' && e.button >= 0) {
+        const bit = 1 << e.button, down = fromButtons(e.buttons) & bit;
+        if (down && !onUI(e) && !(this.mouse.buttons & bit)) { this.mouse.buttons |= bit; this.mdown.add(e.button); }
+        else if (!down && (this.mouse.buttons & bit)) this.mup.add(e.button);
+      }
+      sync(e);
+    });
+    addEventListener('pointerover', sync);
     addEventListener('pointerdown', e => {
       if (e.pointerType === 'touch') return;
+      sync(e);
       this.mouse.x = e.clientX; this.mouse.y = e.clientY;
       if (onUI(e)) return;
       this.mouse.buttons |= 1 << e.button; this.mdown.add(e.button);
       el.focus?.();
     });
-    addEventListener('pointerup', e => { if (e.pointerType === 'touch') return; if (this.mouse.buttons & (1 << e.button)) this.mup.add(e.button); this.mouse.buttons &= ~(1 << e.button); });
+    addEventListener('pointerup', e => { if (e.pointerType === 'touch') return; if (this.mouse.buttons & (1 << e.button)) this.mup.add(e.button); this.mouse.buttons &= ~(1 << e.button); sync(e); });
+    addEventListener('pointercancel', () => { this.mouse.buttons = 0; });
+    addEventListener('dragstart', () => { this.mouse.buttons = 0; });
+    addEventListener('contextmenu', e => { if (e.target !== el) this.mouse.buttons = 0; });
     el.addEventListener('contextmenu', e => e.preventDefault());
+    el.addEventListener('dragstart', e => e.preventDefault());
     el.addEventListener('wheel', e => { this.wheel += e.deltaY; e.preventDefault(); }, { passive: false });
   }
+  /** forget every held key and button (focus lost, tab hidden, Cmd released) */
+  releaseAll() { for (const k of this.keys) this.released.add(k); this.keys.clear(); this.mouse.buttons = 0; }
   isGameKey(code) { return Object.values(this.binds).includes(code) && code !== 'F12'; }
   down(action) { return this.keys.has(this.binds[action]); }
   hit(action) { return this.pressed.has(this.binds[action]); }
@@ -46,6 +75,18 @@ export class Input {
   clicked(b) { return this.mdown.has(b); }
   /** call at the end of every frame */
   endFrame() { this.pressed.clear(); this.released.clear(); this.mdown.clear(); this.mup.clear(); this.wheel = 0; }
-  /** first connected gamepad (standard mapping) or null */
-  pad() { const ps = navigator.getGamepads?.(); if (!ps) return null; for (const p of ps) if (p && p.connected) return p; return null; }
+  /** first connected gamepad with the standard layout that has actually been used (stops idle or odd devices —
+   *  wheels, flight sticks, virtual pads — from holding a stick or trigger down) */
+  pad() {
+    const ps = navigator.getGamepads?.(); if (!ps) return null;
+    for (const p of ps) {
+      if (!p || !p.connected || p.mapping !== 'standard') continue;
+      if (!this.padLive?.has(p.index)) {
+        if (!p.buttons.some(b => b.pressed) && !p.axes.some(a => Math.abs(a) > 0.6)) continue;
+        (this.padLive ||= new Set()).add(p.index);
+      }
+      return p;
+    }
+    return null;
+  }
 }

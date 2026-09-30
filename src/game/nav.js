@@ -1,6 +1,8 @@
 // Walkability grid for a zone: queries, collision-and-slide movement, line of sight, and A* with path smoothing.
 // The world builds the grid (zone.nav = { cell, w, h, x0, z0, data: Uint8Array(1 = walkable) }).
 
+const STEER = [0.45, -0.45, 0.9, -0.9, 1.35, -1.35];   // radians: ~26°, 52°, 77° either side
+
 export class NavGrid {
   constructor(nav) {
     this.cell = nav.cell; this.w = nav.w; this.h = nav.h; this.x0 = nav.x0; this.z0 = nav.z0; this.data = nav.data;
@@ -24,15 +26,26 @@ export class NavGrid {
   okR(x, z, r) { if (!this.ok(x, z)) return false; if (r < 0.2) return true; const q = r * 0.7; return this.ok(x + q, z) && this.ok(x - q, z) && this.ok(x, z + q) && this.ok(x, z - q); }
   center(k) { return { x: this.x0 + ((k % this.w) + 0.5) * this.cell, z: this.z0 + (Math.floor(k / this.w) + 0.5) * this.cell }; }
 
-  /** Move by (dx, dz) with collision; slides along walls. Returns the new position in out. */
+  /** Move by (dx, dz) with collision; slides along walls and steers around small props. Returns the new position. */
   move(x, z, dx, dz, r, out = { x: 0, z: 0, hit: false }) {
     const len = Math.hypot(dx, dz), steps = Math.max(1, Math.ceil(len / (this.cell * 0.5)));
-    const sx = dx / steps, sz = dz / steps;
+    const sx = dx / steps, sz = dz / steps, st = len / steps;
     out.hit = false;
+    // already overlapping a prop (after a dash, knockback or shove)? move as a point until the body fits again
+    if (r > 0 && !this.okR(x, z, r) && this.ok(x, z)) r = 0;
     for (let s = 0; s < steps; s++) {
       if (this.okR(x + sx, z + sz, r)) { x += sx; z += sz; continue; }
       out.hit = true;
-      if (this.okR(x + sx, z, r)) x += sx; else if (this.okR(x, z + sz, r)) z += sz; else break;
+      // slide along an axis — only if that axis carries a real share of the step (head-on hits have none)
+      if (Math.abs(sx) > st * 0.3 && this.okR(x + sx, z, r)) { x += sx; continue; }
+      if (Math.abs(sz) > st * 0.3 && this.okR(x, z + sz, r)) { z += sz; continue; }
+      // steer: the step turned by growing angles, same side first so the body curves smoothly around the obstacle
+      let moved = false;
+      for (const a of STEER) {
+        const c = Math.cos(a), n = Math.sin(a), rx = (sx * c - sz * n) * 0.85, rz = (sx * n + sz * c) * 0.85;
+        if (this.okR(x + rx, z + rz, r)) { x += rx; z += rz; moved = true; break; }
+      }
+      if (!moved) break;
     }
     out.x = x; out.z = z; return out;
   }

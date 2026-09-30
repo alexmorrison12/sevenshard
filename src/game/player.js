@@ -3,6 +3,8 @@
 // and a touch layer that calls the same methods.
 import { SLOT_KEYS } from './hero.js';
 
+const PLAN_R = 0.34;   // path-planning clearance (the body moves with ~0.27)
+
 export class PlayerCtrl {
   constructor(kit, game) {
     this.kit = kit; this.u = kit.u; this.game = game;
@@ -46,11 +48,17 @@ export class PlayerCtrl {
   stop() { this.dest = null; this.path = null; }
   setDest(x, z, fresh = true) {
     const u = this.u, L = this.game.level;
-    const p = L.nav.nearest(x, z, 8, 0.3) || { x, z };
+    const p = L.nav.nearest(x, z, 8, PLAN_R) || L.nav.nearest(x, z, 8, 0.3) || { x, z };
     if (!fresh && this.dest && Math.hypot(p.x - this.dest.x, p.z - this.dest.z) < 0.4) return;
     this.dest = p;
-    this.path = L.nav.los(u.pos.x, u.pos.z, p.x, p.z, 0.3) ? [p] : L.nav.path(u.pos.x, u.pos.z, p.x, p.z, 0.3) || [p];
+    this.path = this.plan(p);
+    this.stuckT = 0; this.replans = 0;
     if (fresh) this.game.emitClickMarker?.(p);
+  }
+  /** path from where the hero stands to p; planned a little wider than the body so corners don't catch it */
+  plan(p) {
+    const u = this.u, L = this.game.level;
+    return L.nav.los(u.pos.x, u.pos.z, p.x, p.z, PLAN_R) ? [p] : L.nav.path(u.pos.x, u.pos.z, p.x, p.z, PLAN_R) || [p];
   }
   /** level update hook (runs inside Level.update before skills/movement) */
   update(dt, L) {
@@ -67,7 +75,16 @@ export class PlayerCtrl {
     if (d < 0.25) { this.path.shift(); if (!this.path.length) this.dest = null; return; }
     const s = u.st.speed;
     u.move.x = dx / d * s; u.move.z = dz / d * s;
-    if (u.blocked && d < 1) this.path.shift();
+    if (u.blocked && d < 1) { this.path.shift(); return; }
+    // pinned against something for a moment: re-plan from where we actually are; give up rather than run in place
+    if (u.blocked && this.lastPos && Math.hypot(u.pos.x - this.lastPos.x, u.pos.z - this.lastPos.z) < s * dt * 0.25) this.stuckT = (this.stuckT || 0) + dt;
+    else this.stuckT = 0;
+    this.lastPos = { x: u.pos.x, z: u.pos.z };
+    if (this.stuckT > 0.3 && this.dest) {
+      this.stuckT = 0;
+      if (++this.replans > 3) { this.stop(); u.move.x = u.move.z = 0; return; }
+      this.path = this.plan(this.dest);
+    }
   }
   padInput(p, dt) {
     const dz = v => Math.abs(v) < 0.18 ? 0 : v;
