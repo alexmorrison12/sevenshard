@@ -8,8 +8,12 @@ export const PROVIDERS = { hero: null, creature: null, boss: null };
 
 export function makeModel(u) {
   try {
-    if (u.kind === 'hero' || (u.kind === 'npc' && u.data.look)) {
-      if (PROVIDERS.hero) return PROVIDERS.hero({ cls: u.cls, sex: u.data.sex || 'm', look: u.data.look, gear: u.data.gear, weapon: u.data.weapon, npc: u.data.npc || null, lod: u.data.lod || 'full' });
+    if (u.kind === 'hero' || (u.kind === 'npc' && u.data.look) || u.data.npcBody) {
+      if (PROVIDERS.hero) {
+        const m = PROVIDERS.hero({ cls: u.cls, sex: u.data.sex || 'm', look: u.data.look || {}, gear: u.data.gear, weapon: u.data.weapon, npc: u.data.npc || null, lod: u.data.lod || (u.data.npcBody ? 'crowd' : 'full') });
+        if (u.data.npcBody && u.data.scale && u.data.scale !== 1) m.root.scale.setScalar(u.data.scale);
+        return m;
+      }
       return placeholderHero({ cls: u.cls, npc: u.data.npc });
     }
     if (u.kind === 'boss') {

@@ -137,7 +137,7 @@ export function createShip(type = 'dawnrunner') {
     return { dur: (slots.length ? times[times.length - 1] : 0) + RECOIL_DUR, times };
   }
 
-  function setGlow(k = 1) { wu.uGlow.value = k; }
+  function setGlow(k = 1) { if (typeof k === 'number' && Number.isFinite(k)) wu.uGlow.value = k; }
   function dispose() { root.removeFromParent(); wmat.dispose(); smat.dispose(); sdep.dispose(); fmat?.dispose(); }
 
   su.uBillow.value = st.billow; su.uLuff.value = st.luff;

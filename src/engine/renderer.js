@@ -13,6 +13,19 @@ export const GRADE_DEFAULT = {
   bloom: 0.55, bloomRadius: 0.5, bloomThreshold: 0.86,
 };
 
+/** Replace non-finite HDR values (NaN / Inf) with black and cap extreme highlights before bloom. */
+const ScrubShader = {
+  uniforms: { tDiffuse: { value: null } },
+  vertexShader: /* glsl */`varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: /* glsl */`
+    uniform sampler2D tDiffuse; varying vec2 vUv;
+    void main() {
+      vec4 c = texture2D(tDiffuse, vUv);
+      bool bad = any(isnan(c)) || any(isinf(c)) || c.r != c.r || c.g != c.g || c.b != c.b;
+      gl_FragColor = bad ? vec4(0.0, 0.0, 0.0, 1.0) : vec4(min(c.rgb, vec3(64.0)), c.a);
+    }`,
+};
+
 const FinalShader = {
   uniforms: {
     tDiffuse: { value: null },
@@ -114,6 +127,9 @@ export class Renderer {
     this.composer = new EffectComposer(r, rt);
     this.renderPass = new RenderPass(null, null);
     this.composer.addPass(this.renderPass);
+    // one bad pixel (NaN / Inf from any shader) would be smeared by bloom into black squares across the screen
+    this.scrub = new ShaderPass(ScrubShader);
+    this.composer.addPass(this.scrub);
     this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.55, 0.5, 0.86);
     this.composer.addPass(this.bloom);
     this.final = new ShaderPass(FinalShader);

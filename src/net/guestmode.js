@@ -7,8 +7,11 @@ export class GuestMode {
   update(dt) {
     const me = this.game.hero?.u; if (!me) return;
     if (me.dead && me.deadT > 6) {
-      const sp = this.game.zone?.anchors?.spawn || { x: 0, z: 0 };
+      // back on your feet next to your friend (a chaos run moves between stages; the zone spawn may be far behind)
+      const L = this.game.level, lead = this.net.hud?.lead;
+      const sp = (lead && L.nav.nearest(lead[0] + 1.5, lead[1] + 1.5, 6, 0.3)) || this.game.zone?.anchors?.spawn || { x: 0, z: 0 };
       me.dead = false; me.hp = Math.round(me.hpMax * 0.6); me.pos.x = sp.x; me.pos.z = sp.z; me.invuln = 2; me.deadT = 0;
+      this.game.cam.snap(me.pos);
       me.model?.play?.('revive', { dur: 0.8 });
       this.game.level.emit('revive', { unit: me });
     }

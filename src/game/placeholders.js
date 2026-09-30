@@ -18,6 +18,7 @@ function basic(root, height, radius, parts) {
   let act = null, actT = 0, actDur = 0, tint = 0, tintCol = new THREE.Color(), glow = 0, loop = false;
   const mats = []; root.traverse(o => { if (o.material) mats.push(o.material); });
   return {
+    placeholder: true,   // tests count these: a real game unit should never end up with one
     root, height, radius, sockets,
     update(dt, st = {}) {
       const t = performance.now() / 1000;

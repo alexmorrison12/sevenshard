@@ -33,6 +33,7 @@ export class Meter {
     this.L = L; if (!L?.on) return;
     const on = (t, fn) => { const off = L.on(t, ev => { try { fn(ev || {}); } catch (e) { console.warn('[meter]', t, e); } }); if (typeof off === 'function') this.offs.push(off); };
     on('damage', ev => this.onDamage(ev));
+    on('meterCredit', ev => this.credit(ev));
     // shields / heals before the first blow (pre-pull) are buffered and credited when the fight starts
     const support = (k, ev, v) => { if (!this.ally(ev.src) || !(v > 0)) return; if (this.cur) this.row(this.cur, ev.src)[k] += v; else { this.prePull.push({ k, u: ev.src, v, t: this.L.time }); if (this.prePull.length > 48) this.prePull.shift(); } };
     on('heal', ev => support('heal', ev, ev.real));
@@ -140,6 +141,15 @@ export class Meter {
   }
 
   // ------------------------------------------------------------------------------------------------ events
+  /** co-op: damage dealt on the host's side (the host and other friends), summed per snapshot */
+  credit({ src, amount, hits, crits, back, head, counters }) {
+    if (!src || !(amount > 0)) return;
+    const S = this.seg(), r = this.row(S, src);
+    r.dmg += amount; r.hits += hits || 0; r.crits += crits || 0; r.back += back || 0; r.head += head || 0; r.counters += counters || 0;
+    const avg = amount / Math.max(1, hits || 1); if (avg > r.max) r.max = avg;
+    S.last = S.act = this.L.time;
+    this.ver++;
+  }
   onDamage(ev) {
     if (!(ev.amount > 0) || ev.immune) return;
     const src = ev.src, tgt = ev.tgt; if (!tgt) return;

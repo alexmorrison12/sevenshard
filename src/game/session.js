@@ -61,6 +61,8 @@ function clearRank(c, r) {
   if ((r.deaths || 0) > (c.kind === 'raid' ? 4 : 1)) i = Math.min(3, i + 1);
   return 'SABC'[i];
 }
+/** places where a co-op guest runs the real zone mode locally (everything else mirrors the host) */
+const GUEST_OPEN = new Set(['city', 'field', 'pipsprout', 'island', 'stronghold']);
 const CONTENT_NAMES = { chaos: 'Chaos Dungeon', guardian: 'Guardian Hunt', raid: 'Legion Raid', inferno: 'Inferno Descent', cube: 'Rift Cube', trial: 'Trial Guardian', pvp: 'Proving Grounds', fieldboss: 'Field Boss', chaosgate: 'Chaos Gate', island: 'Adventure Island', ghostship: 'Ghost Ship' };
 const NEWS = [
   { tag: 'Event', title: 'The Horned Legion stirs', date: 'This week', body: 'Gorrath, the Horned Tyrant, waits beyond the Rift Nexus. Eight Shardbearers. Two gates. One weekly race.' },
@@ -312,6 +314,15 @@ export class Session {
     const it = this.findInteractable();
     h.interact = it ? { key: 'G', label: it.label || it.data?.interactLabel || (it.portal ? 'Enter' : it.data?.npcDef?.object ? 'Use' : 'Talk'), name: it.name } : null;
     h.zone = { name: this.game.zone?.name || '', sub: this.game.mode?.kind === 'city' ? 'Valemont' : '' };
+    const net = this.game.net;
+    if (net && this.guestMode) {
+      const nh = net.hud || {}, me = this.game.hero?.u;
+      if (nh.party?.length) h.party = nh.party.map(x => x.name === me?.name && x.cls === me?.cls ? { ...x, you: true, hp: me.hp, hpMax: me.hpMax, shield: me.shield, dead: me.dead } : { ...x, you: false });
+      h.boss ||= nh.boss || null; h.progress ||= nh.progress || null; h.timer ||= nh.timer || null;
+    } else if (net?.partyList && net.count > 0) {
+      const P = this.game.party;
+      if (!(P?.members?.length && P.level === this.game.level)) h.party = net.partyList();
+    }
     h.minimap = this.minimap();
     return h;
   }
@@ -525,19 +536,21 @@ export class Session {
     const il = Math.floor(itemLevel(this.char));
     this.ui.close('nexus');
     const [k, a] = id.split(':');
-    if (k === 'chaos') { const t = CHAOS_TIERS.find(x => x.id === +a); if (il < (t?.ilvl || 0)) return this.ui.toast('Your item level is too low. Hone your gear at the blacksmith.', 'error'); return this.launch({ kind: 'chaos', tier: +a, allies: p.aiFill === false ? 0 : undefined }); }
-    if (k === 'guardian') { const g = GUARDIANS.find(x => x.id === a); if (il < (g?.ilvl || 0)) return this.ui.toast('Your item level is too low. Hone your gear at the blacksmith.', 'error'); return this.launch({ kind: 'guardian', boss: a }); }
+    const solo = p.aiFill === false;
+    if (k === 'chaos') { const t = CHAOS_TIERS.find(x => x.id === +a); if (il < (t?.ilvl || 0)) return this.ui.toast('Your item level is too low. Hone your gear at the blacksmith.', 'error'); return this.launch({ kind: 'chaos', tier: +a, allies: solo ? 0 : 3 }); }
+    if (k === 'guardian') { const g = GUARDIANS.find(x => x.id === a); if (il < (g?.ilvl || 0)) return this.ui.toast('Your item level is too low. Hone your gear at the blacksmith.', 'error'); return this.launch({ kind: 'guardian', boss: a, solo }); }
     if (k === 'raid') {
       const r = RAIDS[a]; if (!r) return;
       const mode = p.mode || 'normal', need = mode === 'hard' ? r.ilvl.hard : r.ilvl.normal;
       const trial = mode === 'trial' || (r.kind === 'legion' && il < need);
       if (!trial && il < need) return this.ui.toast('Your item level is too low for that mode.', 'error');
-      return this.launch({ kind: 'raid', raid: a, gate: Math.max(0, Math.min(r.gates.length - 1, +(p.gate ?? 0))), hard: mode === 'hard' && !trial, trial });
+      return this.launch({ kind: 'raid', raid: a, gate: Math.max(0, Math.min(r.gates.length - 1, +(p.gate ?? 0))), hard: mode === 'hard' && !trial, trial, solo });
     }
     if (id === 'inferno') return infernoMenu(this);
     if (id === 'cube' || id === 'trial') return this.launch({ kind: id });
   }
   async launch(c) {
+    if (this.guestMode) { this.ui.toast('Your host leads the party — they choose where you go next.', 'info'); return; }
     this.lastContent = c;
     if (LAUNCHERS[c.kind]) { this.hub = null; await LAUNCHERS[c.kind](this, c); this.bus.emit('zone', { id: this.game.zone?.id, kind: c.kind }); return; }
     const A = this.account, ch = this.char;
@@ -554,14 +567,14 @@ export class Session {
       const def = BOSS_DEFS[c.boss], gd = GUARDIANS.find(g => g.id === c.boss);
       await this.loadZone(def.arena || gd?.arena || 'frostmere', { kind: 'arena', region: 'Guardian Hunt' });
       this.spawnMe(this.game.zone.anchors.spawn);
-      this.game.mode = new EncounterMode(this.game, { boss: def, ilvl: gd?.ilvl || 1100, partySize: 4, seed: Date.now() % 1000, onEnd: done });
+      this.game.mode = new EncounterMode(this.game, { boss: def, ilvl: gd?.ilvl || 1100, partySize: c.solo ? 1 + (this.game.net?.count || 0) : 4, seed: Date.now() % 1000, onEnd: done });
       this.game.mode.enter();
     } else if (c.kind === 'raid') {
       const r = RAIDS[c.raid], gt = r.gates[c.gate];
       await this.loadZone(gt.zone, { kind: 'raid', region: r.name });
       this.spawnMe(this.game.zone.anchors.spawn);
       if (c.trial) { const st = this.statsFor({ ...this.heroChar(ch), equip: Object.fromEntries(['weapon', 'head', 'shoulder', 'chest', 'pants', 'gloves'].map(s => [s, { iLvl: r.ilvl.normal, quality: 70 }])) }); this.game.hero.u.setStats(st); this.game.hero.u.hp = this.game.hero.u.hpMax; }
-      this.game.mode = new EncounterMode(this.game, { boss: gt.bosses[0].boss, bosses: gt.bosses, ilvl: r.ilvl.normal, partySize: r.players, hard: !!c.hard, seed: Date.now() % 1000, onEnd: done, noRevive: r.kind === 'legion' });
+      this.game.mode = new EncounterMode(this.game, { boss: gt.bosses[0].boss, bosses: gt.bosses, ilvl: r.ilvl.normal, partySize: c.solo ? 1 + (this.game.net?.count || 0) : r.players, hard: !!c.hard, seed: Date.now() % 1000, onEnd: done, noRevive: r.kind === 'legion' });
       this.game.mode.enter();
     }
     this.inWorld();
@@ -777,10 +790,17 @@ export class Session {
       onClose: reason => { this.ui.toast(reason || 'Disconnected from your friend’s world.', 'warn'); this.stopNet(); },
       onPlace: async place => {
         badge.set({ host: place.host || 'your friend' });
-        await this.loadZone(place.zone || 'solhaven', { kind: place.kind === 'city' ? 'city' : 'dungeon' });
+        try { this.game.mode?.exit?.(); } catch (e) { console.warn('[guest] mode exit', e); }
+        const kind = GUEST_OPEN.has(place.kind) ? (place.kind === 'pipsprout' ? 'field' : place.kind) : place.kind === 'sea' ? 'sea' : 'dungeon';
+        await this.loadZone(place.zone || 'solhaven', { kind });
         this.spawnMe(this.game.zone.anchors?.spawn || this.game.zone.anchors?.['stage1:spawn'] || { x: 0, z: 0 });
-        this.game.mode = this.hub = new GuestMode(this.game, place, net);
-        this.hub.interactable = () => this.guestInteractable();
+        // open world: our own zone mode (our residents, quests, props, collectibles — the host only shares fights);
+        // at sea: aboard the host's ship; instances: the host drives everything
+        let mode = null;
+        if (GUEST_OPEN.has(place.kind)) mode = this.zoneMode(place.zone);
+        else if (place.kind === 'sea') { const { SeaPassengerMode } = await import('./modes/sailing.js'); mode = new SeaPassengerMode(this, net); }
+        if (!mode) { mode = new GuestMode(this.game, place, net); mode.interactable = () => this.guestInteractable(); }
+        this.game.mode = this.hub = mode;
         this.game.mode.enter();
         this.lastContent = place.content;
         this.inWorld();

@@ -2,7 +2,7 @@
 // Each friend's browser owns their own hero (instant controls, local dodging). The host keeps a puppet of every
 // friend's hero, streams 15 Hz snapshots + events to everyone, and applies the hits friends report.
 import { HostTransport } from './peer.js';
-import { spawnRec, row, hitRec } from './codec.js';
+import { spawnRec, row, hitRec, q1, q2 } from './codec.js';
 import { Unit } from '../game/unit.js';
 import { SkillRun } from '../game/skills/runner.js';
 import { dealDamage, applyKnock, applyStatus, heal, addShield } from '../game/combat.js';
@@ -10,12 +10,15 @@ import { CLASSES } from '../data/classes/index.js';
 import { heroStats } from '../game/systems/stats.js';
 
 const SNAP = 1 / 15;
+// open-world places: every friend runs their own residents, props, collectibles and quests (only fights are shared)
+const OPEN_WORLD = new Set(['city', 'field', 'pipsprout', 'island', 'stronghold', 'sea']);
 
 export class NetHost {
   constructor(game, { code = null, name = 'Host', onStatus } = {}) {
     this.game = game; this.name = name; this.onStatus = onStatus || (() => {});
     this.guests = new Map();     // relay id → guest
     this.code = null; this.acc = 0; this.hudAcc = 0; this.teleId = 1; this.projId = 1;
+    this.dmg = new Map();       // damage credit per source since the last snapshot (friends' meters)
     this.net = new HostTransport({
       onOpen: c => { this.code = c; this.onStatus({ open: true, code: c }); game.ui?.chat?.add?.({ channel: 'system', text: `Your world is open. Room code ${c} — friends can join from Play Together.` }); },
       onWait: c => this.onStatus({ waiting: c }),
@@ -40,8 +43,14 @@ export class NetHost {
     this.L = L; L.netHost = this;
     const on = (t, f) => this.offs.push(L.on(t, f));
     this.offs = [];
-    on('spawn', ({ unit }) => { if (!unit.remote) this.all({ t: 'sp', u: spawnRec(unit) }); });
-    on('despawn', ({ unit }) => this.all({ t: 'ds', id: unit.id }));
+    on('spawn', ({ unit }) => { if (!unit.remote && this.shared(unit)) this.all({ t: 'sp', u: spawnRec(unit) }); });
+    on('despawn', ({ unit }) => { if (this.shared(unit)) this.all({ t: 'ds', id: unit.id }); });
+    on('damage', ev => {
+      const s = ev.src, t = ev.tgt;
+      if (!(ev.amount > 0) || ev.immune || !s || s.team !== 0 || !t || t.team === 0 || t.team === 2) return;
+      let a = this.dmg.get(s.id); if (!a) this.dmg.set(s.id, a = [s.id, 0, 0, 0, 0, 0, 0]);
+      a[1] += ev.amount; a[2]++; if (ev.crit) a[3]++; if (ev.back) a[4]++; if (ev.head) a[5]++; if (ev.counter) a[6]++;
+    });
     on('telegraph', tg => { tg.nid = this.teleId++; this.all({ t: 'tl', g: { id: tg.nid, shape: tg.shape, x: tg.x, z: tg.z, dx: tg.dx, dz: tg.dz, r: tg.r, inner: tg.inner, angle: tg.angle, len: tg.len, width: tg.width, back: tg.back, dur: tg.dur, t: tg.t, color: tg.color, safe: tg.safe, fo: tg.follow?.id } }); });
     on('telegraphEnd', tg => { if (tg.t < tg.dur - 0.05) this.all({ t: 'te', id: tg.nid }); });
     on('hitSpec', ({ src, h, ox, oz, dx, dz }) => this.all({ t: 'eh', s: src.id, h: hitRec(h), x: ox, z: oz, dx, dz }));
@@ -64,10 +73,35 @@ export class NetHost {
     on('heal', ev => { if (ev.tgt?.remote && ev.src !== ev.tgt) this.toOwner(ev.tgt, { t: 'al', k: 'heal', a: ev.amount }); });
     on('shield', ev => { if (ev.tgt?.remote) this.toOwner(ev.tgt, { t: 'al', k: 'shield', a: ev.amount }); });
     on('status', ev => { if (ev.on && ev.tgt?.remote && !ev.s?.def?.debuff && !ev.s?.def?.cc && !ev.s?.netApplied) this.toOwner(ev.tgt, { t: 'al', k: 'status', id: ev.id, dur: ev.s.left, mods: ev.s.mods, name: ev.s.name, icon: ev.s.icon }); });
-    // re-seat every friend in the new level
-    for (const g of this.guests.values()) { g.unit = null; g.ready = false; this.send(g, { t: 'pl', p: this.game.placeInfo?.() || {} }); }
+    // re-seat every friend in the new level — once our new mode is running (a zone loads before its mode exists,
+    // and friends pick their own mode from the place's kind)
+    for (const g of this.guests.values()) { g.unit = null; g.ready = false; }
+    this.plPending = { mode: this.game.mode, t: 0 };
+  }
+  flushPlace(dt) {
+    const P = this.plPending; if (!P) return;
+    P.t += dt;
+    if (this.game.mode === P.mode && P.t < 4) return;
+    this.plPending = null;
+    const place = this.game.placeInfo?.() || {};
+    for (const g of this.guests.values()) this.send(g, { t: 'pl', p: place });
   }
   detach() { for (const f of this.offs || []) f(); this.offs = []; if (this.L) this.L.netHost = null; this.L = null; }
+  /** does this unit exist in everyone's world? (heroes, enemies, bosses — not our town extras or personal props) */
+  shared(u) {
+    if (u.data.local) return false;
+    if (u.kind === 'hero' && u.team === 2) return false;
+    if ((u.kind === 'npc' || u.kind === 'object') && OPEN_WORLD.has(this.game.mode?.kind)) return false;
+    return true;
+  }
+  /** the party frames everyone sees: the instance party, or (open world) us + every friend */
+  partyList() {
+    const P = this.game.party;
+    if (P?.members?.length && P.level === this.level) return P.hud();
+    const me = this.game.hero?.u; if (!me) return null;
+    const list = [me, ...[...this.guests.values()].map(g => g.unit).filter(Boolean)];
+    return list.map(u => ({ name: u.name, cls: u.cls, hp: u.hp, hpMax: u.hpMax, shield: u.shield || 0, dead: u.dead, you: u === me, remote: u !== me, support: CLASSES[u.cls]?.role === 'support' }));
+  }
   toOwner(u, m) { for (const g of this.guests.values()) if (g.unit === u && g.ready) this.send(g, m); }
 
   // ---------------------------------------------------------------- connections
@@ -104,7 +138,7 @@ export class NetHost {
     const party = this.game.party;
     if (party && !party.members.some(m => m.kit?.u === u)) { party.members.push({ kit: { u, char: { cls: c.cls, name: c.name } }, remote: true, guest: g.id }); u.party = party; }
     // send the whole world (the guest builds it), then their own id
-    this.send(g, { t: 'wl', you: u.id, lead: this.game.hero?.u.id, units: L.units.filter(x => x !== u).map(spawnRec), place: this.game.placeInfo?.() || {} });
+    this.send(g, { t: 'wl', you: u.id, lead: this.game.hero?.u.id, units: L.units.filter(x => x !== u && this.shared(x)).map(spawnRec), place: this.game.placeInfo?.() || {} });
     this.all({ t: 'sp', u: spawnRec(u) }, g);
   }
 
@@ -168,20 +202,27 @@ export class NetHost {
 
   // ---------------------------------------------------------------- per frame
   update(dt) {
+    this.flushPlace(dt);
     if (!this.guests.size || !this.level) return;
     this.acc += dt; this.hudAcc += dt;
     if (this.acc < SNAP) return;
     this.acc = 0;
-    const L = this.level, rows = [];
-    for (const u of L.units) rows.push(row(u));
+    const L = this.level, rows = [], mode = this.game.mode;
+    for (const u of L.units) if (this.shared(u)) rows.push(row(u));
     const m = { t: 'sn', tm: Math.round(L.time * 1000), u: rows };
+    // our ship (friends ride along as passengers)
+    const sh = mode?.kind === 'sea' && mode.sh;
+    if (sh) m.ship = [q1(sh.x), q1(sh.z), q2(sh.h), q1(sh.v), q2(sh.w), q2(sh.sail)];
     if (this.hudAcc > 0.25) {
       this.hudAcc = 0;
-      const mode = this.game.mode;
-      m.h = { boss: mode?.bossHud?.() || null, progress: mode?.progressHud?.() || null, timer: mode?.timerHud?.() || null, party: this.game.party?.hud?.() || null, state: mode?.state };
+      const me = this.game.hero?.u;
+      m.h = { boss: mode?.bossHud?.() || null, progress: mode?.progressHud?.() || null, timer: mode?.timerHud?.() || null, party: this.partyList(), state: mode?.state,
+        lead: me ? [q1(me.pos.x), q1(me.pos.z)] : null };
       if (m.h.boss) delete m.h.boss.buffs;
     }
-    for (const g of this.guests.values()) if (g.ready) this.send(g, m);
+    // damage credit for friends' meters (each friend already counts their own hits)
+    const dm = [...this.dmg.values()].map(a => [a[0], Math.round(a[1]), a[2], a[3], a[4], a[5], a[6]]); this.dmg.clear();
+    for (const g of this.guests.values()) if (g.ready) this.send(g, dm.length ? { ...m, dm: dm.filter(r => r[0] !== g.unit?.id) } : m);
   }
   /** the game changed place (zone/mode): guests rebuild */
   placeChanged() { for (const g of this.guests.values()) { g.ready = false; g.unit = null; this.send(g, { t: 'pl', p: this.game.placeInfo?.() || {} }); } }

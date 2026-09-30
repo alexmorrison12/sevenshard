@@ -1261,6 +1261,63 @@ async function crewMenu(session) {
 }
 
 // ------------------------------------------------------------------------------------------------ registration
+// ------------------------------------------------------------------------------------------------ co-op passenger
+/**
+ * A friend in the host's world while the host sails: aboard the host's Dawnrunner. The ship follows the host's
+ * snapshots (net.ship = [x, z, heading, speed, turn, sail]); our hero stands on the deck and can still fight.
+ */
+export class SeaPassengerMode {
+  constructor(session, net) { this.s = session; this.game = session.game; this.net = net; this.kind = 'sea'; this.passenger = true; this.rigs = new Set(); this.stormAt = 0; this.mistAt = 0; }
+  get zone() { return this.game.zone; }
+  get me() { return this.game.hero?.u; }
+  enter() {
+    const g = this.game, z = this.zone; if (!z?.sea) return;
+    const p = this.net.ship || [PORTS.solhaven.x, PORTS.solhaven.z, PORTS.solhaven.facing ?? 0, 0, 0, 0.2];
+    this.sh = { x: p[0], z: p[1], h: p[2], v: p[3], w: p[4], sail: p[5] };
+    const rig = this.rig = new ShipRig('dawnrunner', { waves: z.sea.waves });
+    z.root.add(rig.root); rig.place(this.sh.x, this.sh.z, this.sh.h); this.rigs.add(rig);
+    const me = this.me;
+    if (me) { me.untargetable = true; me.data.rooted = true; me.data.ghostWalk = true; me.data.noAutoFace = true; }
+    const cam = g.cam; this.camPrev = { follow: cam.follow };
+    cam.pitch = 50 * Math.PI / 180; cam.minDist = 34; cam.maxDist = 110; cam.zoom = 60; cam.dist = 60; cam.follow = 6;
+    this.focus = new THREE.Vector3(this.sh.x, 0, this.sh.z); g.camFocus = this.focus; cam.snap(this.focus);
+    SailingMode.prototype.applySeaEnv.call(this, true);
+    g.audio?.music?.('sea'); g.audio?.ambience?.('sea');
+    this.s.ui?.banner?.(SEA_NAME, { kind: 'zone', sub: `Aboard ${this.net.hud?.party?.find(x => x.you)?.name || 'your friend'}'s Dawnrunner`, dur: 3 });
+  }
+  exit() {
+    const g = this.game, cam = g.cam;
+    if (g.camFocus === this.focus) g.camFocus = null;
+    cam.pitch = ISO.pitch; cam.minDist = ISO.minDist; cam.maxDist = ISO.maxDist; cam.zoom = ISO.dist; cam.follow = this.camPrev?.follow ?? 10;
+    for (const r of [...this.rigs]) r.dispose(); this.rigs.clear();
+    const me = this.me; if (me) { me.untargetable = false; me.data.rooted = false; me.data.ghostWalk = false; me.data.noAutoFace = false; me.data.hover = 0; }
+  }
+  preUpdate(dt) {
+    const sh = this.sh; if (!sh || !this.rig) return;
+    const t = this.net.ship;
+    if (t) {
+      const k = 1 - Math.exp(-dt * 8);
+      if (Math.hypot(t[0] - sh.x, t[1] - sh.z) > 40) { sh.x = t[0]; sh.z = t[1]; } else { sh.x += (t[0] - sh.x) * k; sh.z += (t[1] - sh.z) * k; }
+      sh.h = wrap(sh.h + wrap(t[2] - sh.h) * k); sh.v = t[3]; sh.w = t[4]; sh.sail = t[5];
+    }
+    this.rig.update(dt, G.uTime.value, { x: sh.x, z: sh.z, heading: sh.h, speed: sh.v, turn: sh.w, sail: sh.sail });
+    // our place on deck: a few steps forward of the helm, where the host's captain stands
+    const me = this.me;
+    if (me) {
+      const hp = this.rig.world(this.rig.ship.sockets.helm, _v), fx = -Math.sin(sh.h), fz = -Math.cos(sh.h);
+      me.pos.x = hp.x + fx * 3.2 + fz * 0.8; me.pos.z = hp.z + fz * 3.2 - fx * 0.8; me.data.hover = hp.y; me.facing = sh.h; me.move.x = me.move.z = 0; me.anim.speed = 0;
+    }
+    const lead = clamp(sh.v * 1.3, 0, 22);
+    this.focus.set(sh.x - Math.sin(sh.h) * lead, 0, sh.z - Math.cos(sh.h) * lead);
+    this.zone.sea.ocean?.update(this.focus);
+    this.envT = (this.envT || 0) - dt; if (this.envT <= 0) SailingMode.prototype.applySeaEnv.call(this, false);
+  }
+  update() {}
+  interactable() { return null; }
+  bossHud() { return this.net.hud?.boss || null; }
+  progressHud() { return this.net.hud?.progress || null; }
+}
+
 registerContent('sail', launchSail);
 registerService('sail', (session, n) => harbourMaster(session, n));
 registerZoneMode('glass_sea', (session, zone) => new SailingMode(session, { port: PORTS[seaState(session.account).last] || PORTS.solhaven }));

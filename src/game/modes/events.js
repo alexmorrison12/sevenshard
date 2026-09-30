@@ -568,7 +568,8 @@ const PLUGIN = {
         say(s, simName(e.start % 9973), line);
       }
     }
-    // field boss & chaos gate in the fields
+    // field boss & chaos gate in the fields (in a friend's world the host spawns them for everyone)
+    if (s.guestMode) return;
     if (!inField(s) || g.zone?.fallbackLayout && !g.zone.anchors?.fieldboss) return;
     const here = g.zone.id;
     const fbLive = this.live('fieldboss'), fbKey = this.windowKey('fieldboss');

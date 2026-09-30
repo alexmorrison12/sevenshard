@@ -148,7 +148,8 @@ export class FieldMode {
     // packs stream in/out and respawn
     this.safeT -= dt;
     const recheck = this.safeT <= 0; if (recheck) { this.safeT = 2; this.safe = null; }
-    for (const p of this.packs) {
+    // co-op guest: the host owns the field's monsters (we see theirs), so no packs of our own
+    for (const p of this.s.guestMode ? [] : this.packs) {
       const d = dist(me.pos, p.a), alive = p.units.filter(u => u.level && !u.dead);
       if (p.state === 'sleep') { if (d < ACTIVE_R && !this.isQuiet(p.a)) this.spawnPack(p); continue; }
       const calm = alive.every(u => u.combatT <= 0);
@@ -179,8 +180,8 @@ export class FieldMode {
     if (this.channel) this.tickChannel(dt);
     // out-of-combat regeneration (Lost Ark style)
     if (!me.dead && me.combatT <= 0 && me.hp < me.hpMax) me.hp = Math.min(me.hpMax, me.hp + me.hpMax * 0.035 * dt);
-    // the shrink follows a rebuilt hero model
-    if (this.shrunk && me.model && me.model.root.scale.x !== this.shrunk) me.model.root.scale.setScalar(this.shrunk);
+    // the shrink follows a rebuilt hero model — and friends (co-op) are Pip-sized here too
+    if (this.shrunk) for (const u of this.L.units) if (u.kind === 'hero' && u.model && u.model.root.scale.x !== this.shrunk && (u === me || u.remote || u.puppet || u.party)) u.model.root.scale.setScalar(this.shrunk);
     // triports attune by walking past them
     this.attuneT -= dt;
     if (this.attuneT <= 0) { this.attuneT = 0.5; for (const o of this.objs) if (o.kind === 'triport' && dist(me.pos, o) < 5) attune(this.s, o.key); }
@@ -429,6 +430,7 @@ export class FieldMode {
 /** load another open-world zone and arrive at the gate that leads back (or `at`) */
 export async function travel(s, to, { from, at } = {}) {
   if (s._traveling || !to) return;
+  if (s.guestMode) { s.ui?.toast?.('Your host leads the party between zones.', 'info'); return; }
   s._traveling = true;
   try {
     s.game.player?.stop?.();

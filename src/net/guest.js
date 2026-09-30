@@ -60,6 +60,7 @@ export class NetGuest {
     u.hp = rec.hp; u.puppet = true; u.hostId = rec.id; u.ctrl = null;
     Object.assign(u.data, { sex: rec.sx, look: rec.lk, gear: rec.gr, weapon: rec.wp, npc: rec.npc, elite: !!rec.el, scale: rec.sc, modelOpts: rec.mo, title: rec.ti, variant: rec.var, lod: rec.lod, bars: rec.bars, barHp: rec.bh });
     if (rec.tpl) u.data.tpl = { model: rec.tpl };
+    if (rec.npc && rec.k === 'mob') u.data.npcBody = true;   // bandits, cultists…: a dressed human, not a creature
     if (rec.def) u.data.def = rec.def;
     if (rec.nd) { u.data.npcDef = CITY_NPCS.find(n => n.id === rec.nd) || null; u.untargetable = true; }
     u.net = { tx: rec.x, tz: rec.z, tf: rec.f, lift: 0 };
@@ -173,9 +174,17 @@ export class NetGuest {
       u.cc.down = fl & F.down ? 0.3 : 0; u.cc.stun = fl & F.stun ? 0.3 : 0;
       u.data.groggy = !!(fl & F.groggy); u.data.fly = fl & F.fly ? 1 : 0; u.data.burrowed = fl & F.burrow ? 1 : 0; u.data.ghost = fl & F.ghost ? 1 : 0;
       u.data.enraged = !!(fl & F.enraged); u.untargetable = !!(fl & F.untarget); u.data.counterWindow = fl & F.counter ? 0.5 : 0;
-      u.model?.setGlow?.('counter', fl & F.counter ? 1 : 0);
+      // the blue counter glow is a boss-model feature; only touch it when it changes
+      const ctr = fl & F.counter ? 1 : 0;
+      if (u.kind === 'boss' && u.net.ctr !== ctr) { u.net.ctr = ctr; u.model?.setGlow?.('counter', ctr); }
     }
     if (m.h) { this.hud = m.h; this.s.onHud?.(m.h); }
+    if (m.ship) this.ship = m.ship;
+    // the host's damage (and other friends') for our meter — our own hits are already counted here
+    if (m.dm) for (const [id, amount, hits, crits, back, head, counters] of m.dm) {
+      const src = this.unit(id); if (!src || src === this.me) continue;
+      L.emit('meterCredit', { src, amount, hits, crits, back, head, counters });
+    }
   }
   update(dt) {
     const L = this.level; if (!L || this.building) return;
@@ -194,7 +203,7 @@ export class NetGuest {
     if (me && this.acc >= SEND) {
       this.acc = 0;
       const fl = (me.dead ? 1 : 0) | (me.cc.down > 0 || me.air.launched ? 2 : 0) | (me.cc.stun > 0 || me.cc.freeze > 0 ? 4 : 0);
-      this.send({ t: 'st', x: r1(me.pos.x), z: r1(me.pos.z), f: Math.round(me.facing * 100) / 100, sp: r1(me.anim.speed || 0), hp: Math.round(me.hp), hm: me.hpMax, sh: Math.round(me.shield), fl, l: r1(me.lift || 0) });
+      this.send({ t: 'st', x: r1(me.pos.x), z: r1(me.pos.z), f: Math.round(me.facing * 100) / 100, sp: r1(me.anim.speed || 0), hp: Math.round(me.hp), hm: me.hpMax, sh: Math.round(me.shield), fl, l: r1((me.lift || 0) + (me.data.hover || 0)) });
     }
   }
 }

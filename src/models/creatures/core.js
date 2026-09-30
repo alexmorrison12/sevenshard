@@ -130,7 +130,8 @@ export class Creature {
     this._tintA = amount;
   }
   /** Emissive multiplier (1 = authored). e.g. 2.5 for an enrage / charge flash. */
-  setGlow(k = 1) { this.material.userData.u.uGlow.value = k; }
+  // glow multiplier (1 = authored). Boss-style calls — setGlow('counter', v) — are not a creature thing: ignore them.
+  setGlow(k = 1) { if (typeof k !== 'number' || !Number.isFinite(k)) return; this.material.userData.u.uGlow.value = k; }
   /** 0..1 burn-away with ember edges (hide the corpse after death; reverse it for a magical spawn). */
   setDissolve(v, hex) {
     const u = this.material.userData.u; u.uDissolve.value = v; if (hex !== undefined) u.uDissolveCol.value.set(hex);
