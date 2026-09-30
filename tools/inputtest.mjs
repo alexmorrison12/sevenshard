@@ -2,9 +2,9 @@
 import puppeteer from 'puppeteer-core';
 const b = await puppeteer.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: 'new', args: ['--use-angle=metal'], defaultViewport: { width: 1280, height: 720 } });
 const p = await b.newPage();
-await p.goto('http://localhost:5299/index.html', { waitUntil: 'load' });
+await p.goto((process.argv[2]||'http://localhost:5299/index.html'), { waitUntil: 'load' });
 await p.evaluate(() => localStorage.clear());
-await p.goto('http://localhost:5299/index.html', { waitUntil: 'load' });
+await p.goto((process.argv[2]||'http://localhost:5299/index.html'), { waitUntil: 'load' });
 await p.waitForFunction(() => window.__session?.screen === 'title', { timeout: 60000 });
 await p.evaluate(async () => { await __session.route('title:enter'); await __session.route('create:confirm', { cls: 'starcaller', sex: 'f', look: {}, name: 'Clicker', path: 'powerpass' }); await new Promise(r => setTimeout(r, 2500)); });
 const state = () => p.evaluate(() => ({ buttons: __game.input.mouse.buttons, skill: !!__game.hero.u.skill }));
